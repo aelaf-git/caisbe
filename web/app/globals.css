@@ -1,26 +1,60 @@
 @import "tailwindcss";
 
 :root {
+  --ifma-navy: #0e3352;
+  --ifma-blue: #2186b9;
+  --ifma-blue-bright: #1581e2;
+  --ifma-red: #ff4546;
+  --ifma-text: #4d4543;
+  --ifma-text-dark: #211e1d;
+  --ifma-muted: #484c50;
+  --ifma-border: #bec1c4;
+  --ifma-border-light: #dfe0e2;
+  --ifma-surface: #fafafa;
+  --ifma-highlight: #e6f4fb;
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #4d4543;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-ifma-navy: var(--ifma-navy);
+  --color-ifma-blue: var(--ifma-blue);
+  --color-ifma-blue-bright: var(--ifma-blue-bright);
+  --color-ifma-red: var(--ifma-red);
+  --color-ifma-text: var(--ifma-text);
+  --color-ifma-text-dark: var(--ifma-text-dark);
+  --color-ifma-muted: var(--ifma-muted);
+  --color-ifma-border: var(--ifma-border);
+  --color-ifma-border-light: var(--ifma-border-light);
+  --color-ifma-surface: var(--ifma-surface);
+  --color-ifma-highlight: var(--ifma-highlight);
+  --font-sans: var(--font-roboto);
+  --font-display: var(--font-open-sans);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-roboto), Arial, sans-serif;
+}
+
+.ifma-hero-bg {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
+    linear-gradient(135deg, #0e3352 0%, #1a4d73 40%, #2186b9 100%);
+}
+
+.ifma-section-title {
+  font-family: var(--font-open-sans), Arial, sans-serif;
+  color: var(--ifma-navy);
+}
+
+.ifma-card-shadow {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.16);
+}
+
+.ifma-nav-shadow {
+  box-shadow: -1px 7px 15px 8px rgba(0, 0, 0, 0.24);
 }
