@@ -22,28 +22,14 @@ caisbe/
 
 ### API (Django REST Framework)
 
-**First-time setup:**
-
 ```bash
 cd api
-./scripts/setup-venv.sh
-cp .env.example .env
-.venv/bin/python3 manage.py migrate
-```
-
-**Run the API** (use the venv Python — do not use system `pip` or `python3` directly):
-
-```bash
-cd api
+python3 -m venv .venv
 source .venv/bin/activate
+python3 -m pip install -r requirements.txt
+cp .env.example .env
+python3 manage.py migrate
 python3 manage.py runserver
-```
-
-Or without activating:
-
-```bash
-cd api
-./scripts/runserver.sh
 ```
 
 If `pip install` fails with `externally-managed-environment`, your shell is using system pip. Use:
