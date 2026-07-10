@@ -1,3 +1,5 @@
+import { heroCta, heroIntro, siteFullName, siteName } from "@/lib/data/home";
+
 function HeroButton({
   children,
   variant = "primary",
@@ -23,25 +25,20 @@ export default function HeroSection() {
   return (
     <section className="ifma-hero-bg relative overflow-hidden text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(33,134,185,0.35),transparent_55%)]" />
-      <div className="relative mx-auto max-w-7xl px-4 py-24 md:py-32">
-        <div className="max-w-3xl">
-          <h1 className="hero-title text-[clamp(2rem,4vw,4rem)] font-light leading-tight">
-            Unlock your potential.
-            <br />
-            <span className="font-semibold">Advance your career.</span>
-          </h1>
-          <p className="mt-6 max-w-2xl text-[clamp(1rem,2vw,1.375rem)] leading-relaxed text-white/90">
-            Connect with other facility professionals, learn from experts and
-            grow your network and career.
-          </p>
-          <div className="hero-button-container mt-8 flex flex-wrap gap-4">
-            <HeroButton>Join Today</HeroButton>
-            <HeroButton variant="secondary">Membership Benefits</HeroButton>
-          </div>
-          <p className="hero-extra mt-6 text-xs uppercase tracking-[0.2em] text-white/75">
-            Already a member?{" "}
-            <span className="underline decoration-white/50">Manage your account</span>
-          </p>
+      <div className="relative mx-auto max-w-7xl px-4 py-20 md:py-28">
+        <h1 className="max-w-4xl text-[clamp(1.75rem,3.5vw,3.25rem)] font-semibold leading-tight">
+          {siteFullName}
+        </h1>
+        <p className="mt-6 max-w-3xl text-[clamp(1rem,2vw,1.25rem)] leading-relaxed text-white/90">
+          {heroIntro}
+        </p>
+        <p className="mt-4 max-w-3xl text-base leading-relaxed text-white/85">
+          {heroCta}
+        </p>
+        <div className="mt-8 flex flex-wrap gap-4">
+          <HeroButton>Join {siteName}</HeroButton>
+          <HeroButton variant="secondary">Our Services</HeroButton>
+          <HeroButton variant="secondary">Contact Us</HeroButton>
         </div>
       </div>
     </section>

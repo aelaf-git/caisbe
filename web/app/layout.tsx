@@ -15,9 +15,9 @@ const openSans = Open_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "IFMA - International Facility Management Association",
+  title: "CAISBE - Canada Africa Institute for the Sustainable Built Environment",
   description:
-    "Connect with facility management professionals, learn from experts, and grow your network and career.",
+    "CAISBE prepares the next generation of facility and property management professionals to lead sustainable transformation across buildings and infrastructure in Africa.",
 };
 
 export default function RootLayout({
