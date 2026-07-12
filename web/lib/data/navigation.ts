@@ -1,27 +1,41 @@
+import { buildPath, linkPath } from "@/lib/routes";
+
 export type NavLink = {
   label: string;
+  href: string;
 };
 
 export type NavGroup = {
   title: string;
+  href: string;
   links: NavLink[];
 };
 
 export type NavSection = {
   label: string;
+  href: string;
   groups: NavGroup[];
 };
 
-export const quickLinks = ["Login", "Register", "My Account"];
+export type SimpleLink = {
+  label: string;
+  href: string;
+};
 
-export const utilityLinks = [
-  "About",
-  "Store / Bookstore",
-  "News & Announcements",
-  "Contact",
+export const quickLinks: SimpleLink[] = [
+  { label: "Login", href: "/login" },
+  { label: "Register", href: "/register" },
+  { label: "My Account", href: "/my-account" },
 ];
 
-export const mainNavigation: NavSection[] = [
+export const utilityLinks: SimpleLink[] = [
+  { label: "About", href: "/about" },
+  { label: "Store / Bookstore", href: "/store" },
+  { label: "News & Announcements", href: "/news" },
+  { label: "Contact", href: "/contact" },
+];
+
+const rawNavigation = [
   {
     label: "Membership",
     groups: [
@@ -67,12 +81,8 @@ export const mainNavigation: NavSection[] = [
         title: "Events",
         links: [
           { label: "Event Calendar" },
-          {
-            label: "World Workplace Conference & Expo (major annual event)",
-          },
-          {
-            label: "Other Conferences, Webinars, and Regional Events",
-          },
+          { label: "World Workplace Conference & Expo (major annual event)" },
+          { label: "Other Conferences, Webinars, and Regional Events" },
         ],
       },
       {
@@ -168,4 +178,21 @@ export const mainNavigation: NavSection[] = [
       },
     ],
   },
-];
+] as const;
+
+function enrichNavigation(): NavSection[] {
+  return rawNavigation.map((section) => ({
+    label: section.label,
+    href: buildPath(section.label),
+    groups: section.groups.map((group) => ({
+      title: group.title,
+      href: linkPath(group.title, section.label),
+      links: group.links.map((link) => ({
+        label: link.label,
+        href: linkPath(link.label, section.label, group.title),
+      })),
+    })),
+  }));
+}
+
+export const mainNavigation = enrichNavigation();

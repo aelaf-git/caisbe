@@ -1,3 +1,5 @@
+import { buildPath, linkPath } from "@/lib/routes";
+
 export const siteName = "CAISBE";
 export const siteFullName =
   "Canada Africa Institute for the Sustainable Built Environment";
@@ -211,7 +213,7 @@ export const services = [
   "Advocacy and Policy dialogue",
 ];
 
-export const footerColumns = [
+const rawFooterColumns = [
   {
     title: "Our Services",
     links: services,
@@ -242,3 +244,23 @@ export const footerColumns = [
     ],
   },
 ];
+
+export type FooterLink = {
+  label: string;
+  href: string;
+};
+
+export type FooterColumn = {
+  title: string;
+  href: string;
+  links: FooterLink[];
+};
+
+export const footerColumns: FooterColumn[] = rawFooterColumns.map((column) => ({
+  title: column.title,
+  href: buildPath(column.title),
+  links: column.links.map((link) => ({
+    label: link,
+    href: linkPath(link, column.title),
+  })),
+}));

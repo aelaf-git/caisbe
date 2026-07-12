@@ -1,8 +1,9 @@
+import ButtonLink from "@/components/ui/ButtonLink";
 import { certificates, certificatesIntro } from "@/lib/data/home";
 
 export default function CertificatesSection() {
   return (
-    <section className="bg-ifma-surface py-16">
+    <section className="border-b border-ifma-border-light bg-white py-16">
       <div className="mx-auto max-w-7xl px-4">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
@@ -13,9 +14,9 @@ export default function CertificatesSection() {
               {certificatesIntro.subtitle}
             </p>
           </div>
-          <span className="inline-flex cursor-default text-sm font-semibold uppercase tracking-wide text-ifma-blue-bright">
+          <ButtonLink href="/certifications" variant="text">
             {certificatesIntro.cta}
-          </span>
+          </ButtonLink>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -24,7 +25,7 @@ export default function CertificatesSection() {
               key={certificate.code}
               className="ifma-card-shadow flex flex-col border border-ifma-border-light bg-white p-6"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ifma-blue">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
                 {certificate.code}
               </p>
               <h3 className="mt-3 text-lg font-semibold leading-snug text-ifma-navy">

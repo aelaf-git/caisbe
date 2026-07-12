@@ -1,17 +1,20 @@
+import Link from "next/link";
 import { globalMission, offices } from "@/lib/data/home";
+import ButtonLink from "@/components/ui/ButtonLink";
+import { linkPath } from "@/lib/routes";
 
 export default function OfficesSection() {
   return (
-    <section className="bg-ifma-navy py-16 text-white">
+    <section className="border-b border-ifma-border-light bg-white py-16">
       <div className="mx-auto max-w-7xl px-4">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-white/70">
-            Sustainability
+          <p className="brand-eyebrow text-sm font-semibold uppercase tracking-[0.25em]">
+            Global Presence
           </p>
-          <h2 className="mt-3 text-3xl font-semibold leading-tight md:text-4xl">
+          <h2 className="brand-section-title mt-3 text-3xl font-semibold leading-tight md:text-4xl">
             {globalMission.title}
           </h2>
-          <p className="mt-4 text-base leading-7 text-white/85">
+          <p className="mt-4 text-base leading-7 text-caisbe-muted">
             {globalMission.description}
           </p>
         </div>
@@ -20,23 +23,28 @@ export default function OfficesSection() {
           {offices.map((office) => (
             <div
               key={office.region}
-              className="border border-white/20 bg-white/5 p-6 backdrop-blur-sm"
+              className="brand-card-shadow rounded-lg border border-ifma-border-light bg-white p-6"
             >
-              <h3 className="text-lg font-semibold">{office.region}</h3>
-              <p className="mt-3 text-sm leading-6 text-white/85">
+              <h3 className="text-lg font-semibold text-caisbe-green">
+                {office.region}
+              </h3>
+              <p className="mt-3 text-sm leading-6 text-caisbe-muted">
                 {office.address}
               </p>
-              <span className="mt-4 inline-flex cursor-default text-sm font-semibold uppercase tracking-wide text-ifma-blue-bright">
+              <Link
+                href={linkPath(office.region, "Offices")}
+                className="mt-4 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red transition-colors hover:text-caisbe-green"
+              >
                 Direction
-              </span>
+              </Link>
             </div>
           ))}
         </div>
 
         <p className="mt-8 text-center">
-          <span className="cursor-default text-sm font-semibold uppercase tracking-wide text-white/90 underline decoration-white/40">
+          <ButtonLink href="/offices" variant="textGreen">
             View our offices
-          </span>
+          </ButtonLink>
         </p>
       </div>
     </section>

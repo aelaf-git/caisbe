@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import type { NavGroup, NavSection } from "@/lib/data/navigation";
 import { mainNavigation } from "@/lib/data/navigation";
 
@@ -95,15 +96,18 @@ function DropdownPanel({
       <div className={`grid gap-6 px-5 ${gridClass}`}>
         {groups.map((group) => (
           <div key={group.title} className="min-w-0">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-ifma-blue">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-green">
               {group.title}
             </p>
             <ul className="space-y-2">
               {group.links.map((link) => (
                 <li key={link.label}>
-                  <span className="block cursor-default text-sm leading-5 break-words text-ifma-text-dark hover:text-ifma-blue">
+                  <Link
+                    href={link.href}
+                    className="block text-sm leading-5 break-words text-ifma-text-dark transition-colors hover:text-caisbe-red"
+                  >
                     {link.label}
-                  </span>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -118,7 +122,7 @@ function DropdownPanel({
 function DesktopNavItem({ section }: { section: NavSection }) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<PanelPosition | null>(null);
-  const triggerRef = useRef<HTMLSpanElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<number | null>(null);
 
@@ -192,19 +196,17 @@ function DesktopNavItem({ section }: { section: NavSection }) {
 
   return (
     <li className="relative">
-      <span
+      <div
         ref={triggerRef}
         onMouseEnter={handleOpen}
         onMouseLeave={handleClose}
-        onFocus={handleOpen}
-        onBlur={handleClose}
-        className={`flex cursor-default items-center gap-1 border-b-2 px-3 py-5 text-[14px] font-medium transition-colors ${
+        className={`flex items-center gap-1 border-b-2 px-3 py-5 text-[14px] font-medium transition-colors ${
           open
-            ? "border-ifma-blue text-ifma-blue"
-            : "border-transparent text-ifma-text-dark hover:border-ifma-blue hover:text-ifma-blue"
+            ? "border-caisbe-green text-caisbe-green"
+            : "border-transparent text-ifma-text-dark hover:border-caisbe-green hover:text-caisbe-green"
         }`}
       >
-        {section.label}
+        <Link href={section.href}>{section.label}</Link>
         <svg
           className="h-3 w-3 opacity-60"
           viewBox="0 0 12 12"
@@ -213,7 +215,7 @@ function DesktopNavItem({ section }: { section: NavSection }) {
         >
           <path d="M2 4l4 4 4-4" />
         </svg>
-      </span>
+      </div>
       <DropdownPanel
         groups={section.groups}
         open={open}
@@ -240,24 +242,32 @@ function MobileNavSection({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-4 text-left text-sm font-semibold text-ifma-navy"
+        className="flex w-full items-center justify-between px-4 py-4 text-left text-sm font-semibold text-caisbe-green"
       >
-        {section.label}
+        <Link href={section.href} onClick={(e) => e.stopPropagation()}>
+          {section.label}
+        </Link>
         <span className="text-ifma-muted">{isOpen ? "−" : "+"}</span>
       </button>
       {isOpen && (
-        <div className="space-y-6 bg-ifma-surface px-4 pb-4">
+        <div className="space-y-6 bg-white px-4 pb-4">
           {section.groups.map((group) => (
             <div key={group.title}>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-ifma-blue">
+              <Link
+                href={group.href}
+                className="mb-2 block text-xs font-semibold uppercase tracking-[0.15em] text-caisbe-red"
+              >
                 {group.title}
-              </p>
+              </Link>
               <ul className="space-y-2">
                 {group.links.map((link) => (
                   <li key={link.label}>
-                    <span className="block text-sm text-ifma-muted">
+                    <Link
+                      href={link.href}
+                      className="block text-sm text-ifma-muted transition-colors hover:text-caisbe-green"
+                    >
                       {link.label}
-                    </span>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -266,6 +276,33 @@ function MobileNavSection({
         </div>
       )}
     </div>
+  );
+}
+
+function MenuIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      className="h-6 w-6 text-caisbe-green"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden
+    >
+      {open ? (
+        <>
+          <path d="M6 6l12 12" />
+          <path d="M18 6L6 18" />
+        </>
+      ) : (
+        <>
+          <path d="M4 7h16" />
+          <path d="M4 12h16" />
+          <path d="M4 17h16" />
+        </>
+      )}
+    </svg>
   );
 }
 
@@ -287,10 +324,11 @@ export default function MainNav() {
         <button
           type="button"
           onClick={() => setMobileOpen((prev) => !prev)}
-          className="rounded border border-ifma-navy px-3 py-2 text-sm font-medium text-ifma-navy"
+          className="inline-flex items-center justify-center rounded border border-caisbe-green p-2 text-caisbe-green transition-colors hover:bg-ifma-border-light"
           aria-expanded={mobileOpen}
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
         >
-          {mobileOpen ? "Close" : "Menu"}
+          <MenuIcon open={mobileOpen} />
         </button>
 
         {mobileOpen && (
