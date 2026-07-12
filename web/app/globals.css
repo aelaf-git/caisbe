@@ -1,24 +1,38 @@
 @import "tailwindcss";
 
 :root {
-  --ifma-navy: #0e3352;
-  --ifma-blue: #2186b9;
-  --ifma-blue-bright: #1581e2;
-  --ifma-red: #ff4546;
-  --ifma-text: #4d4543;
-  --ifma-text-dark: #211e1d;
-  --ifma-muted: #484c50;
-  --ifma-border: #bec1c4;
-  --ifma-border-light: #dfe0e2;
-  --ifma-surface: #fafafa;
-  --ifma-highlight: #e6f4fb;
+  --caisbe-red: #c42032;
+  --caisbe-red-dark: #9e1a28;
+  --caisbe-green: #0f4d30;
+  --caisbe-green-mid: #1b6b45;
+  --caisbe-text: #1f2937;
+  --caisbe-text-dark: #111827;
+  --caisbe-muted: #5f6b7a;
+  --caisbe-border: #e5e7eb;
+  --caisbe-border-light: #f0f0f0;
   --background: #ffffff;
-  --foreground: #4d4543;
+  --foreground: #1f2937;
+
+  --ifma-navy: var(--caisbe-green);
+  --ifma-blue: var(--caisbe-green-mid);
+  --ifma-blue-bright: var(--caisbe-red);
+  --ifma-red: var(--caisbe-red);
+  --ifma-text: var(--caisbe-text);
+  --ifma-text-dark: var(--caisbe-text-dark);
+  --ifma-muted: var(--caisbe-muted);
+  --ifma-border: var(--caisbe-border);
+  --ifma-border-light: var(--caisbe-border-light);
+  --ifma-surface: #ffffff;
+  --ifma-highlight: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-caisbe-red: var(--caisbe-red);
+  --color-caisbe-red-dark: var(--caisbe-red-dark);
+  --color-caisbe-green: var(--caisbe-green);
+  --color-caisbe-green-mid: var(--caisbe-green-mid);
   --color-ifma-navy: var(--ifma-navy);
   --color-ifma-blue: var(--ifma-blue);
   --color-ifma-blue-bright: var(--ifma-blue-bright);
@@ -40,21 +54,37 @@ body {
   font-family: var(--font-roboto), Arial, sans-serif;
 }
 
-.ifma-hero-bg {
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
-    linear-gradient(135deg, #0e3352 0%, #1a4d73 40%, #2186b9 100%);
+.brand-section-title {
+  font-family: var(--font-open-sans), Arial, sans-serif;
+  color: var(--caisbe-green);
+}
+
+.brand-eyebrow {
+  color: var(--caisbe-red);
+}
+
+.brand-card-shadow {
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+}
+
+.brand-nav-shadow {
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.06);
+}
+
+.brand-media-placeholder {
+  background: #ffffff;
+  border: 1px solid var(--caisbe-border);
 }
 
 .ifma-section-title {
   font-family: var(--font-open-sans), Arial, sans-serif;
-  color: var(--ifma-navy);
+  color: var(--caisbe-green);
 }
 
 .ifma-card-shadow {
-  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.16);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
 }
 
 .ifma-nav-shadow {
-  box-shadow: -1px 7px 15px 8px rgba(0, 0, 0, 0.24);
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.06);
 }
