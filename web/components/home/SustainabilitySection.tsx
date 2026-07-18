@@ -22,25 +22,37 @@ export default function SustainabilitySection() {
       </section>
 
       <section className="border-b border-ifma-border-light bg-white py-16">
-        <div className="mx-auto max-w-7xl px-4 text-center">
-          <h2 className="brand-section-title text-3xl font-semibold">
-            {bestPractices.title}
-          </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-base text-caisbe-muted">
-            {bestPractices.description}
-          </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="brand-section-title text-3xl font-semibold">
+              {bestPractices.title}
+            </h2>
+            <p className="mt-3 text-base text-caisbe-muted">
+              {bestPractices.description}
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {bestPractices.items.map((item, index) => (
-              <div
-                key={item}
-                className={`rounded-lg border bg-white px-4 py-8 text-sm font-semibold uppercase tracking-wide ${
+              <article
+                key={item.title}
+                className={`brand-card-shadow rounded-lg border bg-white p-6 text-left ${
                   index % 2 === 0
-                    ? "border-caisbe-green/30 text-caisbe-green"
-                    : "border-caisbe-red/30 text-caisbe-red"
+                    ? "border-caisbe-green/30"
+                    : "border-caisbe-red/30"
                 }`}
               >
-                {item}
-              </div>
+                <h3
+                  className={`text-lg font-semibold ${
+                    index % 2 === 0 ? "text-caisbe-green" : "text-caisbe-red"
+                  }`}
+                >
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-caisbe-muted">
+                  {item.description}
+                </p>
+              </article>
             ))}
           </div>
         </div>

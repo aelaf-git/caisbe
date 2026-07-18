@@ -11,7 +11,7 @@ export default function ContactPage() {
   return (
     <ContactSection
       eyebrow="Contact Us"
-      title="Ready to Work Together? Build a FM team with us!"
+      title="Build Your FM Future With Us"
       showOffices
     />
   );

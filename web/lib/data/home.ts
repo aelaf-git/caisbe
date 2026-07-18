@@ -1,5 +1,3 @@
-import { buildPath, linkPath } from "@/lib/routes";
-
 export const siteName = "CAISBE";
 export const siteFullName =
   "Canada Africa Institute for the Sustainable Built Environment";
@@ -92,10 +90,31 @@ export const bestPractices = {
   title: "We Follow Best Practices",
   description: "We follow best practices and scaling it up to Africa",
   items: [
-    "Sustainability",
-    "Project On Time",
-    "Modern Technology",
-    "Local Innovative Knowledge",
+    {
+      title: "Sustainability",
+      description:
+        "Promoting environmentally responsible facility operations through energy efficiency, renewable energy solutions, water conservation, waste reduction, green building practices, and net-zero strategies. Canadian sustainability expertise can support African organizations in developing resilient, low-carbon, and cost-effective facilities.",
+    },
+    {
+      title: "Modern Technology",
+      description:
+        "Advancing the use of technology to improve building performance through smart building systems, IoT sensors, computerized maintenance management systems (CMMS), building automation, data analytics, and digital facility management solutions.",
+    },
+    {
+      title: "Local Innovation & Indigenous Knowledge",
+      description:
+        "Combining global best practices with local African expertise, traditional knowledge, and innovative solutions to develop facility management approaches that are practical, affordable, and suitable for local environments.",
+    },
+    {
+      title: "Professional Development & Capacity Building",
+      description:
+        "Building a skilled Facility Management workforce through training, certification, mentorship, and knowledge-sharing programs that connect Canadian experience with African industry needs.",
+    },
+    {
+      title: "Lifecycle Asset Management",
+      description:
+        "Promoting proactive maintenance, asset planning, and lifecycle strategies that improve building performance, reduce operational costs, and maximize long-term value of infrastructure investments.",
+    },
   ],
 };
 
@@ -108,7 +127,7 @@ export const globalMission = {
 export const offices = [
   {
     region: "Canada",
-    address: "815-4AVE SW, CALGARY Alberta, T2P 5N7",
+    address: "815-4AVE SW, CALGARY Alberta, T2P 5N7 (Canada)",
   },
   {
     region: "United States",
@@ -118,28 +137,6 @@ export const offices = [
     region: "Africa",
     address: "Africa Union, Mexico road, Addis Ababa",
   },
-];
-
-export const teamIntro = {
-  eyebrow: "About Us",
-  title: "We Are CAISBE",
-};
-
-export const teamMembers = [
-  { name: "Lara Smith", role: "Leadership" },
-  { name: "John Doe", role: "Leadership" },
-];
-
-export const aboutCta = {
-  title: siteTagline,
-  description: heroCta,
-  cta: "View Projects",
-};
-
-export const projects = [
-  { name: "Gate Bridge" },
-  { name: "Enix Lawyer Building" },
-  { name: "Ridge" },
 ];
 
 export const testimonialsIntro = {
@@ -175,8 +172,8 @@ export const testimonials = [
 ];
 
 export const contactContent = {
-  title: "Ready to Work Together? Build a FM team with us!",
-  eyebrow: "Request a Training",
+  title: "Build Your FM Future With Us",
+  eyebrow: "Contact Us",
   fields: ["Enter your name", "Enter your email address", "Subject", "Message"],
   cta: "Send Message",
 };
@@ -190,23 +187,22 @@ export const faqs = [
   {
     question: "Why Choose CAISBE?",
     answer: [
-      "Internationally benchmarked FM certifications",
       "Industry-recognized qualifications",
-      "Corporate training for high-performing organizations",
-      "Global industry partnerships and accredited instructors",
+      "Corporate training",
+      "Global industry partnerships",
       "A growing community of Sustainable Built Environment professionals, students, and employers",
     ],
   },
   {
-    question: "How long does FM training take?",
+    question: "How long does the certificate program take?",
     answer: [
-      "Program duration varies by certificate. Introductory courses may run 8 weeks, while full certification pathways typically span several months with flexible pacing options.",
+      "Program duration varies by certificate and may take 8 weeks, with flexible pacing options.",
     ],
   },
   {
-    question: "Can I study FM online or weekends?",
+    question: "Can I study CAISBE courses online or self-paced?",
     answer: [
-      "Yes. CAISBE offers online learning and weekend study options designed for working professionals across Canada, the United States, and Africa.",
+      "Yes. CAISBE offers online learning and weekend study options designed for working professionals across Canada and Africa.",
     ],
   },
 ];
@@ -214,40 +210,67 @@ export const faqs = [
 export const services = [
   "Professional certifications",
   "Corporate training & consultancy",
-  "Research, standards, and industry guidelines",
-  "Membership and CPD programming",
-  "Events, conferences, and knowledge sharing",
-  "Advocacy and Policy dialogue",
+  "Membership",
+  "Advocacy and Policy Dialogue",
 ];
+
+export const footerAddress =
+  "815-4AVE SW, CALGARY Alberta, T2P 5N7 (Canada)";
 
 const rawFooterColumns = [
   {
     title: "Our Services",
-    links: services,
+    href: "/professional-development",
+    links: [
+      { label: "Professional certifications", href: "/professional-development" },
+      {
+        label: "Corporate training & consultancy",
+        href: "/professional-development/learning-formats/on-site-corporate-training",
+      },
+      { label: "Membership", href: "/membership" },
+      {
+        label: "Advocacy and Policy Dialogue",
+        href: "/resources/advocacy-government-affairs",
+      },
+    ],
   },
   {
     title: "Programs",
-    links: certificates.map((c) => c.code),
+    href: "/professional-development",
+    links: [
+      { label: "FMC", href: "/professional-development/fmc" },
+      { label: "PMC", href: "/professional-development/pmc" },
+      { label: "CHMC", href: "/professional-development/chmc" },
+      { label: "HSC", href: "/professional-development/hsc" },
+      { label: "CEEBM", href: "/professional-development/ceebm" },
+      { label: "SRET", href: "/professional-development/sret" },
+    ],
   },
   {
-    title: "Organization",
+    title: "About Us",
+    href: "/about",
     links: [
-      "About Us",
-      "Our Mission",
-      "Offices",
-      "Projects",
-      "Contact Us",
-      "Membership",
+      { label: "Our Mission", href: "/about#mission" },
+      { label: "Offices", href: "/contact" },
+      { label: "Projects", href: "/projects" },
+      { label: "Contact Us", href: "/contact" },
+      { label: "Membership", href: "/membership" },
     ],
   },
   {
     title: "Resources",
+    href: "/resources",
     links: [
-      "Certifications",
-      "Corporate Training",
-      "Research",
-      "Standards",
-      "FAQ",
+      { label: "Certificate", href: "/professional-development" },
+      {
+        label: "Corporate Training",
+        href: "/professional-development/learning-formats/on-site-corporate-training",
+      },
+      { label: "FAQ", href: "/#faq" },
+      {
+        label: "Membership Overview and Benefits",
+        href: "/membership/overview",
+      },
     ],
   },
 ];
@@ -263,27 +286,4 @@ export type FooterColumn = {
   links: FooterLink[];
 };
 
-const footerLinkOverrides: Record<string, string> = {
-  Membership: "/membership",
-  "About Us": "/about",
-  "Contact Us": "/contact",
-  FAQ: "/#faq",
-  Certifications: "/professional-development",
-  Research: "/resources/research-benchmarking",
-  FMC: "/professional-development/fmc",
-  PMC: "/professional-development/pmc",
-  CHMC: "/professional-development/chmc",
-  HSC: "/professional-development/hsc",
-  CEEBM: "/professional-development/ceebm",
-  RIPVC: "/professional-development/ripvc",
-  SRET: "/professional-development/sret",
-};
-
-export const footerColumns: FooterColumn[] = rawFooterColumns.map((column) => ({
-  title: column.title,
-  href: buildPath(column.title),
-  links: column.links.map((link) => ({
-    label: link,
-    href: footerLinkOverrides[link] ?? linkPath(link, column.title),
-  })),
-}));
+export const footerColumns: FooterColumn[] = rawFooterColumns;
