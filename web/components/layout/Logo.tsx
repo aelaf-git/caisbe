@@ -24,11 +24,13 @@ export default function Logo({ variant = "header" }: LogoProps) {
           className="h-24 w-24 shrink-0 rounded-full object-contain sm:h-28 sm:w-28"
         />
         <div className="max-w-xl">
-          <p className="text-lg font-semibold tracking-wide text-caisbe-green">
+          <p className="text-lg font-bold tracking-wide text-white">
             {siteName}
           </p>
-          <p className="mt-2 text-sm leading-6 text-caisbe-text">{siteFullName}</p>
-          <p className="mt-2 text-sm leading-6 text-caisbe-muted">
+          <p className="mt-2 text-sm font-semibold leading-6 text-white">
+            {siteFullName}
+          </p>
+          <p className="mt-2 text-sm font-semibold leading-6 text-white/90">
             Advancing sustainable built environments across Canada and Africa
             through research, education, and collaboration.
           </p>
