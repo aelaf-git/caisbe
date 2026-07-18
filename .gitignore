@@ -1,4 +1,4 @@
-# Python / Django
+# Python / FastAPI
 __pycache__/
 *.py[cod]
 *$py.class
@@ -13,8 +13,6 @@ dist/
 build/
 *.sqlite3
 *.sqlite3-journal
-staticfiles/
-media/
 .pytest_cache/
 .coverage
 htmlcov/

@@ -41,31 +41,37 @@ export const certificates = [
     code: "FMC",
     title: "Facilities Management Certificate (FMC)",
     description:
-      "This certificate provides foundational knowledge and practical skills for managing modern facilities.",
+      "This certificate provides foundational knowledge and practical skills for managing modern facilities. Participants learn how to oversee building operations, maintenance planning, space management, vendor coordination, and sustainability practices to ensure efficient, safe, and cost-effective facility performance.",
   },
   {
     code: "PMC",
     title: "Property Management Certificate (PMC)",
     description:
-      "This program equips learners with essential skills in property operations, leasing, tenant relations, rent management, maintenance coordination, and legal compliance.",
+      "This program equips learners with essential skills in property operations, leasing, tenant relations, rent management, maintenance coordination, and legal compliance. Ideal for those managing residential, commercial, or mixed-use properties in rapidly growing real estate markets.",
   },
   {
     code: "CHMC",
     title: "Condominium/Cooperative Housing Management Certificate (CHMC)",
     description:
-      "This certificate focuses on the unique governance, financial management, maintenance, and community leadership skills needed to manage condominium and cooperative housing developments.",
+      "This certificate focuses on the unique governance, financial management, maintenance, and community leadership skills needed to manage condominium and cooperative housing developments. It covers owner/tenant coordination, board relations, budgeting, and conflict resolution.",
   },
   {
     code: "HSC",
     title: "Health & Safety Certificate for FM Professionals (HSC)",
     description:
-      "Designed for facility and property management professionals, this certificate covers workplace safety standards, risk assessment, emergency preparedness, hazard control, and compliance with health and safety regulations.",
+      "Designed for facility and property management professionals, this certificate covers workplace safety standards, risk assessment, emergency preparedness, hazard control, and compliance with health and safety regulations. Graduates gain the skills to create safe and compliant building environments.",
   },
   {
     code: "CEEBM",
-    title: "Certificate in Efficiency & Building Energy Management (CEEBM)",
+    title: "Certificate in Energy Efficiency & Building Energy Management (CEEBM)",
     description:
-      "Participants learn practical strategies for reducing building energy consumption through audits, energy monitoring, HVAC optimization, lighting upgrades, and sustainable design principles.",
+      "Participants learn practical strategies for reducing building energy consumption through audits, energy monitoring, HVAC optimization, lighting upgrades, and sustainable design principles. The program emphasizes cost-effective approaches suitable for developing and advanced markets.",
+  },
+  {
+    code: "RIPVC",
+    title: "Real Estate Investment & Property Valuation Certificate (RIPVC)",
+    description:
+      "This certificate introduces learners to investment analysis, valuation techniques, market assessment, and financial modeling for real estate assets. Participants gain skills in estimating property value, analyzing risk, and evaluating investment opportunities in emerging and mature property markets.",
   },
   {
     code: "SRET",
@@ -209,7 +215,8 @@ export const services = [
   "Professional certifications",
   "Corporate training & consultancy",
   "Research, standards, and industry guidelines",
-  "Membership",
+  "Membership and CPD programming",
+  "Events, conferences, and knowledge sharing",
   "Advocacy and Policy dialogue",
 ];
 
@@ -256,11 +263,27 @@ export type FooterColumn = {
   links: FooterLink[];
 };
 
+const footerLinkOverrides: Record<string, string> = {
+  Membership: "/membership",
+  "About Us": "/about",
+  "Contact Us": "/contact",
+  FAQ: "/#faq",
+  Certifications: "/professional-development",
+  Research: "/resources/research-benchmarking",
+  FMC: "/professional-development/fmc",
+  PMC: "/professional-development/pmc",
+  CHMC: "/professional-development/chmc",
+  HSC: "/professional-development/hsc",
+  CEEBM: "/professional-development/ceebm",
+  RIPVC: "/professional-development/ripvc",
+  SRET: "/professional-development/sret",
+};
+
 export const footerColumns: FooterColumn[] = rawFooterColumns.map((column) => ({
   title: column.title,
   href: buildPath(column.title),
   links: column.links.map((link) => ({
     label: link,
-    href: linkPath(link, column.title),
+    href: footerLinkOverrides[link] ?? linkPath(link, column.title),
   })),
 }));

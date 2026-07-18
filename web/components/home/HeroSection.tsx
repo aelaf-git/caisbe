@@ -1,6 +1,5 @@
 import ButtonLink from "@/components/ui/ButtonLink";
 import { heroCta, heroIntro, siteFullName, siteName } from "@/lib/data/home";
-import { linkPath } from "@/lib/routes";
 
 export default function HeroSection() {
   return (
@@ -21,7 +20,7 @@ export default function HeroSection() {
           </p>
         </div>
         <div className="mt-8 flex flex-wrap gap-4">
-          <ButtonLink href={linkPath("Join / Register", "Membership", "Membership")} variant="primary">
+          <ButtonLink href="/membership/join" variant="primary">
             Join {siteName}
           </ButtonLink>
           <ButtonLink href="/our-services" variant="secondary">
