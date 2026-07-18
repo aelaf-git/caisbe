@@ -22,6 +22,23 @@ export type SimpleLink = {
   href: string;
 };
 
+type RawNavLink = {
+  label: string;
+  href?: string;
+};
+
+type RawNavGroup = {
+  title: string;
+  href?: string;
+  links: readonly RawNavLink[];
+};
+
+type RawNavSection = {
+  label: string;
+  href?: string;
+  groups: readonly RawNavGroup[];
+};
+
 export const quickLinks: SimpleLink[] = [
   { label: "Login", href: "/login" },
   { label: "Register", href: "/register" },
@@ -35,161 +52,209 @@ export const utilityLinks: SimpleLink[] = [
   { label: "Contact", href: "/contact" },
 ];
 
-const rawNavigation = [
+const rawNavigation: readonly RawNavSection[] = [
   {
     label: "Membership",
+    href: "/membership",
     groups: [
       {
         title: "Membership",
+        href: "/membership",
         links: [
-          { label: "Membership Overview / Benefits" },
-          { label: "Join / Register" },
-          { label: "Manage Account (login)" },
           {
-            label:
-              "Types of Membership (Professional, Associate, Young Professionals, Students, Retired, etc.)",
+            label: "Membership Overview and Benefits",
+            href: "/membership/overview",
+          },
+          { label: "Join / Register", href: "/membership/join" },
+          { label: "Manage Account (login)", href: "/login" },
+          {
+            label: "Types of Membership",
+            href: "/membership/types",
+          },
+          {
+            label: "Become a Member",
+            href: "/membership/become-a-member",
           },
         ],
       },
       {
         title: "Network",
+        href: "/network",
         links: [
-          { label: "Overview / Networking Groups" },
-          { label: "Local Chapters (with interactive Local Chapter Map)" },
-          { label: "Councils" },
-          { label: "Communities" },
-          { label: "Military (military.ifma.org)" },
-          { label: "Discussion Forum (engage.ifma.org)" },
-          { label: "Member Directory" },
-          { label: "Young Professionals" },
-        ],
-      },
-      {
-        title: "Regional Sites and Affiliates",
-        links: [
-          { label: "IFMA EMEA" },
-          { label: "IFMA LATAM" },
-          { label: "IFMA Foundation" },
+          {
+            label: "Overview / Networking Groups",
+            href: "/network/overview",
+          },
+          {
+            label: "Discussion Forum",
+            href: "/network/discussion-forum",
+          },
         ],
       },
     ],
   },
   {
     label: "Events",
+    href: "/events",
     groups: [
       {
         title: "Events",
+        href: "/events",
         links: [
-          { label: "Event Calendar" },
-          { label: "World Workplace Conference & Expo (major annual event)" },
-          { label: "Other Conferences, Webinars, and Regional Events" },
+          { label: "Event Calendar", href: "/events/calendar" },
+          {
+            label: "Africa–Canada Built Environment Expo & Forum",
+            href: "/events/expo",
+          },
+          {
+            label: "Conferences and Webinars",
+            href: "/events/conferences",
+          },
         ],
       },
       {
-        title: "Participate",
+        title: "Get Involved",
+        href: "/events/get-involved",
         links: [
-          { label: "Speaking Opportunities" },
-          { label: "Advertise, Exhibit or Sponsor" },
-          { label: "Awards of Excellence" },
-          { label: "Event Marketing Kit" },
-          { label: "Events News Center" },
+          { label: "Get Involved", href: "/events/get-involved" },
+          { label: "Sponsor and Advertise", href: "/events/sponsor" },
+          { label: "Awards and Excellence", href: "/events/awards" },
         ],
       },
     ],
   },
   {
     label: "Professional Development",
+    href: "/professional-development",
     groups: [
       {
-        title: "Training",
+        title: "Certificate Programs",
+        href: "/professional-development",
         links: [
-          { label: "Essentials of FM" },
-          { label: "CFM Knowledge Workshop" },
-          { label: "Individual Courses" },
-          { label: "Online Training" },
-          { label: "Partner Courses" },
-          { label: "Local Training Providers / Affiliates" },
-          { label: "Find Your Training" },
-          { label: "Access My Training (fm.training)" },
-          { label: "Webinars" },
+          {
+            label: "Facilities Management Certificate (FMC)",
+            href: "/professional-development/fmc",
+          },
+          {
+            label: "Property Management Certificate (PMC)",
+            href: "/professional-development/pmc",
+          },
+          {
+            label: "Condominium/Cooperative Housing Management (CHMC)",
+            href: "/professional-development/chmc",
+          },
+          {
+            label: "Health & Safety Certificate (HSC)",
+            href: "/professional-development/hsc",
+          },
+          {
+            label: "Energy Efficiency & Building Energy Management (CEEBM)",
+            href: "/professional-development/ceebm",
+          },
+          {
+            label: "Real Estate Investment & Property Valuation (RIPVC)",
+            href: "/professional-development/ripvc",
+          },
+          {
+            label: "Smart Real Estate Technologies",
+            href: "/professional-development/sret",
+          },
         ],
       },
       {
-        title: "Credentials",
+        title: "Learning Formats",
+        href: "/professional-development/learning-formats",
         links: [
-          { label: "Overview" },
-          { label: "FMP – Facility Management Professional" },
-          { label: "SFP – Sustainability Facility Professional" },
-          { label: "CFM – Certified Facility Manager" },
-          { label: "Manage My Credentials" },
-          { label: "Credential Registry / Verification" },
+          {
+            label: "Online (self-paced)",
+            href: "/professional-development/learning-formats/online-self-paced",
+          },
+          {
+            label: "Virtual Live Classes",
+            href: "/professional-development/learning-formats/virtual-live-classes",
+          },
+          {
+            label: "In-Person Classroom Training",
+            href: "/professional-development/learning-formats/in-person-classroom-training",
+          },
+          {
+            label: "On-site Corporate Training",
+            href: "/professional-development/learning-formats/on-site-corporate-training",
+          },
         ],
-      },
-      {
-        title: "Government",
-        links: [{ label: "GSA Schedule (U.S.)" }],
       },
     ],
   },
   {
     label: "Resources",
+    href: "/resources",
     groups: [
       {
         title: "Resources",
+        href: "/resources",
         links: [
-          { label: "What is FM?" },
-          { label: "Knowledge Library" },
-          { label: "Research & Benchmarking" },
-          { label: "Job Board (jobboard.ifma.org)" },
-          { label: "Speaker Directory" },
-          { label: "Buyer's Guide (onlinefmguide.com)" },
-          { label: "ESG + Facility Management" },
-          { label: "Crisis Resource Center / Wildfire Crisis Resource Hub" },
-          { label: "Advocacy & Government Affairs" },
+          { label: "Careers & Job Board", href: "/careers" },
+          {
+            label: "Advocacy and Government",
+            href: "/resources/advocacy-government-affairs",
+          },
+          { label: "What is FM?", href: "/resources/what-is-fm" },
+          { label: "Knowledge Library", href: "/resources/knowledge-library" },
+          {
+            label: "Research & Benchmarking",
+            href: "/resources/research-benchmarking",
+          },
+          { label: "Speaker Directory", href: "/resources/speaker-directory" },
+          { label: "Buyer's Guide", href: "/resources/buyers-guide" },
         ],
       },
       {
-        title: "Tools for Members / Chapters",
+        title: "Members Corner",
+        href: "/resources/members-corner",
         links: [
-          { label: "Leader Tools" },
-          { label: "Component Reports" },
-          { label: "FMJ Magazine" },
-          { label: "Blog" },
-          { label: "Podcast" },
-          { label: "YouTube" },
+          { label: "CAISBE Magazine", href: "/resources/magazine" },
+          { label: "YouTube", href: "/resources/youtube" },
+          { label: "Podcast", href: "/resources/podcast" },
+          { label: "Blog", href: "/resources/blog" },
         ],
       },
     ],
   },
   {
     label: "About CAISBE",
+    href: "/about",
     groups: [
       {
         title: "About the Association",
+        href: "/about",
         links: [
-          { label: "About CAISBE" },
-          { label: "What is FM?" },
-          { label: "Board of Directors" },
-          { label: "Staff" },
-          { label: "Governance" },
-          { label: "Volunteering" },
-          { label: "Brand Assets" },
+          { label: "About Us", href: "/about" },
+          {
+            label: "What is the Built Environment?",
+            href: "/about/what-is-built-environment",
+          },
+          { label: "Our Leadership", href: "/about#leadership" },
+          { label: "Board of Directors", href: "/about/board-of-directors" },
+          { label: "Staff", href: "/about/staff" },
+          { label: "Governance", href: "/about/governance" },
+          { label: "Volunteering", href: "/about/volunteering" },
+          { label: "Brand Assets", href: "/about/brand-assets" },
         ],
       },
     ],
   },
-] as const;
+];
 
 function enrichNavigation(): NavSection[] {
   return rawNavigation.map((section) => ({
     label: section.label,
-    href: buildPath(section.label),
+    href: section.href ?? buildPath(section.label),
     groups: section.groups.map((group) => ({
       title: group.title,
-      href: linkPath(group.title, section.label),
+      href: group.href ?? linkPath(group.title, section.label),
       links: group.links.map((link) => ({
         label: link.label,
-        href: linkPath(link.label, section.label, group.title),
+        href: link.href ?? linkPath(link.label, section.label, group.title),
       })),
     })),
   }));

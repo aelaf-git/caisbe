@@ -23,7 +23,7 @@ export default function ContactSection({
         </h2>
 
         <div className="mt-10">
-          <ContactForm />
+          <ContactForm cta={contactContent.cta} />
         </div>
 
         {showOffices && (

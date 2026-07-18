@@ -1,7 +1,7 @@
 import { quickLinks, utilityLinks } from "@/lib/data/navigation";
 import Logo from "@/components/layout/Logo";
 import MainNav from "@/components/layout/MainNav";
-import { NavTextLink } from "@/components/pages/UnderConstruction";
+import NavTextLink from "@/components/ui/NavTextLink";
 
 export default function Header() {
   return (
