@@ -1,5 +1,3 @@
-import { buildPath, linkPath } from "@/lib/routes";
-
 export const siteName = "CAISBE";
 export const siteFullName =
   "Canada Africa Institute for the Sustainable Built Environment";
@@ -108,7 +106,7 @@ export const globalMission = {
 export const offices = [
   {
     region: "Canada",
-    address: "815-4AVE SW, CALGARY Alberta, T2P 5N7",
+    address: "815-4AVE SW, CALGARY Alberta, T2P 5N7 (Canada)",
   },
   {
     region: "United States",
@@ -175,8 +173,8 @@ export const testimonials = [
 ];
 
 export const contactContent = {
-  title: "Ready to Work Together? Build a FM team with us!",
-  eyebrow: "Request a Training",
+  title: "Build Your FM Future With Us",
+  eyebrow: "Contact Us",
   fields: ["Enter your name", "Enter your email address", "Subject", "Message"],
   cta: "Send Message",
 };
@@ -214,40 +212,67 @@ export const faqs = [
 export const services = [
   "Professional certifications",
   "Corporate training & consultancy",
-  "Research, standards, and industry guidelines",
-  "Membership and CPD programming",
-  "Events, conferences, and knowledge sharing",
-  "Advocacy and Policy dialogue",
+  "Membership",
+  "Advocacy and Policy Dialogue",
 ];
+
+export const footerAddress =
+  "815-4AVE SW, CALGARY Alberta, T2P 5N7 (Canada)";
 
 const rawFooterColumns = [
   {
     title: "Our Services",
-    links: services,
+    href: "/professional-development",
+    links: [
+      { label: "Professional certifications", href: "/professional-development" },
+      {
+        label: "Corporate training & consultancy",
+        href: "/professional-development/learning-formats/on-site-corporate-training",
+      },
+      { label: "Membership", href: "/membership" },
+      {
+        label: "Advocacy and Policy Dialogue",
+        href: "/resources/advocacy-government-affairs",
+      },
+    ],
   },
   {
     title: "Programs",
-    links: certificates.map((c) => c.code),
+    href: "/professional-development",
+    links: [
+      { label: "FMC", href: "/professional-development/fmc" },
+      { label: "PMC", href: "/professional-development/pmc" },
+      { label: "CHMC", href: "/professional-development/chmc" },
+      { label: "HSC", href: "/professional-development/hsc" },
+      { label: "CEEBM", href: "/professional-development/ceebm" },
+      { label: "SRET", href: "/professional-development/sret" },
+    ],
   },
   {
-    title: "Organization",
+    title: "About Us",
+    href: "/about",
     links: [
-      "About Us",
-      "Our Mission",
-      "Offices",
-      "Projects",
-      "Contact Us",
-      "Membership",
+      { label: "Our Mission", href: "/about#mission" },
+      { label: "Offices", href: "/contact" },
+      { label: "Projects", href: "/projects" },
+      { label: "Contact Us", href: "/contact" },
+      { label: "Membership", href: "/membership" },
     ],
   },
   {
     title: "Resources",
+    href: "/resources",
     links: [
-      "Certifications",
-      "Corporate Training",
-      "Research",
-      "Standards",
-      "FAQ",
+      { label: "Certificate", href: "/professional-development" },
+      {
+        label: "Corporate Training",
+        href: "/professional-development/learning-formats/on-site-corporate-training",
+      },
+      { label: "FAQ", href: "/#faq" },
+      {
+        label: "Membership Overview and Benefits",
+        href: "/membership/overview",
+      },
     ],
   },
 ];
@@ -263,27 +288,4 @@ export type FooterColumn = {
   links: FooterLink[];
 };
 
-const footerLinkOverrides: Record<string, string> = {
-  Membership: "/membership",
-  "About Us": "/about",
-  "Contact Us": "/contact",
-  FAQ: "/#faq",
-  Certifications: "/professional-development",
-  Research: "/resources/research-benchmarking",
-  FMC: "/professional-development/fmc",
-  PMC: "/professional-development/pmc",
-  CHMC: "/professional-development/chmc",
-  HSC: "/professional-development/hsc",
-  CEEBM: "/professional-development/ceebm",
-  RIPVC: "/professional-development/ripvc",
-  SRET: "/professional-development/sret",
-};
-
-export const footerColumns: FooterColumn[] = rawFooterColumns.map((column) => ({
-  title: column.title,
-  href: buildPath(column.title),
-  links: column.links.map((link) => ({
-    label: link,
-    href: footerLinkOverrides[link] ?? linkPath(link, column.title),
-  })),
-}));
+export const footerColumns: FooterColumn[] = rawFooterColumns;
