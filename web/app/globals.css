@@ -88,3 +88,13 @@ body {
 .ifma-nav-shadow {
   box-shadow: 0 1px 12px rgba(0, 0, 0, 0.06);
 }
+
+@keyframes page-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.page-loader-spin {
+  animation: page-loader-spin 0.75s linear infinite;
+}

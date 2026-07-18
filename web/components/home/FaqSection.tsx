@@ -1,54 +1,6 @@
-"use client";
-
-import { useState } from "react";
 import { faqIntro, faqs } from "@/lib/data/home";
 
-function FaqItem({
-  question,
-  answer,
-  isOpen,
-  onToggle,
-}: {
-  question: string;
-  answer: string[];
-  isOpen: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="rounded-lg border border-ifma-border-light border-l-4 border-l-caisbe-green bg-white">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={isOpen}
-        className="flex w-full items-center justify-between gap-4 p-6 text-left"
-      >
-        <h3 className="text-lg font-semibold text-caisbe-green">{question}</h3>
-        <span
-          className="shrink-0 text-xl font-light leading-none text-caisbe-red"
-          aria-hidden
-        >
-          {isOpen ? "−" : "+"}
-        </span>
-      </button>
-      {isOpen && (
-        <ul className="space-y-2 border-t border-ifma-border-light px-6 pb-6 pt-4">
-          {answer.map((line) => (
-            <li
-              key={line}
-              className="text-sm leading-6 text-caisbe-muted before:mr-2 before:text-caisbe-red before:content-['•']"
-            >
-              {line}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 export default function FaqSection() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
-
   return (
     <section id="faq" className="border-b border-ifma-border-light bg-white py-16">
       <div className="mx-auto max-w-4xl px-4">
@@ -62,16 +14,39 @@ export default function FaqSection() {
         </div>
 
         <div className="mt-10 space-y-4">
-          {faqs.map((faq, index) => (
-            <FaqItem
+          {faqs.map((faq) => (
+            <details
               key={faq.question}
-              question={faq.question}
-              answer={faq.answer}
-              isOpen={openIndex === index}
-              onToggle={() =>
-                setOpenIndex((current) => (current === index ? null : index))
-              }
-            />
+              className="group rounded-lg border border-ifma-border-light border-l-4 border-l-caisbe-green bg-white"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-6 text-left marker:content-none [&::-webkit-details-marker]:hidden">
+                <h3 className="text-lg font-semibold text-caisbe-green">
+                  {faq.question}
+                </h3>
+                <span
+                  className="shrink-0 text-xl font-light leading-none text-caisbe-red group-open:hidden"
+                  aria-hidden
+                >
+                  +
+                </span>
+                <span
+                  className="hidden shrink-0 text-xl font-light leading-none text-caisbe-red group-open:inline"
+                  aria-hidden
+                >
+                  −
+                </span>
+              </summary>
+              <ul className="space-y-2 border-t border-ifma-border-light px-6 pb-6 pt-4">
+                {faq.answer.map((line) => (
+                  <li
+                    key={line}
+                    className="text-sm leading-6 text-caisbe-muted before:mr-2 before:text-caisbe-red before:content-['•']"
+                  >
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </details>
           ))}
         </div>
       </div>

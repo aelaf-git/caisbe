@@ -1,17 +1,19 @@
 # CAISBE
 
-Monorepo with a **Next.js** frontend (`web/`) and a **Django REST Framework** API (`api/`).
+Monorepo with a **Next.js** frontend (`web/`) and a **FastAPI** backend (`api/`).
 
 ## Project structure
 
 ```
 caisbe/
-├── api/                    # Django REST Framework API
-│   ├── apps/               # Django apps (add new apps here)
-│   │   └── core/           # Core endpoints (health, etc.)
-│   ├── config/             # Project settings, URLs, WSGI/ASGI
-│   ├── manage.py
-│   └── requirements.txt
+├── api/                    # FastAPI backend
+│   ├── app/
+│   │   ├── main.py         # FastAPI app entry
+│   │   ├── config.py       # Settings
+│   │   ├── routers/        # API route modules
+│   │   └── schemas/        # Pydantic models
+│   ├── requirements.txt
+│   └── .env.example
 └── web/                    # Next.js frontend
     ├── app/
     ├── lib/                # API client and shared utilities
@@ -20,7 +22,7 @@ caisbe/
 
 ## Local development
 
-### API (Django REST Framework)
+### API (FastAPI)
 
 ```bash
 cd api
@@ -28,11 +30,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -r requirements.txt
 cp .env.example .env
-python3 manage.py migrate
-python3 manage.py runserver
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-If `pip install` fails with `externally-managed-environment`, your shell is using system pip. Use:
+If `pip install` fails with `externally-managed-environment`, use:
 
 ```bash
 .venv/bin/python3 -m pip install -r requirements.txt
@@ -40,7 +41,8 @@ If `pip install` fails with `externally-managed-environment`, your shell is usin
 
 API runs at `http://127.0.0.1:8000`.
 
-Health check: `http://127.0.0.1:8000/api/health/`
+- Health check: `http://127.0.0.1:8000/api/health`
+- Interactive docs: `http://127.0.0.1:8000/docs`
 
 ### Web (Next.js)
 
@@ -53,7 +55,7 @@ npm run dev
 
 App runs at `http://localhost:3000`.
 
-The web app proxies `/api/*` requests to Django (see `web/next.config.ts`).
+The web app proxies `/api/*` requests to FastAPI (see `web/next.config.ts`).
 
 ### Calling the API from Next.js
 
@@ -63,15 +65,17 @@ import { apiFetch } from "@/lib/api";
 const health = await apiFetch<{ status: string; service: string }>("/health/");
 ```
 
-### Adding a new DRF app
+### Adding a new FastAPI router
 
-```bash
-cd api
-source .venv/bin/activate
-python3 manage.py startapp my_feature apps/my_feature
+1. Create `api/app/routers/my_feature.py` with an `APIRouter`
+2. Create schemas in `api/app/schemas/` as needed
+3. Include the router in `api/app/main.py`:
+
+```python
+from app.routers import my_feature
+
+app.include_router(my_feature.router, prefix="/api")
 ```
-
-Then register `apps.my_feature` in `api/config/settings.py` and include its URLs in `api/config/urls.py`.
 
 ## Ports
 
@@ -79,3 +83,4 @@ Then register `apps.my_feature` in `api/config/settings.py` and include its URLs
 |---------|-----|
 | Web     | http://localhost:3000 |
 | API     | http://127.0.0.1:8000 |
+| API Docs| http://127.0.0.1:8000/docs |

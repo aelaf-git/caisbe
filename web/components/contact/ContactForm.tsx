@@ -1,8 +1,10 @@
 "use client";
 
-import { contactContent } from "@/lib/data/home";
+type ContactFormProps = {
+  cta: string;
+};
 
-export default function ContactForm() {
+export default function ContactForm({ cta }: ContactFormProps) {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
   }
@@ -78,7 +80,7 @@ export default function ContactForm() {
           type="submit"
           className="inline-flex min-w-[180px] items-center justify-center rounded-md border-2 border-caisbe-green bg-caisbe-green px-8 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-caisbe-green-mid"
         >
-          {contactContent.cta}
+          {cta}
         </button>
       </div>
     </form>
