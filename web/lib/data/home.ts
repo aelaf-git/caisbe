@@ -90,10 +90,31 @@ export const bestPractices = {
   title: "We Follow Best Practices",
   description: "We follow best practices and scaling it up to Africa",
   items: [
-    "Sustainability",
-    "Project On Time",
-    "Modern Technology",
-    "Local Innovative Knowledge",
+    {
+      title: "Sustainability",
+      description:
+        "Promoting environmentally responsible facility operations through energy efficiency, renewable energy solutions, water conservation, waste reduction, green building practices, and net-zero strategies. Canadian sustainability expertise can support African organizations in developing resilient, low-carbon, and cost-effective facilities.",
+    },
+    {
+      title: "Modern Technology",
+      description:
+        "Advancing the use of technology to improve building performance through smart building systems, IoT sensors, computerized maintenance management systems (CMMS), building automation, data analytics, and digital facility management solutions.",
+    },
+    {
+      title: "Local Innovation & Indigenous Knowledge",
+      description:
+        "Combining global best practices with local African expertise, traditional knowledge, and innovative solutions to develop facility management approaches that are practical, affordable, and suitable for local environments.",
+    },
+    {
+      title: "Professional Development & Capacity Building",
+      description:
+        "Building a skilled Facility Management workforce through training, certification, mentorship, and knowledge-sharing programs that connect Canadian experience with African industry needs.",
+    },
+    {
+      title: "Lifecycle Asset Management",
+      description:
+        "Promoting proactive maintenance, asset planning, and lifecycle strategies that improve building performance, reduce operational costs, and maximize long-term value of infrastructure investments.",
+    },
   ],
 };
 
@@ -116,28 +137,6 @@ export const offices = [
     region: "Africa",
     address: "Africa Union, Mexico road, Addis Ababa",
   },
-];
-
-export const teamIntro = {
-  eyebrow: "About Us",
-  title: "We Are CAISBE",
-};
-
-export const teamMembers = [
-  { name: "Lara Smith", role: "Leadership" },
-  { name: "John Doe", role: "Leadership" },
-];
-
-export const aboutCta = {
-  title: siteTagline,
-  description: heroCta,
-  cta: "View Projects",
-};
-
-export const projects = [
-  { name: "Gate Bridge" },
-  { name: "Enix Lawyer Building" },
-  { name: "Ridge" },
 ];
 
 export const testimonialsIntro = {
@@ -188,23 +187,22 @@ export const faqs = [
   {
     question: "Why Choose CAISBE?",
     answer: [
-      "Internationally benchmarked FM certifications",
       "Industry-recognized qualifications",
-      "Corporate training for high-performing organizations",
-      "Global industry partnerships and accredited instructors",
+      "Corporate training",
+      "Global industry partnerships",
       "A growing community of Sustainable Built Environment professionals, students, and employers",
     ],
   },
   {
-    question: "How long does FM training take?",
+    question: "How long does the certificate program take?",
     answer: [
-      "Program duration varies by certificate. Introductory courses may run 8 weeks, while full certification pathways typically span several months with flexible pacing options.",
+      "Program duration varies by certificate and may take 8 weeks, with flexible pacing options.",
     ],
   },
   {
-    question: "Can I study FM online or weekends?",
+    question: "Can I study CAISBE courses online or self-paced?",
     answer: [
-      "Yes. CAISBE offers online learning and weekend study options designed for working professionals across Canada, the United States, and Africa.",
+      "Yes. CAISBE offers online learning and weekend study options designed for working professionals across Canada and Africa.",
     ],
   },
 ];
