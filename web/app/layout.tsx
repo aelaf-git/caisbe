@@ -28,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${roboto.variable} ${openSans.variable} h-full`}>
-      <body className="flex min-h-full flex-col antialiased">
+    <html lang="en" className={`${roboto.variable} ${openSans.variable} h-full`} suppressHydrationWarning>
+      <body className="flex min-h-full flex-col antialiased" suppressHydrationWarning>
         <Header />
         <main className="flex-1 bg-white">{children}</main>
         <Footer />
