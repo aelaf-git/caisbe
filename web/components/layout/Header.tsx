@@ -1,4 +1,5 @@
-import { quickLinks, utilityLinks } from "@/lib/data/navigation";
+import { utilityLinks } from "@/lib/data/navigation";
+import AuthNav from "@/components/auth/AuthNav";
 import Logo from "@/components/layout/Logo";
 import MainNav from "@/components/layout/MainNav";
 import NavTextLink from "@/components/ui/NavTextLink";
@@ -16,15 +17,7 @@ export default function Header() {
             ))}
           </div>
           <div className="flex flex-wrap gap-4">
-            {quickLinks.map((link) => (
-              <NavTextLink
-                key={link.href}
-                href={link.href}
-                className={link.label === "Register" ? "font-semibold text-caisbe-red hover:text-caisbe-red-dark" : ""}
-              >
-                {link.label}
-              </NavTextLink>
-            ))}
+            <AuthNav />
           </div>
         </div>
       </div>

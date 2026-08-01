@@ -2,15 +2,15 @@ import { faqIntro, faqs } from "@/lib/data/home";
 
 export default function FaqSection() {
   return (
-    <section id="faq" className="border-b border-ifma-border-light bg-white py-16">
+    <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
       <div className="mx-auto max-w-4xl px-4">
         <div className="text-center">
           <p className="brand-eyebrow text-sm font-semibold uppercase tracking-[0.25em]">
             {faqIntro.eyebrow}
           </p>
-          <h2 className="brand-section-title mt-3 text-3xl font-semibold">
+          <h1 className="brand-section-title mt-3 text-3xl font-semibold md:text-4xl">
             {faqIntro.title}
-          </h2>
+          </h1>
         </div>
 
         <div className="mt-10 space-y-4">
