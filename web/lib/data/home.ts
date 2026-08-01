@@ -205,6 +205,68 @@ export const faqs = [
       "Yes. CAISBE offers online learning and weekend study options designed for working professionals across Canada and Africa.",
     ],
   },
+  {
+    question:
+      "Can I take some courses in online self-paced and in classroom?",
+    answer: [
+      "You can choose from any delivery method that is available to you. Once you select one method, you do not need to use this method for the remaining courses in the certificate programs. You can mix the delivery options depending on your budget, availability, and needs.",
+    ],
+  },
+  {
+    question: "Is there a time limit as to completion of the certificates?",
+    answer: [
+      "Learners must complete their certificate enrolment within a three-year period. Learners selecting not to complete their certificate enrolment within the term will be considered inactive.",
+    ],
+  },
+  {
+    question: "How long are the certificate exams?",
+    answer: [
+      "In the CAISBE Learning Portal, you will have two hours to complete your exams. You are required to read and comply with the CAISBE code of professional ethics, so please read those prior to taking your course exam.",
+    ],
+  },
+  {
+    question: "What is the pass mark?",
+    answer: [
+      "To pass the exam you must score a 70% or better. If you fail, you cannot appeal to have your score changed to a pass.",
+    ],
+  },
+  {
+    question: "What type of questions are possibly asked on the exam?",
+    answer: [
+      "Exams are multiple choice. Each chapter within your course material will have practice questions that can be used to prepare you for the type of questions that will appear on the certificate exam.",
+    ],
+  },
+  {
+    question: "When do I find out how I did on the exam?",
+    answer: [
+      "Once you complete your last question of the exam, the system will indicate what your unofficial mark is. You will receive an official result within fourteen days after you complete the exam.",
+    ],
+  },
+  {
+    question: "What is the CAISBE continuing professional development program?",
+    answer: [
+      "The CPD program requires that course graduates earn 16 points of continuing education credit every two years to maintain their membership certificate status. The two-year renewal period begins on the date that graduates attain their first certificate.",
+    ],
+  },
+  {
+    question: "How do I get my CPD points and certificates?",
+    answer: [
+      "You can get your CPD points in a number of ways. You can attend conferences, seminars, and trade shows related to facility management or property management, including building operations.",
+    ],
+  },
+  {
+    question: "Which course should I take first?",
+    answer: [
+      "You can take any course in any order. If you don’t have a background in facility operations, start with the Fundamentals course, as this course covers a bit of everything about facility operations and you will find it easier once you have taken the other courses.",
+    ],
+  },
+  {
+    question:
+      "Is there a time limit as to when I must complete the certificate programs?",
+    answer: [
+      "Learners must complete their certificate enrolment within a one-year period. Beyond this term, members will be considered inactive.",
+    ],
+  },
 ];
 
 export const services = [
@@ -266,7 +328,7 @@ const rawFooterColumns = [
         label: "Corporate Training",
         href: "/professional-development/learning-formats/on-site-corporate-training",
       },
-      { label: "FAQ", href: "/#faq" },
+      { label: "FAQ", href: "/faq" },
       {
         label: "Membership Overview and Benefits",
         href: "/membership/overview",
