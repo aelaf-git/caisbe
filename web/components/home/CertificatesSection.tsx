@@ -9,7 +9,7 @@ export default function CertificatesSection() {
       <div className="mx-auto max-w-7xl px-4">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="ifma-section-title text-3xl font-semibold md:text-4xl">
+            <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold md:text-4xl">
               {certificatesIntro.title}
             </h2>
             <p className="mt-2 text-lg text-ifma-muted">
@@ -26,7 +26,7 @@ export default function CertificatesSection() {
             <Link
               key={certificate.code}
               href={certificatePath(certificate.code.toLowerCase())}
-              className="ifma-card-shadow flex flex-col border border-ifma-border-light bg-white p-6 transition-colors hover:border-caisbe-green"
+              className="shadow-brand-card flex flex-col border border-ifma-border-light bg-white p-6 transition-colors hover:border-caisbe-red"
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
                 {certificate.code}

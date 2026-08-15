@@ -72,10 +72,10 @@ export function MembershipSubpageContent({ slug }: { slug: MembershipSlug }) {
       <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mx-auto max-w-4xl">
-            <p className="brand-eyebrow text-sm font-semibold uppercase tracking-[0.25em]">
+            <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
               {page.eyebrow}
             </p>
-            <h1 className="brand-section-title mt-3 text-3xl font-semibold md:text-4xl">
+            <h1 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold md:text-4xl">
               {page.title}
             </h1>
           </div>
@@ -83,9 +83,9 @@ export function MembershipSubpageContent({ slug }: { slug: MembershipSlug }) {
             {page.items.map((item) => (
               <article
                 key={item.title}
-                className="brand-card-shadow rounded-lg border border-ifma-border-light bg-white p-6"
+                className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white p-6"
               >
-                <h2 className="text-lg font-semibold text-caisbe-green">
+                <h2 className="text-lg font-semibold text-caisbe-text-dark">
                   {item.title}
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-caisbe-muted">

@@ -23,23 +23,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${roboto.variable} ${openSans.variable} h-full`} suppressHydrationWarning>
-      <body className="flex min-h-full flex-col bg-white antialiased" suppressHydrationWarning>
-        <AuthProvider>
-          <header className="border-b border-ifma-border bg-white">
-            <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-              <a href="/" className="text-sm font-semibold uppercase tracking-wide text-caisbe-green">
-                CAISBE Student Portal
-              </a>
-              <a
-                href={process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}
-                className="text-sm text-caisbe-muted hover:text-caisbe-green"
-              >
-                Website
-              </a>
-            </div>
-          </header>
-          <main className="flex-1">{children}</main>
-        </AuthProvider>
+      <body className="flex min-h-full flex-col bg-[#f7f7f5] font-sans text-foreground antialiased" suppressHydrationWarning>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

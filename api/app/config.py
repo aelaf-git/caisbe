@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     )
     jwt_secret: str = "change-me-in-production-use-a-long-random-string"
     jwt_expire_minutes: int = 60 * 24 * 7
-    database_url: str = "sqlite:///./caisbe.db"
+    database_url: str = "postgresql+psycopg://caisbe:caisbe@127.0.0.1:5433/caisbe"
     admin_email: str = "admin@caisbe.org"
     admin_password: str = "adminpass123"
     admin_full_name: str = "CAISBE Admin"

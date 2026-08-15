@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # --- Course catalog / enrollment ---
@@ -81,7 +81,14 @@ class QuizChoiceStudentOut(BaseModel):
 class QuizQuestionIn(BaseModel):
     prompt: str = Field(min_length=1)
     sort_order: int = 0
-    choices: list[QuizChoiceIn] = Field(default_factory=list)
+    choices: list[QuizChoiceIn] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def require_one_correct_choice(self) -> "QuizQuestionIn":
+        correct_count = sum(1 for choice in self.choices if choice.is_correct)
+        if correct_count != 1:
+            raise ValueError("Each question must mark exactly one correct answer")
+        return self
 
 
 class QuizQuestionOut(BaseModel):
@@ -127,11 +134,14 @@ class QuizUpdate(BaseModel):
 
 
 class ContentBlockCreate(BaseModel):
-    block_type: str = Field(pattern="^(text|video|pdf|link|quiz|assignment)$")
+    block_type: str = Field(
+        pattern="^(text|video|pdf|document|image|epub|subtopic|link|quiz|assignment)$"
+    )
     title: str | None = None
     body: str | None = None
     url: str | None = None
     label: str | None = None
+    parent_id: int | None = None
     sort_order: int = 0
     quiz_title: str | None = "Quiz"
     quiz_questions: list[QuizQuestionIn] = Field(default_factory=list)
@@ -142,6 +152,7 @@ class ContentBlockUpdate(BaseModel):
     body: str | None = None
     url: str | None = None
     label: str | None = None
+    parent_id: int | None = None
     sort_order: int | None = None
     quiz_title: str | None = None
     quiz_questions: list[QuizQuestionIn] | None = None
@@ -154,6 +165,7 @@ class ContentBlockOut(BaseModel):
     body: str | None
     url: str | None
     label: str | None
+    parent_id: int | None = None
     sort_order: int
     quiz: QuizOut | None = None
 
@@ -167,25 +179,38 @@ class ContentBlockStudentOut(BaseModel):
     body: str | None
     url: str | None
     label: str | None
+    parent_id: int | None = None
     sort_order: int
     quiz: QuizStudentOut | None = None
 
     model_config = {"from_attributes": True}
 
 
+class BlockReorderItem(BaseModel):
+    id: int
+    sort_order: int
+
+
+class BlockReorderRequest(BaseModel):
+    items: list[BlockReorderItem] = Field(min_length=1)
+
+
 class LessonCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
+    body: str | None = None
     sort_order: int = 0
 
 
 class LessonUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
+    body: str | None = None
     sort_order: int | None = None
 
 
 class LessonOut(BaseModel):
     id: int
     title: str
+    body: str | None = None
     sort_order: int
     blocks: list[ContentBlockOut] = Field(default_factory=list)
 
@@ -195,6 +220,7 @@ class LessonOut(BaseModel):
 class LessonStudentOut(BaseModel):
     id: int
     title: str
+    body: str | None = None
     sort_order: int
     completed: bool = False
     blocks: list[ContentBlockStudentOut] = Field(default_factory=list)
@@ -217,6 +243,7 @@ class ChapterOut(BaseModel):
     title: str
     sort_order: int
     lessons: list[LessonOut] = Field(default_factory=list)
+    blocks: list[ContentBlockOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 
@@ -226,6 +253,7 @@ class ChapterStudentOut(BaseModel):
     title: str
     sort_order: int
     lessons: list[LessonStudentOut] = Field(default_factory=list)
+    blocks: list[ContentBlockStudentOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 

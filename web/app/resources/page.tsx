@@ -43,7 +43,7 @@ export default function ResourcesPage() {
       <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mx-auto max-w-4xl">
-            <h2 className="brand-section-title text-3xl font-semibold">
+            <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold">
               More Resources
             </h2>
           </div>
@@ -51,9 +51,9 @@ export default function ResourcesPage() {
             {resourcesPages.map((item) => (
               <article
                 key={item.slug}
-                className="brand-card-shadow flex flex-col rounded-lg border border-ifma-border-light bg-white p-6"
+                className="shadow-brand-card flex flex-col rounded-lg border border-ifma-border-light bg-white p-6"
               >
-                <h3 className="text-xl font-semibold text-caisbe-green">
+                <h3 className="text-xl font-semibold text-caisbe-text-dark">
                   {item.title}
                 </h3>
                 <p className="mt-3 flex-1 text-sm leading-6 text-caisbe-muted">

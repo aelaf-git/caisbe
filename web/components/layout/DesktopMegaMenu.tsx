@@ -101,7 +101,7 @@ function DropdownPanel({
       <div className={`grid gap-6 px-5 ${gridClass}`}>
         {groups.map((group) => (
           <div key={group.title} className="min-w-0">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-green">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
               {group.title}
             </p>
             <ul className="space-y-2">
@@ -252,8 +252,8 @@ function DesktopNavItem({
         onMouseLeave={handleTriggerLeave}
         className={`flex items-center gap-1 border-b-2 px-3 py-5 text-[14px] font-medium transition-colors ${
           isOpen
-            ? "border-caisbe-green text-caisbe-green"
-            : "border-transparent text-ifma-text-dark hover:border-caisbe-green hover:text-caisbe-green"
+            ? "border-caisbe-red text-caisbe-red"
+            : "border-transparent text-ifma-text-dark hover:border-caisbe-red hover:text-caisbe-red"
         }`}
       >
         <Link href={section.href}>{section.label}</Link>

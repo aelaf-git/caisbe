@@ -20,11 +20,23 @@ export type Quiz = {
 
 export type ContentBlock = {
   id: number;
-  block_type: "text" | "video" | "pdf" | "link" | "quiz" | "assignment" | string;
+  block_type:
+    | "text"
+    | "video"
+    | "pdf"
+    | "document"
+    | "image"
+    | "epub"
+    | "subtopic"
+    | "link"
+    | "quiz"
+    | "assignment"
+    | string;
   title: string | null;
   body: string | null;
   url: string | null;
   label: string | null;
+  parent_id?: number | null;
   sort_order: number;
   quiz: Quiz | null;
 };
@@ -32,6 +44,7 @@ export type ContentBlock = {
 export type Lesson = {
   id: number;
   title: string;
+  body?: string | null;
   sort_order: number;
   completed?: boolean;
   blocks: ContentBlock[];
@@ -42,6 +55,7 @@ export type Chapter = {
   title: string;
   sort_order: number;
   lessons: Lesson[];
+  blocks?: ContentBlock[];
 };
 
 export type FinalExam = {

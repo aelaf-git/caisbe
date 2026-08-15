@@ -77,6 +77,11 @@ def _load_published_course(db: Session, course_id: int) -> Course:
             .joinedload(ContentBlock.quiz)
             .joinedload(Quiz.questions)
             .joinedload(QuizQuestion.choices),
+            joinedload(Course.chapters)
+            .joinedload(Chapter.blocks)
+            .joinedload(ContentBlock.quiz)
+            .joinedload(Quiz.questions)
+            .joinedload(QuizQuestion.choices),
             joinedload(Course.final_exam).joinedload(FinalExam.questions).joinedload(QuizQuestion.choices),
             joinedload(Course.certificate_template),
         )

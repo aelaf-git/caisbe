@@ -1,0 +1,28 @@
+---
+description: Use Tailwind utilities instead of custom CSS
+alwaysApply: true
+---
+
+# Prefer Tailwind over custom CSS
+
+Style UI with Tailwind utility classes in components. `globals.css` may only contain `@import "tailwindcss"` and `@theme` design tokens — no custom component classes.
+
+## Do
+
+- Use Tailwind utilities and theme tokens (e.g. `text-caisbe-green`, `border-ifma-border`, `shadow-brand-card`, `font-display`)
+- Prefer `className` composition over inline `style` unless a value must be dynamic (e.g. measured positions)
+- Extend colors/fonts/shadows only via `@theme` in `globals.css`
+
+## Don't
+
+- Add component-specific CSS classes, keyframes, or `body` rules in `globals.css`
+- Create `.css` / `.module.css` files for new UI
+- Write custom stylesheets for layout or spacing
+
+```tsx
+// ❌ BAD
+<div className="course-card">...</div>
+
+// ✅ GOOD
+<div className="border border-ifma-border bg-white p-6 shadow-brand-card">...</div>
+```

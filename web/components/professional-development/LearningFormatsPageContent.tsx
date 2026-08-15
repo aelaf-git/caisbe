@@ -10,10 +10,10 @@ export default function LearningFormatsPageContent() {
   return (
     <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
       <div className="mx-auto max-w-4xl px-4">
-        <p className="brand-eyebrow text-sm font-semibold uppercase tracking-[0.25em]">
+        <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
           Professional Development
         </p>
-        <h1 className="brand-section-title mt-3 text-3xl font-semibold md:text-4xl">
+        <h1 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold md:text-4xl">
           {formats.title}
         </h1>
         <p className="mt-6 text-base leading-7 text-caisbe-muted">
@@ -24,9 +24,9 @@ export default function LearningFormatsPageContent() {
           {formats.items.map((format) => (
             <article
               key={format.slug}
-              className="brand-card-shadow flex flex-col rounded-lg border border-ifma-border-light bg-white p-6"
+              className="shadow-brand-card flex flex-col rounded-lg border border-ifma-border-light bg-white p-6"
             >
-              <h2 className="text-lg font-semibold text-caisbe-green">
+              <h2 className="text-lg font-semibold text-caisbe-text-dark">
                 {format.title}
               </h2>
               <p className="mt-3 flex-1 text-sm leading-6 text-caisbe-muted">

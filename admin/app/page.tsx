@@ -10,15 +10,11 @@ export default function AdminHomePage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) {
+    if (!user || user.role !== "admin") {
       router.replace("/login");
       return;
     }
-    if (user.role !== "admin") {
-      router.replace("/login");
-      return;
-    }
-    router.replace("/courses");
+    router.replace("/dashboard");
   }, [loading, user, router]);
 
   return (

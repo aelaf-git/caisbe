@@ -94,6 +94,12 @@ class Chapter(Base):
         cascade="all, delete-orphan",
         order_by="Lesson.sort_order",
     )
+    blocks: Mapped[list["ContentBlock"]] = relationship(
+        back_populates="chapter",
+        cascade="all, delete-orphan",
+        order_by="ContentBlock.sort_order",
+        foreign_keys="ContentBlock.chapter_id",
+    )
 
 
 class Lesson(Base):
@@ -102,6 +108,7 @@ class Lesson(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"), index=True)
     title: Mapped[str] = mapped_column(String(255))
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     chapter: Mapped[Chapter] = relationship(back_populates="lessons")
@@ -109,6 +116,7 @@ class Lesson(Base):
         back_populates="lesson",
         cascade="all, delete-orphan",
         order_by="ContentBlock.sort_order",
+        foreign_keys="ContentBlock.lesson_id",
     )
     progress_records: Mapped[list["LessonProgress"]] = relationship(
         back_populates="lesson",
@@ -135,8 +143,19 @@ class ContentBlock(Base):
     __tablename__ = "content_blocks"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    lesson_id: Mapped[int] = mapped_column(ForeignKey("lessons.id", ondelete="CASCADE"), index=True)
-    block_type: Mapped[str] = mapped_column(String(32))  # text, video, pdf, link, quiz, assignment
+    # Topic content uses lesson_id; chapter quizzes/assignments use chapter_id.
+    lesson_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lessons.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    chapter_id: Mapped[int | None] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    # Media uploads nest under a text or subtopic block.
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("content_blocks.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    # text, video, pdf, document, subtopic, link, quiz, assignment
+    block_type: Mapped[str] = mapped_column(String(32))
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
     url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
@@ -144,8 +163,24 @@ class ContentBlock(Base):
     quiz_id: Mapped[int | None] = mapped_column(ForeignKey("quizzes.id"), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
-    lesson: Mapped[Lesson] = relationship(back_populates="blocks")
+    lesson: Mapped[Lesson | None] = relationship(
+        back_populates="blocks", foreign_keys=[lesson_id]
+    )
+    chapter: Mapped[Chapter | None] = relationship(
+        back_populates="blocks", foreign_keys=[chapter_id]
+    )
     quiz: Mapped[Quiz | None] = relationship(back_populates="blocks")
+    parent: Mapped["ContentBlock | None"] = relationship(
+        remote_side=[id],
+        back_populates="children",
+        foreign_keys=[parent_id],
+    )
+    children: Mapped[list["ContentBlock"]] = relationship(
+        back_populates="parent",
+        foreign_keys=[parent_id],
+        order_by="ContentBlock.sort_order",
+        cascade="all, delete-orphan",
+    )
 
 
 class FinalExam(Base):

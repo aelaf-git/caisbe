@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   title: "CAISBE - Canada Africa Institute for the Sustainable Built Environment",
   description:
     "CAISBE prepares the next generation of facility and property management professionals to lead sustainable transformation across buildings and infrastructure in Africa.",
+  icons: {
+    icon: [{ url: "/images/favicon.png", type: "image/png" }],
+    apple: [{ url: "/images/favicon.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
@@ -34,7 +38,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body
-        className="flex min-h-full flex-col antialiased"
+        className="flex min-h-full flex-col bg-background font-sans text-foreground antialiased"
         suppressHydrationWarning
       >
         <Header />

@@ -11,10 +11,10 @@ export function PageHero({ eyebrow, title, children, actions }: PageHeroProps) {
   return (
     <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
       <div className="mx-auto max-w-4xl px-4">
-        <p className="brand-eyebrow text-sm font-semibold uppercase tracking-[0.25em]">
+        <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
           {eyebrow}
         </p>
-        <h1 className="brand-section-title mt-3 text-3xl font-semibold md:text-4xl">
+        <h1 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold md:text-4xl">
           {title}
         </h1>
         {children}
@@ -41,10 +41,10 @@ export function SubsectionIndex({
     <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
       <div className="mx-auto max-w-7xl px-4">
         <div className="mx-auto max-w-4xl">
-          <p className="brand-eyebrow text-sm font-semibold uppercase tracking-[0.25em]">
+          <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
             {eyebrow}
           </p>
-          <h1 className="brand-section-title mt-3 text-3xl font-semibold md:text-4xl">
+          <h1 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold md:text-4xl">
             {title}
           </h1>
           {description ? (
@@ -57,9 +57,9 @@ export function SubsectionIndex({
           {items.map((item) => (
             <article
               key={item.href}
-              className="brand-card-shadow flex flex-col rounded-lg border border-ifma-border-light bg-white p-6"
+              className="shadow-brand-card flex flex-col rounded-lg border border-ifma-border-light bg-white p-6"
             >
-              <h2 className="text-xl font-semibold text-caisbe-green">
+              <h2 className="text-xl font-semibold text-caisbe-text-dark">
                 {item.title}
               </h2>
               {item.description ? (

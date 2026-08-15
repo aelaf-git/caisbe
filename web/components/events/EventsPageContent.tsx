@@ -23,7 +23,7 @@ export function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
     return (
       <PageHero eyebrow="Events" title={page.title}>
         <p className="mt-6 text-base leading-7 text-caisbe-muted">{page.intro}</p>
-        <h2 className="mt-10 text-xl font-semibold text-caisbe-green">
+        <h2 className="mt-10 text-xl font-semibold text-caisbe-text-dark">
           {page.objectivesTitle}
         </h2>
         <ul className="mt-4 list-disc space-y-2 pl-5 text-base leading-7 text-caisbe-muted">
@@ -31,7 +31,7 @@ export function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
             <li key={item}>{item}</li>
           ))}
         </ul>
-        <h2 className="mt-10 text-xl font-semibold text-caisbe-green">
+        <h2 className="mt-10 text-xl font-semibold text-caisbe-text-dark">
           {page.participantsTitle}
         </h2>
         <p className="mt-4 text-base leading-7 text-caisbe-muted">
@@ -55,7 +55,7 @@ export function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
           {page.categories.map((category) => (
             <li
               key={category}
-              className="brand-card-shadow rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-green"
+              className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-red"
             >
               {category}
             </li>
@@ -68,7 +68,7 @@ export function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
           {page.inquiryLabel}{" "}
           <a
             href={`mailto:${page.email}`}
-            className="font-semibold text-caisbe-red transition-colors hover:text-caisbe-green"
+            className="font-semibold text-caisbe-red transition-colors hover:text-caisbe-red-dark"
           >
             {page.email}
           </a>
