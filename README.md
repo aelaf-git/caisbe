@@ -24,9 +24,10 @@ caisbe/
 
 ### API (FastAPI)
 
-Postgres is required. Start the local database (Docker, port **5433** so it does not collide with a system Postgres on 5432):
+Postgres is required. Start it with the API stack (port **5433** so it does not collide with a system Postgres on 5432):
 
 ```bash
+cd api
 docker compose up -d postgres
 ```
 
@@ -91,6 +92,41 @@ from app.routers import my_feature
 
 app.include_router(my_feature.router, prefix="/api")
 ```
+
+## Docker (per service, with watch)
+
+Each app has its own Dockerfile and compose file. Source changes sync into the container (`docker compose up --watch`). Do not commit `.env` files.
+
+API (Postgres + FastAPI). From the repo, stop anything already bound to 8000/5433 first:
+
+```bash
+cd api
+docker compose up --watch
+```
+
+Frontends expect the API on `http://127.0.0.1:8000` (via `host.docker.internal`):
+
+```bash
+cd web
+docker compose up --watch
+```
+
+```bash
+cd admin
+docker compose up --watch
+```
+
+```bash
+cd portal
+docker compose up --watch
+```
+
+| Service | Compose | URL |
+|---------|---------|-----|
+| API     | `api/`  | http://127.0.0.1:8000 |
+| Web     | `web/`  | http://localhost:3000 |
+| Admin   | `admin/`| http://localhost:3001 |
+| Portal  | `portal/` | http://localhost:3002 |
 
 ## Ports
 
