@@ -110,4 +110,13 @@ export type Certificate = {
   student_name: string;
   title: string;
   body: string;
+  verify_url?: string | null;
+};
+
+export type CertificateVerify = {
+  valid: boolean;
+  certificate_code: string;
+  student_name: string;
+  course_title: string;
+  issued_at: string;
 };

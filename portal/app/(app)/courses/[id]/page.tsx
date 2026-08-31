@@ -8,6 +8,7 @@ import QuizPlayer from "@/components/portal/QuizPlayer";
 import BackButton from "@/components/ui/BackButton";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { ContentBlock, CourseDetail, Lesson, QuizAttempt } from "@/lib/lms";
+import { outlineNumber } from "@/lib/outlineNumber";
 import { sanitizeContentBody } from "@/lib/sanitizeHtml";
 
 type NavSelection =
@@ -17,15 +18,18 @@ type NavSelection =
 
 function BlockView({
   block,
+  heading,
   onQuizResult,
 }: {
   block: ContentBlock;
+  heading?: string;
   onQuizResult?: (result: QuizAttempt) => void;
 }) {
   if (block.block_type === "text" || block.block_type === "subtopic") {
+    const title = heading ?? block.title;
     return (
       <div className="prose prose-sm max-w-none text-caisbe-text">
-        {block.title ? <h3 className="mb-2 text-lg font-semibold">{block.title}</h3> : null}
+        {title ? <h3 className="mb-2 text-lg font-semibold">{title}</h3> : null}
         {block.body ? (
           <div dangerouslySetInnerHTML={{ __html: sanitizeContentBody(block.body) }} />
         ) : null}
@@ -151,27 +155,38 @@ function BlockView({
   return null;
 }
 
-function TopicSections({ topic }: { topic: Lesson }) {
-  const sections = useMemo(() => {
-    const top = topic.blocks
-      .filter((b) => !b.parent_id && (b.block_type === "text" || b.block_type === "subtopic"))
-      .slice()
-      .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+const SECTION_TYPES = new Set(["text", "subtopic"]);
+const MEDIA_TYPES = new Set(["video", "pdf", "document", "image", "epub", "link"]);
+
+function sortBlocks(a: ContentBlock, b: ContentBlock) {
+  return a.sort_order - b.sort_order || a.id - b.id;
+}
+
+function TopicSections({
+  topic,
+  topicOutline,
+}: {
+  topic: Lesson;
+  topicOutline: string;
+}) {
+  const tree = useMemo(() => {
+    const sectionsByParent = new Map<number | "root", ContentBlock[]>();
     const mediaByParent = new Map<number, ContentBlock[]>();
     for (const block of topic.blocks) {
-      if (
-        block.parent_id &&
-        ["video", "pdf", "document", "image", "epub", "link"].includes(block.block_type)
-      ) {
+      if (SECTION_TYPES.has(block.block_type)) {
+        const key = block.parent_id ?? "root";
+        const list = sectionsByParent.get(key) ?? [];
+        list.push(block);
+        sectionsByParent.set(key, list);
+      } else if (block.parent_id && MEDIA_TYPES.has(block.block_type)) {
         const list = mediaByParent.get(block.parent_id) ?? [];
         list.push(block);
         mediaByParent.set(block.parent_id, list);
       }
     }
-    for (const list of mediaByParent.values()) {
-      list.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
-    }
-    return { top, mediaByParent };
+    for (const list of sectionsByParent.values()) list.sort(sortBlocks);
+    for (const list of mediaByParent.values()) list.sort(sortBlocks);
+    return { sectionsByParent, mediaByParent };
   }, [topic.blocks]);
 
   return (
@@ -182,14 +197,66 @@ function TopicSections({ topic }: { topic: Lesson }) {
           dangerouslySetInnerHTML={{ __html: sanitizeContentBody(topic.body) }}
         />
       ) : null}
-      {sections.top.map((block) => (
-        <div key={block.id} className="space-y-4 border-b border-ifma-border-light pb-6">
-          <BlockView block={block} />
-          {(sections.mediaByParent.get(block.id) ?? []).map((media) => (
-            <BlockView key={media.id} block={media} />
-          ))}
-        </div>
-      ))}
+      <OutlineBranch
+        parentId={null}
+        parentOutline={topicOutline}
+        sectionsByParent={tree.sectionsByParent}
+        mediaByParent={tree.mediaByParent}
+      />
+    </div>
+  );
+}
+
+function OutlineBranch({
+  parentId,
+  parentOutline,
+  sectionsByParent,
+  mediaByParent,
+}: {
+  parentId: number | null;
+  parentOutline: string;
+  sectionsByParent: Map<number | "root", ContentBlock[]>;
+  mediaByParent: Map<number, ContentBlock[]>;
+}) {
+  const sections = sectionsByParent.get(parentId ?? "root") ?? [];
+  let subtopicIndex = 0;
+
+  return (
+    <div className="space-y-6">
+      {sections.map((block) => {
+        const isSubtopic = block.block_type === "subtopic";
+        if (isSubtopic) subtopicIndex += 1;
+        const outline = isSubtopic
+          ? outlineNumber(...parentOutline.split(".").map(Number), subtopicIndex)
+          : undefined;
+        const heading =
+          isSubtopic && outline
+            ? `${outline}${block.title ? ` ${block.title}` : ""}`
+            : undefined;
+        return (
+          <div
+            key={block.id}
+            className={
+              parentId
+                ? "space-y-4 border-l-2 border-ifma-border-light pl-4"
+                : "space-y-4 border-b border-ifma-border-light pb-6"
+            }
+          >
+            <BlockView block={block} heading={heading} />
+            {(mediaByParent.get(block.id) ?? []).map((media) => (
+              <BlockView key={media.id} block={media} />
+            ))}
+            {isSubtopic ? (
+              <OutlineBranch
+                parentId={block.id}
+                parentOutline={outline ?? parentOutline}
+                sectionsByParent={sectionsByParent}
+                mediaByParent={mediaByParent}
+              />
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -244,11 +311,39 @@ export default function CoursePlayerPage() {
 
   const chapterBlocks = useMemo(() => {
     if (!course) return [] as ContentBlock[];
-    return course.chapters.flatMap((c) => c.blocks ?? []);
+    return course.chapters.flatMap((c) =>
+      (c.blocks ?? []).filter((b) => b.block_type === "quiz" || b.block_type === "assignment"),
+    );
   }, [course]);
 
   const activeTopic =
     selection?.kind === "topic" ? topics.find((t) => t.id === selection.topicId) ?? null : null;
+  const activeTopicChapter = useMemo(() => {
+    if (!course || !activeTopic) return null;
+    return (
+      course.chapters.find((chapter) => chapter.lessons.some((lesson) => lesson.id === activeTopic.id)) ??
+      null
+    );
+  }, [activeTopic, course]);
+  const chapterMedia = useMemo(() => {
+    const mediaTypes = new Set(["video", "pdf", "document", "image", "epub", "link"]);
+    return (activeTopicChapter?.blocks ?? [])
+      .filter((block) => mediaTypes.has(block.block_type))
+      .slice()
+      .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+  }, [activeTopicChapter]);
+  const activeTopicOutline = useMemo(() => {
+    if (!course || !activeTopic) return "";
+    for (let chapterIndex = 0; chapterIndex < course.chapters.length; chapterIndex += 1) {
+      const topicIndex = course.chapters[chapterIndex].lessons.findIndex(
+        (lesson) => lesson.id === activeTopic.id,
+      );
+      if (topicIndex >= 0) {
+        return outlineNumber(chapterIndex + 1, topicIndex + 1);
+      }
+    }
+    return "";
+  }, [activeTopic, course]);
   const activeChapterBlock =
     selection?.kind === "chapter-block"
       ? chapterBlocks.find((b) => b.id === selection.blockId) ?? null
@@ -307,13 +402,13 @@ export default function CoursePlayerPage() {
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[260px_1fr]">
         <aside className="space-y-4 border border-ifma-border bg-white p-4">
-          {course.chapters.map((chapter) => (
+          {course.chapters.map((chapter, chapterIndex) => (
             <div key={chapter.id}>
               <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
                 {chapter.title}
               </p>
               <ul className="mt-2 space-y-1">
-                {chapter.lessons.map((topic) => (
+                {chapter.lessons.map((topic, topicIndex) => (
                   <li key={topic.id}>
                     <button
                       type="button"
@@ -325,11 +420,13 @@ export default function CoursePlayerPage() {
                       }`}
                     >
                       {topic.completed ? "✓ " : ""}
-                      {topic.title}
+                      {outlineNumber(chapterIndex + 1, topicIndex + 1)} {topic.title}
                     </button>
                   </li>
                 ))}
-                {(chapter.blocks ?? []).map((block) => (
+                {(chapter.blocks ?? [])
+                  .filter((block) => block.block_type === "quiz" || block.block_type === "assignment")
+                  .map((block) => (
                   <li key={block.id}>
                     <button
                       type="button"
@@ -408,8 +505,21 @@ export default function CoursePlayerPage() {
             </div>
           ) : activeTopic ? (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold">{activeTopic.title}</h2>
-              <TopicSections topic={activeTopic} />
+              <h2 className="text-xl font-semibold">
+                {activeTopicOutline ? `${activeTopicOutline} ` : ""}
+                {activeTopic.title}
+              </h2>
+              <TopicSections topic={activeTopic} topicOutline={activeTopicOutline} />
+              {chapterMedia.length > 0 ? (
+                <div className="space-y-4 border-t border-ifma-border-light pt-6">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-caisbe-muted">
+                    Chapter files
+                  </h3>
+                  {chapterMedia.map((block) => (
+                    <BlockView key={block.id} block={block} />
+                  ))}
+                </div>
+              ) : null}
               <button
                 type="button"
                 disabled={busy || activeTopic.completed}

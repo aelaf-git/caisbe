@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
 
@@ -56,6 +58,21 @@ CSS_SANITIZER = CSSSanitizer(
     ],
 )
 
+_BLANK_TARGET_ANCHOR = re.compile(r"(<a\b[^>]*\btarget\s*=\s*['\"]?_blank['\"]?)([^>]*>)", re.IGNORECASE)
+
+
+def _harden_links(html: str) -> str:
+    def add_rel(match: re.Match[str]) -> str:
+        opening, closing = match.group(1), match.group(2)
+        if re.search(r"\brel\s*=", opening, re.IGNORECASE):
+            if "noopener" not in opening.lower():
+                opening = f'{opening} rel="noopener noreferrer"'
+        else:
+            opening = f'{opening} rel="noopener noreferrer"'
+        return opening + closing
+
+    return _BLANK_TARGET_ANCHOR.sub(add_rel, html)
+
 
 def sanitize_html(value: str | None) -> str | None:
     if value is None:
@@ -68,4 +85,10 @@ def sanitize_html(value: str | None) -> str | None:
         css_sanitizer=CSS_SANITIZER,
         strip=True,
     )
-    return cleaned
+    return _harden_links(cleaned)
+
+
+def strip_plain_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return bleach.clean(value, tags=[], attributes={}, strip=True).strip()

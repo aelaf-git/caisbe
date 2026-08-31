@@ -111,3 +111,13 @@ export type Certificate = {
   title: string;
   body: string;
 };
+
+export type IssuedCertificate = {
+  id: number;
+  certificate_code: string;
+  issued_at: string;
+  student_name: string;
+  student_email: string;
+  course_id: number;
+  course_title: string;
+};

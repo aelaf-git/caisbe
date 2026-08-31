@@ -6,6 +6,7 @@ import QuizQuestionEditor, {
   validateQuestions,
 } from "@/components/lms/QuizQuestionEditor";
 import TopicContentEditor from "@/components/lms/TopicContentEditor";
+import ChapterUploads from "@/components/lms/ChapterUploads";
 import { CollapseToggle } from "@/components/ui/CollapseToggle";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
@@ -25,6 +26,7 @@ type AskConfirm = (options: {
 type ChapterCardProps = {
   chapter: Chapter;
   sequence: number;
+  defaultExpanded?: boolean;
   onChanged: () => Promise<void>;
   onError: (message: string) => void;
 };
@@ -38,9 +40,15 @@ function RequiredDot() {
   );
 }
 
-export default function ChapterCard({ chapter, sequence, onChanged, onError }: ChapterCardProps) {
+export default function ChapterCard({
+  chapter,
+  sequence,
+  defaultExpanded = false,
+  onChanged,
+  onError,
+}: ChapterCardProps) {
   const { confirm, dialog } = useConfirmDialog();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [tab, setTab] = useState<Tab>("content");
   const [title, setTitle] = useState(chapter.title);
   const [busy, setBusy] = useState(false);
@@ -185,6 +193,7 @@ export default function ChapterCard({ chapter, sequence, onChanged, onError }: C
             {tab === "content" ? (
               <ContentPanel
                 chapter={chapter}
+                sequence={sequence}
                 onAddTopic={() => void addTopic()}
                 onChanged={onChanged}
                 onError={onError}
@@ -219,6 +228,7 @@ export default function ChapterCard({ chapter, sequence, onChanged, onError }: C
 
 function ContentPanel({
   chapter,
+  sequence,
   onAddTopic,
   onChanged,
   onError,
@@ -226,6 +236,7 @@ function ContentPanel({
   busy,
 }: {
   chapter: Chapter;
+  sequence: number;
   onAddTopic: () => void;
   onChanged: () => Promise<void>;
   onError: (message: string) => void;
@@ -236,7 +247,8 @@ function ContentPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-caisbe-muted">
-          Add topics, then stack text and subtopic blocks. Uploads attach under a block.
+          Add topics, then nest notes and subtopics as deep as you need. Files for the whole chapter
+          go in Chapter uploads below.
         </p>
         <button
           type="button"
@@ -254,10 +266,12 @@ function ContentPanel({
         </p>
       ) : (
         <div className="space-y-3">
-          {chapter.lessons.map((topic) => (
+          {chapter.lessons.map((topic, topicIndex) => (
             <TopicContentEditor
               key={topic.id}
               topic={topic}
+              chapterSequence={sequence}
+              topicIndex={topicIndex}
               onChanged={onChanged}
               onError={onError}
               askConfirm={askConfirm}
@@ -265,6 +279,13 @@ function ContentPanel({
           ))}
         </div>
       )}
+
+      <ChapterUploads
+        chapter={chapter}
+        onChanged={onChanged}
+        onError={onError}
+        askConfirm={askConfirm}
+      />
     </div>
   );
 }

@@ -21,7 +21,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/quizzes", label: "Quizzes", soon: true },
   { href: "/assignments", label: "Assignments", soon: true },
   { href: "/media", label: "Media library", soon: true },
-  { href: "/certificates", label: "Certificates", soon: true },
   { href: "/reports", label: "Reports", soon: true },
   { href: "/settings", label: "Settings", soon: true },
 ];

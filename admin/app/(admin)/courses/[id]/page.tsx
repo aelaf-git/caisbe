@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import CertificatePreview from "@/components/certificates/CertificatePreview";
+import IssuedCertificatesTable from "@/components/certificates/IssuedCertificatesTable";
 import ChapterCard from "@/components/lms/ChapterCard";
 import QuizQuestionEditor, {
   emptyQuestion,
@@ -12,6 +14,7 @@ import { AutosaveProvider, autosaveLabel, useAutosaveRegistry } from "@/hooks/au
 import { useAutosave } from "@/hooks/useAutosave";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { CourseDetail, QuizQuestion } from "@/lib/lms";
+import { numberedTitle, slugify } from "@/lib/ordinalTitles";
 
 const SECTION_NAV = [
   { id: "all", label: "All" },
@@ -35,11 +38,6 @@ type ExamDraft = {
   title: string;
   pass_percent: number;
   questions: QuizQuestion[];
-};
-
-type CertDraft = {
-  title: string;
-  body: string;
 };
 
 function metaReady(meta: CourseMeta): boolean {
@@ -82,11 +80,8 @@ function AdminCourseEditorInner() {
   });
   const [examHint, setExamHint] = useState<string | null>(null);
 
-  const [cert, setCert] = useState<CertDraft>({
-    title: "Certificate of Completion",
-    body: "This certifies that {student_name} has successfully completed {course_title}.",
-  });
   const [activeSection, setActiveSection] = useState<EditorSection>("all");
+  const [focusChapterId, setFocusChapterId] = useState<number | null>(null);
 
   function showSection(id: Exclude<EditorSection, "all">) {
     return activeSection === "all" || activeSection === id;
@@ -116,12 +111,6 @@ function AdminCourseEditorInner() {
             })),
           }))
         : [emptyQuestion()],
-    });
-    setCert({
-      title: data.certificate_template?.title ?? "Certificate of Completion",
-      body:
-        data.certificate_template?.body ??
-        "This certifies that {student_name} has successfully completed {course_title}.",
     });
     setBaselineKey((n) => n + 1);
   }
@@ -191,22 +180,9 @@ function AdminCourseEditorInner() {
     },
   });
 
-  const certAutosave = useAutosave({
-    id: `course-${courseId}-cert`,
-    value: cert,
-    baselineKey,
-    enabled: Boolean(course),
-    save: async (next) => {
-      await apiFetch(`/admin/courses/${courseId}/certificate-template`, {
-        method: "PUT",
-        body: JSON.stringify(next),
-      });
-    },
-  });
-
   const sectionError = useMemo(
-    () => metaAutosave.error || examAutosave.error || certAutosave.error,
-    [metaAutosave.error, examAutosave.error, certAutosave.error],
+    () => metaAutosave.error || examAutosave.error,
+    [metaAutosave.error, examAutosave.error],
   );
 
   async function togglePublish() {
@@ -232,13 +208,22 @@ function AdminCourseEditorInner() {
     if (!course) return;
     setContentError(null);
     try {
-      await apiFetch(`/admin/courses/${courseId}/chapters`, {
+      const created = await apiFetch<{ id: number }>(`/admin/courses/${courseId}/chapters`, {
         method: "POST",
         body: JSON.stringify({
           title: "Untitled chapter",
           sort_order: course.chapters.length,
         }),
       });
+      await apiFetch(`/admin/chapters/${created.id}/lessons`, {
+        method: "POST",
+        body: JSON.stringify({
+          title: numberedTitle("Topic", 0),
+          body: "",
+          sort_order: 0,
+        }),
+      });
+      setFocusChapterId(created.id);
       await softReload();
     } catch (err) {
       setContentError(err instanceof ApiError ? err.detail : "Unable to add chapter.");
@@ -333,7 +318,10 @@ function AdminCourseEditorInner() {
             <input
               className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
               value={meta.code}
-              onChange={(e) => setMeta((m) => ({ ...m, code: e.target.value }))}
+              onChange={(e) => {
+                const code = e.target.value;
+                setMeta((m) => ({ ...m, code, slug: slugify(code) }));
+              }}
               onBlur={() => void metaAutosave.flush()}
             />
           </label>
@@ -344,6 +332,7 @@ function AdminCourseEditorInner() {
               value={meta.slug}
               onChange={(e) => setMeta((m) => ({ ...m, slug: e.target.value }))}
               onBlur={() => void metaAutosave.flush()}
+              placeholder="auto from code"
             />
           </label>
         </div>
@@ -451,6 +440,7 @@ function AdminCourseEditorInner() {
               key={chapter.id}
               chapter={chapter}
               sequence={index + 1}
+              defaultExpanded={chapter.id === focusChapterId || chapter.lessons.length === 0}
               onChanged={async () => {
                 await softReload();
               }}
@@ -540,29 +530,14 @@ function AdminCourseEditorInner() {
         id="certificate"
         className="scroll-mt-36 space-y-4 border border-ifma-border bg-white p-6"
       >
-        <h2 className="text-lg font-semibold text-caisbe-text">Certificate template</h2>
-        <p className="text-xs text-caisbe-muted">
-          Use {"{student_name}"} and {"{course_title}"} placeholders.
+        <h2 className="text-lg font-semibold text-caisbe-text">Certificate</h2>
+        <p className="text-sm text-caisbe-muted">
+          All courses use the standard CAISBE certificate design. When a student completes this course,
+          a certificate is issued with their name, the course title below, the issue date, and a
+          verification QR code.
         </p>
-        <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-caisbe-text">Certificate title</span>
-          <input
-            value={cert.title}
-            onChange={(e) => setCert((prev) => ({ ...prev, title: e.target.value }))}
-            onBlur={() => void certAutosave.flush()}
-            className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-caisbe-text">Certificate body</span>
-          <textarea
-            value={cert.body}
-            onChange={(e) => setCert((prev) => ({ ...prev, body: e.target.value }))}
-            onBlur={() => void certAutosave.flush()}
-            rows={4}
-            className="w-full rounded-md border border-ifma-border px-3 py-2 text-sm outline-none focus:border-caisbe-green"
-          />
-        </label>
+        <CertificatePreview courseTitle={meta.title || "Sample Course"} />
+        <IssuedCertificatesTable courseId={courseId} />
       </section>
       ) : null}
     </div>

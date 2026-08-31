@@ -1,11 +1,20 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import CertificateDocument from "@/components/certificates/CertificateDocument";
 import BackButton from "@/components/ui/BackButton";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { Certificate } from "@/lib/lms";
+
+function verifyUrlFor(cert: Certificate): string {
+  if (cert.verify_url) return cert.verify_url;
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/certificates/verify/${cert.certificate_code}`;
+  }
+  return `/certificates/verify/${cert.certificate_code}`;
+}
 
 export default function CertificatePage() {
   const params = useParams<{ code: string }>();
@@ -37,6 +46,8 @@ export default function CertificatePage() {
     };
   }, [user, params.code]);
 
+  const verifyUrl = useMemo(() => (cert ? verifyUrlFor(cert) : ""), [cert]);
+
   if (loading || !user) {
     return <div className="px-4 py-16 text-center text-sm text-caisbe-muted">Loading…</div>;
   }
@@ -55,18 +66,22 @@ export default function CertificatePage() {
   }
 
   return (
-    <section>
-      <BackButton href="/certificates" />
-      <div className="mt-6 border-4 border-caisbe-red bg-white px-8 py-12 text-center print:border-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">CAISBE</p>
-        <h1 className="mt-4 font-display text-3xl font-semibold text-caisbe-text-dark">{cert.title}</h1>
-        <p className="mt-6 text-lg text-caisbe-text">{cert.body}</p>
-        <p className="mt-8 text-sm text-caisbe-muted">Certificate ID: {cert.certificate_code}</p>
-        <p className="mt-1 text-sm text-caisbe-muted">
-          Issued {new Date(cert.issued_at).toLocaleDateString()}
-        </p>
+    <section className="print:p-0">
+      <div className="print:hidden">
+        <BackButton href="/certificates" />
       </div>
-      <div className="mt-6 text-center">
+
+      <div className="mt-6 print:mt-0">
+        <CertificateDocument
+          studentName={cert.student_name}
+          courseTitle={cert.course.title}
+          issuedAt={cert.issued_at}
+          verifyUrl={verifyUrl}
+          certificateCode={cert.certificate_code}
+        />
+      </div>
+
+      <div className="mt-6 text-center print:hidden">
         <button
           type="button"
           onClick={() => window.print()}

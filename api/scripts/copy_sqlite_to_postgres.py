@@ -49,7 +49,7 @@ def copy() -> None:
         missing = [name for name in TABLES if name not in tables]
         if missing:
             raise SystemExit(
-                f"Postgres is missing tables {missing}. Start the API once so create_all can run."
+                f"Postgres is missing tables {missing}. Run `alembic upgrade head` from api/."
             )
 
         conn.execute(text("SET session_replication_role = replica"))

@@ -336,5 +336,26 @@ class CertificateOut(BaseModel):
     student_name: str
     title: str
     body: str
+    verify_url: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class CertificateVerifyOut(BaseModel):
+    valid: bool = True
+    certificate_code: str
+    student_name: str
+    course_title: str
+    issued_at: datetime
+
+
+class CertificateAdminOut(BaseModel):
+    id: int
+    certificate_code: str
+    issued_at: datetime
+    student_name: str
+    student_email: str
+    course_id: int
+    course_title: str
 
     model_config = {"from_attributes": True}

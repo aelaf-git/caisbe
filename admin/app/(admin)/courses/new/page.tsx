@@ -4,14 +4,7 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, ApiError, type Course } from "@/lib/auth";
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 64);
-}
+import { slugify } from "@/lib/ordinalTitles";
 
 export default function AdminCreateCoursePage() {
   const router = useRouter();

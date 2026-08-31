@@ -28,3 +28,15 @@ export function numberedTitle(prefix: string, index: number): string {
   }
   return `${prefix} ${n}`;
 }
+
+export function outlineNumber(...parts: number[]): string {
+  return parts.filter((n) => Number.isFinite(n) && n > 0).join(".");
+}
+
+export function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 64);
+}

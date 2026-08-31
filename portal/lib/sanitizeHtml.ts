@@ -1,5 +1,6 @@
 import DOMPurify from "isomorphic-dompurify";
 
+// Keep aligned with api/app/html_sanitize.py ALLOWED_TAGS / ALLOWED_ATTRIBUTES.
 const ALLOWED_TAGS = [
   "p",
   "br",
@@ -28,6 +29,22 @@ const ALLOWED_TAGS = [
 ];
 
 const ALLOWED_ATTR = ["href", "src", "alt", "title", "target", "rel", "class", "style"];
+
+function hardenLinks(node: Element): void {
+  if (node.tagName !== "A") return;
+  const target = node.getAttribute("target");
+  if (target?.toLowerCase() === "_blank") {
+    const rel = node.getAttribute("rel") ?? "";
+    const parts = new Set(rel.split(/\s+/).filter(Boolean));
+    parts.add("noopener");
+    parts.add("noreferrer");
+    node.setAttribute("rel", Array.from(parts).join(" "));
+  }
+}
+
+DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+  hardenLinks(node);
+});
 
 /** Sanitize LMS rich-text HTML before rendering with dangerouslySetInnerHTML. */
 export function sanitizeHtml(html: string): string {

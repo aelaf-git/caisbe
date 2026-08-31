@@ -29,6 +29,7 @@ services:
       API_HOST: 0.0.0.0
       DATABASE_URL: postgresql+psycopg://caisbe:caisbe@postgres:5432/caisbe
       UPLOAD_DIR: ./uploads
+      PORTAL_PUBLIC_URL: http://localhost:3002
     volumes:
       - uploads:/app/uploads
     depends_on:

@@ -108,6 +108,11 @@ export async function apiUpload(
   path: string,
   file: File,
 ): Promise<{ url: string; filename: string }> {
+  const maxBytes = 500 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new ApiError(413, "File is too large. Maximum upload size is 500 MB.");
+  }
+
   const headers = new Headers();
   const token = getToken();
   if (token) {
@@ -117,7 +122,11 @@ export async function apiUpload(
   const body = new FormData();
   body.append("file", file);
 
-  const response = await fetch(`/api${path}`, {
+  // Prefer direct API upload so large files are not buffered/truncated by Next.js.
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+  const url = apiBase ? `${apiBase}/api${path}` : `/api${path}`;
+
+  const response = await fetch(url, {
     method: "POST",
     headers,
     body,

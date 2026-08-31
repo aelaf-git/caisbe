@@ -3,14 +3,15 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_admin
 from app.config import settings
 from app.db import get_db
-from app.html_sanitize import sanitize_html
+from app.html_sanitize import sanitize_html, strip_plain_text
 from app.models import (
+    Certificate,
     CertificateTemplate,
     Chapter,
     ContentBlock,
@@ -32,6 +33,7 @@ from app.schemas.courses import (
     ContentBlockUpdate,
     CertificateTemplateOut,
     CertificateTemplateUpdate,
+    CertificateAdminOut,
     CourseCreate,
     CourseDetailAdminOut,
     CourseOut,
@@ -53,6 +55,8 @@ TOPIC_BLOCK_TYPES = {"text", "video", "pdf", "document", "image", "epub", "subto
 TOPIC_SECTION_TYPES = {"text", "subtopic"}
 TOPIC_MEDIA_TYPES = {"video", "pdf", "document", "image", "epub", "link"}
 CHAPTER_BLOCK_TYPES = {"quiz", "assignment"}
+CHAPTER_UPLOAD_TYPES = TOPIC_MEDIA_TYPES
+CHAPTER_ALLOWED_BLOCK_TYPES = CHAPTER_BLOCK_TYPES | CHAPTER_UPLOAD_TYPES
 
 ALLOWED_UPLOAD_EXTENSIONS = {
     ".mp4",
@@ -78,8 +82,12 @@ def _block_has_content(block: ContentBlock, children_by_parent: dict[int, list[C
     elif block.block_type == "subtopic":
         if (block.title or "").strip() or (block.body or "").strip():
             return True
-    children = children_by_parent.get(block.id, [])
-    return any((child.url or "").strip() for child in children if child.block_type in TOPIC_MEDIA_TYPES)
+    for child in children_by_parent.get(block.id, []):
+        if child.block_type in TOPIC_MEDIA_TYPES and (child.url or "").strip():
+            return True
+        if child.block_type in TOPIC_SECTION_TYPES and _block_has_content(child, children_by_parent):
+            return True
+    return False
 
 
 def _chapter_has_required_content(chapter: Chapter) -> bool:
@@ -102,43 +110,111 @@ def _chapter_has_required_content(chapter: Chapter) -> bool:
     return False
 
 
+def _parent_chain_contains(
+    db: Session,
+    *,
+    start_id: int,
+    needle_id: int,
+    lesson_id: int,
+) -> bool:
+    current_id: int | None = start_id
+    seen: set[int] = set()
+    while current_id is not None:
+        if current_id == needle_id:
+            return True
+        if current_id in seen:
+            return True
+        seen.add(current_id)
+        row = (
+            db.query(ContentBlock.parent_id)
+            .filter(ContentBlock.id == current_id, ContentBlock.lesson_id == lesson_id)
+            .first()
+        )
+        current_id = row[0] if row else None
+    return False
+
+
 def _validate_topic_parent(
     db: Session,
     *,
     lesson_id: int,
     parent_id: int | None,
     block_type: str,
+    block_id: int | None = None,
 ) -> int | None:
-    if block_type in TOPIC_SECTION_TYPES:
-        if parent_id is not None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Text and subtopic blocks cannot be nested under another block",
-            )
-        return None
-    if block_type in TOPIC_MEDIA_TYPES:
-        if parent_id is None:
+    if parent_id is None:
+        if block_type in TOPIC_MEDIA_TYPES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Uploads must be attached to a text or subtopic block",
             )
-        parent = (
-            db.query(ContentBlock)
-            .filter(
-                ContentBlock.id == parent_id,
-                ContentBlock.lesson_id == lesson_id,
-                ContentBlock.parent_id.is_(None),
-                ContentBlock.block_type.in_(tuple(TOPIC_SECTION_TYPES)),
-            )
-            .first()
+        return None
+
+    if block_id is not None and parent_id == block_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A block cannot be nested under itself",
         )
-        if parent is None:
+
+    parent = (
+        db.query(ContentBlock)
+        .filter(ContentBlock.id == parent_id, ContentBlock.lesson_id == lesson_id)
+        .first()
+    )
+    if parent is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Parent block was not found in this topic",
+        )
+
+    if block_id is not None and _parent_chain_contains(
+        db, start_id=parent_id, needle_id=block_id, lesson_id=lesson_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot nest a block under its own descendant",
+        )
+
+    if block_type in TOPIC_SECTION_TYPES:
+        if parent.block_type != "subtopic":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Notes and subtopics can only nest under a subtopic",
+            )
+        return parent_id
+
+    if block_type in TOPIC_MEDIA_TYPES:
+        if parent.block_type not in TOPIC_SECTION_TYPES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Upload parent must be a text or subtopic block in this topic",
             )
         return parent_id
+
     return parent_id
+
+
+def _delete_block_tree(db: Session, root: ContentBlock) -> None:
+    quiz_ids: list[int] = []
+    descendant_ids: list[int] = []
+    frontier = [root.id]
+    if root.quiz_id:
+        quiz_ids.append(root.quiz_id)
+    while frontier:
+        children = db.query(ContentBlock).filter(ContentBlock.parent_id.in_(frontier)).all()
+        frontier = []
+        for child in children:
+            descendant_ids.append(child.id)
+            frontier.append(child.id)
+            if child.quiz_id:
+                quiz_ids.append(child.quiz_id)
+    for child_id in reversed(descendant_ids):
+        db.query(ContentBlock).filter(ContentBlock.id == child_id).delete(synchronize_session=False)
+    db.delete(root)
+    for quiz_id in quiz_ids:
+        quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
+        if quiz:
+            db.delete(quiz)
 
 
 def _publish_content_errors(course: Course) -> list[str]:
@@ -169,7 +245,7 @@ def _replace_questions(
         question = QuizQuestion(
             quiz_id=quiz_id,
             final_exam_id=final_exam_id,
-            prompt=q_in.prompt,
+            prompt=strip_plain_text(q_in.prompt) or "",
             sort_order=q_in.sort_order if q_in.sort_order else q_idx,
         )
         db.add(question)
@@ -178,11 +254,17 @@ def _replace_questions(
             db.add(
                 QuizChoice(
                     question_id=question.id,
-                    text=c_in.text,
+                    text=strip_plain_text(c_in.text) or "",
                     is_correct=c_in.is_correct,
                     sort_order=c_in.sort_order if c_in.sort_order else c_idx,
                 )
             )
+
+
+def _apply_plain_text_fields(data: dict, *keys: str) -> None:
+    for key in keys:
+        if key in data and isinstance(data[key], str):
+            data[key] = strip_plain_text(data[key]) or ""
 
 
 def _load_course_admin(db: Session, course_id: int) -> Course:
@@ -239,8 +321,8 @@ def admin_create_course(
 
     course = Course(
         code=code,
-        title=payload.title.strip(),
-        description=payload.description.strip(),
+        title=strip_plain_text(payload.title.strip()) or "",
+        description=strip_plain_text(payload.description.strip()) or "",
         slug=slug,
         status="draft",
         cover_url=payload.cover_url,
@@ -287,6 +369,7 @@ def admin_update_course(
         data["code"] = data["code"].strip().upper()
     if "slug" in data and data["slug"]:
         data["slug"] = data["slug"].strip().lower()
+    _apply_plain_text_fields(data, "title", "description")
 
     if data.get("status") == "published":
         loaded = _load_course_admin(db, course_id)
@@ -326,7 +409,11 @@ def admin_create_chapter(
     course = db.query(Course).filter(Course.id == course_id).first()
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
-    chapter = Chapter(course_id=course_id, title=payload.title.strip(), sort_order=payload.sort_order)
+    chapter = Chapter(
+        course_id=course_id,
+        title=strip_plain_text(payload.title.strip()) or "",
+        sort_order=payload.sort_order,
+    )
     db.add(chapter)
     db.commit()
     db.refresh(chapter)
@@ -353,7 +440,7 @@ def admin_update_chapter(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
     for key, value in payload.model_dump(exclude_unset=True).items():
         if key == "title" and isinstance(value, str):
-            value = value.strip()
+            value = strip_plain_text(value.strip()) or ""
         setattr(chapter, key, value)
     db.commit()
     db.refresh(chapter)
@@ -388,7 +475,7 @@ def admin_create_lesson(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
     lesson = Lesson(
         chapter_id=chapter_id,
-        title=payload.title.strip(),
+        title=strip_plain_text(payload.title.strip()) or "",
         body=sanitize_html(payload.body),
         sort_order=payload.sort_order,
     )
@@ -415,7 +502,7 @@ def admin_update_lesson(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
     for key, value in payload.model_dump(exclude_unset=True).items():
         if key == "title" and isinstance(value, str):
-            value = value.strip()
+            value = strip_plain_text(value.strip()) or ""
         if key == "body":
             value = sanitize_html(value)
         setattr(lesson, key, value)
@@ -471,10 +558,10 @@ def admin_create_block(
         chapter_id=None,
         parent_id=parent_id,
         block_type=payload.block_type,
-        title=payload.title,
+        title=strip_plain_text(payload.title),
         body=sanitize_html(payload.body),
         url=payload.url,
-        label=payload.label,
+        label=strip_plain_text(payload.label),
         quiz_id=None,
         sort_order=payload.sort_order,
     )
@@ -503,15 +590,20 @@ def admin_create_chapter_block(
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if chapter is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
-    if payload.block_type not in CHAPTER_BLOCK_TYPES:
+    if payload.block_type not in CHAPTER_ALLOWED_BLOCK_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Chapter blocks only support quiz or assignment",
+            detail="Chapter blocks only support quiz, assignment, or media uploads",
+        )
+    if payload.block_type in CHAPTER_UPLOAD_TYPES and payload.parent_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Chapter uploads cannot be nested under another block",
         )
 
     quiz_id = None
     if payload.block_type == "quiz":
-        quiz = Quiz(title=payload.quiz_title or "Quiz")
+        quiz = Quiz(title=strip_plain_text(payload.quiz_title) or "Quiz")
         db.add(quiz)
         db.flush()
         _replace_questions(db, payload.quiz_questions, quiz_id=quiz.id)
@@ -520,11 +612,12 @@ def admin_create_chapter_block(
     block = ContentBlock(
         lesson_id=None,
         chapter_id=chapter_id,
+        parent_id=None,
         block_type=payload.block_type,
-        title=payload.title,
+        title=strip_plain_text(payload.title),
         body=sanitize_html(payload.body),
         url=payload.url,
-        label=payload.label,
+        label=strip_plain_text(payload.label),
         quiz_id=quiz_id,
         sort_order=payload.sort_order,
     )
@@ -564,16 +657,19 @@ def admin_update_block(
             lesson_id=block.lesson_id,
             parent_id=data["parent_id"],
             block_type=block.block_type,
+            block_id=block.id,
         )
     for key, value in data.items():
         if key == "body":
             value = sanitize_html(value)
+        if key in {"title", "label"} and isinstance(value, str):
+            value = strip_plain_text(value)
         setattr(block, key, value)
 
     if block.block_type == "quiz" and block.quiz_id:
         quiz = db.query(Quiz).filter(Quiz.id == block.quiz_id).first()
         if quiz and quiz_title is not None:
-            quiz.title = quiz_title
+            quiz.title = strip_plain_text(quiz_title) or "Quiz"
         if quiz and quiz_questions is not None:
             _replace_questions(db, [QuizQuestionIn.model_validate(q) for q in quiz_questions], quiz_id=quiz.id)
 
@@ -596,16 +692,7 @@ def admin_delete_block(
     block = db.query(ContentBlock).filter(ContentBlock.id == block_id).first()
     if block is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Block not found")
-    quiz_id = block.quiz_id
-    # Remove nested uploads when deleting a text/subtopic section.
-    children = db.query(ContentBlock).filter(ContentBlock.parent_id == block_id).all()
-    for child in children:
-        db.delete(child)
-    db.delete(block)
-    if quiz_id:
-        quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
-        if quiz:
-            db.delete(quiz)
+    _delete_block_tree(db, block)
     db.commit()
 
 
@@ -620,20 +707,26 @@ def admin_reorder_lesson_blocks(
     if lesson is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
 
-    blocks = {
-        block.id: block
-        for block in db.query(ContentBlock)
-        .filter(ContentBlock.lesson_id == lesson_id, ContentBlock.parent_id.is_(None))
+    requested_ids = [item.id for item in payload.items]
+    blocks = (
+        db.query(ContentBlock)
+        .filter(ContentBlock.lesson_id == lesson_id, ContentBlock.id.in_(requested_ids))
         .all()
-    }
+    )
+    if len(blocks) != len(set(requested_ids)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="All reorder items must belong to this topic",
+        )
+    parent_ids = {block.parent_id for block in blocks}
+    if len(parent_ids) != 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reorder items must be siblings",
+        )
+    blocks_by_id = {block.id: block for block in blocks}
     for item in payload.items:
-        block = blocks.get(item.id)
-        if block is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Block {item.id} is not a top-level block in this topic",
-            )
-        block.sort_order = item.sort_order
+        blocks_by_id[item.id].sort_order = item.sort_order
     db.commit()
 
 
@@ -658,7 +751,7 @@ def admin_upsert_final_exam(
         db.flush()
 
     if payload.title is not None:
-        exam.title = payload.title
+        exam.title = strip_plain_text(payload.title) or "Final Exam"
     if payload.pass_percent is not None:
         exam.pass_percent = payload.pass_percent
     if payload.questions is not None:
@@ -692,12 +785,43 @@ def admin_upsert_certificate_template(
         db.flush()
 
     if payload.title is not None:
-        template.title = payload.title
+        template.title = strip_plain_text(payload.title) or "Certificate of Completion"
     if payload.body is not None:
-        template.body = payload.body
+        template.body = sanitize_html(payload.body) or ""
     db.commit()
     db.refresh(template)
     return template
+
+
+@router.get("/courses/{course_id}/certificates", response_model=list[CertificateAdminOut])
+def admin_list_course_certificates(
+    course_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[CertificateAdminOut]:
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if course is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    rows = (
+        db.query(Certificate)
+        .options(joinedload(Certificate.user), joinedload(Certificate.course))
+        .filter(Certificate.course_id == course_id)
+        .order_by(Certificate.issued_at.desc())
+        .all()
+    )
+    return [
+        CertificateAdminOut(
+            id=row.id,
+            certificate_code=row.certificate_code,
+            issued_at=row.issued_at,
+            student_name=row.user.full_name,
+            student_email=row.user.email,
+            course_id=row.course_id,
+            course_title=row.course.title,
+        )
+        for row in rows
+    ]
 
 
 @router.put("/quizzes/{quiz_id}", response_model=QuizOut)
@@ -711,7 +835,7 @@ def admin_update_quiz(
     if quiz is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
     if payload.title is not None:
-        quiz.title = payload.title
+        quiz.title = strip_plain_text(payload.title) or "Quiz"
     if payload.questions is not None:
         _replace_questions(db, payload.questions, quiz_id=quiz.id)
     db.commit()
@@ -726,12 +850,24 @@ def admin_update_quiz(
 
 # --- Uploads ---
 
+MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+UPLOAD_CHUNK_BYTES = 1024 * 1024
+
 
 @router.post("/uploads", response_model=UploadOut)
 async def admin_upload(
-    file: UploadFile = File(...),
+    request: Request,
     _: User = Depends(require_admin),
 ) -> UploadOut:
+    form = await request.form(max_part_size=MAX_UPLOAD_BYTES)
+    uploaded = form.get("file")
+    if not isinstance(uploaded, UploadFile):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing file upload",
+        )
+    file = uploaded
+
     upload_root = Path(settings.upload_dir)
     upload_root.mkdir(parents=True, exist_ok=True)
     suffix = Path(file.filename or "file").suffix.lower()
@@ -742,6 +878,29 @@ async def admin_upload(
         )
     safe_name = f"{uuid.uuid4().hex}{suffix}"
     dest = upload_root / safe_name
-    content = await file.read()
-    dest.write_bytes(content)
-    return UploadOut(url=f"/api/uploads/{safe_name}", filename=file.filename or safe_name)
+    written = 0
+    try:
+        with dest.open("wb") as out:
+            while True:
+                chunk = await file.read(UPLOAD_CHUNK_BYTES)
+                if not chunk:
+                    break
+                written += len(chunk)
+                if written > MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail="File is too large. Maximum upload size is 500 MB.",
+                    )
+                out.write(chunk)
+    except Exception:
+        if dest.exists():
+            dest.unlink(missing_ok=True)
+        raise
+
+    if written == 0:
+        if dest.exists():
+            dest.unlink(missing_ok=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty")
+
+    display_name = (file.filename or safe_name)[:120]
+    return UploadOut(url=f"/api/uploads/{safe_name}", filename=display_name)

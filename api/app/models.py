@@ -180,6 +180,7 @@ class ContentBlock(Base):
         foreign_keys=[parent_id],
         order_by="ContentBlock.sort_order",
         cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
 
