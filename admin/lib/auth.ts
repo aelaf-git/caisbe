@@ -26,6 +26,54 @@ export type Enrollment = {
   course: Course;
 };
 
+export type AdminStudentEnrollment = {
+  course_id: number;
+  course_code: string;
+  course_title: string;
+  progress: number;
+  status: string;
+  enrolled_at: string;
+};
+
+export type AdminStudent = {
+  id: number;
+  full_name: string;
+  email: string;
+  enrollments: AdminStudentEnrollment[];
+};
+
+export type AdminEnrollment = {
+  id: number;
+  student_id: number;
+  student_name: string;
+  student_email: string;
+  course_id: number;
+  course_code: string;
+  course_title: string;
+  status: string;
+  progress: number;
+  enrolled_at: string;
+};
+
+export type AdminEnrollmentCourseStat = {
+  course_id: number;
+  course_code: string;
+  course_title: string;
+  enrollment_count: number;
+  completed_count: number;
+  average_progress: number;
+};
+
+export type AdminEnrollmentStats = {
+  total_enrollments: number;
+  in_progress: number;
+  completed: number;
+  not_started: number;
+  completion_rate: number;
+  new_last_30_days: number;
+  by_course: AdminEnrollmentCourseStat[];
+};
+
 export type TokenResponse = {
   access_token: string;
   token_type: string;
@@ -101,7 +149,15 @@ export async function apiFetch<T>(
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const text = await response.text();
+  if (!text.trim()) {
+    throw new ApiError(response.status, "Empty response from server.");
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError(response.status, "Invalid response from server.");
+  }
 }
 
 export async function apiUpload(

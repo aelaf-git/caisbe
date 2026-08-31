@@ -1,19 +1,17 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import QuizQuestionEditor, {
-  emptyQuestion,
-  validateQuestions,
-} from "@/components/lms/QuizQuestionEditor";
+import { useRef, useState, type FormEvent } from "react";
+import AssignmentFilePreview, { ASSIGNMENT_ACCEPT, isAssignmentFile } from "@/components/lms/AssignmentFilePreview";
+import QuizBlockEditor from "@/components/lms/QuizBlockEditor";
 import TopicContentEditor from "@/components/lms/TopicContentEditor";
 import ChapterUploads from "@/components/lms/ChapterUploads";
 import { CollapseToggle } from "@/components/ui/CollapseToggle";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
 import { useAutosave } from "@/hooks/useAutosave";
-import { apiFetch, ApiError } from "@/lib/auth";
+import { apiFetch, apiUpload, ApiError } from "@/lib/auth";
 import { numberedTitle } from "@/lib/ordinalTitles";
-import type { Chapter, ContentBlock, QuizQuestion } from "@/lib/lms";
+import type { Chapter, ContentBlock } from "@/lib/lms";
 
 type Tab = "content" | "quizzes" | "assignments";
 
@@ -30,15 +28,6 @@ type ChapterCardProps = {
   onChanged: () => Promise<void>;
   onError: (message: string) => void;
 };
-
-function RequiredDot() {
-  return (
-    <span
-      className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-caisbe-red align-middle"
-      aria-hidden
-    />
-  );
-}
 
 export default function ChapterCard({
   chapter,
@@ -133,9 +122,8 @@ export default function ChapterCard({
               Chapter - {sequence}
             </p>
             <div>
-              <label className="mb-1 flex items-center text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
                 Title
-                <RequiredDot />
               </label>
               <input
                 value={title}
@@ -168,11 +156,11 @@ export default function ChapterCard({
           <div className="flex flex-wrap items-center gap-2 border-t border-ifma-border-light px-4 py-3">
             {(
               [
-                ["content", "Content", true],
-                ["quizzes", "Quizzes", false],
-                ["assignments", "Assignments", false],
+                ["content", "Content"],
+                ["quizzes", "Quizzes"],
+                ["assignments", "Assignments"],
               ] as const
-            ).map(([key, label, required]) => (
+            ).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
@@ -184,7 +172,6 @@ export default function ChapterCard({
                 }`}
               >
                 {label}
-                {required ? <RequiredDot /> : null}
               </button>
             ))}
           </div>
@@ -303,40 +290,37 @@ function QuizzesPanel({
   onError: (message: string) => void;
   askConfirm: AskConfirm;
 }) {
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("Quiz");
-  const [questions, setQuestions] = useState<QuizQuestion[]>([emptyQuestion()]);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [newQuizId, setNewQuizId] = useState<number | null>(null);
 
-  async function saveQuiz(event: FormEvent) {
-    event.preventDefault();
-    const invalid = validateQuestions(questions);
-    if (invalid) {
-      setError(invalid);
-      return;
-    }
-    setSaving(true);
-    setError(null);
+  async function addQuiz() {
+    setAdding(true);
     try {
-      await apiFetch(`/admin/chapters/${chapter.id}/blocks`, {
+      const created = await apiFetch<ContentBlock>(`/admin/chapters/${chapter.id}/blocks`, {
         method: "POST",
         body: JSON.stringify({
           block_type: "quiz",
-          title,
-          quiz_title: title,
-          quiz_questions: questions,
+          title: "Quiz",
+          quiz_title: "Quiz",
+          quiz_questions: [
+            {
+              prompt: "Enter your question here",
+              sort_order: 0,
+              choices: [
+                { text: "Correct answer — edit this option", is_correct: true, sort_order: 0 },
+                { text: "Another option — edit this", is_correct: false, sort_order: 1 },
+              ],
+            },
+          ],
           sort_order: (chapter.blocks ?? []).length,
         }),
       });
-      setOpen(false);
-      setTitle("Quiz");
-      setQuestions([emptyQuestion()]);
+      setNewQuizId(created.id);
       await onChanged();
     } catch (err) {
-      onError(err instanceof ApiError ? err.detail : "Unable to save quiz.");
+      onError(err instanceof ApiError ? err.detail : "Unable to add quiz.");
     } finally {
-      setSaving(false);
+      setAdding(false);
     }
   }
 
@@ -350,6 +334,7 @@ function QuizzesPanel({
     if (!ok) return;
     try {
       await apiFetch(`/admin/blocks/${block.id}`, { method: "DELETE" });
+      if (newQuizId === block.id) setNewQuizId(null);
       await onChanged();
     } catch (err) {
       onError(err instanceof ApiError ? err.detail : "Unable to delete quiz.");
@@ -359,85 +344,37 @@ function QuizzesPanel({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-caisbe-muted">Optional chapter quizzes for learners.</p>
+        <p className="text-sm text-caisbe-muted">
+          Optional chapter quizzes for learners. Each quiz saves only when every question is complete
+          and one correct answer is marked.
+        </p>
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="border-2 border-caisbe-green px-4 py-2 text-sm font-semibold text-caisbe-green"
+          disabled={adding}
+          onClick={() => void addQuiz()}
+          className="border-2 border-caisbe-green px-4 py-2 text-sm font-semibold text-caisbe-green disabled:opacity-60"
         >
-          {open ? "Cancel" : "+ Add quiz"}
+          {adding ? "Adding…" : "+ Add quiz"}
         </button>
       </div>
 
-      {quizzes.length === 0 && !open ? (
+      {quizzes.length === 0 ? (
         <p className="text-sm text-caisbe-muted">No quizzes yet.</p>
       ) : (
         <ul className="space-y-2">
           {quizzes.map((block) => (
-            <QuizListItem key={block.id} block={block} onDelete={() => void deleteQuiz(block)} />
+            <QuizBlockEditor
+              key={block.id}
+              block={block}
+              radioNamePrefix={`chapter-${chapter.id}-quiz-${block.id}`}
+              defaultExpanded={block.id === newQuizId}
+              onDelete={() => void deleteQuiz(block)}
+              onError={onError}
+            />
           ))}
         </ul>
       )}
-
-      {open ? (
-        <form onSubmit={saveQuiz} className="space-y-3 border border-ifma-border p-4">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
-            placeholder="Quiz title"
-          />
-          <QuizQuestionEditor
-            questions={questions}
-            onChange={setQuestions}
-            radioNamePrefix={`chapter-${chapter.id}-quiz`}
-            error={error}
-          />
-          <button
-            type="submit"
-            disabled={saving}
-            className="border-2 border-caisbe-green bg-caisbe-green px-4 py-2 text-sm font-semibold uppercase text-white disabled:opacity-60"
-          >
-            {saving ? "Adding…" : "Add quiz"}
-          </button>
-        </form>
-      ) : null}
     </div>
-  );
-}
-
-function QuizListItem({ block, onDelete }: { block: ContentBlock; onDelete: () => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const questionCount = block.quiz?.questions.length ?? 0;
-
-  return (
-    <li className="border border-ifma-border-light">
-      <div className="flex flex-wrap items-center gap-1 px-2 py-2">
-        <CollapseToggle
-          expanded={expanded}
-          onToggle={() => setExpanded((v) => !v)}
-          label={block.title || block.quiz?.title || "quiz"}
-        />
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-caisbe-text">{block.title || block.quiz?.title || "Quiz"}</p>
-          <p className="text-xs text-caisbe-muted">{questionCount} questions</p>
-        </div>
-        <DeleteIconButton
-          label={`Delete quiz ${block.title || block.quiz?.title || ""}`.trim()}
-          onClick={onDelete}
-        />
-      </div>
-      {expanded ? (
-        <ul className="space-y-1 border-t border-ifma-border-light px-4 py-3 text-sm text-caisbe-muted">
-          {(block.quiz?.questions ?? []).map((q, idx) => (
-            <li key={q.id ?? idx}>
-              {idx + 1}. {q.prompt}
-            </li>
-          ))}
-          {questionCount === 0 ? <li>No questions.</li> : null}
-        </ul>
-      ) : null}
-    </li>
   );
 }
 
@@ -454,34 +391,42 @@ function AssignmentsPanel({
   onError: (message: string) => void;
   askConfirm: AskConfirm;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function saveAssignment(event: FormEvent) {
     event.preventDefault();
-    if (!title.trim() || !body.trim()) {
-      onError("Assignment title and prompt are required.");
+    if (!file) {
+      onError("Choose a PDF or Word file to attach.");
+      return;
+    }
+    if (!isAssignmentFile(file)) {
+      onError("Assignments must be a PDF or Word (.doc, .docx) file.");
       return;
     }
     setSaving(true);
     try {
+      const uploaded = await apiUpload("/admin/uploads", file);
       await apiFetch(`/admin/chapters/${chapter.id}/blocks`, {
         method: "POST",
         body: JSON.stringify({
           block_type: "assignment",
-          title: title.trim(),
-          body,
+          title: title.trim() || file.name.replace(/\.[^.]+$/, ""),
+          label: file.name,
+          url: uploaded.url,
           sort_order: (chapter.blocks ?? []).length,
         }),
       });
       setOpen(false);
       setTitle("");
-      setBody("");
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       await onChanged();
     } catch (err) {
-      onError(err instanceof ApiError ? err.detail : "Unable to save assignment.");
+      onError(err instanceof ApiError ? err.detail : "Unable to add assignment.");
     } finally {
       setSaving(false);
     }
@@ -505,7 +450,9 @@ function AssignmentsPanel({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-caisbe-muted">Optional chapter assignments.</p>
+        <p className="text-sm text-caisbe-muted">
+          Attach PDF or Word assignment files for this chapter.
+        </p>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -531,27 +478,33 @@ function AssignmentsPanel({
 
       {open ? (
         <form onSubmit={saveAssignment} className="space-y-3 border border-ifma-border p-4">
-          <input
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Assignment title"
-            className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
-          />
-          <textarea
-            required
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={4}
-            placeholder="Assignment prompt"
-            className="w-full rounded-md border border-ifma-border px-3 py-2 text-sm outline-none focus:border-caisbe-green"
-          />
+          <label className="block text-sm">
+            <span className="mb-1.5 block font-medium text-caisbe-text">Title (optional)</span>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Defaults to the file name"
+              className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1.5 block font-medium text-caisbe-text">File</span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              required
+              accept={ASSIGNMENT_ACCEPT}
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-caisbe-muted file:mr-3 file:rounded-md file:border-0 file:bg-caisbe-green/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-caisbe-green"
+            />
+            <p className="mt-1.5 text-xs text-caisbe-muted">PDF or Word (.doc, .docx) only. Max 500 MB.</p>
+          </label>
           <button
             type="submit"
             disabled={saving}
             className="border-2 border-caisbe-green bg-caisbe-green px-4 py-2 text-sm font-semibold uppercase text-white disabled:opacity-60"
           >
-            {saving ? "Adding…" : "Add assignment"}
+            {saving ? "Uploading…" : "Add assignment"}
           </button>
         </form>
       ) : null}
@@ -576,7 +529,12 @@ function AssignmentListItem({
           onToggle={() => setExpanded((v) => !v)}
           label={block.title || "assignment"}
         />
-        <p className="min-w-0 flex-1 truncate font-semibold text-caisbe-text">{block.title}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold text-caisbe-text">{block.title || "Assignment"}</p>
+          {block.label ? (
+            <p className="truncate text-xs text-caisbe-muted">{block.label}</p>
+          ) : null}
+        </div>
         <DeleteIconButton
           label={`Delete assignment ${block.title || ""}`.trim()}
           onClick={onDelete}
@@ -584,11 +542,7 @@ function AssignmentListItem({
       </div>
       {expanded ? (
         <div className="border-t border-ifma-border-light px-4 py-3">
-          {block.body ? (
-            <p className="whitespace-pre-wrap text-sm text-caisbe-muted">{block.body}</p>
-          ) : (
-            <p className="text-xs text-caisbe-muted">No assignment prompt.</p>
-          )}
+          <AssignmentFilePreview block={block} />
         </div>
       ) : null}
     </li>

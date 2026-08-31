@@ -124,12 +124,36 @@ function BlockView({
   }
 
   if (block.block_type === "assignment") {
+    const fileLabel = block.label || block.title || "Assignment file";
+    const fileUrl = block.url;
+    const isPdf = fileUrl?.toLowerCase().split("?")[0].endsWith(".pdf");
+
     return (
       <div className="border border-ifma-border bg-[#fafafa] p-4">
         <h3 className="text-lg font-semibold">{block.title || "Assignment"}</h3>
-        <p className="mt-2 whitespace-pre-wrap text-sm text-caisbe-text">{block.body}</p>
+        {fileUrl ? (
+          <div className="mt-3 space-y-3">
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex text-sm font-semibold text-caisbe-green hover:underline"
+            >
+              {isPdf ? "Open PDF" : "Download assignment file"} — {fileLabel}
+            </a>
+            {isPdf ? (
+              <iframe
+                title={fileLabel}
+                src={fileUrl}
+                className="h-72 w-full border border-ifma-border bg-white"
+              />
+            ) : null}
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-caisbe-muted">No file attached to this assignment.</p>
+        )}
         <p className="mt-3 text-xs text-caisbe-muted">
-          Complete this assignment as instructed, then continue with the remaining topics.
+          Complete the assignment, then continue with the remaining topics.
         </p>
       </div>
     );

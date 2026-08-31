@@ -7,14 +7,16 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3000"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     environment:
-      API_URL: http://host.docker.internal:8000
+      # Reach the API container on the shared dev network (start api/ stack first).
+      API_URL: http://caisbe-api:8000
       NEXT_PUBLIC_API_URL: http://localhost:8000
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       NEXT_PUBLIC_ADMIN_URL: http://localhost:3001
       NEXT_PUBLIC_PORTAL_URL: http://localhost:3002
+    networks:
+      - default
+      - caisbe_dev
     develop:
       watch:
         - action: sync
@@ -25,3 +27,8 @@ services:
             - .next/
         - action: rebuild
           path: ./package.json
+
+networks:
+  caisbe_dev:
+    external: true
+    name: caisbe_dev

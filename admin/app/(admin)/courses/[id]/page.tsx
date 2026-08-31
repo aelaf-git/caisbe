@@ -4,16 +4,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import CertificatePreview from "@/components/certificates/CertificatePreview";
-import IssuedCertificatesTable from "@/components/certificates/IssuedCertificatesTable";
 import ChapterCard from "@/components/lms/ChapterCard";
-import QuizQuestionEditor, {
-  emptyQuestion,
-  validateQuestions,
-} from "@/components/lms/QuizQuestionEditor";
+import FinalExamEditor, { type ExamDraft } from "@/components/lms/FinalExamEditor";
+import { emptyQuestion } from "@/components/lms/QuizQuestionEditor";
 import { AutosaveProvider, autosaveLabel, useAutosaveRegistry } from "@/hooks/autosaveContext";
 import { useAutosave } from "@/hooks/useAutosave";
 import { apiFetch, ApiError } from "@/lib/auth";
-import type { CourseDetail, QuizQuestion } from "@/lib/lms";
+import type { CourseDetail } from "@/lib/lms";
 import { numberedTitle, slugify } from "@/lib/ordinalTitles";
 
 const SECTION_NAV = [
@@ -32,12 +29,6 @@ type CourseMeta = {
   description: string;
   slug: string;
   pass_percent: number;
-};
-
-type ExamDraft = {
-  title: string;
-  pass_percent: number;
-  questions: QuizQuestion[];
 };
 
 function metaReady(meta: CourseMeta): boolean {
@@ -78,7 +69,6 @@ function AdminCourseEditorInner() {
     pass_percent: 70,
     questions: [emptyQuestion()],
   });
-  const [examHint, setExamHint] = useState<string | null>(null);
 
   const [activeSection, setActiveSection] = useState<EditorSection>("all");
   const [focusChapterId, setFocusChapterId] = useState<number | null>(null);
@@ -161,28 +151,9 @@ function AdminCourseEditorInner() {
     },
   });
 
-  const examAutosave = useAutosave({
-    id: `course-${courseId}-exam`,
-    value: exam,
-    baselineKey,
-    enabled: Boolean(course),
-    save: async (next) => {
-      const questionsValid = validateQuestions(next.questions) === null;
-      setExamHint(questionsValid ? null : "Exam questions save when every question is complete.");
-      await apiFetch(`/admin/courses/${courseId}/final-exam`, {
-        method: "PUT",
-        body: JSON.stringify({
-          title: next.title,
-          pass_percent: next.pass_percent,
-          ...(questionsValid ? { questions: next.questions } : {}),
-        }),
-      });
-    },
-  });
-
   const sectionError = useMemo(
-    () => metaAutosave.error || examAutosave.error,
-    [metaAutosave.error, examAutosave.error],
+    () => metaAutosave.error,
+    [metaAutosave.error],
   );
 
   async function togglePublish() {
@@ -418,11 +389,7 @@ function AdminCourseEditorInner() {
           <div>
             <h2 className="text-lg font-semibold text-caisbe-text">Chapters</h2>
             <p className="mt-1 text-xs text-caisbe-muted">
-              <span
-                className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-caisbe-red align-middle"
-                aria-hidden
-              />
-              Marks required fields and sections. Changes save automatically as a draft.
+              Changes save automatically as a draft.
             </p>
           </div>
           <button
@@ -454,73 +421,16 @@ function AdminCourseEditorInner() {
       {showSection("exam") ? (
       <section id="exam" className="scroll-mt-36 space-y-4 border border-ifma-border bg-white p-6">
         <h2 className="text-lg font-semibold text-caisbe-text">Final exam</h2>
-        <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-caisbe-text">Exam title</span>
-          <input
-            value={exam.title}
-            onChange={(e) => setExam((prev) => ({ ...prev, title: e.target.value }))}
-            onBlur={() => void examAutosave.flush()}
-            className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
-          />
-        </label>
-        <div className="rounded-md border border-ifma-border-light bg-[#fafaf8] p-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-caisbe-text">Pass mark</p>
-              <p className="mt-1 text-xs text-caisbe-muted">
-                Minimum score required to pass the final exam.
-              </p>
-            </div>
-            <div className="flex items-baseline gap-1 text-caisbe-green">
-              <span className="font-display text-3xl font-semibold tabular-nums leading-none">
-                {exam.pass_percent}
-              </span>
-              <span className="text-sm font-semibold">%</span>
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-4">
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={exam.pass_percent}
-              onChange={(e) =>
-                setExam((prev) => ({ ...prev, pass_percent: Number(e.target.value) }))
-              }
-              onMouseUp={() => void examAutosave.flush()}
-              onTouchEnd={() => void examAutosave.flush()}
-              className="h-2 min-w-[180px] flex-1 cursor-pointer appearance-none rounded-full bg-ifma-border accent-caisbe-green"
-              aria-label="Exam pass percent"
-            />
-            <label className="relative block w-24 shrink-0">
-              <span className="sr-only">Exam pass percent</span>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={exam.pass_percent}
-                onChange={(e) => {
-                  const next = Number(e.target.value);
-                  setExam((prev) => ({
-                    ...prev,
-                    pass_percent: Number.isFinite(next) ? Math.min(100, Math.max(0, next)) : 0,
-                  }));
-                }}
-                onBlur={() => void examAutosave.flush()}
-                className="h-11 w-full rounded-md border border-ifma-border bg-white pr-8 pl-3 text-sm tabular-nums outline-none focus:border-caisbe-green"
-              />
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-caisbe-muted">
-                %
-              </span>
-            </label>
-          </div>
-        </div>
-        <QuizQuestionEditor
-          questions={exam.questions}
-          onChange={(questions) => setExam((prev) => ({ ...prev, questions }))}
-          radioNamePrefix="exam"
-          error={examHint}
+        <p className="text-sm text-caisbe-muted">
+          Build the final exam here. Changes autosave when every question has a prompt,
+          filled choices, and exactly one correct answer marked.
+        </p>
+        <FinalExamEditor
+          courseId={courseId}
+          baselineKey={baselineKey}
+          exam={exam}
+          onChange={setExam}
+          onError={setContentError}
         />
       </section>
       ) : null}
@@ -537,7 +447,6 @@ function AdminCourseEditorInner() {
           verification QR code.
         </p>
         <CertificatePreview courseTitle={meta.title || "Sample Course"} />
-        <IssuedCertificatesTable courseId={courseId} />
       </section>
       ) : null}
     </div>

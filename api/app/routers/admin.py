@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_admin
@@ -16,6 +17,7 @@ from app.models import (
     Chapter,
     ContentBlock,
     Course,
+    Enrollment,
     FinalExam,
     Lesson,
     Quiz,
@@ -24,6 +26,11 @@ from app.models import (
     User,
 )
 from app.schemas.courses import (
+    AdminEnrollmentCourseStatOut,
+    AdminEnrollmentOut,
+    AdminEnrollmentStatsOut,
+    AdminStudentEnrollmentOut,
+    AdminStudentOut,
     BlockReorderRequest,
     ChapterCreate,
     ChapterOut,
@@ -43,6 +50,7 @@ from app.schemas.courses import (
     LessonCreate,
     LessonOut,
     LessonUpdate,
+    QuizChoiceIn,
     QuizOut,
     QuizQuestionIn,
     QuizUpdate,
@@ -73,6 +81,20 @@ ALLOWED_UPLOAD_EXTENSIONS = {
     ".doc",
     ".docx",
 }
+
+
+def _validate_assignment_url(url: str | None) -> None:
+    if not url or not url.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Assignment requires an attached PDF or Word file.",
+        )
+    path = url.split("?")[0].lower()
+    if not path.endswith((".pdf", ".doc", ".docx")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Assignments must be a PDF or Word (.doc, .docx) file.",
+        )
 
 
 def _block_has_content(block: ContentBlock, children_by_parent: dict[int, list[ContentBlock]]) -> bool:
@@ -230,7 +252,7 @@ def _publish_content_errors(course: Course) -> list[str]:
 
 def _replace_questions(
     db: Session,
-    questions_in: list[QuizQuestionIn],
+    questions_in: list,
     *,
     quiz_id: int | None = None,
     final_exam_id: int | None = None,
@@ -250,15 +272,25 @@ def _replace_questions(
         )
         db.add(question)
         db.flush()
-        for c_idx, c_in in enumerate(q_in.choices):
+        for c_idx, c_in in enumerate(q_in.choices or []):
             db.add(
                 QuizChoice(
                     question_id=question.id,
                     text=strip_plain_text(c_in.text) or "",
-                    is_correct=c_in.is_correct,
+                    is_correct=bool(c_in.is_correct),
                     sort_order=c_in.sort_order if c_in.sort_order else c_idx,
                 )
             )
+        if not q_in.choices:
+            for c_idx in range(2):
+                db.add(
+                    QuizChoice(
+                        question_id=question.id,
+                        text="",
+                        is_correct=c_idx == 0,
+                        sort_order=c_idx,
+                    )
+                )
 
 
 def _apply_plain_text_fields(data: dict, *keys: str) -> None:
@@ -295,6 +327,188 @@ def _load_course_admin(db: Session, course_id: int) -> Course:
 
 def _course_admin_out(course: Course) -> CourseDetailAdminOut:
     return CourseDetailAdminOut.model_validate(course)
+
+
+# --- Students ---
+
+
+@router.get("/students", response_model=list[AdminStudentOut])
+def admin_list_students(
+    q: str | None = Query(default=None, max_length=120),
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[AdminStudentOut]:
+    students = (
+        db.query(User)
+        .options(joinedload(User.enrollments).joinedload(Enrollment.course))
+        .filter(User.role == "student")
+        .order_by(User.full_name.asc())
+        .all()
+    )
+
+    needle = q.strip().lower() if q else None
+    if needle:
+        matched: list[User] = []
+        for student in students:
+            if needle in student.full_name.lower() or needle in student.email.lower():
+                matched.append(student)
+                continue
+            for enrollment in student.enrollments:
+                course = enrollment.course
+                if needle in course.title.lower() or needle in course.code.lower():
+                    matched.append(student)
+                    break
+        students = matched
+
+    return [
+        AdminStudentOut(
+            id=student.id,
+            full_name=student.full_name,
+            email=student.email,
+            enrollments=[
+                AdminStudentEnrollmentOut(
+                    course_id=enrollment.course_id,
+                    course_code=enrollment.course.code,
+                    course_title=enrollment.course.title,
+                    progress=enrollment.progress,
+                    status=enrollment.status,
+                    enrolled_at=enrollment.enrolled_at,
+                )
+                for enrollment in sorted(
+                    student.enrollments,
+                    key=lambda row: row.enrolled_at,
+                    reverse=True,
+                )
+            ],
+        )
+        for student in students
+    ]
+
+
+# --- Enrollments ---
+
+
+def _enrollment_completed(enrollment: Enrollment) -> bool:
+    return enrollment.status == "completed" or enrollment.progress >= 100
+
+
+def _enrollment_in_progress(enrollment: Enrollment) -> bool:
+    return not _enrollment_completed(enrollment) and 1 <= enrollment.progress <= 99
+
+
+def _enrollment_not_started(enrollment: Enrollment) -> bool:
+    return not _enrollment_completed(enrollment) and enrollment.progress == 0
+
+
+@router.get("/enrollments/stats", response_model=AdminEnrollmentStatsOut)
+def admin_enrollment_stats(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminEnrollmentStatsOut:
+    enrollments = (
+        db.query(Enrollment)
+        .options(joinedload(Enrollment.course))
+        .order_by(Enrollment.enrolled_at.desc())
+        .all()
+    )
+
+    total = len(enrollments)
+    completed = sum(1 for row in enrollments if _enrollment_completed(row))
+    in_progress = sum(1 for row in enrollments if _enrollment_in_progress(row))
+    not_started = sum(1 for row in enrollments if _enrollment_not_started(row))
+    completion_rate = round(100 * completed / total) if total else 0
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    new_last_30_days = sum(
+        1
+        for row in enrollments
+        if row.enrolled_at and row.enrolled_at >= cutoff
+    )
+
+    by_course_map: dict[int, dict] = {}
+    for row in enrollments:
+        course = row.course
+        bucket = by_course_map.get(course.id)
+        if bucket is None:
+            bucket = {
+                "course_id": course.id,
+                "course_code": course.code,
+                "course_title": course.title,
+                "enrollment_count": 0,
+                "completed_count": 0,
+                "progress_sum": 0,
+            }
+            by_course_map[course.id] = bucket
+        bucket["enrollment_count"] += 1
+        bucket["progress_sum"] += row.progress
+        if _enrollment_completed(row):
+            bucket["completed_count"] += 1
+
+    by_course = [
+        AdminEnrollmentCourseStatOut(
+            course_id=bucket["course_id"],
+            course_code=bucket["course_code"],
+            course_title=bucket["course_title"],
+            enrollment_count=bucket["enrollment_count"],
+            completed_count=bucket["completed_count"],
+            average_progress=round(bucket["progress_sum"] / bucket["enrollment_count"])
+            if bucket["enrollment_count"]
+            else 0,
+        )
+        for bucket in by_course_map.values()
+    ]
+    by_course.sort(key=lambda row: (-row.enrollment_count, row.course_code))
+
+    return AdminEnrollmentStatsOut(
+        total_enrollments=total,
+        in_progress=in_progress,
+        completed=completed,
+        not_started=not_started,
+        completion_rate=completion_rate,
+        new_last_30_days=new_last_30_days,
+        by_course=by_course,
+    )
+
+
+@router.get("/enrollments", response_model=list[AdminEnrollmentOut])
+def admin_list_enrollments(
+    q: str | None = Query(default=None, max_length=120),
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[AdminEnrollmentOut]:
+    enrollments = (
+        db.query(Enrollment)
+        .options(joinedload(Enrollment.user), joinedload(Enrollment.course))
+        .order_by(Enrollment.enrolled_at.desc())
+        .all()
+    )
+
+    needle = q.strip().lower() if q else None
+    if needle:
+        filtered: list[Enrollment] = []
+        for row in enrollments:
+            if needle in row.user.full_name.lower() or needle in row.user.email.lower():
+                filtered.append(row)
+                continue
+            if needle in row.course.title.lower() or needle in row.course.code.lower():
+                filtered.append(row)
+        enrollments = filtered
+
+    return [
+        AdminEnrollmentOut(
+            id=row.id,
+            student_id=row.user_id,
+            student_name=row.user.full_name,
+            student_email=row.user.email,
+            course_id=row.course_id,
+            course_code=row.course.code,
+            course_title=row.course.title,
+            status=row.status,
+            progress=row.progress,
+            enrolled_at=row.enrolled_at,
+        )
+        for row in enrollments
+    ]
 
 
 # --- Courses ---
@@ -606,8 +820,30 @@ def admin_create_chapter_block(
         quiz = Quiz(title=strip_plain_text(payload.quiz_title) or "Quiz")
         db.add(quiz)
         db.flush()
-        _replace_questions(db, payload.quiz_questions, quiz_id=quiz.id)
+        quiz_questions = payload.quiz_questions
+        if not quiz_questions:
+            quiz_questions = [
+                QuizQuestionIn(
+                    prompt="Enter your question here",
+                    choices=[
+                        QuizChoiceIn(
+                            text="Correct answer — edit this option",
+                            is_correct=True,
+                            sort_order=0,
+                        ),
+                        QuizChoiceIn(
+                            text="Another option — edit this",
+                            is_correct=False,
+                            sort_order=1,
+                        ),
+                    ],
+                )
+            ]
+        _replace_questions(db, quiz_questions, quiz_id=quiz.id)
         quiz_id = quiz.id
+
+    if payload.block_type == "assignment":
+        _validate_assignment_url(payload.url)
 
     block = ContentBlock(
         lesson_id=None,
@@ -649,6 +885,9 @@ def admin_update_block(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Block not found")
 
     data = payload.model_dump(exclude_unset=True)
+    if block.block_type == "assignment" and "url" in data:
+        _validate_assignment_url(data.get("url"))
+
     quiz_questions = data.pop("quiz_questions", None)
     quiz_title = data.pop("quiz_title", None)
     if "parent_id" in data and block.lesson_id is not None:
@@ -671,7 +910,7 @@ def admin_update_block(
         if quiz and quiz_title is not None:
             quiz.title = strip_plain_text(quiz_title) or "Quiz"
         if quiz and quiz_questions is not None:
-            _replace_questions(db, [QuizQuestionIn.model_validate(q) for q in quiz_questions], quiz_id=quiz.id)
+            _replace_questions(db, quiz_questions, quiz_id=quiz.id)
 
     db.commit()
     block = (

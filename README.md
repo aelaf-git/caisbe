@@ -97,22 +97,28 @@ app.include_router(my_feature.router, prefix="/api")
 
 Each app has its own Dockerfile and compose file. Source changes sync into the container (`docker compose up --watch`). Do not commit `.env` files.
 
-API (Postgres + FastAPI). From the repo, stop anything already bound to 8000/5433 first:
+**Start the API stack first** — frontends join the shared Docker network `caisbe_dev` and talk to the API at `http://caisbe-api:8000` (not `host.docker.internal`, which is unreliable on Linux when the API runs in another container).
 
 ```bash
 cd api
 docker compose up --watch
 ```
 
-Frontends expect the API on `http://127.0.0.1:8000` (via `host.docker.internal`):
+Then in separate terminals:
 
 ```bash
-cd web
+cd admin
+docker compose up --watch
+```
+
+Or run everything from the repo root:
+
+```bash
 docker compose up --watch
 ```
 
 ```bash
-cd admin
+cd web
 docker compose up --watch
 ```
 

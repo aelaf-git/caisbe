@@ -52,11 +52,65 @@ class EnrollmentCreate(BaseModel):
     course_id: int = Field(gt=0)
 
 
+class AdminStudentEnrollmentOut(BaseModel):
+    course_id: int
+    course_code: str
+    course_title: str
+    progress: int
+    status: str
+    enrolled_at: datetime
+
+
+class AdminStudentOut(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    enrollments: list[AdminStudentEnrollmentOut] = Field(default_factory=list)
+
+
+class AdminEnrollmentOut(BaseModel):
+    id: int
+    student_id: int
+    student_name: str
+    student_email: str
+    course_id: int
+    course_code: str
+    course_title: str
+    status: str
+    progress: int
+    enrolled_at: datetime
+
+
+class AdminEnrollmentCourseStatOut(BaseModel):
+    course_id: int
+    course_code: str
+    course_title: str
+    enrollment_count: int
+    completed_count: int
+    average_progress: int
+
+
+class AdminEnrollmentStatsOut(BaseModel):
+    total_enrollments: int
+    in_progress: int
+    completed: int
+    not_started: int
+    completion_rate: int
+    new_last_30_days: int
+    by_course: list[AdminEnrollmentCourseStatOut] = Field(default_factory=list)
+
+
 # --- Quiz structures ---
 
 
 class QuizChoiceIn(BaseModel):
     text: str = Field(min_length=1, max_length=512)
+    is_correct: bool = False
+    sort_order: int = 0
+
+
+class QuizChoiceDraftIn(BaseModel):
+    text: str = ""
     is_correct: bool = False
     sort_order: int = 0
 
@@ -89,6 +143,12 @@ class QuizQuestionIn(BaseModel):
         if correct_count != 1:
             raise ValueError("Each question must mark exactly one correct answer")
         return self
+
+
+class QuizQuestionDraftIn(BaseModel):
+    prompt: str = ""
+    sort_order: int = 0
+    choices: list[QuizChoiceDraftIn] = Field(default_factory=list)
 
 
 class QuizQuestionOut(BaseModel):

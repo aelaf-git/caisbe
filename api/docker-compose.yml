@@ -16,6 +16,8 @@ services:
       interval: 3s
       timeout: 5s
       retries: 10
+    networks:
+      - caisbe_dev
 
   api:
     build: .
@@ -35,6 +37,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - caisbe_dev
     develop:
       watch:
         - action: sync
@@ -46,3 +50,8 @@ services:
 volumes:
   caisbe_pgdata:
   uploads:
+
+networks:
+  caisbe_dev:
+    name: caisbe_dev
+    driver: bridge
