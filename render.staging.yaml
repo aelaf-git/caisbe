@@ -1,23 +1,19 @@
-# CAISBE production Blueprint (main branch only).
-# Staging / `dev` must use render.staging.yaml so it does not attach to `caisbe-db`.
+# Staging Blueprint for CAISBE-DEV (dev branch).
+# Names and public URLs match the live Render services (suffix -090a).
 #
-# Deploy: Dashboard → New → Blueprint → connect this repo → Apply.
-# After first deploy, confirm the four *.onrender.com URLs match the env vars below
-# (Render may append a suffix if a name is taken — update CORS + NEXT_PUBLIC_* if so).
-#
-# Cost note: API needs a persistent disk (Starter+). Postgres is paid (basic-256mb).
-# Frontends can use Free (spin down when idle) or Starter for always-on.
+# After you push this file to `dev`:
+#   Blueprint CAISBE-DEV → Manual sync
+# Then Manual Deploy web, admin, and portal so Next.js picks up the new URLs.
 
 databases:
-  - name: caisbe-db
+  - name: caisbe-staging-db-090a
     plan: basic-256mb
-    databaseName: caisbe
-    user: caisbe
+    databaseName: caisbe_staging
+    user: caisbe_staging
 
 services:
-  # --- FastAPI + Alembic migrations on boot + uploads disk ---
   - type: web
-    name: caisbe-api
+    name: caisbe-staging-api-090a
     runtime: docker
     plan: starter
     region: oregon
@@ -25,9 +21,9 @@ services:
     dockerContext: ./api
     healthCheckPath: /api/health
     disk:
-      name: caisbe-uploads
+      name: caisbe-staging-uploads
       mountPath: /var/data/uploads
-      sizeGB: 10
+      sizeGB: 5
     envVars:
       - key: APP_ENV
         value: production
@@ -35,7 +31,7 @@ services:
         value: /var/data/uploads
       - key: DATABASE_URL
         fromDatabase:
-          name: caisbe-db
+          name: caisbe-staging-db-090a
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
@@ -46,11 +42,11 @@ services:
       - key: ADMIN_PASSWORD
         sync: false
       - key: ADMIN_FULL_NAME
-        value: CAISBE Admin
+        value: CAISBE Staging Admin
       - key: PORTAL_PUBLIC_URL
-        value: https://caisbe-portal.onrender.com
+        value: https://caisbe-staging-portal-090a.onrender.com
       - key: CORS_ALLOWED_ORIGINS
-        value: https://caisbe-web.onrender.com,https://caisbe-admin.onrender.com,https://caisbe-portal.onrender.com
+        value: https://caisbe-staging-web-090a.onrender.com,https://caisbe-staging-admin-090a.onrender.com,https://caisbe-staging-portal-090a.onrender.com
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
@@ -64,9 +60,8 @@ services:
       - key: SMTP_USE_TLS
         value: "true"
 
-  # --- Marketing site ---
   - type: web
-    name: caisbe-web
+    name: caisbe-staging-web-090a
     runtime: docker
     plan: free
     region: oregon
@@ -75,17 +70,16 @@ services:
     healthCheckPath: /
     envVars:
       - key: API_URL
-        value: https://caisbe-api.onrender.com
+        value: https://caisbe-staging-api-090a.onrender.com
       - key: NEXT_PUBLIC_SITE_URL
-        value: https://caisbe-web.onrender.com
+        value: https://caisbe-staging-web-090a.onrender.com
       - key: NEXT_PUBLIC_ADMIN_URL
-        value: https://caisbe-admin.onrender.com
+        value: https://caisbe-staging-admin-090a.onrender.com
       - key: NEXT_PUBLIC_PORTAL_URL
-        value: https://caisbe-portal.onrender.com
+        value: https://caisbe-staging-portal-090a.onrender.com
 
-  # --- Admin LMS ---
   - type: web
-    name: caisbe-admin
+    name: caisbe-staging-admin-090a
     runtime: docker
     plan: free
     region: oregon
@@ -94,19 +88,18 @@ services:
     healthCheckPath: /
     envVars:
       - key: API_URL
-        value: https://caisbe-api.onrender.com
+        value: https://caisbe-staging-api-090a.onrender.com
       - key: NEXT_PUBLIC_API_URL
-        value: https://caisbe-api.onrender.com
+        value: https://caisbe-staging-api-090a.onrender.com
       - key: NEXT_PUBLIC_SITE_URL
-        value: https://caisbe-web.onrender.com
+        value: https://caisbe-staging-web-090a.onrender.com
       - key: NEXT_PUBLIC_ADMIN_URL
-        value: https://caisbe-admin.onrender.com
+        value: https://caisbe-staging-admin-090a.onrender.com
       - key: NEXT_PUBLIC_PORTAL_URL
-        value: https://caisbe-portal.onrender.com
+        value: https://caisbe-staging-portal-090a.onrender.com
 
-  # --- Student portal ---
   - type: web
-    name: caisbe-portal
+    name: caisbe-staging-portal-090a
     runtime: docker
     plan: free
     region: oregon
@@ -115,10 +108,10 @@ services:
     healthCheckPath: /
     envVars:
       - key: API_URL
-        value: https://caisbe-api.onrender.com
+        value: https://caisbe-staging-api-090a.onrender.com
       - key: NEXT_PUBLIC_SITE_URL
-        value: https://caisbe-web.onrender.com
+        value: https://caisbe-staging-web-090a.onrender.com
       - key: NEXT_PUBLIC_ADMIN_URL
-        value: https://caisbe-admin.onrender.com
+        value: https://caisbe-staging-admin-090a.onrender.com
       - key: NEXT_PUBLIC_PORTAL_URL
-        value: https://caisbe-portal.onrender.com
+        value: https://caisbe-staging-portal-090a.onrender.com

@@ -23,6 +23,7 @@ from app.models import (
     MediaAsset,
     NewsletterCampaign,
     NewsletterSubscriber,
+    SiteVisit,
     Quiz,
     QuizChoice,
     QuizQuestion,
@@ -59,6 +60,7 @@ from app.schemas.courses import (
     QuizUpdate,
     UploadOut,
 )
+from app.schemas.analytics import AdminDashboardOut, SiteVisitOut, SiteVisitStatsOut
 from app.schemas.media import (
     MediaAssetCreateIn,
     MediaAssetOut,
@@ -68,6 +70,7 @@ from app.schemas.media import (
     NewsletterSendOut,
     NewsletterSubscriberOut,
 )
+from app.services.analytics import site_visit_stats
 from app.services.email import EmailDeliveryError, load_upload_attachment, send_email
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -354,6 +357,71 @@ def _load_course_admin(db: Session, course_id: int) -> Course:
 
 def _course_admin_out(course: Course) -> CourseDetailAdminOut:
     return CourseDetailAdminOut.model_validate(course)
+
+
+# --- Dashboard & site activity ---
+
+
+@router.get("/dashboard", response_model=AdminDashboardOut)
+def admin_dashboard(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminDashboardOut:
+    courses = db.query(Course).all()
+    enrollments = db.query(Enrollment).all()
+    visit_stats = site_visit_stats(db)
+    completed = sum(1 for row in enrollments if row.status == "completed" or row.progress >= 100)
+    in_progress = sum(
+        1 for row in enrollments if not (row.status == "completed" or row.progress >= 100) and 1 <= row.progress <= 99
+    )
+    total = len(enrollments)
+    return AdminDashboardOut(
+        students=db.query(User).filter(User.role == "student").count(),
+        courses_total=len(courses),
+        courses_published=sum(1 for row in courses if row.status == "published"),
+        courses_draft=sum(1 for row in courses if (row.status or "draft") == "draft"),
+        total_enrollments=total,
+        enrollments_in_progress=in_progress,
+        enrollments_completed=completed,
+        completion_rate=round(100 * completed / total) if total else 0,
+        certificates=db.query(Certificate).count(),
+        newsletter_subscribers=db.query(NewsletterSubscriber)
+        .filter(NewsletterSubscriber.unsubscribed_at.is_(None))
+        .count(),
+        newsletters_sent=db.query(NewsletterCampaign).count(),
+        magazines_published=db.query(MediaAsset)
+        .filter(MediaAsset.category == "magazine", MediaAsset.published.is_(True))
+        .count(),
+        site_views_today=visit_stats.views_today,
+        site_unique_today=visit_stats.unique_today,
+        landing_views=visit_stats.landing_views,
+        landing_unique_visitors=visit_stats.landing_unique_visitors,
+    )
+
+
+@router.get("/site-visits/stats", response_model=SiteVisitStatsOut)
+def admin_site_visit_stats(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> SiteVisitStatsOut:
+    return site_visit_stats(db)
+
+
+@router.get("/site-visits", response_model=list[SiteVisitOut])
+def admin_list_site_visits(
+    path: str | None = Query(default=None, max_length=512),
+    landing_only: bool = Query(default=False),
+    limit: int = Query(default=200, ge=1, le=500),
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[SiteVisitOut]:
+    query = db.query(SiteVisit)
+    if landing_only:
+        query = query.filter(SiteVisit.path == "/")
+    elif path:
+        query = query.filter(SiteVisit.path == path)
+    rows = query.order_by(SiteVisit.visited_at.desc()).limit(limit).all()
+    return [SiteVisitOut.model_validate(row) for row in rows]
 
 
 # --- Students ---

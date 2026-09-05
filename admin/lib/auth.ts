@@ -103,6 +103,51 @@ export type NewsletterCampaign = {
   sent_at: string;
 };
 
+export type AdminDashboard = {
+  students: number;
+  courses_total: number;
+  courses_published: number;
+  courses_draft: number;
+  total_enrollments: number;
+  enrollments_in_progress: number;
+  enrollments_completed: number;
+  completion_rate: number;
+  certificates: number;
+  newsletter_subscribers: number;
+  newsletters_sent: number;
+  magazines_published: number;
+  site_views_today: number;
+  site_unique_today: number;
+  landing_views: number;
+  landing_unique_visitors: number;
+};
+
+export type SiteVisit = {
+  id: number;
+  path: string;
+  ip_address: string;
+  country: string | null;
+  city: string | null;
+  referrer: string | null;
+  user_agent: string | null;
+  language: string | null;
+  timezone: string | null;
+  visited_at: string;
+};
+
+export type SiteVisitStats = {
+  total_views: number;
+  unique_visitors: number;
+  landing_views: number;
+  landing_unique_visitors: number;
+  views_today: number;
+  unique_today: number;
+  views_last_7_days: number;
+  unique_last_7_days: number;
+  top_paths: { path: string; views: number }[];
+  top_countries: { country: string; views: number }[];
+};
+
 export type TokenResponse = {
   access_token: string;
   token_type: string;

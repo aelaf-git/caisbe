@@ -1,16 +1,8 @@
 import type { NextConfig } from "next";
 
-const apiUrl = process.env.API_URL ?? "http://127.0.0.1:8000";
-
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${apiUrl}/api/:path*`,
-      },
-    ];
-  },
+  // API calls go through app/api/[...path] so API_URL is read at runtime
+  // (Render staging URLs differ from the Blueprint placeholders).
 };
 
 export default nextConfig;
