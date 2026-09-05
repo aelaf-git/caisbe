@@ -10,7 +10,6 @@ type NewsletterSignupProps = {
 
 export default function NewsletterSignup({ className = "", compact = false }: NewsletterSignupProps) {
   const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
@@ -21,12 +20,10 @@ export default function NewsletterSignup({ className = "", compact = false }: Ne
     try {
       const result = await subscribeNewsletter({
         email: email.trim(),
-        full_name: fullName.trim() || undefined,
       });
       setStatus("success");
       setMessage(result.message);
       setEmail("");
-      setFullName("");
     } catch (err) {
       setStatus("error");
       setMessage(err instanceof Error ? err.message : "Unable to subscribe.");
@@ -39,18 +36,6 @@ export default function NewsletterSignup({ className = "", compact = false }: Ne
         onSubmit={(e) => void handleSubmit(e)}
         className={compact ? "flex flex-col gap-3 sm:flex-row sm:items-end" : "space-y-4"}
       >
-        {!compact ? (
-          <label className="block space-y-2">
-            <span className="text-sm font-semibold text-ifma-navy">Name (optional)</span>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="h-11 w-full rounded-md border border-ifma-border-light bg-white px-3 text-sm outline-none focus:border-caisbe-red"
-              placeholder="Your name"
-            />
-          </label>
-        ) : null}
         <label className={compact ? "min-w-0 flex-1 space-y-2" : "block space-y-2"}>
           {!compact ? (
             <span className="text-sm font-semibold text-ifma-navy">Email</span>

@@ -59,7 +59,6 @@ export async function fetchPublishedMagazines(options?: {
 
 export async function subscribeNewsletter(payload: {
   email: string;
-  full_name?: string;
 }): Promise<{ message: string }> {
   return apiFetch<{ message: string }>("/newsletter/subscribe", {
     method: "POST",

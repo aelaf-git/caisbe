@@ -49,15 +49,12 @@ def subscribe_newsletter(
                 return {"message": "You are already subscribed."}
             existing.unsubscribed_at = None
             existing.subscribed_at = datetime.now(timezone.utc)
-            if payload.full_name:
-                existing.full_name = payload.full_name.strip()
             existing.source = "website"
             db.commit()
             return {"message": "Welcome back! You are subscribed again."}
 
         subscriber = NewsletterSubscriber(
             email=email,
-            full_name=payload.full_name.strip() if payload.full_name else None,
             source="website",
         )
         db.add(subscriber)

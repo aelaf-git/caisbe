@@ -90,7 +90,6 @@ export type MediaAsset = {
 export type NewsletterSubscriber = {
   id: number;
   email: string;
-  full_name: string | null;
   source: string;
   subscribed_at: string;
   unsubscribed_at: string | null;

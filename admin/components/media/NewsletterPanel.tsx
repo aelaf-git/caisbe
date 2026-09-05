@@ -277,7 +277,6 @@ export default function NewsletterPanel({
                   </label>
                 </th>
                 <th className="px-6 py-3 font-semibold text-caisbe-text">Email</th>
-                <th className="px-6 py-3 font-semibold text-caisbe-text">Name</th>
                 <th className="px-6 py-3 font-semibold text-caisbe-text">Subscribed</th>
               </tr>
             </thead>
@@ -294,7 +293,6 @@ export default function NewsletterPanel({
                     />
                   </td>
                   <td className="px-6 py-4 text-caisbe-text">{row.email}</td>
-                  <td className="px-6 py-4 text-caisbe-muted">{row.full_name ?? "—"}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-caisbe-muted">
                     {new Date(row.subscribed_at).toLocaleDateString(undefined, {
                       year: "numeric",
