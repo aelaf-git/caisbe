@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.limiter import limiter
 from app.models import MediaAsset, NewsletterSubscriber
+from app.schemas.analytics import SiteVisitIn
 from app.schemas.media import MediaAssetOut, NewsletterSubscribeIn
+from app.services.analytics import record_site_visit
 
 router = APIRouter(tags=["public"])
 
@@ -59,3 +61,13 @@ def subscribe_newsletter(
     db.add(subscriber)
     db.commit()
     return {"message": "Thank you for subscribing to the CAISBE newsletter."}
+
+
+@router.post("/analytics/visit", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("60/minute")
+def record_public_visit(
+    request: Request,
+    payload: SiteVisitIn,
+    db: Session = Depends(get_db),
+) -> None:
+    record_site_visit(db, request, payload)

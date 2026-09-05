@@ -333,3 +333,18 @@ class NewsletterCampaign(Base):
     sent_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     sent_by: Mapped[User | None] = relationship()
+
+
+class SiteVisit(Base):
+    __tablename__ = "site_visits"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    path: Mapped[str] = mapped_column(String(512), index=True)
+    ip_address: Mapped[str] = mapped_column(String(64), index=True)
+    country: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    referrer: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    language: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    visited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)

@@ -19,6 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/students", label: "Students" },
   { href: "/enrollments", label: "Enrollments" },
   { href: "/media", label: "Media library" },
+  { href: "/site-activity", label: "Site activity" },
   { href: "/reports", label: "Reports", soon: true },
   { href: "/settings", label: "Settings", soon: true },
 ];
