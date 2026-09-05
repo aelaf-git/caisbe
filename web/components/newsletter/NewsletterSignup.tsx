@@ -3,6 +3,8 @@
 import { FormEvent, useState } from "react";
 import { subscribeNewsletter } from "@/lib/api";
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 type NewsletterSignupProps = {
   className?: string;
   compact?: boolean;
@@ -15,11 +17,17 @@ export default function NewsletterSignup({ className = "", compact = false }: Ne
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const trimmed = email.trim().toLowerCase();
+    if (!EMAIL_PATTERN.test(trimmed)) {
+      setStatus("error");
+      setMessage("Enter a valid email address.");
+      return;
+    }
     setStatus("loading");
     setMessage(null);
     try {
       const result = await subscribeNewsletter({
-        email: email.trim(),
+        email: trimmed,
       });
       setStatus("success");
       setMessage(result.message);
@@ -42,11 +50,19 @@ export default function NewsletterSignup({ className = "", compact = false }: Ne
           ) : null}
           <input
             type="email"
+            name="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             required
+            pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+            title="Enter a valid email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="h-11 w-full rounded-md border border-ifma-border-light bg-white px-3 text-sm outline-none focus:border-caisbe-red"
-            placeholder="Email address"
+            placeholder="name@example.com"
           />
         </label>
         <button
