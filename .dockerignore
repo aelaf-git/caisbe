@@ -1,0 +1,16 @@
+node_modules
+.next
+.venv
+venv
+.env
+.env.*
+!.env.example
+!.env.local.example
+.git
+.cursor
+**/.DS_Store
+*.log
+*.tsbuildinfo
+uploads
+api/uploads
+*.db

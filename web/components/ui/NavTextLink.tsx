@@ -12,7 +12,7 @@ export default function NavTextLink({
   return (
     <Link
       href={href}
-      className={`transition-colors hover:text-caisbe-green ${className}`}
+      className={`transition-colors hover:text-caisbe-red ${className}`}
     >
       {children}
     </Link>

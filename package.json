@@ -1,0 +1,16 @@
+{
+  "name": "caisbe",
+  "private": true,
+  "workspaces": [
+    "web",
+    "admin",
+    "portal"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w web",
+    "dev:admin": "npm run dev -w admin",
+    "dev:portal": "npm run dev -w portal",
+    "dev:api": "cd api && .venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+    "dev:db": "docker compose -f api/docker-compose.yml up -d postgres"
+  }
+}

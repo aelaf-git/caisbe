@@ -8,10 +8,10 @@ export default function OfficesSection() {
     <section className="border-b border-ifma-border-light bg-white py-16">
       <div className="mx-auto max-w-7xl px-4">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="brand-eyebrow text-sm font-semibold uppercase tracking-[0.25em]">
+          <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
             Global Presence
           </p>
-          <h2 className="brand-section-title mt-3 text-3xl font-semibold leading-tight md:text-4xl">
+          <h2 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold leading-tight md:text-4xl">
             {globalMission.title}
           </h2>
           <p className="mt-4 text-base leading-7 text-caisbe-muted">
@@ -23,9 +23,9 @@ export default function OfficesSection() {
           {offices.map((office) => (
             <div
               key={office.region}
-              className="brand-card-shadow rounded-lg border border-ifma-border-light bg-white p-6"
+              className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white p-6"
             >
-              <h3 className="text-lg font-semibold text-caisbe-green">
+              <h3 className="text-lg font-semibold text-caisbe-text-dark">
                 {office.region}
               </h3>
               <p className="mt-3 text-sm leading-6 text-caisbe-muted">
@@ -33,7 +33,7 @@ export default function OfficesSection() {
               </p>
               <Link
                 href={linkPath(office.region, "Offices")}
-                className="mt-4 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red transition-colors hover:text-caisbe-green"
+                className="mt-4 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red transition-colors hover:text-caisbe-red-dark"
               >
                 Direction
               </Link>

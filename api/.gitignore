@@ -28,8 +28,10 @@ htmlcov/
 .tox/
 
 # Local databases / uploads
+*.db
 *.sqlite3
 *.sqlite3-journal
+uploads/
 media/
 uploads/
 

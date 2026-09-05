@@ -39,12 +39,6 @@ type RawNavSection = {
   groups: readonly RawNavGroup[];
 };
 
-export const quickLinks: SimpleLink[] = [
-  { label: "Login", href: "/login" },
-  { label: "Register", href: "/register" },
-  { label: "My Account", href: "/my-account" },
-];
-
 export const utilityLinks: SimpleLink[] = [
   { label: "About", href: "/about" },
   { label: "Store / Bookstore", href: "/store" },

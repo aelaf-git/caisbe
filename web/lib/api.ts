@@ -1,3 +1,16 @@
+export type MediaAsset = {
+  id: number;
+  title: string;
+  description: string | null;
+  file_url: string;
+  cover_url: string | null;
+  category: string;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
 const API_BASE = "/api";
 
 export async function apiFetch<T>(
@@ -13,8 +26,37 @@ export async function apiFetch<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    let detail = `Request failed (${response.status})`;
+    try {
+      const data = (await response.json()) as { detail?: string };
+      if (typeof data.detail === "string") detail = data.detail;
+    } catch {
+      // keep default
+    }
+    throw new Error(detail);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;
+}
+
+export async function fetchPublishedMagazines(options?: {
+  featured?: boolean;
+}): Promise<MediaAsset[]> {
+  const params = new URLSearchParams({ category: "magazine" });
+  if (options?.featured) params.set("featured", "true");
+  return apiFetch<MediaAsset[]>(`/media?${params.toString()}`);
+}
+
+export async function subscribeNewsletter(payload: {
+  email: string;
+  full_name?: string;
+}): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>("/newsletter/subscribe", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

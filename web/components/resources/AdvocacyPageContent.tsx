@@ -25,9 +25,9 @@ export default function AdvocacyPageContent() {
             {advocacyContent.services.map((service) => (
               <article
                 key={service.title}
-                className="brand-card-shadow rounded-lg border border-ifma-border-light bg-white p-6"
+                className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white p-6"
               >
-                <h2 className="text-lg font-semibold text-caisbe-green">
+                <h2 className="text-lg font-semibold text-caisbe-text-dark">
                   {service.title}
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-caisbe-muted">

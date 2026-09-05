@@ -34,7 +34,7 @@ export default function AllJobsPage() {
         {careersContent.jobBoard.roles.map((role) => (
           <li
             key={role}
-            className="brand-card-shadow rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-green"
+            className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-red"
           >
             {role}
           </li>
