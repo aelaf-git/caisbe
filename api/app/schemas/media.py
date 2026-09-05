@@ -55,10 +55,16 @@ class NewsletterSubscriberOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class NewsletterAttachmentIn(BaseModel):
+    filename: str = Field(min_length=1, max_length=255)
+    file_url: str = Field(min_length=1, max_length=1024)
+
+
 class NewsletterSendIn(BaseModel):
     subject: str = Field(min_length=1, max_length=255)
     body_html: str = Field(min_length=1, max_length=100_000)
-    test_email: EmailStr | None = None
+    subscriber_ids: list[int] = Field(min_length=1)
+    attachments: list[NewsletterAttachmentIn] = Field(default_factory=list)
 
 
 class NewsletterSendOut(BaseModel):

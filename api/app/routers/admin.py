@@ -68,7 +68,7 @@ from app.schemas.media import (
     NewsletterSendOut,
     NewsletterSubscriberOut,
 )
-from app.services.email import EmailDeliveryError, send_email
+from app.services.email import EmailDeliveryError, load_upload_attachment, send_email
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -1301,30 +1301,43 @@ def admin_send_newsletter(
             detail="Newsletter body cannot be empty.",
         )
 
-    if payload.test_email:
-        recipients = [payload.test_email.lower().strip()]
-    else:
-        subscribers = (
-            db.query(NewsletterSubscriber)
-            .filter(NewsletterSubscriber.unsubscribed_at.is_(None))
-            .order_by(NewsletterSubscriber.id.asc())
-            .all()
+    unique_ids = list(dict.fromkeys(payload.subscriber_ids))
+    subscribers = (
+        db.query(NewsletterSubscriber)
+        .filter(
+            NewsletterSubscriber.id.in_(unique_ids),
+            NewsletterSubscriber.unsubscribed_at.is_(None),
         )
-        if not subscribers:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No active newsletter subscribers to send to.",
-            )
-        recipients = [row.email for row in subscribers]
+        .order_by(NewsletterSubscriber.id.asc())
+        .all()
+    )
+    if not subscribers:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Select at least one active subscriber to send to.",
+        )
+
+    attachments = []
+    try:
+        for item in payload.attachments:
+            _validate_upload_url(item.file_url, field="Attachment")
+            attachments.append(load_upload_attachment(item.file_url, item.filename))
+    except EmailDeliveryError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     failed: list[str] = []
     sent_count = 0
-    for email in recipients:
+    for row in subscribers:
         try:
-            send_email(to=email, subject=subject, html_body=body_html)
+            send_email(
+                to=row.email,
+                subject=subject,
+                html_body=body_html,
+                attachments=attachments,
+            )
             sent_count += 1
         except EmailDeliveryError:
-            failed.append(email)
+            failed.append(row.email)
 
     if sent_count == 0:
         raise HTTPException(
