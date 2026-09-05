@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import CourseCard from "@/components/portal/CourseCard";
 import { apiFetch, ApiError, type Course, type Enrollment } from "@/lib/auth";
 import type { Certificate } from "@/lib/lms";
 
@@ -106,27 +107,16 @@ export default function StudentDashboardPage() {
             </Link>
           </div>
         ) : (
-          <ul className="divide-y divide-ifma-border-light">
+          <div className="grid gap-5 p-6 sm:grid-cols-2 xl:grid-cols-3">
             {recent.map((enrollment) => (
-              <li key={enrollment.id} className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">
-                    {enrollment.course.code}
-                  </p>
-                  <p className="mt-1 font-semibold text-caisbe-text">{enrollment.course.title}</p>
-                  <p className="mt-1 text-sm text-caisbe-muted">
-                    {enrollment.status} · {enrollment.progress}% complete
-                  </p>
-                </div>
-                <Link
-                  href={`/courses/${enrollment.course.id}`}
-                  className="text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:text-caisbe-red-dark"
-                >
-                  Continue
-                </Link>
-              </li>
+              <CourseCard
+                key={enrollment.id}
+                course={enrollment.course}
+                progress={enrollment.progress}
+                action={{ href: `/courses/${enrollment.course.id}`, label: "Continue" }}
+              />
             ))}
-          </ul>
+          </div>
         )}
       </section>
     </div>

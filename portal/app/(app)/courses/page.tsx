@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import CourseCard from "@/components/portal/CourseCard";
 import { apiFetch, ApiError, type Course, type Enrollment } from "@/lib/auth";
 
 export default function StudentCoursesPage() {
@@ -81,27 +81,16 @@ export default function StudentCoursesPage() {
             You are not enrolled in any courses yet. Browse available courses below.
           </p>
         ) : (
-          <ul className="divide-y divide-ifma-border-light">
+          <div className="grid gap-5 p-6 sm:grid-cols-2 xl:grid-cols-3">
             {enrollments.map((enrollment) => (
-              <li key={enrollment.id} className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">
-                    {enrollment.course.code}
-                  </p>
-                  <p className="mt-1 font-semibold text-caisbe-text">{enrollment.course.title}</p>
-                  <p className="mt-1 text-sm text-caisbe-muted">
-                    {enrollment.status} · {enrollment.progress}% complete
-                  </p>
-                </div>
-                <Link
-                  href={`/courses/${enrollment.course.id}`}
-                  className="text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:text-caisbe-red-dark"
-                >
-                  Continue
-                </Link>
-              </li>
+              <CourseCard
+                key={enrollment.id}
+                course={enrollment.course}
+                progress={enrollment.progress}
+                action={{ href: `/courses/${enrollment.course.id}`, label: "Continue" }}
+              />
             ))}
-          </ul>
+          </div>
         )}
       </section>
 
@@ -118,25 +107,19 @@ export default function StudentCoursesPage() {
               : "You are enrolled in every available course. Great work!"}
           </p>
         ) : (
-          <ul className="divide-y divide-ifma-border-light">
+          <div className="grid gap-5 p-6 sm:grid-cols-2 xl:grid-cols-3">
             {availableCourses.map((course) => (
-              <li key={course.id} className="flex flex-wrap items-start justify-between gap-4 px-6 py-4">
-                <div className="max-w-2xl">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">{course.code}</p>
-                  <p className="mt-1 font-semibold text-caisbe-text">{course.title}</p>
-                  <p className="mt-1 text-sm text-caisbe-muted">{course.description}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void handleEnroll(course.id)}
-                  disabled={enrollingId === course.id}
-                  className="inline-flex min-w-[140px] items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red-dark disabled:opacity-60"
-                >
-                  {enrollingId === course.id ? "Enrolling…" : "Enroll"}
-                </button>
-              </li>
+              <CourseCard
+                key={course.id}
+                course={course}
+                action={{
+                  onClick: () => void handleEnroll(course.id),
+                  label: enrollingId === course.id ? "Enrolling…" : "Enroll",
+                  busy: enrollingId === course.id,
+                }}
+              />
             ))}
-          </ul>
+          </div>
         )}
       </section>
     </div>
