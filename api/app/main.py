@@ -4,19 +4,23 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app import models  # noqa: F401 — register SQLAlchemy models
-from app.config import settings
-from app.db import Base, SessionLocal, engine
-from app.migrate import ensure_sqlite_columns
-from app.routers import admin, auth, courses, health
+from app.config import settings, validate_production_settings
+from app.db_migrations import upgrade_to_head
+from app.db import SessionLocal
+from app.limiter import limiter
+from app.routers import admin, auth, courses, health, public
+from app.security.middleware import SecurityHeadersMiddleware
 from app.seed import seed_admin
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    ensure_sqlite_columns(engine)
+    validate_production_settings()
+    upgrade_to_head()
     upload_root = Path(settings.upload_dir)
     upload_root.mkdir(parents=True, exist_ok=True)
     db = SessionLocal()
@@ -34,6 +38,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -45,6 +53,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(courses.router, prefix="/api")
+app.include_router(public.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 
 upload_path = Path(settings.upload_dir)

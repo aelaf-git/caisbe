@@ -1,0 +1,96 @@
+# Full dev stack — run from repo root:
+#   docker compose up --watch
+#
+# Per-app compose files under api/, admin/, portal/, web/ still work when the API
+# stack is up first (shared network `caisbe_dev`).
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: caisbe-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: caisbe
+      POSTGRES_USER: caisbe
+      POSTGRES_PASSWORD: caisbe
+    ports:
+      - "5433:5432"
+    volumes:
+      - caisbe_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U caisbe -d caisbe"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    networks:
+      - caisbe_dev
+
+  api:
+    build:
+      context: ./api
+    container_name: caisbe-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./api/.env.example
+    environment:
+      API_HOST: 0.0.0.0
+      DATABASE_URL: postgresql+psycopg://caisbe:caisbe@postgres:5432/caisbe
+      UPLOAD_DIR: ./uploads
+      PORTAL_PUBLIC_URL: http://localhost:3002
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./api/app
+          target: /app/app
+        - action: sync
+          path: ./api/alembic
+          target: /app/alembic
+        - action: rebuild
+          path: ./api/requirements.txt
+    networks:
+      - caisbe_dev
+
+  admin:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+    container_name: caisbe-admin
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      API_URL: http://api:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_ADMIN_URL: http://localhost:3001
+      NEXT_PUBLIC_PORTAL_URL: http://localhost:3002
+    depends_on:
+      - api
+    develop:
+      watch:
+        - action: sync
+          path: ./admin
+          target: /app/admin
+          ignore:
+            - node_modules/
+            - .next/
+        - action: rebuild
+          path: ./admin/package.json
+    networks:
+      - caisbe_dev
+
+networks:
+  caisbe_dev:
+    name: caisbe_dev
+    driver: bridge
+
+volumes:
+  caisbe_pgdata:
+  uploads:

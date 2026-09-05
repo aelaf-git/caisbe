@@ -9,10 +9,10 @@ export default function CareersPageContent() {
     <>
       <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
         <div className="mx-auto max-w-4xl px-4">
-          <p className="brand-eyebrow text-sm font-semibold uppercase tracking-[0.25em]">
+          <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
             {eyebrow}
           </p>
-          <h1 className="brand-section-title mt-3 text-3xl font-semibold md:text-4xl">
+          <h1 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold md:text-4xl">
             {title}
           </h1>
           <p className="mt-6 text-base leading-7 text-caisbe-muted">{intro}</p>
@@ -24,14 +24,14 @@ export default function CareersPageContent() {
         className="scroll-mt-28 border-b border-ifma-border-light bg-white py-16 md:py-20"
       >
         <div className="mx-auto max-w-4xl px-4">
-          <h2 className="brand-section-title text-3xl font-semibold">
+          <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold">
             {jobBoard.title}
           </h2>
           <ul className="mt-8 grid gap-3 sm:grid-cols-2">
             {jobBoard.roles.map((role) => (
               <li
                 key={role}
-                className="brand-card-shadow rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-green"
+                className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-red"
               >
                 {role}
               </li>
@@ -50,14 +50,14 @@ export default function CareersPageContent() {
         className="scroll-mt-28 border-b border-ifma-border-light bg-white py-16 md:py-20"
       >
         <div className="mx-auto max-w-4xl px-4">
-          <h2 className="brand-section-title text-3xl font-semibold">
+          <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold">
             {careerResources.title}
           </h2>
           <ul className="mt-8 space-y-3">
             {careerResources.items.map((item) => (
               <li
                 key={item}
-                className="brand-card-shadow rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-green"
+                className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-red"
               >
                 {item}
               </li>
@@ -71,7 +71,7 @@ export default function CareersPageContent() {
         className="scroll-mt-28 border-b border-ifma-border-light bg-white py-16 md:py-20"
       >
         <div className="mx-auto max-w-4xl px-4">
-          <h2 className="brand-section-title text-3xl font-semibold">
+          <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold">
             {employers.title}
           </h2>
           <p className="mt-6 text-base leading-7 text-caisbe-muted">

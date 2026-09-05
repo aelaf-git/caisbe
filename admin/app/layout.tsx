@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${roboto.variable} ${openSans.variable} h-full`} suppressHydrationWarning>
-      <body className="flex min-h-full flex-col bg-[#f7f7f5] antialiased" suppressHydrationWarning>
+      <body className="flex min-h-full flex-col bg-[#f7f7f5] font-sans text-foreground antialiased" suppressHydrationWarning>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

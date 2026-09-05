@@ -26,6 +26,83 @@ export type Enrollment = {
   course: Course;
 };
 
+export type AdminStudentEnrollment = {
+  course_id: number;
+  course_code: string;
+  course_title: string;
+  progress: number;
+  status: string;
+  enrolled_at: string;
+};
+
+export type AdminStudent = {
+  id: number;
+  full_name: string;
+  email: string;
+  enrollments: AdminStudentEnrollment[];
+};
+
+export type AdminEnrollment = {
+  id: number;
+  student_id: number;
+  student_name: string;
+  student_email: string;
+  course_id: number;
+  course_code: string;
+  course_title: string;
+  status: string;
+  progress: number;
+  enrolled_at: string;
+};
+
+export type AdminEnrollmentCourseStat = {
+  course_id: number;
+  course_code: string;
+  course_title: string;
+  enrollment_count: number;
+  completed_count: number;
+  average_progress: number;
+};
+
+export type AdminEnrollmentStats = {
+  total_enrollments: number;
+  in_progress: number;
+  completed: number;
+  not_started: number;
+  completion_rate: number;
+  new_last_30_days: number;
+  by_course: AdminEnrollmentCourseStat[];
+};
+
+export type MediaAsset = {
+  id: number;
+  title: string;
+  description: string | null;
+  file_url: string;
+  cover_url: string | null;
+  category: string;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
+export type NewsletterSubscriber = {
+  id: number;
+  email: string;
+  full_name: string | null;
+  source: string;
+  subscribed_at: string;
+  unsubscribed_at: string | null;
+};
+
+export type NewsletterCampaign = {
+  id: number;
+  subject: string;
+  recipient_count: number;
+  sent_at: string;
+};
+
 export type TokenResponse = {
   access_token: string;
   token_type: string;
@@ -101,13 +178,26 @@ export async function apiFetch<T>(
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const text = await response.text();
+  if (!text.trim()) {
+    throw new ApiError(response.status, "Empty response from server.");
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError(response.status, "Invalid response from server.");
+  }
 }
 
 export async function apiUpload(
   path: string,
   file: File,
 ): Promise<{ url: string; filename: string }> {
+  const maxBytes = 500 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new ApiError(413, "File is too large. Maximum upload size is 500 MB.");
+  }
+
   const headers = new Headers();
   const token = getToken();
   if (token) {
@@ -117,7 +207,11 @@ export async function apiUpload(
   const body = new FormData();
   body.append("file", file);
 
-  const response = await fetch(`/api${path}`, {
+  // Prefer direct API upload so large files are not buffered/truncated by Next.js.
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+  const url = apiBase ? `${apiBase}/api${path}` : `/api${path}`;
+
+  const response = await fetch(url, {
     method: "POST",
     headers,
     body,

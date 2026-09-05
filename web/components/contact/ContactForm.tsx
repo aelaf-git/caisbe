@@ -23,7 +23,7 @@ export default function ContactForm({ cta }: ContactFormProps) {
           name="name"
           type="text"
           placeholder="Enter your name"
-          className="h-12 w-full rounded-md border border-ifma-border bg-white px-4 text-sm text-caisbe-text outline-none focus:border-caisbe-green focus:ring-1 focus:ring-caisbe-green"
+          className="h-12 w-full rounded-md border border-ifma-border bg-white px-4 text-sm text-caisbe-text outline-none focus:border-caisbe-red focus:ring-1 focus:ring-caisbe-red"
         />
       </div>
 
@@ -39,7 +39,7 @@ export default function ContactForm({ cta }: ContactFormProps) {
           name="email"
           type="email"
           placeholder="Enter your email address"
-          className="h-12 w-full rounded-md border border-ifma-border bg-white px-4 text-sm text-caisbe-text outline-none focus:border-caisbe-green focus:ring-1 focus:ring-caisbe-green"
+          className="h-12 w-full rounded-md border border-ifma-border bg-white px-4 text-sm text-caisbe-text outline-none focus:border-caisbe-red focus:ring-1 focus:ring-caisbe-red"
         />
       </div>
 
@@ -55,7 +55,7 @@ export default function ContactForm({ cta }: ContactFormProps) {
           name="subject"
           type="text"
           placeholder="Subject"
-          className="h-12 w-full rounded-md border border-ifma-border bg-white px-4 text-sm text-caisbe-text outline-none focus:border-caisbe-green focus:ring-1 focus:ring-caisbe-green"
+          className="h-12 w-full rounded-md border border-ifma-border bg-white px-4 text-sm text-caisbe-text outline-none focus:border-caisbe-red focus:ring-1 focus:ring-caisbe-red"
         />
       </div>
 
@@ -71,14 +71,14 @@ export default function ContactForm({ cta }: ContactFormProps) {
           name="message"
           rows={5}
           placeholder="Message"
-          className="w-full resize-y rounded-md border border-ifma-border bg-white px-4 py-3 text-sm text-caisbe-text outline-none focus:border-caisbe-green focus:ring-1 focus:ring-caisbe-green"
+          className="w-full resize-y rounded-md border border-ifma-border bg-white px-4 py-3 text-sm text-caisbe-text outline-none focus:border-caisbe-red focus:ring-1 focus:ring-caisbe-red"
         />
       </div>
 
       <div className="pt-2 text-center">
         <button
           type="submit"
-          className="inline-flex min-w-[180px] items-center justify-center rounded-md border-2 border-caisbe-green bg-caisbe-green px-8 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-caisbe-green-mid"
+          className="inline-flex min-w-[180px] items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-8 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-caisbe-red-dark"
         >
           {cta}
         </button>

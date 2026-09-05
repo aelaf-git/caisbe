@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: caisbe-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: caisbe
+      POSTGRES_USER: caisbe
+      POSTGRES_PASSWORD: caisbe
+    ports:
+      - "5433:5432"
+    volumes:
+      - caisbe_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U caisbe -d caisbe"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    networks:
+      - caisbe_dev
+
+  api:
+    build: .
+    container_name: caisbe-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.example
+    environment:
+      API_HOST: 0.0.0.0
+      DATABASE_URL: postgresql+psycopg://caisbe:caisbe@postgres:5432/caisbe
+      UPLOAD_DIR: ./uploads
+      PORTAL_PUBLIC_URL: http://localhost:3002
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - caisbe_dev
+    develop:
+      watch:
+        - action: sync
+          path: ./app
+          target: /app/app
+        - action: sync
+          path: ./alembic
+          target: /app/alembic
+        - action: rebuild
+          path: ./requirements.txt
+
+volumes:
+  caisbe_pgdata:
+  uploads:
+
+networks:
+  caisbe_dev:
+    name: caisbe_dev
+    driver: bridge

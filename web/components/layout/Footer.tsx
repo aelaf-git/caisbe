@@ -12,7 +12,7 @@ const socialLinks = [
 
 export default function Footer() {
   return (
-    <footer className="bg-caisbe-red text-white">
+    <footer className="border-t-4 border-caisbe-red bg-[#111111] text-white">
       <div className="mx-auto max-w-7xl px-4 py-12">
         <div className="mb-10 border-b border-white/25 pb-10">
           <Logo variant="footer" />

@@ -13,10 +13,10 @@ export default function LearningFormatPageContent({
   return (
     <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
       <div className="mx-auto max-w-4xl px-4">
-        <p className="brand-eyebrow text-sm font-semibold uppercase tracking-[0.25em]">
+        <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
           Learning Formats
         </p>
-        <h1 className="brand-section-title mt-3 text-3xl font-semibold md:text-4xl">
+        <h1 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold md:text-4xl">
           {title}
         </h1>
         <p className="mt-6 text-base leading-7 text-caisbe-muted">

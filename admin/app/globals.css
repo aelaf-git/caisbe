@@ -1,100 +1,106 @@
 @import "tailwindcss";
 
-:root {
-  --caisbe-red: #c42032;
-  --caisbe-red-dark: #9e1a28;
-  --caisbe-green: #0f4d30;
-  --caisbe-green-mid: #1b6b45;
-  --caisbe-text: #1f2937;
-  --caisbe-text-dark: #111827;
-  --caisbe-muted: #5f6b7a;
-  --caisbe-border: #e5e7eb;
-  --caisbe-border-light: #f0f0f0;
-  --background: #ffffff;
-  --foreground: #1f2937;
+/* TipTap Placeholder extension */
+.ProseMirror p.is-editor-empty:first-child::before,
+.ProseMirror p.is-empty:first-child::before {
+  color: var(--color-caisbe-muted);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
 
-  --ifma-navy: var(--caisbe-green);
-  --ifma-blue: var(--caisbe-green-mid);
-  --ifma-blue-bright: var(--caisbe-red);
-  --ifma-red: var(--caisbe-red);
-  --ifma-text: var(--caisbe-text);
-  --ifma-text-dark: var(--caisbe-text-dark);
-  --ifma-muted: var(--caisbe-muted);
-  --ifma-border: var(--caisbe-border);
-  --ifma-border-light: var(--caisbe-border-light);
-  --ifma-surface: #ffffff;
-  --ifma-highlight: #ffffff;
+/* TipTap document styles (Word-like editing surface) */
+.rich-text-editor h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.rich-text-editor h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0.7rem 0 0.4rem;
+}
+
+.rich-text-editor h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0.6rem 0 0.35rem;
+}
+
+.rich-text-editor p {
+  margin: 0.35rem 0;
+}
+
+.rich-text-editor ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.rich-text-editor ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.rich-text-editor li {
+  margin: 0.15rem 0;
+}
+
+.rich-text-editor blockquote {
+  border-left: 3px solid var(--color-caisbe-border);
+  color: var(--color-caisbe-muted);
+  margin: 0.75rem 0;
+  padding-left: 0.9rem;
+}
+
+.rich-text-editor hr {
+  border: 0;
+  border-top: 1px solid var(--color-caisbe-border);
+  margin: 1rem 0;
+}
+
+.rich-text-editor a {
+  color: var(--color-caisbe-green);
+  text-decoration: underline;
+}
+
+.rich-text-editor img {
+  max-width: 100%;
+  height: auto;
+  margin: 0.5rem 0;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-caisbe-red: var(--caisbe-red);
-  --color-caisbe-red-dark: var(--caisbe-red-dark);
-  --color-caisbe-green: var(--caisbe-green);
-  --color-caisbe-green-mid: var(--caisbe-green-mid);
-  --color-ifma-navy: var(--ifma-navy);
-  --color-ifma-blue: var(--ifma-blue);
-  --color-ifma-blue-bright: var(--ifma-blue-bright);
-  --color-ifma-red: var(--ifma-red);
-  --color-ifma-text: var(--ifma-text);
-  --color-ifma-text-dark: var(--ifma-text-dark);
-  --color-ifma-muted: var(--ifma-muted);
-  --color-ifma-border: var(--ifma-border);
-  --color-ifma-border-light: var(--ifma-border-light);
-  --color-ifma-surface: var(--ifma-surface);
-  --color-ifma-highlight: var(--ifma-highlight);
+  --color-background: #ffffff;
+  --color-foreground: #1f2937;
+  --color-caisbe-red: #c42032;
+  --color-caisbe-red-dark: #9e1a28;
+  --color-caisbe-green: #c42032;
+  --color-caisbe-green-mid: #9e1a28;
+  --color-caisbe-text: #1f2937;
+  --color-caisbe-text-dark: #111827;
+  --color-caisbe-muted: #5f6b7a;
+  --color-caisbe-border: #e5e7eb;
+  --color-caisbe-border-light: #f0f0f0;
+  --color-ifma-navy: #111827;
+  --color-ifma-blue: #c42032;
+  --color-ifma-blue-bright: #c42032;
+  --color-ifma-red: #c42032;
+  --color-ifma-text: #1f2937;
+  --color-ifma-text-dark: #111827;
+  --color-ifma-muted: #5f6b7a;
+  --color-ifma-border: #e5e7eb;
+  --color-ifma-border-light: #f0f0f0;
+  --color-ifma-surface: #ffffff;
+  --color-ifma-highlight: #ffffff;
   --font-sans: var(--font-roboto);
   --font-display: var(--font-open-sans);
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-roboto), Arial, sans-serif;
-}
-
-.brand-section-title {
-  font-family: var(--font-open-sans), Arial, sans-serif;
-  color: var(--caisbe-green);
-}
-
-.brand-eyebrow {
-  color: var(--caisbe-red);
-}
-
-.brand-card-shadow {
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
-}
-
-.brand-nav-shadow {
-  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.06);
-}
-
-.brand-media-placeholder {
-  background: #ffffff;
-  border: 1px solid var(--caisbe-border);
-}
-
-.ifma-section-title {
-  font-family: var(--font-open-sans), Arial, sans-serif;
-  color: var(--caisbe-green);
-}
-
-.ifma-card-shadow {
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
-}
-
-.ifma-nav-shadow {
-  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.06);
-}
-
-@keyframes page-loader-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.page-loader-spin {
-  animation: page-loader-spin 0.75s linear infinite;
+  --shadow-brand-card: 0 8px 24px rgba(17, 24, 39, 0.06);
+  --shadow-brand-nav: 0 1px 0 rgba(17, 24, 39, 0.06);
 }

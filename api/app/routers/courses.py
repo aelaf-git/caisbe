@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import json
 import secrets
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
+from app.config import settings
 from app.db import get_db
+from app.html_sanitize import sanitize_html, strip_plain_text
 from app.models import (
     Certificate,
+    CertificateTemplate,
     Chapter,
     ContentBlock,
     Course,
@@ -24,6 +28,7 @@ from app.models import (
 )
 from app.schemas.courses import (
     CertificateOut,
+    CertificateVerifyOut,
     CourseDetailStudentOut,
     CourseOut,
     EnrollmentCreate,
@@ -77,6 +82,11 @@ def _load_published_course(db: Session, course_id: int) -> Course:
             .joinedload(ContentBlock.quiz)
             .joinedload(Quiz.questions)
             .joinedload(QuizQuestion.choices),
+            joinedload(Course.chapters)
+            .joinedload(Chapter.blocks)
+            .joinedload(ContentBlock.quiz)
+            .joinedload(Quiz.questions)
+            .joinedload(QuizQuestion.choices),
             joinedload(Course.final_exam).joinedload(FinalExam.questions).joinedload(QuizQuestion.choices),
             joinedload(Course.certificate_template),
         )
@@ -102,6 +112,111 @@ def _score_answers(questions: list[QuizQuestion], answers: dict[str, int]) -> tu
                 break
     score = int(round(100 * correct / len(questions)))
     return score, False, correct
+
+
+def _apply_placeholders(
+    text: str,
+    *,
+    student_name: str,
+    course_title: str,
+    issued_at: datetime,
+) -> str:
+    issued_date = issued_at.strftime("%B %d, %Y")
+    return (
+        text.replace("{student_name}", student_name)
+        .replace("{course_title}", course_title)
+        .replace("{issued_date}", issued_date)
+    )
+
+
+def _render_certificate(
+    template: CertificateTemplate | None,
+    student_name: str,
+    course_title: str,
+    issued_at: datetime,
+) -> dict[str, str]:
+    title_template = template.title if template else "Certificate of Completion"
+    body_template = (
+        template.body
+        if template
+        else "This certifies that {student_name} has successfully completed {course_title}."
+    )
+    kwargs = {"student_name": student_name, "course_title": course_title, "issued_at": issued_at}
+    return {
+        "title": _apply_placeholders(title_template, **kwargs),
+        "body": _apply_placeholders(body_template, **kwargs),
+    }
+
+
+def _certificate_verify_url(certificate_code: str) -> str:
+    base = settings.portal_public_url.rstrip("/")
+    return f"{base}/certificates/verify/{certificate_code}"
+
+
+def _issue_certificate(db: Session, user: User, course: Course) -> str:
+    existing = (
+        db.query(Certificate)
+        .filter(Certificate.user_id == user.id, Certificate.course_id == course.id)
+        .first()
+    )
+    if existing:
+        return existing.certificate_code
+    certificate_code = f"CAISBE-{course.code}-{secrets.token_hex(4).upper()}"
+    db.add(
+        Certificate(
+            user_id=user.id,
+            course_id=course.id,
+            certificate_code=certificate_code,
+        )
+    )
+    db.flush()
+    return certificate_code
+
+
+def _user_passed_final_exam(db: Session, user: User, course: Course) -> bool:
+    exam = course.final_exam
+    if exam is None:
+        return True
+    attempt = (
+        db.query(QuizAttempt)
+        .filter(
+            QuizAttempt.user_id == user.id,
+            QuizAttempt.final_exam_id == exam.id,
+            QuizAttempt.passed.is_(True),
+        )
+        .first()
+    )
+    return attempt is not None
+
+
+def _finalize_course_completion(
+    db: Session,
+    user: User,
+    course: Course,
+    enrollment: Enrollment,
+) -> str:
+    enrollment.status = "completed"
+    enrollment.progress = 100
+    return _issue_certificate(db, user, course)
+
+
+def _certificate_to_out(row: Certificate, student_name: str) -> CertificateOut:
+    rendered = _render_certificate(
+        row.course.certificate_template,
+        student_name,
+        row.course.title,
+        row.issued_at,
+    )
+    return CertificateOut(
+        id=row.id,
+        certificate_code=row.certificate_code,
+        issued_at=row.issued_at,
+        course=CourseOut.model_validate(row.course),
+        student_name=strip_plain_text(student_name) or student_name,
+        title=strip_plain_text(rendered["title"]) or rendered["title"],
+        body=sanitize_html(rendered["body"]) or "",
+        verify_url=_certificate_verify_url(row.certificate_code),
+    )
 
 
 @router.get("/courses", response_model=list[CourseOut])
@@ -220,7 +335,7 @@ def complete_lesson(
     lesson_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict[str, int | bool]:
+) -> dict[str, int | bool | str | None]:
     lesson = (
         db.query(Lesson)
         .options(joinedload(Lesson.chapter).joinedload(Chapter.course).joinedload(Course.chapters).joinedload(Chapter.lessons))
@@ -248,8 +363,26 @@ def complete_lesson(
     # reload course with chapters for progress
     course = _load_published_course(db, course.id)
     _recompute_progress(db, current_user, course, enrollment)
+
+    certificate_code: str | None = None
+    if enrollment.progress >= 100:
+        if course.final_exam is None:
+            if enrollment.status != "completed":
+                certificate_code = _finalize_course_completion(db, current_user, course, enrollment)
+            else:
+                certificate_code = _issue_certificate(db, current_user, course)
+        elif _user_passed_final_exam(db, current_user, course):
+            if enrollment.status != "completed":
+                certificate_code = _finalize_course_completion(db, current_user, course, enrollment)
+            else:
+                certificate_code = _issue_certificate(db, current_user, course)
+
     db.commit()
-    return {"completed": True, "progress": enrollment.progress}
+    return {
+        "completed": True,
+        "progress": enrollment.progress,
+        "certificate_code": certificate_code,
+    }
 
 
 @router.post("/me/quizzes/{quiz_id}/submit", response_model=QuizAttemptOut)
@@ -324,26 +457,8 @@ def submit_final_exam(
 
     certificate_code = None
     if passed:
-        existing = (
-            db.query(Certificate)
-            .filter(Certificate.user_id == current_user.id, Certificate.course_id == course_id)
-            .first()
-        )
-        if existing is None:
-            certificate_code = f"CAISBE-{course.code}-{secrets.token_hex(4).upper()}"
-            db.add(
-                Certificate(
-                    user_id=current_user.id,
-                    course_id=course_id,
-                    certificate_code=certificate_code,
-                )
-            )
-        else:
-            certificate_code = existing.certificate_code
-
         enrollment = _require_enrollment(db, current_user, course_id)
-        enrollment.status = "completed"
-        enrollment.progress = 100
+        certificate_code = _finalize_course_completion(db, current_user, course, enrollment)
 
     db.commit()
     db.refresh(attempt)
@@ -367,28 +482,7 @@ def list_my_certificates(
         .order_by(Certificate.issued_at.desc())
         .all()
     )
-    results: list[CertificateOut] = []
-    for row in rows:
-        template = row.course.certificate_template
-        title = template.title if template else "Certificate of Completion"
-        body_template = (
-            template.body
-            if template
-            else "This certifies that {student_name} has successfully completed {course_title}."
-        )
-        body = body_template.format(student_name=current_user.full_name, course_title=row.course.title)
-        results.append(
-            CertificateOut(
-                id=row.id,
-                certificate_code=row.certificate_code,
-                issued_at=row.issued_at,
-                course=CourseOut.model_validate(row.course),
-                student_name=current_user.full_name,
-                title=title,
-                body=body,
-            )
-        )
-    return results
+    return [_certificate_to_out(row, current_user.full_name) for row in rows]
 
 
 @router.get("/me/certificates/{certificate_code}", response_model=CertificateOut)
@@ -406,20 +500,27 @@ def get_certificate(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certificate not found")
 
-    template = row.course.certificate_template
-    title = template.title if template else "Certificate of Completion"
-    body_template = (
-        template.body
-        if template
-        else "This certifies that {student_name} has successfully completed {course_title}."
+    return _certificate_to_out(row, current_user.full_name)
+
+
+@router.get("/certificates/verify/{certificate_code}", response_model=CertificateVerifyOut)
+def verify_certificate(
+    certificate_code: str,
+    db: Session = Depends(get_db),
+) -> CertificateVerifyOut:
+    row = (
+        db.query(Certificate)
+        .options(joinedload(Certificate.course), joinedload(Certificate.user))
+        .filter(Certificate.certificate_code == certificate_code)
+        .first()
     )
-    body = body_template.format(student_name=current_user.full_name, course_title=row.course.title)
-    return CertificateOut(
-        id=row.id,
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certificate not found")
+
+    return CertificateVerifyOut(
+        valid=True,
         certificate_code=row.certificate_code,
+        student_name=row.user.full_name,
+        course_title=row.course.title,
         issued_at=row.issued_at,
-        course=CourseOut.model_validate(row.course),
-        student_name=current_user.full_name,
-        title=title,
-        body=body,
     )

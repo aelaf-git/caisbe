@@ -10,18 +10,16 @@ export default function PortalHomePage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) {
+    if (!user || user.role === "admin") {
       router.replace("/login");
       return;
     }
-    if (user.role === "admin") {
-      router.replace("/login");
-      return;
-    }
-    router.replace("/my-account");
+    router.replace("/dashboard");
   }, [loading, user, router]);
 
   return (
-    <div className="px-4 py-16 text-center text-sm text-caisbe-muted">Loading portal…</div>
+    <div className="flex flex-1 items-center justify-center px-4 py-16 text-sm text-caisbe-muted">
+      Loading portal…
+    </div>
   );
 }
