@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -41,25 +42,32 @@ def subscribe_newsletter(
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     email = payload.email.lower().strip()
-    existing = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == email).first()
-    if existing:
-        if existing.unsubscribed_at is None:
-            return {"message": "You are already subscribed."}
-        existing.unsubscribed_at = None
-        existing.subscribed_at = datetime.now(timezone.utc)
-        if payload.full_name:
-            existing.full_name = payload.full_name.strip()
-        existing.source = "website"
-        db.commit()
-        return {"message": "Welcome back! You are subscribed again."}
+    try:
+        existing = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == email).first()
+        if existing:
+            if existing.unsubscribed_at is None:
+                return {"message": "You are already subscribed."}
+            existing.unsubscribed_at = None
+            existing.subscribed_at = datetime.now(timezone.utc)
+            if payload.full_name:
+                existing.full_name = payload.full_name.strip()
+            existing.source = "website"
+            db.commit()
+            return {"message": "Welcome back! You are subscribed again."}
 
-    subscriber = NewsletterSubscriber(
-        email=email,
-        full_name=payload.full_name.strip() if payload.full_name else None,
-        source="website",
-    )
-    db.add(subscriber)
-    db.commit()
+        subscriber = NewsletterSubscriber(
+            email=email,
+            full_name=payload.full_name.strip() if payload.full_name else None,
+            source="website",
+        )
+        db.add(subscriber)
+        db.commit()
+    except (OperationalError, ProgrammingError) as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Newsletter signup is temporarily unavailable. Try again shortly.",
+        ) from exc
     return {"message": "Thank you for subscribing to the CAISBE newsletter."}
 
 

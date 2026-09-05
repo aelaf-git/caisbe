@@ -28,8 +28,14 @@ export async function apiFetch<T>(
   if (!response.ok) {
     let detail = `Request failed (${response.status})`;
     try {
-      const data = (await response.json()) as { detail?: string };
-      if (typeof data.detail === "string") detail = data.detail;
+      const data = (await response.json()) as {
+        detail?: string | { msg?: string }[];
+      };
+      if (typeof data.detail === "string") {
+        detail = data.detail;
+      } else if (Array.isArray(data.detail) && data.detail[0]?.msg) {
+        detail = data.detail[0].msg;
+      }
     } catch {
       // keep default
     }
