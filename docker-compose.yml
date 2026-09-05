@@ -49,6 +49,9 @@ services:
         - action: sync
           path: ./api/app
           target: /app/app
+        - action: sync
+          path: ./api/alembic
+          target: /app/alembic
         - action: rebuild
           path: ./api/requirements.txt
     networks:

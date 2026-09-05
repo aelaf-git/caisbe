@@ -18,7 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/courses/new", label: "Create course", match: "exact" },
   { href: "/students", label: "Students" },
   { href: "/enrollments", label: "Enrollments" },
-  { href: "/media", label: "Media library", soon: true },
+  { href: "/media", label: "Media library" },
   { href: "/reports", label: "Reports", soon: true },
   { href: "/settings", label: "Settings", soon: true },
 ];

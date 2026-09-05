@@ -12,7 +12,7 @@ from app.config import settings, validate_production_settings
 from app.db_migrations import upgrade_to_head
 from app.db import SessionLocal
 from app.limiter import limiter
-from app.routers import admin, auth, courses, health
+from app.routers import admin, auth, courses, health, public
 from app.security.middleware import SecurityHeadersMiddleware
 from app.seed import seed_admin
 
@@ -53,6 +53,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(courses.router, prefix="/api")
+app.include_router(public.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 
 upload_path = Path(settings.upload_dir)

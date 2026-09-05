@@ -294,3 +294,42 @@ class Certificate(Base):
 
     user: Mapped[User] = relationship(back_populates="certificates")
     course: Mapped[Course] = relationship(back_populates="certificates")
+
+
+class MediaAsset(Base):
+    __tablename__ = "media_assets"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_url: Mapped[str] = mapped_column(String(1024))
+    cover_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    category: Mapped[str] = mapped_column(String(32), default="magazine", index=True)
+    published: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    featured: Mapped[bool] = mapped_column(Boolean, default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class NewsletterSubscriber(Base):
+    __tablename__ = "newsletter_subscribers"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    full_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    source: Mapped[str] = mapped_column(String(64), default="website")
+    subscribed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    unsubscribed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class NewsletterCampaign(Base):
+    __tablename__ = "newsletter_campaigns"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    subject: Mapped[str] = mapped_column(String(255))
+    body_html: Mapped[str] = mapped_column(Text)
+    recipient_count: Mapped[int] = mapped_column(Integer, default=0)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    sent_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    sent_by: Mapped[User | None] = relationship()

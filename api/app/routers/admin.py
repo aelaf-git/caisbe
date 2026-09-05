@@ -20,6 +20,9 @@ from app.models import (
     Enrollment,
     FinalExam,
     Lesson,
+    MediaAsset,
+    NewsletterCampaign,
+    NewsletterSubscriber,
     Quiz,
     QuizChoice,
     QuizQuestion,
@@ -56,6 +59,16 @@ from app.schemas.courses import (
     QuizUpdate,
     UploadOut,
 )
+from app.schemas.media import (
+    MediaAssetCreateIn,
+    MediaAssetOut,
+    MediaAssetUpdateIn,
+    NewsletterCampaignOut,
+    NewsletterSendIn,
+    NewsletterSendOut,
+    NewsletterSubscriberOut,
+)
+from app.services.email import EmailDeliveryError, send_email
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -94,6 +107,20 @@ def _validate_assignment_url(url: str | None) -> None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Assignments must be a PDF or Word (.doc, .docx) file.",
+        )
+
+
+def _validate_upload_url(url: str | None, *, field: str = "file") -> None:
+    if not url or not url.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{field} URL is required.",
+        )
+    path = url.split("?")[0].lower()
+    if not any(path.endswith(ext) for ext in ALLOWED_UPLOAD_EXTENSIONS):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="URL must point to an uploaded file from the media library.",
         )
 
 
@@ -1143,3 +1170,184 @@ async def admin_upload(
 
     display_name = (file.filename or safe_name)[:120]
     return UploadOut(url=f"/api/uploads/{safe_name}", filename=display_name)
+
+
+# --- Media library ---
+
+
+@router.get("/media", response_model=list[MediaAssetOut])
+def admin_list_media(
+    category: str | None = Query(default=None, max_length=32),
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[MediaAssetOut]:
+    query = db.query(MediaAsset)
+    if category:
+        query = query.filter(MediaAsset.category == category.strip().lower())
+    rows = query.order_by(MediaAsset.sort_order.asc(), MediaAsset.created_at.desc()).all()
+    return [MediaAssetOut.model_validate(row) for row in rows]
+
+
+@router.post("/media", response_model=MediaAssetOut, status_code=status.HTTP_201_CREATED)
+def admin_create_media(
+    payload: MediaAssetCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> MediaAssetOut:
+    _validate_upload_url(payload.file_url, field="File")
+    if payload.cover_url:
+        _validate_upload_url(payload.cover_url, field="Cover")
+
+    asset = MediaAsset(
+        title=payload.title.strip(),
+        description=strip_plain_text(payload.description),
+        file_url=payload.file_url.strip(),
+        cover_url=payload.cover_url.strip() if payload.cover_url else None,
+        category=payload.category.strip().lower() or "magazine",
+        published=payload.published,
+        featured=payload.featured,
+        sort_order=payload.sort_order,
+    )
+    db.add(asset)
+    db.commit()
+    db.refresh(asset)
+    return MediaAssetOut.model_validate(asset)
+
+
+@router.patch("/media/{asset_id}", response_model=MediaAssetOut)
+def admin_update_media(
+    asset_id: int,
+    payload: MediaAssetUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> MediaAssetOut:
+    asset = db.query(MediaAsset).filter(MediaAsset.id == asset_id).first()
+    if asset is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media asset not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    if "file_url" in data:
+        _validate_upload_url(data["file_url"], field="File")
+    if data.get("cover_url"):
+        _validate_upload_url(data["cover_url"], field="Cover")
+    if "title" in data and data["title"]:
+        data["title"] = data["title"].strip()
+    if "description" in data:
+        data["description"] = strip_plain_text(data["description"])
+    if "category" in data and data["category"]:
+        data["category"] = data["category"].strip().lower()
+
+    for key, value in data.items():
+        setattr(asset, key, value)
+    db.commit()
+    db.refresh(asset)
+    return MediaAssetOut.model_validate(asset)
+
+
+@router.delete("/media/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_media(
+    asset_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    asset = db.query(MediaAsset).filter(MediaAsset.id == asset_id).first()
+    if asset is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media asset not found")
+    db.delete(asset)
+    db.commit()
+
+
+# --- Newsletter ---
+
+
+@router.get("/newsletter/subscribers", response_model=list[NewsletterSubscriberOut])
+def admin_list_newsletter_subscribers(
+    active_only: bool = Query(default=True),
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[NewsletterSubscriberOut]:
+    query = db.query(NewsletterSubscriber)
+    if active_only:
+        query = query.filter(NewsletterSubscriber.unsubscribed_at.is_(None))
+    rows = query.order_by(NewsletterSubscriber.subscribed_at.desc()).all()
+    return [NewsletterSubscriberOut.model_validate(row) for row in rows]
+
+
+@router.get("/newsletter/campaigns", response_model=list[NewsletterCampaignOut])
+def admin_list_newsletter_campaigns(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[NewsletterCampaignOut]:
+    rows = (
+        db.query(NewsletterCampaign)
+        .order_by(NewsletterCampaign.sent_at.desc())
+        .limit(50)
+        .all()
+    )
+    return [NewsletterCampaignOut.model_validate(row) for row in rows]
+
+
+@router.post("/newsletter/send", response_model=NewsletterSendOut)
+def admin_send_newsletter(
+    payload: NewsletterSendIn,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> NewsletterSendOut:
+    subject = payload.subject.strip()
+    body_html = sanitize_html(payload.body_html) or ""
+    if not body_html.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Newsletter body cannot be empty.",
+        )
+
+    if payload.test_email:
+        recipients = [payload.test_email.lower().strip()]
+    else:
+        subscribers = (
+            db.query(NewsletterSubscriber)
+            .filter(NewsletterSubscriber.unsubscribed_at.is_(None))
+            .order_by(NewsletterSubscriber.id.asc())
+            .all()
+        )
+        if not subscribers:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No active newsletter subscribers to send to.",
+            )
+        recipients = [row.email for row in subscribers]
+
+    failed: list[str] = []
+    sent_count = 0
+    for email in recipients:
+        try:
+            send_email(to=email, subject=subject, html_body=body_html)
+            sent_count += 1
+        except EmailDeliveryError:
+            failed.append(email)
+
+    if sent_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to deliver newsletter to any recipient. Check SMTP settings.",
+        )
+
+    campaign = NewsletterCampaign(
+        subject=subject,
+        body_html=body_html,
+        recipient_count=sent_count,
+        sent_by_id=admin.id,
+    )
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+
+    message = f"Newsletter sent to {sent_count} recipient(s)."
+    if failed:
+        message += f" Failed for {len(failed)} address(es)."
+
+    return NewsletterSendOut(
+        campaign_id=campaign.id,
+        recipient_count=sent_count,
+        message=message,
+    )

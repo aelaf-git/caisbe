@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AdvocacyPageContent from "@/components/resources/AdvocacyPageContent";
+import MagazinePageContent from "@/components/resources/MagazinePageContent";
 import { MembersCornerItemContent } from "@/components/resources/MembersCornerContent";
 import { PlaceholderSubpageContent } from "@/components/pages/PlaceholderPages";
 import {
@@ -52,6 +53,10 @@ export default async function ResourceSubpage({ params }: Props) {
 
   if (slug === advocacyContent.slug) {
     return <AdvocacyPageContent />;
+  }
+
+  if (slug === "magazine") {
+    return <MagazinePageContent />;
   }
 
   if (membersCornerSlugs.includes(slug)) {

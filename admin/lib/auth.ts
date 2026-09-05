@@ -74,6 +74,35 @@ export type AdminEnrollmentStats = {
   by_course: AdminEnrollmentCourseStat[];
 };
 
+export type MediaAsset = {
+  id: number;
+  title: string;
+  description: string | null;
+  file_url: string;
+  cover_url: string | null;
+  category: string;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
+export type NewsletterSubscriber = {
+  id: number;
+  email: string;
+  full_name: string | null;
+  source: string;
+  subscribed_at: string;
+  unsubscribed_at: string | null;
+};
+
+export type NewsletterCampaign = {
+  id: number;
+  subject: string;
+  recipient_count: number;
+  sent_at: string;
+};
+
 export type TokenResponse = {
   access_token: string;
   token_type: string;
