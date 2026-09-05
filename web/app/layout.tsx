@@ -33,18 +33,18 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={`${roboto.variable} ${openSans.variable} h-full`}
-      suppressHydrationWarning
-    >
-      <body
-        className="flex min-h-full flex-col bg-background font-sans text-foreground antialiased"
-        suppressHydrationWarning
-      >
-        <Header />
-        <main className="flex-1 bg-white">{children}</main>
-        <Footer />
-      </body>
-    </html>
+  lang="en"
+  className={`${roboto.variable} ${openSans.variable} h-full`}
+  suppressHydrationWarning
+>
+  <body
+    className="flex min-h-full flex-col bg-background font-sans text-foreground antialiased"
+    suppressHydrationWarning
+  >
+    <Header />
+    <main className="flex-1 bg-white">{children}</main>
+    <Footer />
+  </body>
+</html>
   );
 }
