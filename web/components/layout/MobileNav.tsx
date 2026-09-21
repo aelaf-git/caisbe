@@ -35,10 +35,12 @@ function MobileNavSection({
   section,
   isOpen,
   onToggle,
+  onNavigate,
 }: {
   section: NavSectionData;
   isOpen: boolean;
   onToggle: () => void;
+  onNavigate: () => void;
 }) {
   return (
     <div className="border-b border-ifma-border-light">
@@ -47,7 +49,13 @@ function MobileNavSection({
         onClick={onToggle}
         className="flex w-full items-center justify-between px-4 py-4 text-left text-sm font-semibold text-caisbe-text-dark"
       >
-        <Link href={section.href} onClick={(e) => e.stopPropagation()}>
+        <Link
+          href={section.href}
+          onClick={(e) => {
+            e.stopPropagation();
+            onNavigate();
+          }}
+        >
           {section.label}
         </Link>
         <span className="text-ifma-muted">{isOpen ? "−" : "+"}</span>
@@ -58,6 +66,7 @@ function MobileNavSection({
             <div key={group.title}>
               <Link
                 href={group.href}
+                onClick={onNavigate}
                 className="mb-2 block text-xs font-semibold uppercase tracking-[0.15em] text-caisbe-red"
               >
                 {group.title}
@@ -67,6 +76,7 @@ function MobileNavSection({
                   <li key={link.label}>
                     <Link
                       href={link.href}
+                      onClick={onNavigate}
                       className="block text-sm text-ifma-muted transition-colors hover:text-caisbe-red"
                     >
                       {link.label}
@@ -110,6 +120,10 @@ export default function MobileNav({ sections }: { sections: NavSectionData[] }) 
                   current === section.label ? null : section.label,
                 )
               }
+              onNavigate={() => {
+                setMobileOpen(false);
+                setOpenSection(null);
+              }}
             />
           ))}
         </div>

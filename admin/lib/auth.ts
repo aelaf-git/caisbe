@@ -112,6 +112,7 @@ export type AdminDashboard = {
   enrollments_completed: number;
   completion_rate: number;
   certificates: number;
+  membership_certificates?: number;
   newsletter_subscribers: number;
   newsletters_sent: number;
   magazines_published: number;

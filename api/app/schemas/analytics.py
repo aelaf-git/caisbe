@@ -59,6 +59,7 @@ class AdminDashboardOut(BaseModel):
     enrollments_completed: int
     completion_rate: int
     certificates: int
+    membership_certificates: int = 0
     newsletter_subscribers: int
     newsletters_sent: int
     magazines_published: int

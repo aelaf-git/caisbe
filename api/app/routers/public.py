@@ -7,7 +7,7 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.limiter import limiter
+from app.security.limiter import limiter
 from app.models import MediaAsset, NewsletterSubscriber
 from app.schemas.analytics import SiteVisitIn
 from app.schemas.media import MediaAssetOut, NewsletterSubscribeIn

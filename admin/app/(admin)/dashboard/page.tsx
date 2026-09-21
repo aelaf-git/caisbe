@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { apiFetch, ApiError, type AdminDashboard } from "@/lib/auth";
+import { apiFetch, ApiError, type AdminDashboard, type Course } from "@/lib/auth";
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<AdminDashboard | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,7 +15,12 @@ export default function AdminDashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        setData(await apiFetch<AdminDashboard>("/admin/dashboard"));
+        const [dashboard, courseList] = await Promise.all([
+          apiFetch<AdminDashboard>("/admin/dashboard"),
+          apiFetch<Course[]>("/admin/courses"),
+        ]);
+        setData(dashboard);
+        setCourses(courseList);
       } catch (err) {
         setError(err instanceof ApiError ? err.detail : "Unable to load dashboard.");
       } finally {
@@ -52,6 +58,45 @@ export default function AdminDashboardPage() {
       </div>
 
       {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-caisbe-muted">
+            Courses
+          </h2>
+          <Link href="/courses" className="text-sm font-semibold text-caisbe-green hover:underline">
+            All courses
+          </Link>
+        </div>
+        <div className="border border-ifma-border bg-white">
+          {loading ? (
+            <p className="p-6 text-sm text-caisbe-muted">Loading courses…</p>
+          ) : courses.length === 0 ? (
+            <p className="p-6 text-sm text-caisbe-muted">No courses yet.</p>
+          ) : (
+            <ul className="divide-y divide-ifma-border-light">
+              {courses.map((course) => (
+                <li key={course.id}>
+                  <Link
+                    href={`/courses/${course.id}`}
+                    className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 hover:bg-[#fafafa]"
+                  >
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">
+                        {course.code}
+                      </p>
+                      <p className="mt-1 font-semibold text-caisbe-text">{course.title}</p>
+                    </div>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+                      {course.status ?? "draft"} · Open
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-caisbe-muted">
@@ -103,8 +148,9 @@ export default function AdminDashboardPage() {
           {[
             { label: "Published courses", value: data?.courses_published, href: "/courses" },
             { label: "Draft courses", value: data?.courses_draft, href: "/courses" },
-            { label: "Certificates issued", value: data?.certificates, href: "/enrollments" },
-            { label: "Completion rate", value: data?.completion_rate, suffix: "%", href: "/enrollments" },
+            { label: "Completion certificates", value: data?.certificates, href: "/certificates" },
+            { label: "Membership certificates", value: data?.membership_certificates, href: "/certificates" },
+            { label: "Completion rate", value: data?.completion_rate, suffix: "%", href: "/reports" },
             { label: "Magazine issues", value: data?.magazines_published, href: "/media" },
             { label: "Newsletter subscribers", value: data?.newsletter_subscribers, href: "/media" },
             { label: "Newsletters sent", value: data?.newsletters_sent, href: "/media" },

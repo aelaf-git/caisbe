@@ -59,6 +59,7 @@ function DropdownPanel({
   panelRef,
   onMouseEnter,
   onMouseLeave,
+  onNavigate,
 }: {
   groups: NavGroupData[];
   open: boolean;
@@ -66,6 +67,7 @@ function DropdownPanel({
   panelRef: React.RefObject<HTMLDivElement | null>;
   onMouseEnter: () => void;
   onMouseLeave: (event: React.MouseEvent) => void;
+  onNavigate: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -101,14 +103,19 @@ function DropdownPanel({
       <div className={`grid gap-6 px-5 ${gridClass}`}>
         {groups.map((group) => (
           <div key={group.title} className="min-w-0">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
+            <Link
+              href={group.href}
+              onClick={onNavigate}
+              className="mb-3 block text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red hover:underline"
+            >
               {group.title}
-            </p>
+            </Link>
             <ul className="space-y-2">
               {group.links.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
+                    onClick={onNavigate}
                     className="block text-sm leading-5 break-words text-ifma-text-dark transition-colors hover:text-caisbe-red"
                   >
                     {link.label}
@@ -273,6 +280,7 @@ function DesktopNavItem({
         panelRef={panelRef}
         onMouseEnter={handlePanelEnter}
         onMouseLeave={handlePanelLeave}
+        onNavigate={closeNow}
       />
     </li>
   );

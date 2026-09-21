@@ -21,6 +21,7 @@ export type CertificateDocumentProps = {
   issuedAt: string;
   verifyUrl: string;
   certificateCode?: string;
+  issuedBy?: string;
 };
 
 function formatIssueDate(iso: string): string {
@@ -62,6 +63,7 @@ export default function CertificateDocument({
   issuedAt,
   verifyUrl,
   certificateCode,
+  issuedBy = "CAISBE",
 }: CertificateDocumentProps) {
   const issuedLabel = formatIssueDate(issuedAt);
 
@@ -146,7 +148,7 @@ export default function CertificateDocument({
             </div>
 
             <div className="text-center">
-              <p className="mb-1 text-[clamp(0.7rem,1.4vw,0.85rem)] font-medium text-[#3d3832]">CAISBE</p>
+              <p className="mb-1 text-[clamp(0.7rem,1.4vw,0.85rem)] font-medium text-[#3d3832]">{issuedBy}</p>
               <div className="mx-auto h-px w-[min(100%,120px)] bg-[#c9a227]" />
               <p className="mt-1.5 text-[clamp(0.6rem,1.2vw,0.75rem)] font-bold uppercase tracking-wide text-[#7b1e3a]">
                 Issued By

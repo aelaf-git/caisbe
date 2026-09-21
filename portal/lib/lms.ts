@@ -111,12 +111,27 @@ export type Certificate = {
   title: string;
   body: string;
   verify_url?: string | null;
+  issued_by?: string;
+};
+
+export type MembershipCertificate = {
+  id: number;
+  certificate_code: string;
+  membership_number: string;
+  issued_at: string;
+  student_name: string;
+  title: string;
+  verify_url?: string | null;
+  issued_by?: string;
 };
 
 export type CertificateVerify = {
   valid: boolean;
+  kind: "completion" | "membership" | string;
   certificate_code: string;
   student_name: string;
-  course_title: string;
+  course_title: string | null;
+  membership_number?: string | null;
   issued_at: string;
+  issued_by?: string;
 };

@@ -1,14 +1,14 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import CertificateDocument from "@/components/certificates/CertificateDocument";
+import MembershipCertificateDocument from "@/components/certificates/MembershipCertificateDocument";
 import BackButton from "@/components/ui/BackButton";
 import { apiFetch, ApiError } from "@/lib/auth";
-import type { Certificate } from "@/lib/lms";
+import type { MembershipCertificate } from "@/lib/lms";
 
-function verifyUrlFor(cert: Certificate): string {
+function verifyUrlFor(cert: MembershipCertificate): string {
   if (cert.verify_url) return cert.verify_url;
   if (typeof window !== "undefined") {
     return `${window.location.origin}/certificates/verify/${cert.certificate_code}`;
@@ -16,11 +16,10 @@ function verifyUrlFor(cert: Certificate): string {
   return `/certificates/verify/${cert.certificate_code}`;
 }
 
-export default function CertificatePage() {
-  const params = useParams<{ code: string }>();
+export default function MembershipCertificatePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [cert, setCert] = useState<Certificate | null>(null);
+  const [cert, setCert] = useState<MembershipCertificate | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,7 +33,7 @@ export default function CertificatePage() {
     let active = true;
     async function load() {
       try {
-        const data = await apiFetch<Certificate>(`/me/certificates/${params.code}`);
+        const data = await apiFetch<MembershipCertificate>("/me/membership-certificate");
         if (active) setCert(data);
       } catch (err) {
         if (active) setError(err instanceof ApiError ? err.detail : "Certificate not found.");
@@ -44,7 +43,7 @@ export default function CertificatePage() {
     return () => {
       active = false;
     };
-  }, [user, params.code]);
+  }, [user]);
 
   const verifyUrl = useMemo(() => (cert ? verifyUrlFor(cert) : ""), [cert]);
 
@@ -72,13 +71,14 @@ export default function CertificatePage() {
       </div>
 
       <div className="mt-6 print:mt-0">
-        <CertificateDocument
+        <MembershipCertificateDocument
           studentName={cert.student_name}
-          courseTitle={cert.course.title}
+          membershipNumber={cert.membership_number}
           issuedAt={cert.issued_at}
           verifyUrl={verifyUrl}
           certificateCode={cert.certificate_code}
           issuedBy={cert.issued_by}
+          title={cert.title}
         />
       </div>
 

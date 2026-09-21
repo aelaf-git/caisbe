@@ -18,10 +18,11 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/courses/new", label: "Create course", match: "exact" },
   { href: "/students", label: "Students" },
   { href: "/enrollments", label: "Enrollments" },
+  { href: "/certificates", label: "Certificates" },
   { href: "/media", label: "Media library" },
   { href: "/site-activity", label: "Site activity" },
-  { href: "/reports", label: "Reports", soon: true },
-  { href: "/settings", label: "Settings", soon: true },
+  { href: "/reports", label: "Reports" },
+  { href: "/settings", label: "Settings" },
 ];
 
 function isActive(pathname: string, item: NavItem) {

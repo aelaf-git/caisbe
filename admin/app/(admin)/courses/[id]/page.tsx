@@ -446,7 +446,7 @@ function AdminCourseEditorInner() {
           a certificate is issued with their name, the course title below, the issue date, and a
           verification QR code.
         </p>
-        <CertificatePreview courseTitle={meta.title || "Sample Course"} />
+        <CertificatePreview kind="completion" courseTitle={meta.title || "Sample Course"} />
       </section>
       ) : null}
     </div>

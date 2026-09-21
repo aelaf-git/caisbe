@@ -44,6 +44,7 @@ export default function VerifyCertificatePage() {
   const issuedLabel = result
     ? new Date(result.issued_at).toLocaleDateString(undefined, { dateStyle: "long" })
     : "";
+  const isMembership = result?.kind === "membership";
 
   return (
     <div className="flex min-h-full flex-col">
@@ -76,20 +77,37 @@ export default function VerifyCertificatePage() {
           ) : result ? (
             <>
               <p className="text-center text-xs font-semibold uppercase tracking-wide text-caisbe-green">
-                Valid certificate
+                Valid {isMembership ? "membership" : "completion"} certificate
               </p>
               <h1 className="mt-3 text-center font-display text-2xl font-semibold text-caisbe-text-dark">
                 {result.student_name}
               </h1>
-              <p className="mt-2 text-center text-sm text-caisbe-muted">has successfully completed</p>
-              <p className="mt-1 text-center text-lg font-semibold text-caisbe-text">{result.course_title}</p>
+              {isMembership ? (
+                <>
+                  <p className="mt-2 text-center text-sm text-caisbe-muted">
+                    is a member of {result.issued_by || "CAISBE"}
+                  </p>
+                  {result.membership_number ? (
+                    <p className="mt-1 text-center text-lg font-semibold text-caisbe-text">
+                      {result.membership_number}
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 text-center text-sm text-caisbe-muted">has successfully completed</p>
+                  <p className="mt-1 text-center text-lg font-semibold text-caisbe-text">
+                    {result.course_title}
+                  </p>
+                </>
+              )}
               <dl className="mt-8 space-y-3 border-t border-ifma-border pt-6 text-sm">
                 <div className="flex justify-between gap-4">
                   <dt className="text-caisbe-muted">Certificate ID</dt>
                   <dd className="font-mono text-right text-caisbe-text">{result.certificate_code}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-caisbe-muted">Issued</dt>
+                  <dt className="text-caisbe-muted">{isMembership ? "Member since" : "Issued"}</dt>
                   <dd className="text-right text-caisbe-text">{issuedLabel}</dd>
                 </div>
               </dl>

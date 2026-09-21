@@ -397,16 +397,33 @@ class CertificateOut(BaseModel):
     title: str
     body: str
     verify_url: str | None = None
+    issued_by: str = "CAISBE"
+
+    model_config = {"from_attributes": True}
+
+
+class MembershipCertificateOut(BaseModel):
+    id: int
+    certificate_code: str
+    membership_number: str
+    issued_at: datetime
+    student_name: str
+    title: str
+    verify_url: str | None = None
+    issued_by: str = "CAISBE"
 
     model_config = {"from_attributes": True}
 
 
 class CertificateVerifyOut(BaseModel):
     valid: bool = True
+    kind: str = "completion"  # completion | membership
     certificate_code: str
     student_name: str
-    course_title: str
+    course_title: str | None = None
+    membership_number: str | None = None
     issued_at: datetime
+    issued_by: str = "CAISBE"
 
 
 class CertificateAdminOut(BaseModel):

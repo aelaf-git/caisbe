@@ -11,10 +11,10 @@ from app import models  # noqa: F401 — register SQLAlchemy models
 from app.config import settings, validate_production_settings
 from app.db_migrations import upgrade_to_head
 from app.db import SessionLocal
-from app.limiter import limiter
 from app.routers import admin, auth, courses, health, public
+from app.security.limiter import limiter
 from app.security.middleware import SecurityHeadersMiddleware
-from app.seed import seed_admin
+from app.seeds.admin import seed_admin
 
 
 @asynccontextmanager

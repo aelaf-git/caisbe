@@ -139,7 +139,7 @@ export default function AdminCoursesPage() {
           <ul className="divide-y divide-ifma-border-light">
             {filtered.map((course) => (
               <li key={course.id} className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
-                <div>
+                <Link href={`/courses/${course.id}`} className="min-w-0 flex-1 hover:text-caisbe-green">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">
                       {course.code}
@@ -147,7 +147,7 @@ export default function AdminCoursesPage() {
                     <StatusBadge status={course.status ?? "draft"} />
                   </div>
                   <p className="mt-1 font-semibold text-caisbe-text">{course.title}</p>
-                </div>
+                </Link>
                 <div className="flex items-center gap-1">
                   <EditIconLink href={`/courses/${course.id}`} label={`Edit ${course.title}`} />
                   <DeleteIconButton
