@@ -46,11 +46,14 @@ export function useAutosave<T>({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef<Promise<void> | null>(null);
   const baselineRef = useRef(baselineKey);
+  const runSaveRef = useRef<() => Promise<void>>(async () => undefined);
 
-  valueRef.current = value;
-  saveRef.current = save;
-  enabledRef.current = enabled;
-  isEqualRef.current = isEqual;
+  useEffect(() => {
+    valueRef.current = value;
+    saveRef.current = save;
+    enabledRef.current = enabled;
+    isEqualRef.current = isEqual;
+  }, [value, save, enabled, isEqual]);
 
   const report = useCallback(
     (next: AutosaveStatus) => {
@@ -91,7 +94,7 @@ export function useAutosave<T>({
         report("pending");
         timerRef.current = setTimeout(() => {
           timerRef.current = null;
-          void runSave().catch(() => undefined);
+          void runSaveRef.current().catch(() => undefined);
         }, 0);
       }
     } catch (err) {
@@ -100,6 +103,10 @@ export function useAutosave<T>({
       throw err;
     }
   }, [report]);
+
+  useEffect(() => {
+    runSaveRef.current = runSave;
+  }, [runSave]);
 
   const flush = useCallback(async () => {
     if (timerRef.current) {

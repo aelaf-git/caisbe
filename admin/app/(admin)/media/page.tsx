@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import MagazineManager from "@/components/media/MagazineManager";
 import NewsletterPanel from "@/components/media/NewsletterPanel";
+import Alert from "@/components/ui/Alert";
+import PageHeader from "@/components/ui/PageHeader";
+import Tabs from "@/components/ui/Tabs";
+import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
 import {
   apiFetch,
   ApiError,
@@ -21,6 +25,7 @@ export default function MediaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -42,54 +47,31 @@ export default function MediaPage() {
   }, []);
 
   useEffect(() => {
+    // Initial data synchronization; subsequent refreshes reuse the same callback.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
-  function askConfirm(options: {
-    title: string;
-    description: string;
-    confirmLabel?: string;
-  }): Promise<boolean> {
-    return Promise.resolve(
-      window.confirm(`${options.title}\n\n${options.description}`),
-    );
-  }
-
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">Media library</h1>
-        <p className="mt-2 text-sm text-caisbe-muted">
-          Manage CAISBE magazine issues for the website and send newsletters to subscribers.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Content"
+        title="Media library"
+        description="Manage CAISBE magazine issues for the website and send newsletters to subscribers."
+      />
 
-      <div className="flex flex-wrap gap-2 border-b border-ifma-border-light">
-        {(
-          [
-            ["magazines", "Magazines"],
-            ["newsletter", "Newsletter"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold uppercase tracking-wide ${
-              tab === id
-                ? "border-caisbe-green text-caisbe-green"
-                : "border-transparent text-caisbe-muted hover:text-caisbe-text"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        items={[
+          { id: "magazines", label: "Magazines", count: assets.length },
+          { id: "newsletter", label: "Newsletter", count: subscribers.length },
+        ]}
+        value={tab}
+        onChange={setTab}
+        ariaLabel="Media sections"
+      />
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
-      {success ? (
-        <p className="text-sm text-caisbe-green">{success}</p>
-      ) : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      {success ? <Alert tone="success">{success}</Alert> : null}
 
       {tab === "magazines" ? (
         <MagazineManager
@@ -104,7 +86,7 @@ export default function MediaPage() {
             setError(null);
             setSuccess(message);
           }}
-          askConfirm={askConfirm}
+          askConfirm={confirm}
         />
       ) : (
         <NewsletterPanel
@@ -122,6 +104,7 @@ export default function MediaPage() {
           }}
         />
       )}
+      {dialog}
     </div>
   );
 }

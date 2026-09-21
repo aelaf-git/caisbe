@@ -99,8 +99,20 @@
   --color-ifma-border-light: #f0f0f0;
   --color-ifma-surface: #ffffff;
   --color-ifma-highlight: #ffffff;
+  --color-admin-canvas: #f7f7f5;
+  --color-admin-surface: #ffffff;
+  --color-admin-surface-muted: #f0f0f0;
+  --color-admin-sidebar: #171923;
+  --color-admin-sidebar-muted: #aeb4c2;
+  --color-admin-success: #177245;
+  --color-admin-success-soft: #e9f7ef;
+  --color-admin-warning: #9a6700;
+  --color-admin-warning-soft: #fff7d6;
+  --color-admin-info: #245ea8;
+  --color-admin-info-soft: #eaf2ff;
   --font-sans: var(--font-roboto);
   --font-display: var(--font-open-sans);
   --shadow-brand-card: 0 8px 24px rgba(17, 24, 39, 0.06);
   --shadow-brand-nav: 0 1px 0 rgba(17, 24, 39, 0.06);
+  --shadow-admin-float: 0 16px 40px rgba(17, 24, 39, 0.12);
 }

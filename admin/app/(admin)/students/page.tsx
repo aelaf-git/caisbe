@@ -3,6 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch, ApiError, type AdminStudent } from "@/lib/auth";
+import Alert from "@/components/ui/Alert";
+import Badge from "@/components/ui/Badge";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
+import { fieldClassName } from "@/components/ui/FormField";
+import PageHeader from "@/components/ui/PageHeader";
+import Skeleton from "@/components/ui/Skeleton";
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<AdminStudent[]>([]);
@@ -42,48 +49,62 @@ export default function StudentsPage() {
   }, [students, query]);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">Students</h1>
-        <p className="mt-2 text-sm text-caisbe-muted">
-          View student accounts and track progress across enrolled courses.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Learning"
+        title="Students"
+        description="View student accounts and track progress across enrolled courses."
+      />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-caisbe-muted">
+          {loading ? "Loading students…" : `${filtered.length} of ${students.length} students`}
+        </p>
+        <label className="w-full sm:max-w-sm">
+          <span className="sr-only">Search students</span>
         <input
+          type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name, email, or course"
-          className="h-11 w-full rounded-md border border-ifma-border bg-white px-3 text-sm outline-none focus:border-caisbe-green sm:max-w-sm"
+          className={fieldClassName}
         />
+        </label>
       </div>
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+      {error ? <Alert tone="error" title="Students could not be loaded">{error}</Alert> : null}
 
-      <div className="overflow-x-auto border border-ifma-border bg-white">
+      <Card padding="none" className="overflow-hidden">
         {loading ? (
-          <p className="p-6 text-sm text-caisbe-muted">Loading…</p>
+          <div className="space-y-3 p-6" aria-label="Loading students">
+            {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-16 w-full" />)}
+          </div>
         ) : filtered.length === 0 ? (
-          <p className="p-6 text-sm text-caisbe-muted">
-            {students.length === 0 ? "No students yet." : "No students match your search."}
-          </p>
+          <div className="p-4">
+            <EmptyState
+              title={students.length === 0 ? "No students yet" : "No matching students"}
+              description={students.length === 0
+                ? "Student accounts will appear here after registration."
+                : "Try a different name, email address, or course."}
+            />
+          </div>
         ) : (
-          <table className="min-w-full divide-y divide-ifma-border-light text-left text-sm">
-            <thead className="bg-[#fafaf8]">
+          <div className="overflow-x-auto">
+          <table className="min-w-[720px] w-full divide-y divide-ifma-border-light text-left text-sm">
+            <thead className="bg-admin-surface-muted/70">
               <tr>
-                <th className="px-6 py-3 font-semibold text-caisbe-text">Student</th>
-                <th className="px-6 py-3 font-semibold text-caisbe-text">Courses &amp; progress</th>
+                <th scope="col" className="px-4 py-3 font-semibold text-caisbe-text sm:px-6">Student</th>
+                <th scope="col" className="px-4 py-3 font-semibold text-caisbe-text sm:px-6">Courses &amp; progress</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ifma-border-light">
               {filtered.map((student) => (
-                <tr key={student.id} className="align-top">
-                  <td className="px-6 py-4">
+                <tr key={student.id} className="align-top transition-colors hover:bg-admin-surface-muted/30">
+                  <td className="px-4 py-4 sm:px-6">
                     <p className="font-semibold text-caisbe-text">{student.full_name}</p>
                     <p className="mt-0.5 text-xs text-caisbe-muted">{student.email}</p>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4 sm:px-6">
                     {student.enrollments.length === 0 ? (
                       <p className="text-sm text-caisbe-muted">No enrollments yet</p>
                     ) : (
@@ -103,10 +124,15 @@ export default function StudentsPage() {
                               <EnrollmentStatusBadge status={enrollment.status} />
                             </div>
                             <div className="flex items-center gap-3">
-                              <div className="h-2 min-w-[120px] flex-1 max-w-xs overflow-hidden rounded-full bg-ifma-border-light">
+                              <div className="h-2 min-w-[120px] max-w-xs flex-1 overflow-hidden rounded-full bg-ifma-border-light">
                                 <div
                                   className="h-full rounded-full bg-caisbe-green transition-all"
                                   style={{ width: `${Math.min(100, Math.max(0, enrollment.progress))}%` }}
+                                  role="progressbar"
+                                  aria-label={`${enrollment.course_title} progress`}
+                                  aria-valuenow={enrollment.progress}
+                                  aria-valuemin={0}
+                                  aria-valuemax={100}
                                 />
                               </div>
                               <span className="shrink-0 text-xs tabular-nums text-caisbe-muted">
@@ -122,23 +148,14 @@ export default function StudentsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
 
 function EnrollmentStatusBadge({ status }: { status: string }) {
   const completed = status === "completed";
-  return (
-    <span
-      className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${
-        completed
-          ? "bg-caisbe-green/10 text-caisbe-green"
-          : "bg-ifma-border-light text-caisbe-muted"
-      }`}
-    >
-      {status}
-    </span>
-  );
+  return <Badge tone={completed ? "success" : "neutral"}>{status.replaceAll("_", " ")}</Badge>;
 }

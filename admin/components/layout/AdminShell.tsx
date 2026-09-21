@@ -67,11 +67,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               <span className="block h-0.5 w-5 bg-caisbe-text" />
             </span>
           </button>
-          <p className="text-sm font-bold uppercase tracking-[0.12em] text-caisbe-green">CAISBE Admin</p>
+          <p className="text-sm font-bold uppercase tracking-[0.12em] text-caisbe-red">CAISBE Admin</p>
         </header>
 
         <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
-          <div className="mx-auto w-full max-w-6xl">{children}</div>
+          <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>
     </div>

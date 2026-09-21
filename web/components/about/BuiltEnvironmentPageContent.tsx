@@ -1,3 +1,4 @@
+import BackButton from "@/components/ui/BackButton";
 import ButtonLink from "@/components/ui/ButtonLink";
 import { PageHero } from "@/components/pages/ContentPage";
 import { aboutContent } from "@/lib/data/about";
@@ -11,9 +12,7 @@ export default function BuiltEnvironmentPageContent() {
       title={builtEnvironment.title}
       actions={
         <>
-          <ButtonLink href="/about" variant="secondary">
-            Back to About
-          </ButtonLink>
+          <BackButton href="/about" label="Back to about" />
           <ButtonLink href="/contact" variant="primary">
             Contact Us
           </ButtonLink>

@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 import QuizQuestionEditor, { validateQuestions } from "@/components/lms/QuizQuestionEditor";
+import PassMarkControl from "@/components/lms/PassMarkControl";
+import FormField, { fieldClassName } from "@/components/ui/FormField";
 import { useAutosave } from "@/hooks/useAutosave";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { QuizQuestion } from "@/lib/lms";
@@ -79,67 +81,27 @@ export default function FinalExamEditor({
 
   return (
     <>
-      {statusLabel ? <p className="text-xs text-caisbe-muted">{statusLabel}</p> : null}
-      <label className="block text-sm">
-        <span className="mb-1.5 block font-medium text-caisbe-text">Exam title</span>
+      {statusLabel ? (
+        <p className="inline-flex items-center gap-1.5 text-xs font-medium text-caisbe-muted">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-admin-warning" />
+          {statusLabel}
+        </p>
+      ) : null}
+      <FormField label="Exam title">
         <input
           value={exam.title}
           onChange={(e) => onChange({ ...exam, title: e.target.value })}
           onBlur={() => void autosave.flush()}
-          className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+          className={fieldClassName}
         />
-      </label>
-      <div className="rounded-md border border-ifma-border-light bg-[#fafaf8] p-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-caisbe-text">Pass mark</p>
-            <p className="mt-1 text-xs text-caisbe-muted">
-              Minimum score required to pass the final exam.
-            </p>
-          </div>
-          <div className="flex items-baseline gap-1 text-caisbe-green">
-            <span className="font-display text-3xl font-semibold tabular-nums leading-none">
-              {exam.pass_percent}
-            </span>
-            <span className="text-sm font-semibold">%</span>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-4">
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={exam.pass_percent}
-            onChange={(e) => onChange({ ...exam, pass_percent: Number(e.target.value) })}
-            onMouseUp={() => void autosave.flush()}
-            onTouchEnd={() => void autosave.flush()}
-            className="h-2 min-w-[180px] flex-1 cursor-pointer appearance-none rounded-full bg-ifma-border accent-caisbe-green"
-            aria-label="Exam pass percent"
-          />
-          <label className="relative block w-24 shrink-0">
-            <span className="sr-only">Exam pass percent</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={exam.pass_percent}
-              onChange={(e) => {
-                const next = Number(e.target.value);
-                onChange({
-                  ...exam,
-                  pass_percent: Number.isFinite(next) ? Math.min(100, Math.max(0, next)) : 0,
-                });
-              }}
-              onBlur={() => void autosave.flush()}
-              className="h-11 w-full rounded-md border border-ifma-border bg-white pr-8 pl-3 text-sm tabular-nums outline-none focus:border-caisbe-green"
-            />
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-caisbe-muted">
-              %
-            </span>
-          </label>
-        </div>
-      </div>
+      </FormField>
+      <PassMarkControl
+        value={exam.pass_percent}
+        onChange={(pass_percent) => onChange({ ...exam, pass_percent })}
+        onCommit={() => void autosave.flush()}
+        description="Minimum score required to pass the final exam."
+        ariaLabel="Exam pass percent"
+      />
       <QuizQuestionEditor
         questions={exam.questions}
         onChange={(questions) => onChange({ ...exam, questions })}

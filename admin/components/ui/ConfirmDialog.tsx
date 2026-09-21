@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId, useRef } from "react";
+import { buttonStyles } from "@/components/ui/Button";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -23,13 +24,24 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const titleId = useId();
+  const descriptionId = useId();
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     if (!open) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    cancelRef.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !busy) onCancel();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+      previousFocus?.focus();
+    };
   }, [open, busy, onCancel]);
 
   if (!open) return null;
@@ -39,7 +51,7 @@ export default function ConfirmDialog({
       <button
         type="button"
         aria-label="Dismiss"
-        className="absolute inset-0 bg-caisbe-text/40"
+        className="absolute inset-0 bg-caisbe-text/50 backdrop-blur-[2px]"
         disabled={busy}
         onClick={() => {
           if (!busy) onCancel();
@@ -48,20 +60,22 @@ export default function ConfirmDialog({
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
-        className="relative z-[101] w-full max-w-md border border-ifma-border bg-white p-6 shadow-brand-card"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        className="relative z-[101] w-full max-w-md rounded-2xl border border-ifma-border bg-white p-6 shadow-brand-card sm:p-7"
       >
-        <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">Confirm</p>
-        <h2 id="confirm-dialog-title" className="mt-2 font-display text-xl font-semibold text-caisbe-green">
+        <div className="flex size-11 items-center justify-center rounded-full bg-caisbe-red/10 text-xl text-caisbe-red" aria-hidden>!</div>
+        <h2 id={titleId} className="mt-4 font-display text-xl font-semibold text-caisbe-text-dark">
           {title}
         </h2>
-        <p className="mt-3 text-sm leading-6 text-caisbe-muted">{description}</p>
+        <p id={descriptionId} className="mt-2 text-sm leading-6 text-caisbe-muted">{description}</p>
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <button
+            ref={cancelRef}
             type="button"
             disabled={busy}
             onClick={onCancel}
-            className="inline-flex items-center justify-center border-2 border-ifma-border bg-white px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-green hover:text-caisbe-green disabled:opacity-60"
+            className={buttonStyles({ variant: "secondary" })}
           >
             {cancelLabel}
           </button>
@@ -69,7 +83,7 @@ export default function ConfirmDialog({
             type="button"
             disabled={busy}
             onClick={onConfirm}
-            className="inline-flex items-center justify-center border-2 border-caisbe-red bg-caisbe-red px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            className={buttonStyles({ variant: "danger" })}
           >
             {busy ? "Working…" : confirmLabel}
           </button>

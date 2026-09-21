@@ -5,8 +5,12 @@ import AssignmentFilePreview, { ASSIGNMENT_ACCEPT, isAssignmentFile } from "@/co
 import QuizBlockEditor from "@/components/lms/QuizBlockEditor";
 import TopicContentEditor from "@/components/lms/TopicContentEditor";
 import ChapterUploads from "@/components/lms/ChapterUploads";
+import Button from "@/components/ui/Button";
 import { CollapseToggle } from "@/components/ui/CollapseToggle";
+import EmptyState from "@/components/ui/EmptyState";
+import { fieldClassName } from "@/components/ui/FormField";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
+import Tabs from "@/components/ui/Tabs";
 import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
 import { useAutosave } from "@/hooks/useAutosave";
 import { apiFetch, apiUpload, ApiError } from "@/lib/auth";
@@ -107,9 +111,9 @@ export default function ChapterCard({
   }
 
   return (
-    <div className="border border-ifma-border bg-white">
+    <article className="overflow-hidden rounded-xl border border-ifma-border bg-white shadow-sm transition-shadow hover:shadow-md">
       {dialog}
-      <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4 sm:px-5">
         <div className="flex min-w-0 flex-1 items-start gap-1">
           <CollapseToggle
             expanded={expanded}
@@ -118,8 +122,8 @@ export default function ChapterCard({
             className="mt-0.5"
           />
           <div className="min-w-0 flex-1 space-y-3">
-            <p className="text-sm font-semibold uppercase tracking-wide text-caisbe-red">
-              Chapter - {sequence}
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-caisbe-red">
+              Chapter {sequence}
             </p>
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
@@ -130,7 +134,7 @@ export default function ChapterCard({
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={() => void titleAutosave.flush()}
                 placeholder="Enter chapter title"
-                className="h-11 w-full max-w-xl rounded-md border border-ifma-border px-3 text-sm font-semibold outline-none focus:border-caisbe-green"
+                className={`${fieldClassName} max-w-xl font-semibold`}
               />
             </div>
             {!expanded ? (
@@ -153,30 +157,20 @@ export default function ChapterCard({
 
       {expanded ? (
         <>
-          <div className="flex flex-wrap items-center gap-2 border-t border-ifma-border-light px-4 py-3">
-            {(
-              [
-                ["content", "Content"],
-                ["quizzes", "Quizzes"],
-                ["assignments", "Assignments"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setTab(key)}
-                className={`inline-flex items-center rounded-md px-3 py-2 text-sm font-medium ${
-                  tab === key
-                    ? "bg-caisbe-green/10 text-caisbe-green"
-                    : "text-caisbe-muted hover:bg-ifma-border-light"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="border-t border-ifma-border-light px-4 sm:px-5">
+            <Tabs
+              items={[
+                { id: "content", label: "Content", count: chapter.lessons.length },
+                { id: "quizzes", label: "Quizzes", count: quizzes.length },
+                { id: "assignments", label: "Assignments", count: assignments.length },
+              ]}
+              value={tab}
+              onChange={setTab}
+              ariaLabel={`Chapter ${sequence} sections`}
+            />
           </div>
 
-          <div className="border-t border-ifma-border-light p-4">
+          <div className="p-4 sm:p-5">
             {tab === "content" ? (
               <ContentPanel
                 chapter={chapter}
@@ -209,7 +203,7 @@ export default function ChapterCard({
           </div>
         </>
       ) : null}
-    </div>
+    </article>
   );
 }
 
@@ -237,20 +231,22 @@ function ContentPanel({
           Add topics, then nest notes and subtopics as deep as you need. Files for the whole chapter
           go in Chapter uploads below.
         </p>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           disabled={busy}
           onClick={onAddTopic}
-          className="border-2 border-caisbe-green px-4 py-2 text-sm font-semibold text-caisbe-green hover:bg-caisbe-green/5"
         >
-          + Add topic
-        </button>
+          <span aria-hidden>+</span> Add topic
+        </Button>
       </div>
 
       {chapter.lessons.length === 0 ? (
-        <p className="rounded-md border border-dashed border-ifma-border px-4 py-6 text-sm text-caisbe-muted">
-          No topics yet. Add a topic to start building this chapter&apos;s content.
-        </p>
+        <EmptyState
+          title="No topics yet"
+          description="Add a topic to start building this chapter's learning content."
+          action={<Button size="sm" onClick={onAddTopic}>Add first topic</Button>}
+        />
       ) : (
         <div className="space-y-3">
           {chapter.lessons.map((topic, topicIndex) => (
@@ -348,18 +344,18 @@ function QuizzesPanel({
           Optional chapter quizzes for learners. Each quiz saves only when every question is complete
           and one correct answer is marked.
         </p>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           disabled={adding}
           onClick={() => void addQuiz()}
-          className="border-2 border-caisbe-green px-4 py-2 text-sm font-semibold text-caisbe-green disabled:opacity-60"
         >
           {adding ? "Adding…" : "+ Add quiz"}
-        </button>
+        </Button>
       </div>
 
       {quizzes.length === 0 ? (
-        <p className="text-sm text-caisbe-muted">No quizzes yet.</p>
+        <EmptyState title="No quizzes yet" description="Add an optional knowledge check for this chapter." />
       ) : (
         <ul className="space-y-2">
           {quizzes.map((block) => (
@@ -453,17 +449,17 @@ function AssignmentsPanel({
         <p className="text-sm text-caisbe-muted">
           Attach PDF or Word assignment files for this chapter.
         </p>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setOpen((v) => !v)}
-          className="border-2 border-caisbe-green px-4 py-2 text-sm font-semibold text-caisbe-green"
         >
           {open ? "Cancel" : "+ Add assignment"}
-        </button>
+        </Button>
       </div>
 
       {assignments.length === 0 && !open ? (
-        <p className="text-sm text-caisbe-muted">No assignments yet.</p>
+        <EmptyState title="No assignments yet" description="Attach a PDF or Word document for learners to complete." />
       ) : (
         <ul className="space-y-2">
           {assignments.map((block) => (
@@ -477,7 +473,7 @@ function AssignmentsPanel({
       )}
 
       {open ? (
-        <form onSubmit={saveAssignment} className="space-y-3 border border-ifma-border p-4">
+        <form onSubmit={saveAssignment} className="space-y-4 rounded-xl border border-ifma-border bg-admin-surface-muted/40 p-4">
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium text-caisbe-text">Title (optional)</span>
             <input
@@ -499,13 +495,12 @@ function AssignmentsPanel({
             />
             <p className="mt-1.5 text-xs text-caisbe-muted">PDF or Word (.doc, .docx) only. Max 500 MB.</p>
           </label>
-          <button
+          <Button
             type="submit"
             disabled={saving}
-            className="border-2 border-caisbe-green bg-caisbe-green px-4 py-2 text-sm font-semibold uppercase text-white disabled:opacity-60"
           >
             {saving ? "Uploading…" : "Add assignment"}
-          </button>
+          </Button>
         </form>
       ) : null}
     </div>

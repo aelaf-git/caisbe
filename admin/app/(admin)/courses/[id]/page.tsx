@@ -1,12 +1,22 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import CertificatePreview from "@/components/certificates/CertificatePreview";
 import ChapterCard from "@/components/lms/ChapterCard";
+import { CourseStatusBadge, SaveStatus } from "@/components/lms/CourseEditorChrome";
 import FinalExamEditor, { type ExamDraft } from "@/components/lms/FinalExamEditor";
+import PassMarkControl from "@/components/lms/PassMarkControl";
 import { emptyQuestion } from "@/components/lms/QuizQuestionEditor";
+import Alert from "@/components/ui/Alert";
+import BackButton from "@/components/ui/BackButton";
+import Button, { buttonStyles } from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
+import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
+import PageHeader from "@/components/ui/PageHeader";
+import Skeleton from "@/components/ui/Skeleton";
+import Tabs from "@/components/ui/Tabs";
 import { AutosaveProvider, autosaveLabel, useAutosaveRegistry } from "@/hooks/autosaveContext";
 import { useAutosave } from "@/hooks/useAutosave";
 import { apiFetch, ApiError } from "@/lib/auth";
@@ -133,6 +143,8 @@ function AdminCourseEditorInner() {
   }, [courseId]);
 
   useEffect(() => {
+    // Initial route-data hydration intentionally starts from this effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
@@ -205,89 +217,75 @@ function AdminCourseEditorInner() {
   const draftLabel = autosaveLabel(overallStatus);
 
   if (loading) {
-    return <p className="text-sm text-caisbe-muted">Loading course…</p>;
+    return (
+      <div className="space-y-6" aria-label="Loading course editor">
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
   }
 
   if (!course) {
-    return <p className="text-sm text-caisbe-red">{error ?? "Course not found."}</p>;
+    return (
+      <EmptyState
+        title="Course unavailable"
+        description={error ?? "This course could not be found."}
+        action={<BackButton href="/courses" label="Return to courses" />}
+      />
+    );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="sticky top-0 z-20 -mx-1 border-b border-ifma-border bg-[#f7f7f4]/95 px-1 py-4 backdrop-blur">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <Link href="/courses" className="text-sm text-caisbe-muted hover:text-caisbe-green">
-              ← All courses
-            </Link>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <h1 className="font-display text-2xl font-semibold text-caisbe-text-dark md:text-3xl">
-                {meta.title || course.title}
-              </h1>
-              <span
-                className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
-                  isPublished
-                    ? "bg-caisbe-green/10 text-caisbe-green"
-                    : "bg-ifma-border-light text-caisbe-muted"
-                }`}
-              >
-                {status}
-              </span>
-              {draftLabel ? (
-                <span
-                  className={`text-xs font-medium ${
-                    overallStatus === "error" ? "text-caisbe-red" : "text-caisbe-muted"
-                  }`}
-                >
-                  {draftLabel}
-                </span>
-              ) : null}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => void togglePublish()}
-            disabled={publishing || overallStatus === "saving" || overallStatus === "pending"}
-            className={`inline-flex items-center justify-center border-2 px-5 py-2.5 text-sm font-semibold uppercase tracking-wide disabled:opacity-60 ${
-              isPublished
-                ? "border-caisbe-red/40 bg-white text-caisbe-muted hover:border-caisbe-red hover:text-caisbe-red"
-                : "border-caisbe-green bg-caisbe-green text-white hover:bg-caisbe-green-mid"
-            }`}
-          >
-            {publishing ? "Working…" : isPublished ? "Unpublish" : "Publish"}
-          </button>
+    <div className="space-y-6 pb-12">
+      <BackButton href="/courses" label="Back to all courses" />
+
+      <PageHeader
+        eyebrow="Course workspace"
+        title={meta.title || course.title}
+        titleAccessory={<CourseStatusBadge status={status} />}
+        description={`${meta.code || course.code} · Manage course details, curriculum, assessments, and certification.`}
+        meta={<SaveStatus status={overallStatus} label={draftLabel} />}
+        actions={
+          <>
+            <a
+              href={`${process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3002"}/courses/${courseId}`}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonStyles({ variant: "secondary" })}
+            >
+              Preview as learner
+            </a>
+            <Button
+              variant={isPublished ? "secondary" : "primary"}
+              onClick={() => void togglePublish()}
+              disabled={publishing || overallStatus === "saving" || overallStatus === "pending"}
+            >
+              {publishing ? "Working…" : isPublished ? "Unpublish" : "Publish"}
+            </Button>
+          </>
+        }
+      />
+
+      <div className="sticky top-16 z-20 -mx-4 border-y border-ifma-border bg-admin-canvas/95 px-4 backdrop-blur md:top-0 md:-mx-8 md:px-8">
+        <div className="mx-auto max-w-7xl">
+          <Tabs items={SECTION_NAV} value={activeSection} onChange={setActiveSection} ariaLabel="Course editor sections" />
         </div>
-        <nav className="mt-4 flex flex-wrap gap-1" aria-label="Course sections">
-          {SECTION_NAV.map((item) => {
-            const active = activeSection === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveSection(item.id)}
-                className={`px-3 py-1.5 text-sm font-medium ${
-                  active
-                    ? "bg-caisbe-green/10 text-caisbe-green"
-                    : "text-caisbe-muted hover:text-caisbe-green"
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-        {error ? <p className="mt-3 text-sm text-caisbe-red">{error}</p> : null}
-        {sectionError ? <p className="mt-3 text-sm text-caisbe-red">{sectionError}</p> : null}
       </div>
 
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      {sectionError ? <Alert tone="error">{sectionError}</Alert> : null}
+
       {showSection("details") ? (
-      <section id="details" className="scroll-mt-36 space-y-4 border border-ifma-border bg-white p-6">
-        <h2 className="text-lg font-semibold text-caisbe-text">Course details</h2>
+      <Card id="details" className="scroll-mt-48 space-y-5">
+        <div>
+          <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Course details</h2>
+          <p className="mt-1 text-sm text-caisbe-muted">Set the learner-facing identity and completion requirement.</p>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-caisbe-text">Code</span>
+          <FormField label="Course code" hint="Updating the code also suggests a matching URL slug.">
             <input
-              className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+              className={fieldClassName}
               value={meta.code}
               onChange={(e) => {
                 const code = e.target.value;
@@ -295,112 +293,61 @@ function AdminCourseEditorInner() {
               }}
               onBlur={() => void metaAutosave.flush()}
             />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-caisbe-text">Slug</span>
+          </FormField>
+          <FormField label="URL slug">
             <input
-              className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+              className={fieldClassName}
               value={meta.slug}
               onChange={(e) => setMeta((m) => ({ ...m, slug: e.target.value }))}
               onBlur={() => void metaAutosave.flush()}
               placeholder="auto from code"
             />
-          </label>
+          </FormField>
         </div>
-        <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-caisbe-text">Title</span>
+        <FormField label="Course title">
           <input
-            className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+            className={fieldClassName}
             value={meta.title}
             onChange={(e) => setMeta((m) => ({ ...m, title: e.target.value }))}
             onBlur={() => void metaAutosave.flush()}
           />
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-caisbe-text">Description</span>
+        </FormField>
+        <FormField label="Description" hint="A concise overview shown to learners before they begin.">
           <textarea
-            className="w-full rounded-md border border-ifma-border px-3 py-2 text-sm outline-none focus:border-caisbe-green"
-            rows={3}
+            className={textAreaClassName}
+            rows={4}
             value={meta.description}
             onChange={(e) => setMeta((m) => ({ ...m, description: e.target.value }))}
             onBlur={() => void metaAutosave.flush()}
           />
-        </label>
-        <div className="rounded-md border border-ifma-border-light bg-[#fafaf8] p-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-caisbe-text">Pass mark</p>
-              <p className="mt-1 text-xs text-caisbe-muted">
-                Minimum score required to complete the course and earn a certificate.
-              </p>
-            </div>
-            <div className="flex items-baseline gap-1 text-caisbe-green">
-              <span className="font-display text-3xl font-semibold tabular-nums leading-none">
-                {meta.pass_percent}
-              </span>
-              <span className="text-sm font-semibold">%</span>
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-4">
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={meta.pass_percent}
-              onChange={(e) => setMeta((m) => ({ ...m, pass_percent: Number(e.target.value) }))}
-              onMouseUp={() => void metaAutosave.flush()}
-              onTouchEnd={() => void metaAutosave.flush()}
-              className="h-2 min-w-[180px] flex-1 cursor-pointer appearance-none rounded-full bg-ifma-border accent-caisbe-green"
-              aria-label="Pass percent"
-            />
-            <label className="relative block w-24 shrink-0">
-              <span className="sr-only">Pass percent</span>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={meta.pass_percent}
-                onChange={(e) => {
-                  const next = Number(e.target.value);
-                  setMeta((m) => ({
-                    ...m,
-                    pass_percent: Number.isFinite(next) ? Math.min(100, Math.max(0, next)) : 0,
-                  }));
-                }}
-                onBlur={() => void metaAutosave.flush()}
-                className="h-11 w-full rounded-md border border-ifma-border bg-white pr-8 pl-3 text-sm tabular-nums outline-none focus:border-caisbe-green"
-              />
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-caisbe-muted">
-                %
-              </span>
-            </label>
-          </div>
-        </div>
-      </section>
+        </FormField>
+        <PassMarkControl
+          value={meta.pass_percent}
+          onChange={(pass_percent) => setMeta((current) => ({ ...current, pass_percent }))}
+          onCommit={() => void metaAutosave.flush()}
+          description="Minimum score required to complete the course and earn a certificate."
+        />
+      </Card>
       ) : null}
 
       {showSection("content") ? (
-      <section
+      <Card
         id="content"
-        className="scroll-mt-36 space-y-4 border border-ifma-border bg-white p-6"
+        className="scroll-mt-48 space-y-5"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-caisbe-text">Chapters</h2>
-            <p className="mt-1 text-xs text-caisbe-muted">
-              Changes save automatically as a draft.
-            </p>
+            <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Course content</h2>
+            <p className="mt-1 text-sm text-caisbe-muted">Build the curriculum chapter by chapter. Changes save automatically.</p>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => void addChapter()}
-            className="border-2 border-caisbe-green px-4 py-2 text-sm font-semibold text-caisbe-green hover:bg-caisbe-green hover:text-white"
           >
-            Add chapter
-          </button>
+            <span aria-hidden>+</span> Add chapter
+          </Button>
         </div>
-        {contentError ? <p className="text-sm text-caisbe-red">{contentError}</p> : null}
+        {contentError ? <Alert tone="error">{contentError}</Alert> : null}
         <div className="space-y-4">
           {course.chapters.map((chapter, index) => (
             <ChapterCard
@@ -414,13 +361,20 @@ function AdminCourseEditorInner() {
               onError={setContentError}
             />
           ))}
+          {course.chapters.length === 0 ? (
+            <EmptyState
+              title="Start your curriculum"
+              description="Add a chapter, then fill it with topics, notes, media, quizzes, and assignments."
+              action={<Button onClick={() => void addChapter()}>Add first chapter</Button>}
+            />
+          ) : null}
         </div>
-      </section>
+      </Card>
       ) : null}
 
       {showSection("exam") ? (
-      <section id="exam" className="scroll-mt-36 space-y-4 border border-ifma-border bg-white p-6">
-        <h2 className="text-lg font-semibold text-caisbe-text">Final exam</h2>
+      <Card id="exam" className="scroll-mt-48 space-y-5">
+        <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Final exam</h2>
         <p className="text-sm text-caisbe-muted">
           Build the final exam here. Changes autosave when every question has a prompt,
           filled choices, and exactly one correct answer marked.
@@ -432,22 +386,22 @@ function AdminCourseEditorInner() {
           onChange={setExam}
           onError={setContentError}
         />
-      </section>
+      </Card>
       ) : null}
 
       {showSection("certificate") ? (
-      <section
+      <Card
         id="certificate"
-        className="scroll-mt-36 space-y-4 border border-ifma-border bg-white p-6"
+        className="scroll-mt-48 space-y-4"
       >
-        <h2 className="text-lg font-semibold text-caisbe-text">Certificate</h2>
+        <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Certificate</h2>
         <p className="text-sm text-caisbe-muted">
           All courses use the standard CAISBE certificate design. When a student completes this course,
           a certificate is issued with their name, the course title below, the issue date, and a
           verification QR code.
         </p>
         <CertificatePreview kind="completion" courseTitle={meta.title || "Sample Course"} />
-      </section>
+      </Card>
       ) : null}
     </div>
   );

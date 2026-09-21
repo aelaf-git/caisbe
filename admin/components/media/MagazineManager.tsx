@@ -2,6 +2,12 @@
 
 import { useRef, useState } from "react";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
+import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
+import Skeleton from "@/components/ui/Skeleton";
 import { apiFetch, apiUpload, ApiError, type MediaAsset } from "@/lib/auth";
 
 const MAGAZINE_ACCEPT =
@@ -122,17 +128,14 @@ export default function MagazineManager({
 
   return (
     <div className="space-y-8">
-      <section className="border border-ifma-border bg-white p-6">
+      <Card>
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Add magazine issue</h2>
         <p className="mt-1 text-sm text-caisbe-muted">
           Upload a PDF or EPUB. Published issues appear on the website landing page and magazine page.
         </p>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          <label className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-              Magazine file
-            </span>
+          <FormField label="Magazine file" hint={fileUrl ? "Upload complete — file is ready." : "PDF or EPUB recommended."}>
             <input
               ref={fileInputRef}
               type="file"
@@ -149,12 +152,9 @@ export default function MagazineManager({
                 File ready — open preview
               </a>
             ) : null}
-          </label>
+          </FormField>
 
-          <label className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-              Cover image (optional)
-            </span>
+          <FormField label="Cover image" hint="Optional; JPG, PNG, WebP, or GIF.">
             <input
               ref={coverInputRef}
               type="file"
@@ -171,31 +171,29 @@ export default function MagazineManager({
                 Cover ready — open preview
               </a>
             ) : null}
-          </label>
+          </FormField>
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Title</span>
+          <FormField label="Title">
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="h-11 w-full rounded-md border border-ifma-border bg-white px-3 text-sm outline-none focus:border-caisbe-green"
+              className={fieldClassName}
               placeholder="CAISBE Magazine — Spring 2026"
             />
-          </label>
-          <label className="block space-y-2 md:col-span-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-              Description (optional)
-            </span>
+          </FormField>
+          <div className="md:col-span-2">
+          <FormField label="Description" hint="Optional summary shown on the landing page card.">
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-ifma-border bg-white px-3 py-2 text-sm outline-none focus:border-caisbe-green"
+              className={textAreaClassName}
               placeholder="Brief summary for the landing page card."
             />
-          </label>
+          </FormField>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-6">
@@ -219,27 +217,26 @@ export default function MagazineManager({
           </label>
         </div>
 
-        <button
-          type="button"
+        <Button
           disabled={uploading}
           onClick={() => void createMagazine()}
-          className="mt-6 inline-flex items-center justify-center border-2 border-caisbe-green bg-caisbe-green px-5 py-3 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-green-mid disabled:opacity-60"
+          className="mt-6"
         >
           {uploading ? "Uploading…" : "Save magazine issue"}
-        </button>
-      </section>
+        </Button>
+      </Card>
 
-      <section className="overflow-x-auto border border-ifma-border bg-white">
+      <Card padding="none" className="overflow-x-auto">
         <div className="border-b border-ifma-border-light px-6 py-4">
           <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Magazine issues</h2>
         </div>
         {loading ? (
-          <p className="p-6 text-sm text-caisbe-muted">Loading…</p>
+          <div className="space-y-3 p-6">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-14" />)}</div>
         ) : assets.length === 0 ? (
-          <p className="p-6 text-sm text-caisbe-muted">No magazine issues yet.</p>
+          <div className="p-4"><EmptyState title="No magazine issues yet" description="Upload your first issue to publish it on the website." /></div>
         ) : (
-          <table className="min-w-full divide-y divide-ifma-border-light text-left text-sm">
-            <thead className="bg-[#fafaf8]">
+          <table className="min-w-[720px] w-full divide-y divide-ifma-border-light text-left text-sm">
+            <thead className="bg-admin-surface-muted/70">
               <tr>
                 <th className="px-6 py-3 font-semibold text-caisbe-text">Issue</th>
                 <th className="px-6 py-3 font-semibold text-caisbe-text">Status</th>
@@ -261,26 +258,18 @@ export default function MagazineManager({
                     <button
                       type="button"
                       onClick={() => void toggleField(asset, "published")}
-                      className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${
-                        asset.published
-                          ? "bg-caisbe-green/10 text-caisbe-green"
-                          : "bg-ifma-border-light text-caisbe-muted"
-                      }`}
+                      className="rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-caisbe-red/15"
                     >
-                      {asset.published ? "Published" : "Draft"}
+                      <Badge tone={asset.published ? "success" : "neutral"}>{asset.published ? "Published" : "Draft"}</Badge>
                     </button>
                   </td>
                   <td className="px-6 py-4">
                     <button
                       type="button"
                       onClick={() => void toggleField(asset, "featured")}
-                      className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${
-                        asset.featured
-                          ? "bg-caisbe-green/10 text-caisbe-green"
-                          : "bg-ifma-border-light text-caisbe-muted"
-                      }`}
+                      className="rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-caisbe-red/15"
                     >
-                      {asset.featured ? "Yes" : "No"}
+                      <Badge tone={asset.featured ? "brand" : "neutral"}>{asset.featured ? "Featured" : "No"}</Badge>
                     </button>
                   </td>
                   <td className="px-6 py-4">
@@ -304,7 +293,7 @@ export default function MagazineManager({
             </tbody>
           </table>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

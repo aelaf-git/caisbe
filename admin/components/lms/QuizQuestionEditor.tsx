@@ -1,6 +1,9 @@
 "use client";
 
 import { DeleteIconButton } from "@/components/ui/IconTrash";
+import Alert from "@/components/ui/Alert";
+import Button from "@/components/ui/Button";
+import { fieldClassName } from "@/components/ui/FormField";
 import type { QuizQuestion } from "@/lib/lms";
 
 const MIN_CHOICES = 2;
@@ -61,15 +64,15 @@ export default function QuizQuestionEditor({
   }
 
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-caisbe-muted">
+    <div className="space-y-4">
+      <p className="text-sm text-caisbe-muted">
         Select the radio button next to the correct answer for each question.
       </p>
 
       {questions.map((q, qi) => (
-        <div key={qi} className="space-y-2 border border-ifma-border-light p-3">
+        <div key={qi} className="space-y-4 rounded-xl border border-ifma-border bg-admin-surface-muted/30 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-caisbe-red">
               Question {qi + 1}
             </p>
             {questions.length > 1 ? (
@@ -84,11 +87,12 @@ export default function QuizQuestionEditor({
             placeholder="Question prompt"
             value={q.prompt}
             onChange={(e) => updateQuestion(qi, { ...q, prompt: e.target.value })}
-            className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+            className={`${fieldClassName} font-medium`}
           />
+          <div className="space-y-2">
           {q.choices.map((c, ci) => (
-            <div key={ci} className="flex items-center gap-2">
-              <label className="flex shrink-0 items-center gap-1.5 text-xs text-caisbe-muted">
+            <div key={ci} className={`flex items-center gap-2 rounded-lg border p-2 transition-colors ${c.is_correct ? "border-admin-success/30 bg-admin-success-soft" : "border-ifma-border bg-white"}`}>
+              <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-medium text-caisbe-muted">
                 <input
                   type="radio"
                   name={`${radioNamePrefix}-${qi}`}
@@ -115,7 +119,7 @@ export default function QuizQuestionEditor({
                   choices[ci] = { ...c, text: e.target.value };
                   updateQuestion(qi, { ...q, choices });
                 }}
-                className="h-10 flex-1 rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+                  className="h-10 min-w-0 flex-1 rounded-lg border border-ifma-border bg-white px-3 text-sm outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
               />
               {q.choices.length > MIN_CHOICES ? (
                 <DeleteIconButton
@@ -137,10 +141,11 @@ export default function QuizQuestionEditor({
               ) : null}
             </div>
           ))}
+          </div>
           {q.choices.length < MAX_CHOICES ? (
             <button
               type="button"
-              className="text-sm font-medium text-caisbe-green hover:text-caisbe-green-mid"
+              className="text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
               onClick={() =>
                 updateQuestion(qi, {
                   ...q,
@@ -154,15 +159,15 @@ export default function QuizQuestionEditor({
         </div>
       ))}
 
-      <button
-        type="button"
-        className="text-sm font-medium text-caisbe-green hover:text-caisbe-green-mid"
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={() => onChange([...questions, emptyQuestion()])}
       >
-        + Question
-      </button>
+        + Add question
+      </Button>
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
     </div>
   );
 }

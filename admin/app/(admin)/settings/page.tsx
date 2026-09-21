@@ -2,6 +2,12 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/auth";
+import Alert from "@/components/ui/Alert";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import FormField, { fieldClassName } from "@/components/ui/FormField";
+import PageHeader from "@/components/ui/PageHeader";
+import Skeleton from "@/components/ui/Skeleton";
 
 type AppSettings = {
   institute_name: string;
@@ -98,38 +104,34 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">Settings</h1>
-        <p className="mt-2 text-sm text-caisbe-muted">
-          Configure certificate branding, LMS defaults, and your admin password.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Administration"
+        title="Settings"
+        description="Configure certificate branding, LMS defaults, and your admin password."
+      />
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
-      {message ? <p className="text-sm text-caisbe-green">{message}</p> : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      {message ? <Alert tone="success">{message}</Alert> : null}
 
-      <section className="border border-ifma-border bg-white p-6">
-        <h2 className="text-lg font-semibold text-caisbe-text">Certificate & LMS defaults</h2>
+      <Card>
+        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Certificate &amp; LMS defaults</h2>
+        <p className="mt-1 text-sm text-caisbe-muted">Defaults used for new courses and generated credentials.</p>
         {loading || !settings ? (
-          <p className="mt-4 text-sm text-caisbe-muted">Loading…</p>
+          <div className="mt-6 grid gap-4 md:grid-cols-2" aria-label="Loading settings">
+            {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-16" />)}
+          </div>
         ) : (
-          <form onSubmit={(e) => void handleSave(e)} className="mt-4 space-y-4">
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-                Institute name (certificate footer)
-              </span>
+          <form onSubmit={(e) => void handleSave(e)} className="mt-6 grid gap-5 md:grid-cols-2">
+            <FormField label="Institute name" hint="Shown in the certificate footer.">
               <input
                 value={settings.institute_name}
                 onChange={(e) => setSettings({ ...settings, institute_name: e.target.value })}
-                className="w-full border border-ifma-border px-3 py-2 text-sm"
+                className={fieldClassName}
                 required
               />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-                Default pass percent (new courses)
-              </span>
+            </FormField>
+            <FormField label="Default pass percent" hint="Applied when creating a course.">
               <input
                 type="number"
                 min={0}
@@ -138,103 +140,88 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings({ ...settings, default_pass_percent: Number(e.target.value) })
                 }
-                className="w-full max-w-xs border border-ifma-border px-3 py-2 text-sm"
+                className={fieldClassName}
                 required
               />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-                Membership certificate title
-              </span>
+            </FormField>
+            <FormField label="Membership certificate title">
               <input
                 value={settings.membership_cert_title}
                 onChange={(e) =>
                   setSettings({ ...settings, membership_cert_title: e.target.value })
                 }
-                className="w-full border border-ifma-border px-3 py-2 text-sm"
+                className={fieldClassName}
                 required
               />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-                Completion certificate title
-              </span>
+            </FormField>
+            <FormField label="Completion certificate title">
               <input
                 value={settings.completion_cert_title}
                 onChange={(e) =>
                   setSettings({ ...settings, completion_cert_title: e.target.value })
                 }
-                className="w-full border border-ifma-border px-3 py-2 text-sm"
+                className={fieldClassName}
                 required
               />
-            </label>
-            <div className="rounded-md border border-ifma-border-light bg-[#fafafa] px-3 py-2 text-sm text-caisbe-muted">
+            </FormField>
+            <div className="rounded-lg border border-ifma-border-light bg-admin-surface-muted px-4 py-3 text-sm text-caisbe-muted md:col-span-2">
               Portal public URL (read-only):{" "}
-              <span className="font-mono text-caisbe-text">{settings.portal_public_url}</span>
+              <span className="break-all font-mono text-caisbe-text">{settings.portal_public_url}</span>
             </div>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-md border-2 border-caisbe-green bg-caisbe-green px-5 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-green-mid disabled:opacity-60"
-            >
+            <div className="md:col-span-2">
+            <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : "Save settings"}
-            </button>
+            </Button>
+            </div>
           </form>
         )}
-      </section>
+      </Card>
 
-      <section className="border border-ifma-border bg-white p-6">
-        <h2 className="text-lg font-semibold text-caisbe-text">Change password</h2>
-        {passwordError ? <p className="mt-3 text-sm text-caisbe-red">{passwordError}</p> : null}
-        {passwordMessage ? <p className="mt-3 text-sm text-caisbe-green">{passwordMessage}</p> : null}
-        <form onSubmit={(e) => void handlePassword(e)} className="mt-4 max-w-md space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-              Current password
-            </span>
+      <Card>
+        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Change password</h2>
+        <p className="mt-1 text-sm text-caisbe-muted">Use at least eight characters for your new password.</p>
+        <div className="mt-4 space-y-3">
+        {passwordError ? <Alert tone="error">{passwordError}</Alert> : null}
+        {passwordMessage ? <Alert tone="success">{passwordMessage}</Alert> : null}
+        </div>
+        <form onSubmit={(e) => void handlePassword(e)} className="mt-6 max-w-md space-y-5">
+          <FormField label="Current password">
             <input
+              autoComplete="current-password"
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full border border-ifma-border px-3 py-2 text-sm"
+              className={fieldClassName}
               required
             />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-              New password
-            </span>
+          </FormField>
+          <FormField label="New password">
             <input
+              autoComplete="new-password"
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full border border-ifma-border px-3 py-2 text-sm"
+              className={fieldClassName}
               minLength={8}
               required
             />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-              Confirm new password
-            </span>
+          </FormField>
+          <FormField label="Confirm new password">
             <input
+              autoComplete="new-password"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full border border-ifma-border px-3 py-2 text-sm"
+              className={fieldClassName}
               minLength={8}
               required
             />
-          </label>
-          <button
-            type="submit"
-            disabled={passwordBusy}
-            className="rounded-md border-2 border-ifma-border bg-white px-5 py-2.5 text-sm font-semibold uppercase text-caisbe-text hover:border-caisbe-green hover:text-caisbe-green disabled:opacity-60"
-          >
+          </FormField>
+          <Button type="submit" disabled={passwordBusy} variant="secondary">
             {passwordBusy ? "Updating…" : "Update password"}
-          </button>
+          </Button>
         </form>
-      </section>
+      </Card>
     </div>
   );
 }

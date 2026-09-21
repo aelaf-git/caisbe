@@ -1,8 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/auth";
+import Alert from "@/components/ui/Alert";
+import BackButton from "@/components/ui/BackButton";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
+import PageHeader from "@/components/ui/PageHeader";
+import Skeleton from "@/components/ui/Skeleton";
 
 type CourseReportRow = {
   course_id: number;
@@ -56,23 +61,17 @@ export default function ReportsPage() {
     loading ? "—" : `${n ?? 0}${suffix}`;
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">Reports</h1>
-          <p className="mt-2 text-sm text-caisbe-muted">
-            Enrollment, completion, and certificate activity across the LMS.
-          </p>
-        </div>
-        <Link
-          href="/dashboard"
-          className="text-sm font-semibold text-caisbe-green hover:underline"
-        >
-          Back to dashboard
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Analytics"
+        title="Reports"
+        description="Enrollment, completion, and certificate activity across the LMS."
+        actions={
+          <BackButton href="/dashboard" label="Back to dashboard" />
+        }
+      />
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+      {error ? <Alert tone="error" title="Reports could not be loaded">{error}</Alert> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -94,32 +93,34 @@ export default function ReportsPage() {
             sub: data ? `${data.quiz_passed}/${data.quiz_attempts} passed` : undefined,
           },
         ].map((item) => (
-          <div key={item.label} className="border border-ifma-border bg-white p-5">
+          <Card key={item.label} padding="sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
               {item.label}
             </p>
-            <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">
-              {item.display}
-            </p>
+            {loading ? <Skeleton className="mt-3 h-9 w-20" /> : (
+              <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">{item.display}</p>
+            )}
             {"sub" in item && item.sub ? (
               <p className="mt-1 text-xs text-caisbe-muted">{item.sub}</p>
             ) : null}
-          </div>
+          </Card>
         ))}
       </div>
 
-      <section className="border border-ifma-border bg-white">
+      <Card padding="none" className="overflow-hidden">
         <div className="border-b border-ifma-border-light px-6 py-4">
           <h2 className="text-lg font-semibold text-caisbe-text">By course</h2>
         </div>
         {loading ? (
-          <p className="p-6 text-sm text-caisbe-muted">Loading…</p>
+          <div className="space-y-3 p-6" aria-label="Loading course reports">
+            {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-12" />)}
+          </div>
         ) : !data || data.courses.length === 0 ? (
-          <p className="p-6 text-sm text-caisbe-muted">No courses yet.</p>
+          <div className="p-4"><EmptyState title="No course data yet" description="Course performance will appear after courses and enrollments are created." /></div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-ifma-border-light bg-[#fafafa] text-xs uppercase tracking-wide text-caisbe-muted">
+            <table className="min-w-[760px] w-full text-left text-sm">
+              <thead className="border-b border-ifma-border-light bg-admin-surface-muted/70 text-xs uppercase tracking-wide text-caisbe-muted">
                 <tr>
                   <th className="px-6 py-3 font-semibold">Code</th>
                   <th className="px-6 py-3 font-semibold">Course</th>
@@ -131,7 +132,7 @@ export default function ReportsPage() {
               </thead>
               <tbody className="divide-y divide-ifma-border-light">
                 {data.courses.map((row) => (
-                  <tr key={row.course_id}>
+                  <tr key={row.course_id} className="transition-colors hover:bg-admin-surface-muted/30">
                     <td className="px-6 py-3 font-mono text-xs text-caisbe-muted">{row.course_code}</td>
                     <td className="px-6 py-3 font-medium text-caisbe-text">{row.course_title}</td>
                     <td className="px-6 py-3 tabular-nums">{row.enrollments}</td>
@@ -144,7 +145,7 @@ export default function ReportsPage() {
             </table>
           </div>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

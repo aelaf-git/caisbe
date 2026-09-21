@@ -36,13 +36,17 @@ export default function CertificatePreview({
               Course completion
             </h3>
           ) : null}
-          <CertificateDocument
-            studentName={SAMPLE_STUDENT}
-            courseTitle={courseTitle}
-            issuedAt={issuedAt}
-            verifyUrl={completionVerify}
-            certificateCode={SAMPLE_COMPLETION_CODE}
-          />
+          <div className="overflow-x-auto rounded-xl bg-admin-surface-muted/60 p-3 sm:p-5">
+            <div className="min-w-[620px]">
+              <CertificateDocument
+                studentName={SAMPLE_STUDENT}
+                courseTitle={courseTitle}
+                issuedAt={issuedAt}
+                verifyUrl={completionVerify}
+                certificateCode={SAMPLE_COMPLETION_CODE}
+              />
+            </div>
+          </div>
         </div>
       ) : null}
       {kind === "membership" || kind === "both" ? (
@@ -52,13 +56,17 @@ export default function CertificatePreview({
               Membership
             </h3>
           ) : null}
-          <MembershipCertificateDocument
-            studentName={SAMPLE_STUDENT}
-            membershipNumber={SAMPLE_MEMBERSHIP_NUMBER}
-            issuedAt={issuedAt}
-            verifyUrl={membershipVerify}
-            certificateCode={SAMPLE_MEMBERSHIP_CODE}
-          />
+          <div className="overflow-x-auto rounded-xl bg-admin-surface-muted/60 p-3 sm:p-5">
+            <div className="min-w-[620px]">
+              <MembershipCertificateDocument
+                studentName={SAMPLE_STUDENT}
+                membershipNumber={SAMPLE_MEMBERSHIP_NUMBER}
+                issuedAt={issuedAt}
+                verifyUrl={membershipVerify}
+                certificateCode={SAMPLE_MEMBERSHIP_CODE}
+              />
+            </div>
+          </div>
         </div>
       ) : null}
     </div>

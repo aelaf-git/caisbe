@@ -7,6 +7,11 @@ import {
   type SiteVisit,
   type SiteVisitStats,
 } from "@/lib/auth";
+import Alert from "@/components/ui/Alert";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
+import PageHeader from "@/components/ui/PageHeader";
+import Skeleton from "@/components/ui/Skeleton";
 
 function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -61,15 +66,14 @@ export default function SiteActivityPage() {
   );
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">Site activity</h1>
-        <p className="mt-2 text-sm text-caisbe-muted">
-          Visitors on the public website: landing-page traffic, IP addresses, and device details.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Analytics"
+        title="Site activity"
+        description="Visitors on the public website: landing-page traffic, IP addresses, and device details."
+      />
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+      {error ? <Alert tone="error" title="Activity could not be loaded">{error}</Alert> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -78,22 +82,22 @@ export default function SiteActivityPage() {
           { label: "Views last 7 days", value: stats?.views_last_7_days },
           { label: "Unique last 7 days", value: stats?.unique_last_7_days },
         ].map((item) => (
-          <div key={item.label} className="border border-ifma-border bg-white p-5">
+          <Card key={item.label} padding="sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">{item.label}</p>
-            <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">
-              {loading && !stats ? "—" : (item.value ?? 0)}
-            </p>
-          </div>
+            {loading && !stats ? <Skeleton className="mt-3 h-9 w-20" /> : (
+              <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">{item.value ?? 0}</p>
+            )}
+          </Card>
         ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="border border-ifma-border bg-white">
+        <Card padding="none" className="overflow-hidden">
           <div className="border-b border-ifma-border-light px-6 py-4">
             <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Top pages</h2>
           </div>
           {loading && !stats ? (
-            <p className="p-6 text-sm text-caisbe-muted">Loading…</p>
+            <div className="space-y-3 p-6"><Skeleton className="h-10" /><Skeleton className="h-10" /></div>
           ) : !stats || stats.top_paths.length === 0 ? (
             <p className="p-6 text-sm text-caisbe-muted">No page views recorded yet.</p>
           ) : (
@@ -106,14 +110,14 @@ export default function SiteActivityPage() {
               ))}
             </ul>
           )}
-        </section>
+        </Card>
 
-        <section className="border border-ifma-border bg-white">
+        <Card padding="none" className="overflow-hidden">
           <div className="border-b border-ifma-border-light px-6 py-4">
             <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Countries</h2>
           </div>
           {loading && !stats ? (
-            <p className="p-6 text-sm text-caisbe-muted">Loading…</p>
+            <div className="space-y-3 p-6"><Skeleton className="h-10" /><Skeleton className="h-10" /></div>
           ) : !stats || stats.top_countries.length === 0 ? (
             <p className="p-6 text-sm text-caisbe-muted">
               Country appears when the host provides it (for example Cloudflare). IP is always stored.
@@ -128,7 +132,7 @@ export default function SiteActivityPage() {
               ))}
             </ul>
           )}
-        </section>
+        </Card>
       </div>
 
       <section className="space-y-4">
@@ -150,16 +154,14 @@ export default function SiteActivityPage() {
           </label>
         </div>
 
-        <div className="overflow-x-auto border border-ifma-border bg-white">
+        <Card padding="none" className="overflow-x-auto">
           {loading ? (
-            <p className="p-6 text-sm text-caisbe-muted">Loading…</p>
+            <div className="space-y-3 p-6">{[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-14" />)}</div>
           ) : visits.length === 0 ? (
-            <p className="p-6 text-sm text-caisbe-muted">
-              No visits yet. Open the public website to start recording activity.
-            </p>
+            <div className="p-4"><EmptyState title="No visits yet" description="Open the public website to start recording activity." /></div>
           ) : (
-            <table className="min-w-full divide-y divide-ifma-border-light text-left text-sm">
-              <thead className="bg-[#fafaf8]">
+            <table className="min-w-[1100px] w-full divide-y divide-ifma-border-light text-left text-sm">
+              <thead className="bg-admin-surface-muted/70">
                 <tr>
                   <th className="px-6 py-3 font-semibold text-caisbe-text">When</th>
                   <th className="px-6 py-3 font-semibold text-caisbe-text">Page</th>
@@ -194,7 +196,7 @@ export default function SiteActivityPage() {
               </tbody>
             </table>
           )}
-        </div>
+        </Card>
       </section>
     </div>
   );

@@ -141,7 +141,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
 
   if (!editor) {
     return (
-      <div className="h-[220px] rounded-md border border-ifma-border bg-white px-4 py-3 text-sm text-caisbe-muted">
+      <div className="h-[220px] animate-pulse rounded-xl border border-ifma-border bg-admin-surface-muted px-4 py-3 text-sm text-caisbe-muted">
         Loading editor…
       </div>
     );
@@ -152,8 +152,8 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
   const currentHighlight = (editor.getAttributes("highlight").color as string | undefined) || "";
 
   return (
-    <div className="overflow-hidden rounded-md border border-ifma-border bg-white shadow-sm focus-within:border-caisbe-green">
-      <div className="border-b border-ifma-border bg-[#f3f3f3]">
+    <div className="overflow-hidden rounded-xl border border-ifma-border bg-white shadow-sm transition-shadow focus-within:border-caisbe-red focus-within:ring-4 focus-within:ring-caisbe-red/10">
+      <div className="border-b border-ifma-border bg-admin-surface-muted">
         <div className="flex flex-wrap items-stretch gap-0 px-1 py-1">
           <ToolbarGroup label="Clipboard">
             <IconButton
@@ -177,7 +177,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
           <ToolbarGroup label="Styles">
             <select
               aria-label="Paragraph style"
-              className="h-8 min-w-[7.5rem] rounded border border-[#c8c8c8] bg-white px-2 text-xs text-caisbe-text outline-none focus:border-caisbe-green"
+              className="h-8 min-w-[7.5rem] rounded-lg border border-ifma-border bg-white px-2 text-xs text-caisbe-text outline-none focus:border-caisbe-red"
               value={getBlockStyle(editor)}
               onChange={(e) => applyBlockStyle(editor, e.target.value)}
             >
@@ -188,7 +188,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
             </select>
             <select
               aria-label="Font size"
-              className="h-8 w-[4.25rem] rounded border border-[#c8c8c8] bg-white px-1 text-xs text-caisbe-text outline-none focus:border-caisbe-green"
+              className="h-8 w-[4.25rem] rounded-lg border border-ifma-border bg-white px-1 text-xs text-caisbe-text outline-none focus:border-caisbe-red"
               value={currentSize}
               onChange={(e) => {
                 const next = e.target.value;
@@ -257,7 +257,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
                 X<sup className="text-[9px]">2</sup>
               </span>
             </IconButton>
-            <label className="relative inline-flex h-8 w-8 items-center justify-center rounded border border-transparent hover:border-[#c8c8c8] hover:bg-white" title="Font color">
+            <label className="relative inline-flex h-8 w-8 items-center justify-center rounded-lg border border-transparent hover:border-ifma-border hover:bg-white" title="Font color">
               <span className="text-xs font-semibold text-caisbe-text">A</span>
               <span
                 className="absolute bottom-1 left-1.5 right-1.5 h-1 rounded-sm"
@@ -280,7 +280,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
                 ))}
               </select>
             </label>
-            <label className="relative inline-flex h-8 w-8 items-center justify-center rounded border border-transparent hover:border-[#c8c8c8] hover:bg-white" title="Highlight">
+            <label className="relative inline-flex h-8 w-8 items-center justify-center rounded-lg border border-transparent hover:border-ifma-border hover:bg-white" title="Highlight">
               <IconHighlight />
               <span
                 className="absolute bottom-1 left-1.5 right-1.5 h-1 rounded-sm"
@@ -439,13 +439,13 @@ function ToolbarGroup({ label, children }: { label: string; children: ReactNode 
   return (
     <div className="flex flex-col items-center gap-0.5 px-1.5 py-0.5">
       <div className="flex flex-wrap items-center gap-0.5">{children}</div>
-      <span className="text-[10px] leading-none text-[#6b7280]">{label}</span>
+      <span className="text-[10px] leading-none text-caisbe-muted">{label}</span>
     </div>
   );
 }
 
 function ToolbarDivider() {
-  return <div className="my-1 w-px self-stretch bg-[#d4d4d4]" aria-hidden />;
+  return <div className="my-1 w-px self-stretch bg-ifma-border" aria-hidden />;
 }
 
 function IconButton({
@@ -469,10 +469,10 @@ function IconButton({
       aria-pressed={active}
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex h-8 w-8 items-center justify-center rounded border text-sm disabled:opacity-40 ${
+      className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border text-sm disabled:opacity-40 ${
         active
-          ? "border-[#c8c8c8] bg-[#e5e5e5] text-caisbe-text"
-          : "border-transparent text-caisbe-text hover:border-[#c8c8c8] hover:bg-white"
+          ? "border-caisbe-red/20 bg-caisbe-red/10 text-caisbe-red"
+          : "border-transparent text-caisbe-text hover:border-ifma-border hover:bg-white"
       }`}
     >
       {children}
