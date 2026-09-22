@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import RichTextEditor from "@/components/lms/RichTextEditor";
+import Button from "@/components/ui/Button";
 import { CollapseToggle } from "@/components/ui/CollapseToggle";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import { useAutosave } from "@/hooks/useAutosave";
@@ -122,7 +123,7 @@ export default function TopicContentEditor({
   }
 
   return (
-    <div className="border border-ifma-border-light bg-[#fafaf8]">
+    <div className="overflow-hidden rounded-xl border border-ifma-border bg-admin-surface-muted/30">
       <div className="flex flex-wrap items-center gap-2 px-3 py-3">
         <CollapseToggle
           expanded={expanded}
@@ -134,7 +135,7 @@ export default function TopicContentEditor({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onBlur={() => void titleAutosave.flush()}
-          className="h-10 min-w-[180px] flex-1 rounded-md border border-ifma-border bg-white px-3 text-sm font-semibold outline-none focus:border-caisbe-green"
+          className="h-10 min-w-[180px] flex-1 rounded-lg border border-ifma-border bg-admin-surface px-3 text-sm font-semibold outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
         />
         <DeleteIconButton label="Delete topic" onClick={() => void deleteTopic()} />
       </div>
@@ -236,30 +237,30 @@ function NestedSectionList({
   return (
     <div className="space-y-3">
       <div className="grid gap-2 sm:grid-cols-2">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() => void addSection("text")}
-          className="flex items-center justify-center gap-2 rounded-md border-2 border-caisbe-green bg-white px-4 py-3 text-sm font-semibold text-caisbe-green hover:bg-caisbe-green/5"
+          className="w-full"
         >
           <span className="text-base leading-none" aria-hidden>
             +
           </span>
           Add note
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="secondary"
           onClick={() => void addSection("subtopic")}
-          className="flex items-center justify-center gap-2 rounded-md border-2 border-caisbe-green bg-white px-4 py-3 text-sm font-semibold text-caisbe-green hover:bg-caisbe-green/5"
+          className="w-full"
         >
           <span className="text-base leading-none" aria-hidden>
             +
           </span>
           Add subtopic
-        </button>
+        </Button>
       </div>
 
       {sections.length === 0 && parentId == null ? (
-        <p className="rounded-md border border-dashed border-ifma-border bg-white px-4 py-5 text-sm text-caisbe-muted">
+        <p className="rounded-md border border-dashed border-ifma-border bg-admin-surface px-4 py-5 text-sm text-caisbe-muted">
           Add a note or subtopic. Subtopics can nest as deep as you need. Chapter files are managed
           in Chapter uploads below.
         </p>
@@ -394,7 +395,7 @@ function SectionBlockCard({
         e.stopPropagation();
         onDrop();
       }}
-      className={`rounded-md border border-ifma-border bg-white ${dragging ? "opacity-60" : ""}`}
+      className={`rounded-xl border border-ifma-border bg-admin-surface shadow-sm ${dragging ? "opacity-60" : ""}`}
     >
       <div className="flex flex-wrap items-center gap-1 px-2 py-2">
         <span
@@ -421,7 +422,7 @@ function SectionBlockCard({
           }}
           label={isSubtopic ? "subtopic" : "note"}
         />
-        <span className="rounded-md bg-caisbe-green/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-caisbe-green">
+        <span className="rounded-full bg-caisbe-red/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-caisbe-red">
           {isSubtopic ? "Subtopic" : "Note"}
         </span>
         {outline ? (
@@ -458,7 +459,7 @@ function SectionBlockCard({
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={() => void autosave.flush()}
                 placeholder="Subtopic title"
-                className="h-10 w-full rounded-md border border-ifma-border px-3 text-sm font-semibold outline-none focus:border-caisbe-green"
+                className="h-10 w-full rounded-lg border border-ifma-border px-3 text-sm font-semibold outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
               />
             </label>
           ) : null}

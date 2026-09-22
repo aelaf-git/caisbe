@@ -4,13 +4,15 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm.attributes import flag_modified
+from starlette.datastructures import UploadFile
 
-from app.auth import require_admin
 from app.config import settings
 from app.db import get_db
-from app.html_sanitize import sanitize_html, strip_plain_text
+from app.security.auth import hash_password, require_admin, verify_password
+from app.security.html_sanitize import sanitize_html, strip_plain_text
 from app.models import (
     Certificate,
     CertificateTemplate,
@@ -21,13 +23,22 @@ from app.models import (
     FinalExam,
     Lesson,
     MediaAsset,
+    MembershipCertificate,
     NewsletterCampaign,
     NewsletterSubscriber,
+    QuizAttempt,
     SiteVisit,
     Quiz,
     QuizChoice,
     QuizQuestion,
     User,
+)
+from app.schemas.admin_ops import (
+    AdminPasswordChange,
+    AdminReportsOut,
+    AppSettingsOut,
+    AppSettingsUpdate,
+    CourseReportRow,
 )
 from app.schemas.courses import (
     AdminEnrollmentCourseStatOut,
@@ -47,6 +58,7 @@ from app.schemas.courses import (
     CertificateAdminOut,
     CourseCreate,
     CourseDetailAdminOut,
+    AdminCourseListOut,
     CourseOut,
     CourseUpdate,
     FinalExamOut,
@@ -70,8 +82,9 @@ from app.schemas.media import (
     NewsletterSendOut,
     NewsletterSubscriberOut,
 )
-from app.services.analytics import site_visit_stats
+from app.services.analytics import display_city, display_country, site_visit_stats
 from app.services.email import EmailDeliveryError, load_upload_attachment, send_email
+from app.services.settings import default_pass_percent, get_settings_map, set_settings
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -97,6 +110,50 @@ ALLOWED_UPLOAD_EXTENSIONS = {
     ".doc",
     ".docx",
 }
+
+COURSE_DRAFT_META_KEYS = ("code", "title", "description", "slug", "cover_url", "pass_percent")
+
+
+def _live_course_meta(course: Course) -> dict:
+    return {
+        "code": course.code,
+        "title": course.title,
+        "description": course.description,
+        "slug": course.slug,
+        "cover_url": course.cover_url,
+        "pass_percent": course.pass_percent,
+    }
+
+
+def _apply_course_draft_meta(course: Course) -> None:
+    if not course.draft_meta:
+        course.has_unpublished_changes = False
+        course.draft_meta = None
+        return
+    for key, value in course.draft_meta.items():
+        if key in COURSE_DRAFT_META_KEYS:
+            setattr(course, key, value)
+    course.draft_meta = None
+    course.has_unpublished_changes = False
+
+
+def _write_course_meta(course: Course, meta: dict) -> None:
+    """Write details into draft when published; otherwise update live columns."""
+    if not meta:
+        return
+    if course.status == "published":
+        draft = dict(course.draft_meta or _live_course_meta(course))
+        draft.update(meta)
+        course.draft_meta = draft
+        course.has_unpublished_changes = True
+        flag_modified(course, "draft_meta")
+        return
+    for key, value in meta.items():
+        setattr(course, key, value)
+    # Draft courses are the working copy — no separate unpublished buffer.
+    course.draft_meta = None
+    course.has_unpublished_changes = False
+
 
 
 def _validate_assignment_url(url: str | None) -> None:
@@ -356,7 +413,13 @@ def _load_course_admin(db: Session, course_id: int) -> Course:
 
 
 def _course_admin_out(course: Course) -> CourseDetailAdminOut:
-    return CourseDetailAdminOut.model_validate(course)
+    out = CourseDetailAdminOut.model_validate(course)
+    out.has_unpublished_changes = bool(course.has_unpublished_changes)
+    if course.has_unpublished_changes and course.draft_meta:
+        for key in COURSE_DRAFT_META_KEYS:
+            if key in course.draft_meta:
+                setattr(out, key, course.draft_meta[key])
+    return out
 
 
 # --- Dashboard & site activity ---
@@ -385,6 +448,7 @@ def admin_dashboard(
         enrollments_completed=completed,
         completion_rate=round(100 * completed / total) if total else 0,
         certificates=db.query(Certificate).count(),
+        membership_certificates=db.query(MembershipCertificate).count(),
         newsletter_subscribers=db.query(NewsletterSubscriber)
         .filter(NewsletterSubscriber.unsubscribed_at.is_(None))
         .count(),
@@ -399,29 +463,180 @@ def admin_dashboard(
     )
 
 
+def _choice(data: dict[str, str], key: str, allowed: set[str], default: str) -> str:
+    value = data.get(key, default)
+    return value if value in allowed else default
+
+
+def _settings_out(db: Session) -> AppSettingsOut:
+    data = get_settings_map(db)
+    return AppSettingsOut(
+        institute_name=data.get("institute_name", "CAISBE"),
+        default_pass_percent=default_pass_percent(db),
+        membership_cert_title=data.get("membership_cert_title", "Certificate of Membership"),
+        completion_cert_title=data.get("completion_cert_title", "Certificate of Completion"),
+        portal_public_url=settings.portal_public_url,
+        ui_theme=_choice(data, "ui_theme", {"light", "dark"}, "light"),
+        ui_font_size=_choice(data, "ui_font_size", {"sm", "md", "lg", "xl"}, "md"),
+        ui_font_body=_choice(
+            data,
+            "ui_font_body",
+            {"roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"},
+            "roboto",
+        ),
+        ui_font_display=_choice(
+            data,
+            "ui_font_display",
+            {"roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"},
+            "open-sans",
+        ),
+    )
+
+
+@router.get("/settings", response_model=AppSettingsOut)
+def admin_get_settings(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AppSettingsOut:
+    return _settings_out(db)
+
+
+@router.put("/settings", response_model=AppSettingsOut)
+def admin_update_settings(
+    payload: AppSettingsUpdate,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AppSettingsOut:
+    updates: dict[str, str] = {}
+    if payload.institute_name is not None:
+        updates["institute_name"] = payload.institute_name.strip()
+    if payload.default_pass_percent is not None:
+        updates["default_pass_percent"] = str(payload.default_pass_percent)
+    if payload.membership_cert_title is not None:
+        updates["membership_cert_title"] = payload.membership_cert_title.strip()
+    if payload.completion_cert_title is not None:
+        updates["completion_cert_title"] = payload.completion_cert_title.strip()
+    if payload.ui_theme is not None:
+        updates["ui_theme"] = payload.ui_theme
+    if payload.ui_font_size is not None:
+        updates["ui_font_size"] = payload.ui_font_size
+    if payload.ui_font_body is not None:
+        updates["ui_font_body"] = payload.ui_font_body
+    if payload.ui_font_display is not None:
+        updates["ui_font_display"] = payload.ui_font_display
+    if updates:
+        set_settings(db, updates)
+        db.commit()
+    return _settings_out(db)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def admin_change_password(
+    payload: AdminPasswordChange,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    current_user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+
+
+@router.get("/reports", response_model=AdminReportsOut)
+def admin_reports(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminReportsOut:
+    enrollments = db.query(Enrollment).all()
+    completed = sum(1 for row in enrollments if row.status == "completed" or row.progress >= 100)
+    in_progress = sum(
+        1 for row in enrollments if not (row.status == "completed" or row.progress >= 100) and 1 <= row.progress <= 99
+    )
+    total = len(enrollments)
+    quiz_attempts = db.query(QuizAttempt).count()
+    quiz_passed = db.query(QuizAttempt).filter(QuizAttempt.passed.is_(True)).count()
+
+    courses = db.query(Course).order_by(Course.code.asc()).all()
+    course_rows: list[CourseReportRow] = []
+    for course in courses:
+        course_enrollments = [row for row in enrollments if row.course_id == course.id]
+        course_completed = sum(
+            1 for row in course_enrollments if row.status == "completed" or row.progress >= 100
+        )
+        course_total = len(course_enrollments)
+        certs = db.query(Certificate).filter(Certificate.course_id == course.id).count()
+        course_rows.append(
+            CourseReportRow(
+                course_id=course.id,
+                course_code=course.code,
+                course_title=course.title,
+                enrollments=course_total,
+                completed=course_completed,
+                completion_percent=round(100 * course_completed / course_total) if course_total else 0,
+                certificates_issued=certs,
+            )
+        )
+
+    return AdminReportsOut(
+        students=db.query(User).filter(User.role == "student").count(),
+        total_enrollments=total,
+        enrollments_completed=completed,
+        enrollments_in_progress=in_progress,
+        completion_rate=round(100 * completed / total) if total else 0,
+        membership_certificates=db.query(MembershipCertificate).count(),
+        completion_certificates=db.query(Certificate).count(),
+        quiz_attempts=quiz_attempts,
+        quiz_passed=quiz_passed,
+        courses=course_rows,
+    )
+
+
+# --- Site visits ---
+
+
 @router.get("/site-visits/stats", response_model=SiteVisitStatsOut)
 def admin_site_visit_stats(
+    days: int | None = Query(default=None, ge=1, le=365),
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> SiteVisitStatsOut:
-    return site_visit_stats(db)
+    return site_visit_stats(db, days=days)
 
 
 @router.get("/site-visits", response_model=list[SiteVisitOut])
 def admin_list_site_visits(
     path: str | None = Query(default=None, max_length=512),
     landing_only: bool = Query(default=False),
-    limit: int = Query(default=200, ge=1, le=500),
+    days: int | None = Query(default=None, ge=1, le=365),
+    country: str | None = Query(default=None, max_length=64),
+    limit: int = Query(default=200, ge=1, le=1000),
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[SiteVisitOut]:
     query = db.query(SiteVisit)
+    if days:
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        query = query.filter(SiteVisit.visited_at >= since)
     if landing_only:
         query = query.filter(SiteVisit.path == "/")
     elif path:
         query = query.filter(SiteVisit.path == path)
-    rows = query.order_by(SiteVisit.visited_at.desc()).limit(limit).all()
-    return [SiteVisitOut.model_validate(row) for row in rows]
+    rows = query.order_by(SiteVisit.visited_at.desc()).limit(5000).all()
+    selected = rows
+    if country:
+        wanted = country.strip().casefold()
+        selected = [
+            row
+            for row in rows
+            if display_country(row.country, row.timezone).casefold() == wanted
+        ]
+    payload: list[SiteVisitOut] = []
+    for row in selected[:limit]:
+        item = SiteVisitOut.model_validate(row)
+        item.location_country = display_country(row.country, row.timezone)
+        item.location_city = display_city(row.city, row.timezone)
+        payload.append(item)
+    return payload
 
 
 # --- Students ---
@@ -609,12 +824,13 @@ def admin_list_enrollments(
 # --- Courses ---
 
 
-@router.get("/courses", response_model=list[CourseOut])
+@router.get("/courses", response_model=list[AdminCourseListOut])
 def admin_list_courses(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> list[Course]:
-    return db.query(Course).order_by(Course.id.desc()).all()
+) -> list[AdminCourseListOut]:
+    rows = db.query(Course).order_by(Course.id.desc()).all()
+    return [AdminCourseListOut.model_validate(row) for row in rows]
 
 
 @router.post("/courses", response_model=CourseDetailAdminOut, status_code=status.HTTP_201_CREATED)
@@ -628,6 +844,13 @@ def admin_create_course(
     if db.query(Course).filter((Course.code == code) | (Course.slug == slug)).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code or slug already exists")
 
+    pass_percent = (
+        payload.pass_percent
+        if "pass_percent" in payload.model_fields_set
+        else default_pass_percent(db)
+    )
+    completion_title = get_settings_map(db).get("completion_cert_title", "Certificate of Completion")
+
     course = Course(
         code=code,
         title=strip_plain_text(payload.title.strip()) or "",
@@ -635,18 +858,18 @@ def admin_create_course(
         slug=slug,
         status="draft",
         cover_url=payload.cover_url,
-        pass_percent=payload.pass_percent,
+        pass_percent=pass_percent,
     )
     db.add(course)
     db.flush()
     db.add(
         CertificateTemplate(
             course_id=course.id,
-            title="Certificate of Completion",
+            title=completion_title,
             body="This certifies that {student_name} has successfully completed {course_title}.",
         )
     )
-    db.add(FinalExam(course_id=course.id, title="Final Exam", pass_percent=payload.pass_percent))
+    db.add(FinalExam(course_id=course.id, title="Final Exam", pass_percent=pass_percent))
     db.commit()
     return _course_admin_out(_load_course_admin(db, course.id))
 
@@ -672,7 +895,8 @@ def admin_update_course(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
     data = payload.model_dump(exclude_unset=True)
-    if "status" in data and data["status"] not in ("draft", "published"):
+    next_status = data.pop("status", None)
+    if next_status is not None and next_status not in ("draft", "published"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
     if "code" in data and data["code"]:
         data["code"] = data["code"].strip().upper()
@@ -680,14 +904,44 @@ def admin_update_course(
         data["slug"] = data["slug"].strip().lower()
     _apply_plain_text_fields(data, "title", "description")
 
-    if data.get("status") == "published":
+    meta = {key: data[key] for key in COURSE_DRAFT_META_KEYS if key in data}
+    _write_course_meta(course, meta)
+
+    if next_status == "published":
         loaded = _load_course_admin(db, course_id)
+        # Validate against working content (draft details are overlaid separately below).
         publish_errors = _publish_content_errors(loaded)
         if publish_errors:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=publish_errors[0])
+        _apply_course_draft_meta(course)
+        course.status = "published"
+    elif next_status == "draft":
+        # Keep any pending detail edits in draft_meta while unpublishing, or fold them in.
+        _apply_course_draft_meta(course)
+        course.status = "draft"
 
-    for key, value in data.items():
-        setattr(course, key, value)
+    db.commit()
+    return _course_admin_out(_load_course_admin(db, course_id))
+
+
+@router.post("/courses/{course_id}/save-changes", response_model=CourseDetailAdminOut)
+def admin_save_course_changes(
+    course_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> CourseDetailAdminOut:
+    """Promote draft detail edits onto the live (published) course fields."""
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if course is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    if course.status == "published":
+        _apply_course_draft_meta(course)
+    else:
+        # Draft courses already persist to live columns on autosave.
+        course.draft_meta = None
+        course.has_unpublished_changes = False
+
     db.commit()
     return _course_admin_out(_load_course_admin(db, course_id))
 

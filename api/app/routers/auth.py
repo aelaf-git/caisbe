@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.auth import create_access_token, get_current_user, hash_password, verify_password
 from app.db import get_db
-from app.limiter import limiter
+from app.security.auth import create_access_token, get_current_user, hash_password, verify_password
+from app.security.limiter import limiter
 from app.models import User
 from app.schemas.auth import TokenResponse, UserCreate, UserLogin, UserOut
 
@@ -28,6 +28,8 @@ def register(request: Request, payload: UserCreate, db: Session = Depends(get_db
         role="student",
     )
     db.add(user)
+    db.flush()
+    db.refresh(user)
     db.commit()
     db.refresh(user)
 

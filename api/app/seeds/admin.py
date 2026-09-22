@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.auth import hash_password
+from app.security.auth import hash_password
 from app.config import settings
 from app.models import User
 

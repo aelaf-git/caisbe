@@ -9,7 +9,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
-from app.html_sanitize import sanitize_html
+from app.security.html_sanitize import sanitize_html
 from app.models import Chapter, ContentBlock, Course, Lesson
 
 CURRICULUM_PATH = Path(__file__).with_name("mel_curriculum.md")

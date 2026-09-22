@@ -2,8 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import Alert from "@/components/ui/Alert";
+import Badge from "@/components/ui/Badge";
+import { buttonStyles } from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
 import { EditIconLink } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
+import PageHeader from "@/components/ui/PageHeader";
+import Skeleton from "@/components/ui/Skeleton";
+import Tabs from "@/components/ui/Tabs";
 import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
 import { apiFetch, ApiError, type Course } from "@/lib/auth";
 
@@ -68,87 +76,82 @@ export default function AdminCoursesPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       {dialog}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">All courses</h1>
-          <p className="mt-2 text-sm text-caisbe-muted">
-            Browse draft and published courses. Open a course to edit chapters, lessons, and exams.
-          </p>
-        </div>
-        <Link
-          href="/courses/new"
-          className="inline-flex items-center justify-center border-2 border-caisbe-green bg-caisbe-green px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-green-mid"
-        >
-          Create course
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Learning content"
+        title="Courses"
+        description="Create, organize, and publish learning experiences from one workspace."
+        actions={
+          <Link href="/courses/new" className={buttonStyles()}>
+            <span aria-hidden className="text-lg">+</span>
+            Create course
+          </Link>
+        }
+      />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              ["all", "All"],
-              ["draft", "Draft"],
-              ["published", "Published"],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setFilter(value)}
-              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                filter === value
-                  ? "bg-caisbe-green/10 text-caisbe-green"
-                  : "text-caisbe-muted hover:bg-ifma-border-light hover:text-caisbe-text"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      <Card padding="none" className="overflow-hidden">
+        <div className="flex flex-col gap-4 border-b border-ifma-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
+          <Tabs
+            ariaLabel="Course status"
+            value={filter}
+            onChange={setFilter}
+            items={[
+              { id: "all", label: "All", count: courses.length },
+              { id: "draft", label: "Draft", count: courses.filter((course) => (course.status ?? "draft") === "draft").length },
+              { id: "published", label: "Published", count: courses.filter((course) => course.status === "published").length },
+            ]}
+          />
+          <label className="relative w-full sm:max-w-xs">
+            <span className="sr-only">Search courses</span>
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-caisbe-muted">⌕</span>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by title or code"
-          className="h-11 w-full rounded-md border border-ifma-border bg-white px-3 text-sm outline-none focus:border-caisbe-green sm:max-w-xs"
+              className="h-10 w-full rounded-lg border border-ifma-border bg-admin-surface pr-3 pl-9 text-sm outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
         />
+          </label>
       </div>
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
-
-      <div className="border border-ifma-border bg-white">
+        {error ? <div className="p-5 md:p-6"><Alert tone="error">{error}</Alert></div> : null}
         {loading ? (
-          <p className="p-6 text-sm text-caisbe-muted">Loading…</p>
+          <div className="space-y-3 p-5 md:p-6">
+            {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-16 w-full" />)}
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="p-6">
-            <p className="text-sm text-caisbe-muted">
-              {courses.length === 0 ? "No courses yet." : "No courses match your filters."}
-            </p>
-            {courses.length === 0 ? (
-              <Link
-                href="/courses/new"
-                className="mt-3 inline-flex font-semibold text-caisbe-red hover:text-caisbe-red-dark"
-              >
-                Create your first course
-              </Link>
-            ) : null}
+          <div className="p-5 md:p-6">
+            <EmptyState
+              title={courses.length === 0 ? "Create your first course" : "No matching courses"}
+              description={courses.length === 0 ? "Start with course details, then add chapters, assessments, and a certificate." : "Try another search term or change the status filter."}
+              action={courses.length === 0 ? <Link href="/courses/new" className={buttonStyles()}>Create course</Link> : undefined}
+            />
           </div>
         ) : (
           <ul className="divide-y divide-ifma-border-light">
             {filtered.map((course) => (
-              <li key={course.id} className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">
-                      {course.code}
-                    </p>
+              <li key={course.id} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-admin-surface-muted/60 md:px-6">
+                <span className="relative h-14 w-20 shrink-0 overflow-hidden border border-ifma-border-light bg-[#f3f0ec]">
+                  {course.cover_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={course.cover_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-[10px] font-bold uppercase tracking-wide text-caisbe-red">
+                      {course.code.slice(0, 4)}
+                    </span>
+                  )}
+                </span>
+                <Link href={`/courses/${course.id}`} className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <p className="truncate font-semibold text-caisbe-text group-hover:text-caisbe-red">{course.title}</p>
                     <StatusBadge status={course.status ?? "draft"} />
+                    {course.has_unpublished_changes ? (
+                      <Badge tone="warning">Unsaved publish</Badge>
+                    ) : null}
                   </div>
-                  <p className="mt-1 font-semibold text-caisbe-text">{course.title}</p>
-                </div>
-                <div className="flex items-center gap-1">
+                  <p className="mt-1 text-xs text-caisbe-muted">{course.code} · /{course.slug}</p>
+                </Link>
+                <div className="flex shrink-0 items-center gap-1">
                   <EditIconLink href={`/courses/${course.id}`} label={`Edit ${course.title}`} />
                   <DeleteIconButton
                     label={deletingId === course.id ? "Deleting course…" : `Delete ${course.title}`}
@@ -160,7 +163,7 @@ export default function AdminCoursesPage() {
             ))}
           </ul>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
@@ -168,14 +171,8 @@ export default function AdminCoursesPage() {
 function StatusBadge({ status }: { status: string }) {
   const published = status === "published";
   return (
-    <span
-      className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${
-        published
-          ? "bg-caisbe-green/10 text-caisbe-green"
-          : "bg-ifma-border-light text-caisbe-muted"
-      }`}
-    >
+    <Badge tone={published ? "success" : "warning"}>
       {status}
-    </span>
+    </Badge>
   );
 }

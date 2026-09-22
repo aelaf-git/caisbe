@@ -80,6 +80,7 @@ export type CourseDetail = {
   status: string;
   cover_url: string | null;
   pass_percent: number;
+  has_unpublished_changes?: boolean;
   chapters: Chapter[];
   final_exam: FinalExam | null;
   certificate_template?: CertificateTemplate | null;

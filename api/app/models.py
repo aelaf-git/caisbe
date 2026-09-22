@@ -5,6 +5,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -32,6 +33,10 @@ class User(Base):
     lesson_progress: Mapped[list["LessonProgress"]] = relationship(back_populates="user")
     quiz_attempts: Mapped[list["QuizAttempt"]] = relationship(back_populates="user")
     certificates: Mapped[list["Certificate"]] = relationship(back_populates="user")
+    membership_certificate: Mapped["MembershipCertificate | None"] = relationship(
+        back_populates="user",
+        uselist=False,
+    )
 
 
 class Course(Base):
@@ -45,6 +50,9 @@ class Course(Base):
     status: Mapped[str] = mapped_column(String(32), default="draft", index=True)
     cover_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     pass_percent: Mapped[int] = mapped_column(Integer, default=70)
+    # Working copy of details while status is published; portal keeps reading live columns.
+    draft_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    has_unpublished_changes: Mapped[bool] = mapped_column(Boolean, default=False)
 
     enrollments: Mapped[list["Enrollment"]] = relationship(back_populates="course")
     chapters: Mapped[list["Chapter"]] = relationship(
@@ -294,6 +302,25 @@ class Certificate(Base):
 
     user: Mapped[User] = relationship(back_populates="certificates")
     course: Mapped[Course] = relationship(back_populates="certificates")
+
+
+class MembershipCertificate(Base):
+    __tablename__ = "membership_certificates"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True)
+    membership_number: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    certificate_code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped[User] = relationship(back_populates="membership_certificate")
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(Text)
 
 
 class MediaAsset(Base):

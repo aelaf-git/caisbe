@@ -1,3 +1,4 @@
+import BackButton from "@/components/ui/BackButton";
 import ButtonLink from "@/components/ui/ButtonLink";
 import { siteName } from "@/lib/data/home";
 
@@ -20,9 +21,7 @@ export default function UnderConstruction({ title }: UnderConstructionProps) {
           you this content soon. Thank you for your patience.
         </p>
         <div className="mt-10 flex flex-wrap justify-center gap-4">
-          <ButtonLink href="/" variant="primary">
-            Back to Home
-          </ButtonLink>
+          <BackButton href="/" label="Back to home" />
           <ButtonLink href="/contact" variant="secondary">
             Contact Us
           </ButtonLink>

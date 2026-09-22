@@ -78,6 +78,7 @@ export default function CertificatePage() {
           issuedAt={cert.issued_at}
           verifyUrl={verifyUrl}
           certificateCode={cert.certificate_code}
+          issuedBy={cert.issued_by}
         />
       </div>
 

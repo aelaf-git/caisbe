@@ -86,6 +86,62 @@ services:
     networks:
       - caisbe_dev
 
+  portal:
+    build:
+      context: .
+      dockerfile: portal/Dockerfile
+    container_name: caisbe-portal
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    environment:
+      API_URL: http://api:8000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_ADMIN_URL: http://localhost:3001
+      NEXT_PUBLIC_PORTAL_URL: http://localhost:3002
+    depends_on:
+      - api
+    develop:
+      watch:
+        - action: sync
+          path: ./portal
+          target: /app/portal
+          ignore:
+            - node_modules/
+            - .next/
+        - action: rebuild
+          path: ./portal/package.json
+    networks:
+      - caisbe_dev
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    container_name: caisbe-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      API_URL: http://api:8000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_ADMIN_URL: http://localhost:3001
+      NEXT_PUBLIC_PORTAL_URL: http://localhost:3002
+    depends_on:
+      - api
+    develop:
+      watch:
+        - action: sync
+          path: ./web
+          target: /app/web
+          ignore:
+            - node_modules/
+            - .next/
+        - action: rebuild
+          path: ./web/package.json
+    networks:
+      - caisbe_dev
+
 networks:
   caisbe_dev:
     name: caisbe_dev

@@ -7,10 +7,10 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth import get_current_user
 from app.config import settings
 from app.db import get_db
-from app.html_sanitize import sanitize_html, strip_plain_text
+from app.security.auth import get_current_user
+from app.security.html_sanitize import sanitize_html, strip_plain_text
 from app.models import (
     Certificate,
     CertificateTemplate,
@@ -21,6 +21,7 @@ from app.models import (
     FinalExam,
     Lesson,
     LessonProgress,
+    MembershipCertificate,
     Quiz,
     QuizAttempt,
     QuizQuestion,
@@ -33,9 +34,12 @@ from app.schemas.courses import (
     CourseOut,
     EnrollmentCreate,
     EnrollmentOut,
+    MembershipCertificateOut,
     QuizAttemptOut,
     QuizSubmitIn,
 )
+from app.services.membership import issue_membership_certificate, student_has_completed_course
+from app.services.settings import get_setting
 
 router = APIRouter(tags=["courses"])
 
@@ -197,25 +201,45 @@ def _finalize_course_completion(
 ) -> str:
     enrollment.status = "completed"
     enrollment.progress = 100
-    return _issue_certificate(db, user, course)
+    certificate_code = _issue_certificate(db, user, course)
+    issue_membership_certificate(db, user)
+    return certificate_code
 
 
-def _certificate_to_out(row: Certificate, student_name: str) -> CertificateOut:
+def _certificate_to_out(row: Certificate, student_name: str, db: Session) -> CertificateOut:
     rendered = _render_certificate(
         row.course.certificate_template,
         student_name,
         row.course.title,
         row.issued_at,
     )
+    title = get_setting(db, "completion_cert_title") or rendered["title"]
+    issued_by = get_setting(db, "institute_name") or "CAISBE"
     return CertificateOut(
         id=row.id,
         certificate_code=row.certificate_code,
         issued_at=row.issued_at,
         course=CourseOut.model_validate(row.course),
         student_name=strip_plain_text(student_name) or student_name,
-        title=strip_plain_text(rendered["title"]) or rendered["title"],
+        title=strip_plain_text(title) or title,
         body=sanitize_html(rendered["body"]) or "",
         verify_url=_certificate_verify_url(row.certificate_code),
+        issued_by=issued_by,
+    )
+
+
+def _membership_to_out(row: MembershipCertificate, student_name: str, db: Session) -> MembershipCertificateOut:
+    title = get_setting(db, "membership_cert_title") or "Certificate of Membership"
+    issued_by = get_setting(db, "institute_name") or "CAISBE"
+    return MembershipCertificateOut(
+        id=row.id,
+        certificate_code=row.certificate_code,
+        membership_number=row.membership_number,
+        issued_at=row.issued_at,
+        student_name=strip_plain_text(student_name) or student_name,
+        title=title,
+        verify_url=_certificate_verify_url(row.certificate_code),
+        issued_by=issued_by,
     )
 
 
@@ -482,7 +506,25 @@ def list_my_certificates(
         .order_by(Certificate.issued_at.desc())
         .all()
     )
-    return [_certificate_to_out(row, current_user.full_name) for row in rows]
+    return [_certificate_to_out(row, current_user.full_name, db) for row in rows]
+
+
+@router.get("/me/membership-certificate", response_model=MembershipCertificateOut)
+def get_my_membership_certificate(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MembershipCertificateOut:
+    if current_user.role == "admin":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membership certificate not found")
+    if not student_has_completed_course(db, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Complete at least one course to unlock your membership certificate.",
+        )
+    row = issue_membership_certificate(db, current_user)
+    db.commit()
+    db.refresh(row)
+    return _membership_to_out(row, current_user.full_name, db)
 
 
 @router.get("/me/certificates/{certificate_code}", response_model=CertificateOut)
@@ -500,7 +542,7 @@ def get_certificate(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certificate not found")
 
-    return _certificate_to_out(row, current_user.full_name)
+    return _certificate_to_out(row, current_user.full_name, db)
 
 
 @router.get("/certificates/verify/{certificate_code}", response_model=CertificateVerifyOut)
@@ -508,19 +550,41 @@ def verify_certificate(
     certificate_code: str,
     db: Session = Depends(get_db),
 ) -> CertificateVerifyOut:
+    issued_by = get_setting(db, "institute_name") or "CAISBE"
     row = (
         db.query(Certificate)
         .options(joinedload(Certificate.course), joinedload(Certificate.user))
         .filter(Certificate.certificate_code == certificate_code)
         .first()
     )
-    if row is None:
+    if row is not None:
+        return CertificateVerifyOut(
+            valid=True,
+            kind="completion",
+            certificate_code=row.certificate_code,
+            student_name=row.user.full_name,
+            course_title=row.course.title,
+            membership_number=None,
+            issued_at=row.issued_at,
+            issued_by=issued_by,
+        )
+
+    membership = (
+        db.query(MembershipCertificate)
+        .options(joinedload(MembershipCertificate.user))
+        .filter(MembershipCertificate.certificate_code == certificate_code)
+        .first()
+    )
+    if membership is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certificate not found")
 
     return CertificateVerifyOut(
         valid=True,
-        certificate_code=row.certificate_code,
-        student_name=row.user.full_name,
-        course_title=row.course.title,
-        issued_at=row.issued_at,
+        kind="membership",
+        certificate_code=membership.certificate_code,
+        student_name=membership.user.full_name,
+        course_title=None,
+        membership_number=membership.membership_number,
+        issued_at=membership.issued_at,
+        issued_by=issued_by,
     )

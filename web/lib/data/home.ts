@@ -305,6 +305,7 @@ const rawFooterColumns = [
       { label: "CHMC", href: "/professional-development/chmc" },
       { label: "HSC", href: "/professional-development/hsc" },
       { label: "CEEBM", href: "/professional-development/ceebm" },
+      { label: "RIPVC", href: "/professional-development/ripvc" },
       { label: "SRET", href: "/professional-development/sret" },
     ],
   },

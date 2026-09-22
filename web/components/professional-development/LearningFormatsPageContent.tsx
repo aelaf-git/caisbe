@@ -1,3 +1,4 @@
+import BackButton from "@/components/ui/BackButton";
 import ButtonLink from "@/components/ui/ButtonLink";
 import {
   learningFormatPath,
@@ -44,9 +45,7 @@ export default function LearningFormatsPageContent() {
         </div>
 
         <div className="mt-10">
-          <ButtonLink href="/professional-development" variant="secondary">
-            Back to Certificate Programs
-          </ButtonLink>
+          <BackButton href="/professional-development" label="Back to certificate programs" />
         </div>
       </div>
     </section>

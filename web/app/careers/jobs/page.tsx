@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import BackButton from "@/components/ui/BackButton";
 import ButtonLink from "@/components/ui/ButtonLink";
 import { PageHero } from "@/components/pages/ContentPage";
 import { careersContent } from "@/lib/data/careers";
@@ -16,9 +17,7 @@ export default function AllJobsPage() {
       title="View All Jobs"
       actions={
         <>
-          <ButtonLink href="/careers" variant="secondary">
-            Back to Careers
-          </ButtonLink>
+          <BackButton href="/careers" label="Back to careers" />
           <ButtonLink href="/contact" variant="primary">
             Post a Job
           </ButtonLink>

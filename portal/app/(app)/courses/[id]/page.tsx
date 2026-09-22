@@ -166,6 +166,7 @@ export default function CoursePlayerPage() {
           title={course.title}
           progress={course.progress ?? 0}
           certificateCode={course.certificate_code}
+          coverUrl={course.cover_url}
         />
       </div>
 

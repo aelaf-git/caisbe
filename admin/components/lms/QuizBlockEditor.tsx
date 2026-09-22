@@ -7,6 +7,7 @@ import QuizQuestionEditor, {
 } from "@/components/lms/QuizQuestionEditor";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import { CollapseToggle } from "@/components/ui/CollapseToggle";
+import { fieldClassName } from "@/components/ui/FormField";
 import { useAutosave } from "@/hooks/useAutosave";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { ContentBlock, QuizQuestion } from "@/lib/lms";
@@ -75,6 +76,8 @@ export default function QuizBlockEditor({
   );
 
   useEffect(() => {
+    // Server refreshes replace the canonical block, so reset the local editing draft.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(quizDraftFromBlock(block));
   }, [baselineKey, block]);
 
@@ -111,8 +114,8 @@ export default function QuizBlockEditor({
   const displayError = autosave.error || validationError;
 
   return (
-    <li className="border border-ifma-border-light">
-      <div className="flex flex-wrap items-center gap-1 px-2 py-2">
+    <li className="overflow-hidden rounded-xl border border-ifma-border bg-admin-surface">
+      <div className="flex flex-wrap items-center gap-1 px-3 py-3">
         <CollapseToggle
           expanded={expanded}
           onToggle={() => {
@@ -140,14 +143,14 @@ export default function QuizBlockEditor({
       </div>
 
       {expanded ? (
-        <div className="space-y-3 border-t border-ifma-border-light p-4">
+        <div className="space-y-4 border-t border-ifma-border-light bg-admin-surface-muted/30 p-4 sm:p-5">
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium text-caisbe-text">Quiz title</span>
             <input
               value={draft.title}
               onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
               onBlur={() => void autosave.flush()}
-              className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+              className={fieldClassName}
             />
           </label>
           <QuizQuestionEditor

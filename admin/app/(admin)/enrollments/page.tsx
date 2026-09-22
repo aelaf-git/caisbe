@@ -8,6 +8,13 @@ import {
   type AdminEnrollment,
   type AdminEnrollmentStats,
 } from "@/lib/auth";
+import Alert from "@/components/ui/Alert";
+import Badge from "@/components/ui/Badge";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
+import { fieldClassName } from "@/components/ui/FormField";
+import PageHeader from "@/components/ui/PageHeader";
+import Skeleton from "@/components/ui/Skeleton";
 
 type StatusFilter = "all" | "in_progress" | "completed" | "not_started";
 
@@ -77,15 +84,14 @@ export default function EnrollmentsPage() {
   }, [enrollments, query, statusFilter]);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">Enrollments</h1>
-        <p className="mt-2 text-sm text-caisbe-muted">
-          Platform-wide enrollment activity, course breakdown, and learner progress.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Learning"
+        title="Enrollments"
+        description="Platform-wide enrollment activity, course breakdown, and learner progress."
+      />
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+      {error ? <Alert tone="error" title="Enrollments could not be loaded">{error}</Alert> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -97,18 +103,18 @@ export default function EnrollmentsPage() {
             value: stats ? `${stats.completion_rate}%` : undefined,
           },
         ].map((item) => (
-          <div key={item.label} className="border border-ifma-border bg-white p-5">
+          <Card key={item.label} padding="sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
               {item.label}
             </p>
-            <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">
-              {loading ? "—" : (item.value ?? 0)}
-            </p>
-          </div>
+            {loading ? <Skeleton className="mt-3 h-9 w-20" /> : (
+              <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">{item.value ?? 0}</p>
+            )}
+          </Card>
         ))}
       </div>
 
-      <section className="border border-ifma-border bg-white">
+      <Card padding="none" className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ifma-border-light px-6 py-4">
           <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">
             Enrollments by course
@@ -121,12 +127,12 @@ export default function EnrollmentsPage() {
         </div>
         <div className="overflow-x-auto">
           {loading ? (
-            <p className="p-6 text-sm text-caisbe-muted">Loading…</p>
+            <div className="space-y-3 p-6">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-12" />)}</div>
           ) : !stats || stats.by_course.length === 0 ? (
-            <p className="p-6 text-sm text-caisbe-muted">No enrollments yet.</p>
+            <div className="p-4"><EmptyState title="No enrollments yet" description="Course enrollment totals will appear here." /></div>
           ) : (
             <table className="min-w-full divide-y divide-ifma-border-light text-left text-sm">
-              <thead className="bg-[#fafaf8]">
+              <thead className="bg-admin-surface-muted/70">
                 <tr>
                   <th className="px-6 py-3 font-semibold text-caisbe-text">Course</th>
                   <th className="px-6 py-3 font-semibold text-caisbe-text">Enrolled</th>
@@ -157,7 +163,7 @@ export default function EnrollmentsPage() {
             </table>
           )}
         </div>
-      </section>
+      </Card>
 
       <section className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -168,7 +174,8 @@ export default function EnrollmentsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className="h-11 rounded-md border border-ifma-border bg-white px-3 text-sm outline-none focus:border-caisbe-green"
+              aria-label="Filter by status"
+              className={fieldClassName}
             >
               <option value="all">All statuses</option>
               <option value="in_progress">In progress</option>
@@ -179,21 +186,24 @@ export default function EnrollmentsPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by student or course"
-              className="h-11 w-full rounded-md border border-ifma-border bg-white px-3 text-sm outline-none focus:border-caisbe-green sm:max-w-sm"
+              type="search"
+              aria-label="Search enrollments"
+              className={`${fieldClassName} sm:min-w-72`}
             />
           </div>
         </div>
 
-        <div className="overflow-x-auto border border-ifma-border bg-white">
+        <Card padding="none" className="overflow-x-auto">
           {loading ? (
-            <p className="p-6 text-sm text-caisbe-muted">Loading…</p>
+            <div className="space-y-3 p-6">{[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-14" />)}</div>
           ) : filtered.length === 0 ? (
-            <p className="p-6 text-sm text-caisbe-muted">
-              {enrollments.length === 0 ? "No enrollments yet." : "No enrollments match your filters."}
-            </p>
+            <div className="p-4"><EmptyState
+              title={enrollments.length === 0 ? "No enrollments yet" : "No matching enrollments"}
+              description={enrollments.length === 0 ? "Enrollments will appear when students join courses." : "Adjust the status filter or search query."}
+            /></div>
           ) : (
-            <table className="min-w-full divide-y divide-ifma-border-light text-left text-sm">
-              <thead className="bg-[#fafaf8]">
+            <table className="min-w-[900px] w-full divide-y divide-ifma-border-light text-left text-sm">
+              <thead className="bg-admin-surface-muted/70">
                 <tr>
                   <th className="px-6 py-3 font-semibold text-caisbe-text">Student</th>
                   <th className="px-6 py-3 font-semibold text-caisbe-text">Course</th>
@@ -229,6 +239,11 @@ export default function EnrollmentsPage() {
                           <div
                             className="h-full rounded-full bg-caisbe-green transition-all"
                             style={{ width: `${Math.min(100, Math.max(0, row.progress))}%` }}
+                            role="progressbar"
+                            aria-label={`${row.student_name} progress`}
+                            aria-valuenow={row.progress}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
                           />
                         </div>
                         <span className="shrink-0 text-xs tabular-nums text-caisbe-muted">
@@ -244,7 +259,7 @@ export default function EnrollmentsPage() {
               </tbody>
             </table>
           )}
-        </div>
+        </Card>
       </section>
     </div>
   );
@@ -252,15 +267,5 @@ export default function EnrollmentsPage() {
 
 function EnrollmentStatusBadge({ status }: { status: string }) {
   const completed = status === "completed";
-  return (
-    <span
-      className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${
-        completed
-          ? "bg-caisbe-green/10 text-caisbe-green"
-          : "bg-ifma-border-light text-caisbe-muted"
-      }`}
-    >
-      {status}
-    </span>
-  );
+  return <Badge tone={completed ? "success" : "neutral"}>{status.replaceAll("_", " ")}</Badge>;
 }

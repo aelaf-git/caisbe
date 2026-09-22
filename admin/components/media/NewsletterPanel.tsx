@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import RichTextEditor from "@/components/lms/RichTextEditor";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
+import FormField, { fieldClassName } from "@/components/ui/FormField";
+import Skeleton from "@/components/ui/Skeleton";
 import {
   apiFetch,
   apiUpload,
@@ -52,6 +57,8 @@ export default function NewsletterPanel({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // New subscriber data resets the explicit recipient selection.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedIds(subscribers.map((row) => row.id));
   }, [subscribers]);
 
@@ -137,40 +144,39 @@ export default function NewsletterPanel({
   return (
     <div className="space-y-8">
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="border border-ifma-border bg-white p-5">
+        <Card padding="sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
             Active subscribers
           </p>
           <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">
             {loading ? "—" : subscribers.length}
           </p>
-        </div>
-        <div className="border border-ifma-border bg-white p-5">
+        </Card>
+        <Card padding="sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
             Campaigns sent
           </p>
           <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">
             {loading ? "—" : campaigns.length}
           </p>
-        </div>
+        </Card>
       </div>
 
-      <section className="border border-ifma-border bg-white p-6">
+      <Card>
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Send newsletter</h2>
         <p className="mt-1 text-sm text-caisbe-muted">
           Mark subscribers below, then send. Only marked addresses receive the email.
         </p>
 
         <div className="mt-6 space-y-4">
-          <label className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Subject</span>
+          <FormField label="Subject">
             <input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="h-11 w-full rounded-md border border-ifma-border bg-white px-3 text-sm outline-none focus:border-caisbe-green"
+              className={fieldClassName}
               placeholder="CAISBE Newsletter — March 2026"
             />
-          </label>
+          </FormField>
 
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
@@ -203,7 +209,7 @@ export default function NewsletterPanel({
                 {attachments.map((item) => (
                   <li
                     key={item.file_url}
-                    className="flex items-center justify-between gap-3 border border-ifma-border-light bg-[#fafaf8] px-3 py-2 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-ifma-border-light bg-admin-surface-muted px-3 py-2 text-sm"
                   >
                     <span className="truncate text-caisbe-text">{item.filename}</span>
                     <button
@@ -220,19 +226,18 @@ export default function NewsletterPanel({
           </div>
         </div>
 
-        <button
-          type="button"
+        <Button
           disabled={sending || uploading}
           onClick={() => void sendNewsletter()}
-          className="mt-6 inline-flex items-center justify-center border-2 border-caisbe-green bg-caisbe-green px-5 py-3 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-green-mid disabled:opacity-60"
+          className="mt-6"
         >
           {sending
             ? "Sending…"
             : `Send to ${selectedCount} marked subscriber${selectedCount === 1 ? "" : "s"}`}
-        </button>
-      </section>
+        </Button>
+      </Card>
 
-      <section className="overflow-x-auto border border-ifma-border bg-white">
+      <Card padding="none" className="overflow-x-auto">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ifma-border-light px-6 py-4">
           <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Subscribers</h2>
           {subscribers.length > 0 ? (
@@ -240,7 +245,7 @@ export default function NewsletterPanel({
               <button
                 type="button"
                 onClick={markAll}
-                className="border border-ifma-border bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-green hover:text-caisbe-green"
+                className="border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-green hover:text-caisbe-green"
               >
                 Mark all
               </button>
@@ -248,7 +253,7 @@ export default function NewsletterPanel({
                 type="button"
                 onClick={unmarkAll}
                 disabled={selectedIds.length === 0}
-                className="border border-ifma-border bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-green hover:text-caisbe-green disabled:opacity-50"
+                className="border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-green hover:text-caisbe-green disabled:opacity-50"
               >
                 Unmark all
               </button>
@@ -256,14 +261,12 @@ export default function NewsletterPanel({
           ) : null}
         </div>
         {loading ? (
-          <p className="p-6 text-sm text-caisbe-muted">Loading…</p>
+          <div className="space-y-3 p-6">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-12" />)}</div>
         ) : subscribers.length === 0 ? (
-          <p className="p-6 text-sm text-caisbe-muted">
-            No subscribers yet. They are added when visitors sign up on the website.
-          </p>
+          <div className="p-4"><EmptyState title="No subscribers yet" description="Subscribers are added when visitors sign up on the website." /></div>
         ) : (
-          <table className="min-w-full divide-y divide-ifma-border-light text-left text-sm">
-            <thead className="bg-[#fafaf8]">
+          <table className="min-w-[620px] w-full divide-y divide-ifma-border-light text-left text-sm">
+            <thead className="bg-admin-surface-muted/70">
               <tr>
                 <th className="px-6 py-3">
                   <label className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
@@ -305,15 +308,15 @@ export default function NewsletterPanel({
             </tbody>
           </table>
         )}
-      </section>
+      </Card>
 
       {campaigns.length > 0 ? (
-        <section className="overflow-x-auto border border-ifma-border bg-white">
+        <Card padding="none" className="overflow-x-auto">
           <div className="border-b border-ifma-border-light px-6 py-4">
             <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Recent campaigns</h2>
           </div>
-          <table className="min-w-full divide-y divide-ifma-border-light text-left text-sm">
-            <thead className="bg-[#fafaf8]">
+          <table className="min-w-[620px] w-full divide-y divide-ifma-border-light text-left text-sm">
+            <thead className="bg-admin-surface-muted/70">
               <tr>
                 <th className="px-6 py-3 font-semibold text-caisbe-text">Subject</th>
                 <th className="px-6 py-3 font-semibold text-caisbe-text">Recipients</th>
@@ -336,7 +339,7 @@ export default function NewsletterPanel({
               ))}
             </tbody>
           </table>
-        </section>
+        </Card>
       ) : null}
     </div>
   );

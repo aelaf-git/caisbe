@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.html_sanitize import sanitize_html
+from app.security.html_sanitize import sanitize_html
 from app.models import (
     CertificateTemplate,
     Chapter,
