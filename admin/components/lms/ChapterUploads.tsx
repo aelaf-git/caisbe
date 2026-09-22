@@ -141,7 +141,7 @@ export default function ChapterUploads({
       {media.length > 0 ? (
         <ul className="space-y-3">
           {media.map((item) => (
-            <li key={item.id} className="rounded-lg border border-ifma-border bg-white p-3">
+            <li key={item.id} className="rounded-lg border border-ifma-border bg-admin-surface p-3">
               <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <Badge tone="brand">{item.block_type}</Badge>
@@ -255,7 +255,7 @@ function UploadDropzone({ onFiles }: { onFiles: (files: File[]) => void }) {
       className={`rounded-md border-2 border-dashed px-4 py-6 text-center transition-colors ${
         dragging
           ? "border-caisbe-green bg-caisbe-green/5"
-          : "border-ifma-border bg-white"
+          : "border-ifma-border bg-admin-surface"
       }`}
     >
       <p className="text-sm font-medium text-caisbe-text">Drag and drop files here, or</p>

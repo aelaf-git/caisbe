@@ -9,6 +9,10 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "default_pass_percent": "70",
     "membership_cert_title": "Certificate of Membership",
     "completion_cert_title": "Certificate of Completion",
+    "ui_theme": "light",
+    "ui_font_size": "md",
+    "ui_font_body": "roboto",
+    "ui_font_display": "open-sans",
 }
 
 

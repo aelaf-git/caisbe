@@ -16,6 +16,8 @@ class SiteVisitOut(BaseModel):
     path: str
     ip_address: str
     country: str | None = None
+    location_country: str = "Unknown"
+    location_city: str = "Unknown"
     city: str | None = None
     referrer: str | None = None
     user_agent: str | None = None
@@ -34,6 +36,19 @@ class SiteVisitPathStatOut(BaseModel):
 class SiteVisitCountryStatOut(BaseModel):
     country: str
     views: int
+    unique: int = 0
+
+
+class SiteVisitNamedStatOut(BaseModel):
+    label: str
+    views: int
+    unique: int = 0
+
+
+class SiteVisitDailyOut(BaseModel):
+    date: str
+    views: int
+    unique: int
 
 
 class SiteVisitStatsOut(BaseModel):
@@ -45,8 +60,15 @@ class SiteVisitStatsOut(BaseModel):
     unique_today: int
     views_last_7_days: int
     unique_last_7_days: int
+    previous_views: int | None = None
+    previous_unique: int | None = None
     top_paths: list[SiteVisitPathStatOut] = Field(default_factory=list)
     top_countries: list[SiteVisitCountryStatOut] = Field(default_factory=list)
+    daily: list[SiteVisitDailyOut] = Field(default_factory=list)
+    countries: list[SiteVisitCountryStatOut] = Field(default_factory=list)
+    cities: list[SiteVisitNamedStatOut] = Field(default_factory=list)
+    referrers: list[SiteVisitNamedStatOut] = Field(default_factory=list)
+    browsers: list[SiteVisitNamedStatOut] = Field(default_factory=list)
 
 
 class AdminDashboardOut(BaseModel):

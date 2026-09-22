@@ -109,7 +109,7 @@ export default function AdminCoursesPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by title or code"
-              className="h-10 w-full rounded-lg border border-ifma-border bg-white pr-3 pl-9 text-sm outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
+              className="h-10 w-full rounded-lg border border-ifma-border bg-admin-surface pr-3 pl-9 text-sm outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
         />
           </label>
       </div>

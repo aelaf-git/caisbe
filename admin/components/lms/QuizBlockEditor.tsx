@@ -114,7 +114,7 @@ export default function QuizBlockEditor({
   const displayError = autosave.error || validationError;
 
   return (
-    <li className="overflow-hidden rounded-xl border border-ifma-border bg-white">
+    <li className="overflow-hidden rounded-xl border border-ifma-border bg-admin-surface">
       <div className="flex flex-wrap items-center gap-1 px-3 py-3">
         <CollapseToggle
           expanded={expanded}

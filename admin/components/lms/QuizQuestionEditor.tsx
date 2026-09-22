@@ -91,7 +91,7 @@ export default function QuizQuestionEditor({
           />
           <div className="space-y-2">
           {q.choices.map((c, ci) => (
-            <div key={ci} className={`flex items-center gap-2 rounded-lg border p-2 transition-colors ${c.is_correct ? "border-admin-success/30 bg-admin-success-soft" : "border-ifma-border bg-white"}`}>
+            <div key={ci} className={`flex items-center gap-2 rounded-lg border p-2 transition-colors ${c.is_correct ? "border-admin-success/30 bg-admin-success-soft" : "border-ifma-border bg-admin-surface"}`}>
               <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-medium text-caisbe-muted">
                 <input
                   type="radio"
@@ -119,7 +119,7 @@ export default function QuizQuestionEditor({
                   choices[ci] = { ...c, text: e.target.value };
                   updateQuestion(qi, { ...q, choices });
                 }}
-                  className="h-10 min-w-0 flex-1 rounded-lg border border-ifma-border bg-white px-3 text-sm outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
+                  className="h-10 min-w-0 flex-1 rounded-lg border border-ifma-border bg-admin-surface px-3 text-sm outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
               />
               {q.choices.length > MIN_CHOICES ? (
                 <DeleteIconButton

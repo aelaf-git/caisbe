@@ -76,7 +76,7 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
   const router = useRouter();
 
   return (
-    <aside className={`flex h-full w-full flex-col border-r border-ifma-border bg-white ${className}`}>
+    <aside className={`flex h-full w-full flex-col border-r border-ifma-border bg-admin-surface ${className}`}>
       <div className="border-b border-ifma-border-light px-5 py-5">
         <Link href="/dashboard" onClick={onNavigate} className="flex flex-col gap-2">
           <Image

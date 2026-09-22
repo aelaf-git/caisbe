@@ -245,7 +245,7 @@ export default function NewsletterPanel({
               <button
                 type="button"
                 onClick={markAll}
-                className="border border-ifma-border bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-green hover:text-caisbe-green"
+                className="border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-green hover:text-caisbe-green"
               >
                 Mark all
               </button>
@@ -253,7 +253,7 @@ export default function NewsletterPanel({
                 type="button"
                 onClick={unmarkAll}
                 disabled={selectedIds.length === 0}
-                className="border border-ifma-border bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-green hover:text-caisbe-green disabled:opacity-50"
+                className="border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-green hover:text-caisbe-green disabled:opacity-50"
               >
                 Unmark all
               </button>

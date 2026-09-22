@@ -2,6 +2,17 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/auth";
+import {
+  applyAppearance,
+  FONT_OPTIONS,
+  FONT_SIZE_OPTIONS,
+  markAppearanceAdjusted,
+  THEME_OPTIONS,
+  writeStoredAppearance,
+  type FontId,
+  type FontSizeId,
+  type ThemeId,
+} from "@/lib/appearance";
 import Alert from "@/components/ui/Alert";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -14,7 +25,10 @@ type AppSettings = {
   default_pass_percent: number;
   membership_cert_title: string;
   completion_cert_title: string;
-  portal_public_url: string;
+  ui_theme: ThemeId;
+  ui_font_size: FontSizeId;
+  ui_font_body: FontId;
+  ui_font_display: FontId;
 };
 
 export default function SettingsPage() {
@@ -64,9 +78,19 @@ export default function SettingsPage() {
           default_pass_percent: settings.default_pass_percent,
           membership_cert_title: settings.membership_cert_title,
           completion_cert_title: settings.completion_cert_title,
+          ui_theme: settings.ui_theme,
+          ui_font_size: settings.ui_font_size,
+          ui_font_body: settings.ui_font_body,
+          ui_font_display: settings.ui_font_display,
         }),
       });
       setSettings(updated);
+      writeStoredAppearance({
+        theme: updated.ui_theme,
+        fontSize: updated.ui_font_size,
+        fontBody: updated.ui_font_body,
+        fontDisplay: updated.ui_font_display,
+      });
       setMessage("Settings saved.");
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Unable to save settings.");
@@ -103,26 +127,52 @@ export default function SettingsPage() {
     }
   }
 
+  function updateAppearance(patch: Partial<Pick<AppSettings, "ui_theme" | "ui_font_size" | "ui_font_body" | "ui_font_display">>) {
+    if (!settings) return;
+    const next = { ...settings, ...patch };
+    setSettings(next);
+    markAppearanceAdjusted();
+    applyAppearance({
+      theme: next.ui_theme,
+      fontSize: next.ui_font_size,
+      fontBody: next.ui_font_body,
+      fontDisplay: next.ui_font_display,
+    });
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Administration"
         title="Settings"
-        description="Configure certificate branding, LMS defaults, and your admin password."
+        description="Configure certificate branding, the admin console look, and your admin password."
       />
 
       {error ? <Alert tone="error">{error}</Alert> : null}
       {message ? <Alert tone="success">{message}</Alert> : null}
 
+      {loading || !settings ? (
+        <>
       <Card>
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Certificate &amp; LMS defaults</h2>
         <p className="mt-1 text-sm text-caisbe-muted">Defaults used for new courses and generated credentials.</p>
-        {loading || !settings ? (
           <div className="mt-6 grid gap-4 md:grid-cols-2" aria-label="Loading settings">
             {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-16" />)}
           </div>
-        ) : (
-          <form onSubmit={(e) => void handleSave(e)} className="mt-6 grid gap-5 md:grid-cols-2">
+      </Card>
+      <Card>
+        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Appearance</h2>
+        <div className="mt-6 grid gap-4" aria-label="Loading appearance">
+          {[0, 1, 2].map((item) => <Skeleton key={item} className="h-16" />)}
+        </div>
+      </Card>
+        </>
+      ) : (
+        <form onSubmit={(e) => void handleSave(e)} className="space-y-6">
+      <Card>
+        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Certificate &amp; LMS defaults</h2>
+        <p className="mt-1 text-sm text-caisbe-muted">Defaults used for new courses and generated credentials.</p>
+          <div className="mt-6 grid gap-5 md:grid-cols-2">
             <FormField label="Institute name" hint="Shown in the certificate footer.">
               <input
                 value={settings.institute_name}
@@ -164,18 +214,128 @@ export default function SettingsPage() {
                 required
               />
             </FormField>
-            <div className="rounded-lg border border-ifma-border-light bg-admin-surface-muted px-4 py-3 text-sm text-caisbe-muted md:col-span-2">
-              Portal public URL (read-only):{" "}
-              <span className="break-all font-mono text-caisbe-text">{settings.portal_public_url}</span>
+          </div>
+      </Card>
+
+      <Card>
+        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Appearance</h2>
+        <p className="mt-1 text-sm text-caisbe-muted">
+          Font size, type, and theme apply to this admin console as you change them. Save to keep them for the next visit.
+        </p>
+          <div className="mt-6 space-y-6">
+            <fieldset>
+              <legend className="text-sm font-semibold text-caisbe-text">Theme</legend>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {THEME_OPTIONS.map((option) => {
+                  const selected = settings.ui_theme === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => updateAppearance({ ui_theme: option.id })}
+                      className={`h-10 rounded-md border-2 px-4 text-sm font-semibold ${
+                        selected
+                          ? "border-caisbe-red bg-caisbe-red/10 text-caisbe-red"
+                          : "border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-sm font-semibold text-caisbe-text">Font size</legend>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {FONT_SIZE_OPTIONS.map((option) => {
+                  const selected = settings.ui_font_size === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => updateAppearance({ ui_font_size: option.id })}
+                      className={`h-10 rounded-md border-2 px-4 text-sm font-semibold ${
+                        selected
+                          ? "border-caisbe-red bg-caisbe-red/10 text-caisbe-red"
+                          : "border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-sm font-semibold text-caisbe-text">Body font</legend>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {FONT_OPTIONS.map((option) => {
+                  const selected = settings.ui_font_body === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => updateAppearance({ ui_font_body: option.id })}
+                      style={{ fontFamily: `var(${option.variable})` }}
+                      className={`h-10 rounded-md border-2 px-4 text-sm ${
+                        selected
+                          ? "border-caisbe-red bg-caisbe-red/10 text-caisbe-red"
+                          : "border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-sm font-semibold text-caisbe-text">Heading font</legend>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {FONT_OPTIONS.map((option) => {
+                  const selected = settings.ui_font_display === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => updateAppearance({ ui_font_display: option.id })}
+                      style={{ fontFamily: `var(${option.variable})` }}
+                      className={`h-10 rounded-md border-2 px-4 text-sm ${
+                        selected
+                          ? "border-caisbe-red bg-caisbe-red/10 text-caisbe-red"
+                          : "border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <div className="rounded-lg border border-ifma-border bg-admin-canvas px-4 py-4">
+              <p className="font-display text-2xl font-semibold text-caisbe-text-dark">Heading preview</p>
+              <p className="mt-2 text-base text-caisbe-text">
+                Body text uses the selected font and size across the admin console.
+              </p>
+              <p className="mt-1 text-sm text-caisbe-muted">Secondary text stays readable in light and dark themes.</p>
             </div>
-            <div className="md:col-span-2">
+
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : "Save settings"}
             </Button>
-            </div>
-          </form>
-        )}
+          </div>
       </Card>
+        </form>
+      )}
 
       <Card>
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Change password</h2>

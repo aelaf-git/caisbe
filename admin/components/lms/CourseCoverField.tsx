@@ -62,7 +62,7 @@ export default function CourseCoverField({
             </div>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3 border-t border-ifma-border-light bg-white px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3 border-t border-ifma-border-light bg-admin-surface px-4 py-3">
           <input
             ref={inputRef}
             type="file"

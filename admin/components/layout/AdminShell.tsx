@@ -53,7 +53,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-ifma-border bg-white px-4 py-3 md:hidden">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-ifma-border bg-admin-surface px-4 py-3 md:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}

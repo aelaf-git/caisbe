@@ -15,7 +15,7 @@ export function buttonStyles({
   const variants: Record<ButtonVariant, string> = {
     primary: "border-2 border-caisbe-red bg-caisbe-red text-white hover:border-caisbe-red-dark hover:bg-caisbe-red-dark focus-visible:ring-caisbe-red/25",
     secondary:
-      "border-2 border-ifma-border bg-white text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red focus-visible:ring-caisbe-red/15",
+      "border-2 border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red focus-visible:ring-caisbe-red/15",
     ghost: "text-caisbe-muted hover:bg-ifma-border-light hover:text-caisbe-text focus-visible:ring-ifma-border",
     danger: "border-2 border-caisbe-red bg-caisbe-red text-white hover:border-caisbe-red-dark hover:bg-caisbe-red-dark focus-visible:ring-caisbe-red/25",
   };

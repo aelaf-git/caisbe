@@ -45,7 +45,7 @@ export default function AssignmentFilePreview({ block }: { block: ContentBlock }
         <iframe
           title={label}
           src={block.url}
-          className="mt-3 h-64 w-full rounded-lg border border-ifma-border bg-white"
+          className="mt-3 h-64 w-full rounded-lg border border-ifma-border bg-admin-surface"
         />
       </div>
     );

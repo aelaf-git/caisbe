@@ -46,7 +46,7 @@ function CornerTopLeft() {
 function CornerBottomRight() {
   return (
     <svg
-      className="pointer-events-none absolute bottom-0 right-0 h-[28%] w-[22%] min-h-[80px] min-w-[100px]"
+      className="pointer-events-none absolute bottom-0 right-0 h-[20%] w-[14%] min-h-[56px] min-w-[64px]"
       viewBox="0 0 200 160"
       fill="none"
       aria-hidden
@@ -99,7 +99,14 @@ export default function MembershipCertificateDocument({
         <CornerBottomRight />
 
         <div className="relative flex h-full flex-col px-[8%] py-[7%] text-center">
-          <header className="shrink-0 pt-[2%]">
+          <header className="shrink-0 pt-[1%]">
+            <img
+              src="/images/logo.png"
+              alt="CAISBE"
+              width={2172}
+              height={724}
+              className="mx-auto mb-2 h-[clamp(1.75rem,5vw,2.75rem)] w-auto object-contain"
+            />
             <p className="text-[clamp(0.55rem,1.2vw,0.7rem)] font-semibold uppercase tracking-[0.28em] text-[#7b1e3a]">
               Canada Africa Institute for the Sustainable Built Environment
             </p>
@@ -131,35 +138,36 @@ export default function MembershipCertificateDocument({
             Membership No. {membershipNumber}
           </p>
 
-          <footer className="mt-auto grid shrink-0 grid-cols-[1fr_auto_1fr] items-end gap-4 pb-[1%] pt-[5%]">
-            <div className="text-center">
+          <footer className="relative z-10 mt-auto grid shrink-0 grid-cols-[minmax(0,1fr)_7.5rem_minmax(0,1fr)] items-end gap-x-6 pb-[3%] pt-[4%]">
+            <div className="col-start-1 row-start-1 justify-self-center px-2 text-center">
               <p className="mb-1 text-[clamp(0.7rem,1.4vw,0.85rem)] font-medium text-[#3d3832]">
                 {issuedLabel}
               </p>
-              <div className="mx-auto h-px w-[min(100%,120px)] bg-[#c9a227]" />
+              <div className="mx-auto h-px w-28 bg-[#c9a227]" />
               <p className="mt-1.5 text-[clamp(0.6rem,1.2vw,0.75rem)] font-bold uppercase tracking-wide text-[#7b1e3a]">
                 Member Since
               </p>
             </div>
 
-            <div className="flex flex-col items-center">
+            <div className="col-start-2 row-start-1 justify-self-center">
               <div className="rounded-sm bg-white p-1 print:p-0">
-                <QRCodeSVG value={verifyUrl} size={112} level="M" includeMargin={false} />
+                <QRCodeSVG value={verifyUrl} size={96} level="M" includeMargin={false} />
               </div>
-              {certificateCode ? (
-                <p className="mt-1 max-w-[140px] truncate font-mono text-[9px] text-[#5c5348] print:text-[8px]">
-                  {certificateCode}
-                </p>
-              ) : null}
             </div>
 
-            <div className="text-center">
+            <div className="col-start-3 row-start-1 justify-self-center px-2 text-center">
               <p className="mb-1 text-[clamp(0.7rem,1.4vw,0.85rem)] font-medium text-[#3d3832]">{issuedBy}</p>
-              <div className="mx-auto h-px w-[min(100%,120px)] bg-[#c9a227]" />
+              <div className="mx-auto h-px w-28 bg-[#c9a227]" />
               <p className="mt-1.5 text-[clamp(0.6rem,1.2vw,0.75rem)] font-bold uppercase tracking-wide text-[#7b1e3a]">
                 Issued By
               </p>
             </div>
+
+            {certificateCode ? (
+              <p className="col-start-2 row-start-2 mt-1 w-full break-all text-center font-mono text-[8px] leading-tight text-[#5c5348]">
+                {certificateCode}
+              </p>
+            ) : null}
           </footer>
         </div>
       </article>

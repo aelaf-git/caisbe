@@ -14,7 +14,7 @@ export default function Card({ padding = "md", className = "", ...props }: CardP
 
   return (
     <div
-      className={`border border-ifma-border bg-white ${spacing} ${className}`}
+      className={`border border-ifma-border bg-admin-surface ${spacing} ${className}`}
       {...props}
     />
   );

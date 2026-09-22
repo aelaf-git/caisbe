@@ -135,7 +135,7 @@ export default function TopicContentEditor({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onBlur={() => void titleAutosave.flush()}
-          className="h-10 min-w-[180px] flex-1 rounded-lg border border-ifma-border bg-white px-3 text-sm font-semibold outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
+          className="h-10 min-w-[180px] flex-1 rounded-lg border border-ifma-border bg-admin-surface px-3 text-sm font-semibold outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
         />
         <DeleteIconButton label="Delete topic" onClick={() => void deleteTopic()} />
       </div>
@@ -260,7 +260,7 @@ function NestedSectionList({
       </div>
 
       {sections.length === 0 && parentId == null ? (
-        <p className="rounded-md border border-dashed border-ifma-border bg-white px-4 py-5 text-sm text-caisbe-muted">
+        <p className="rounded-md border border-dashed border-ifma-border bg-admin-surface px-4 py-5 text-sm text-caisbe-muted">
           Add a note or subtopic. Subtopics can nest as deep as you need. Chapter files are managed
           in Chapter uploads below.
         </p>
@@ -395,7 +395,7 @@ function SectionBlockCard({
         e.stopPropagation();
         onDrop();
       }}
-      className={`rounded-xl border border-ifma-border bg-white shadow-sm ${dragging ? "opacity-60" : ""}`}
+      className={`rounded-xl border border-ifma-border bg-admin-surface shadow-sm ${dragging ? "opacity-60" : ""}`}
     >
       <div className="flex flex-wrap items-center gap-1 px-2 py-2">
         <span

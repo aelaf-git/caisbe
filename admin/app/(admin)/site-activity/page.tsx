@@ -1,41 +1,44 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import MetricBars from "@/components/analytics/MetricBars";
+import VisitorsByDate from "@/components/analytics/VisitorsByDate";
+import VisitTrendChart from "@/components/analytics/VisitTrendChart";
+import Alert from "@/components/ui/Alert";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
+import PageHeader from "@/components/ui/PageHeader";
+import Skeleton from "@/components/ui/Skeleton";
+import Tabs from "@/components/ui/Tabs";
 import {
   apiFetch,
   ApiError,
   type SiteVisit,
   type SiteVisitStats,
 } from "@/lib/auth";
-import Alert from "@/components/ui/Alert";
-import Card from "@/components/ui/Card";
-import EmptyState from "@/components/ui/EmptyState";
-import PageHeader from "@/components/ui/PageHeader";
-import Skeleton from "@/components/ui/Skeleton";
 
-function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+type RangeId = "7" | "30" | "all";
 
-function browserHint(userAgent: string | null): string {
-  if (!userAgent) return "—";
-  if (userAgent.includes("Edg/")) return "Edge";
-  if (userAgent.includes("Chrome/")) return "Chrome";
-  if (userAgent.includes("Firefox/")) return "Firefox";
-  if (userAgent.includes("Safari/") && !userAgent.includes("Chrome")) return "Safari";
-  return userAgent.slice(0, 48);
+const RANGES = [
+  { id: "7", label: "Last 7 days" },
+  { id: "30", label: "Last 30 days" },
+  { id: "all", label: "All time" },
+] as const;
+
+function deltaText(current: number, previous: number | null | undefined): string | null {
+  if (previous == null) return null;
+  if (previous === 0) return current > 0 ? "New this period" : "No change vs previous period";
+  const pct = Math.round(((current - previous) / previous) * 100);
+  const sign = pct > 0 ? "+" : "";
+  return `${sign}${pct}% vs previous period`;
 }
 
 export default function SiteActivityPage() {
+  const [range, setRange] = useState<RangeId>("7");
   const [stats, setStats] = useState<SiteVisitStats | null>(null);
   const [visits, setVisits] = useState<SiteVisit[]>([]);
-  const [landingOnly, setLandingOnly] = useState(true);
+  const [landingOnly, setLandingOnly] = useState(false);
+  const [country, setCountry] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,11 +46,16 @@ export default function SiteActivityPage() {
     async function load() {
       setLoading(true);
       setError(null);
+      const params = new URLSearchParams();
+      if (range !== "all") params.set("days", range);
+      if (landingOnly) params.set("landing_only", "true");
+      if (country) params.set("country", country);
+      const statsQuery = range === "all" ? "" : `?days=${range}`;
+      const visitQuery = params.toString() ? `?${params.toString()}` : "";
       try {
-        const query = landingOnly ? "?landing_only=true" : "";
         const [statsData, visitData] = await Promise.all([
-          apiFetch<SiteVisitStats>("/admin/site-visits/stats"),
-          apiFetch<SiteVisit[]>(`/admin/site-visits${query}`),
+          apiFetch<SiteVisitStats>(`/admin/site-visits/stats${statsQuery}`),
+          apiFetch<SiteVisit[]>(`/admin/site-visits${visitQuery}`),
         ]);
         setStats(statsData);
         setVisits(visitData);
@@ -58,79 +66,138 @@ export default function SiteActivityPage() {
       }
     }
     void load();
-  }, [landingOnly]);
+  }, [range, landingOnly, country]);
 
-  const uniqueAddresses = useMemo(
-    () => new Set(visits.map((row) => row.ip_address)).size,
-    [visits],
-  );
+  const topCountry = stats?.countries[0];
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Analytics"
         title="Site activity"
-        description="Visitors on the public website: landing-page traffic, IP addresses, and device details."
+        description="Public website traffic by day, country, and visitor detail."
       />
+
+      <Tabs items={RANGES} value={range} onChange={setRange} ariaLabel="Date range" />
 
       {error ? <Alert tone="error" title="Activity could not be loaded">{error}</Alert> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Landing page views", value: stats?.landing_views },
-          { label: "Unique landing visitors", value: stats?.landing_unique_visitors },
-          { label: "Views last 7 days", value: stats?.views_last_7_days },
-          { label: "Unique last 7 days", value: stats?.unique_last_7_days },
+          { label: "Views", value: stats?.total_views, delta: deltaText(stats?.total_views ?? 0, stats?.previous_views) },
+          { label: "Unique visitors", value: stats?.unique_visitors, delta: deltaText(stats?.unique_visitors ?? 0, stats?.previous_unique) },
+          { label: "Landing views", value: stats?.landing_views, delta: null },
+          { label: "Top country", value: topCountry?.country ?? "—", delta: topCountry ? `${topCountry.views} views` : null },
         ].map((item) => (
           <Card key={item.label} padding="sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">{item.label}</p>
-            {loading && !stats ? <Skeleton className="mt-3 h-9 w-20" /> : (
+            {loading && !stats ? (
+              <Skeleton className="mt-3 h-9 w-24" />
+            ) : (
               <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">{item.value ?? 0}</p>
             )}
+            {item.delta ? <p className="mt-1 text-xs text-caisbe-muted">{item.delta}</p> : null}
           </Card>
         ))}
       </div>
 
+      <Card>
+        <div className="mb-2 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Views by day</h2>
+            <p className="mt-1 text-sm text-caisbe-muted">Hover a point for views and unique visitors.</p>
+          </div>
+        </div>
+        {loading && !stats ? (
+          <Skeleton className="h-56 w-full" />
+        ) : (
+          <VisitTrendChart points={stats?.daily ?? []} />
+        )}
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card padding="none" className="overflow-hidden">
+          <div className="border-b border-ifma-border-light px-6 py-4">
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Visitors by country</h2>
+            <p className="mt-1 text-xs text-caisbe-muted">Select a country to filter the visitor log.</p>
+          </div>
+          {loading && !stats ? (
+            <div className="space-y-3 p-6"><Skeleton className="h-10" /><Skeleton className="h-10" /></div>
+          ) : (
+            <MetricBars
+              active={country}
+              onSelect={(label) => setCountry((current) => (current === label ? null : label))}
+              items={(stats?.countries ?? []).map((row) => ({
+                label: row.country,
+                views: row.views,
+                detail: `${row.views} views · ${row.unique ?? 0} unique`,
+              }))}
+            />
+          )}
+        </Card>
+
         <Card padding="none" className="overflow-hidden">
           <div className="border-b border-ifma-border-light px-6 py-4">
             <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Top pages</h2>
           </div>
           {loading && !stats ? (
             <div className="space-y-3 p-6"><Skeleton className="h-10" /><Skeleton className="h-10" /></div>
-          ) : !stats || stats.top_paths.length === 0 ? (
-            <p className="p-6 text-sm text-caisbe-muted">No page views recorded yet.</p>
           ) : (
-            <ul className="divide-y divide-ifma-border-light">
-              {stats.top_paths.map((row) => (
-                <li key={row.path} className="flex items-center justify-between gap-4 px-6 py-3 text-sm">
-                  <span className="truncate font-medium text-caisbe-text">{row.path}</span>
-                  <span className="tabular-nums text-caisbe-muted">{row.views}</span>
-                </li>
-              ))}
-            </ul>
+            <MetricBars
+              items={(stats?.top_paths ?? []).map((row) => ({ label: row.path, views: row.views }))}
+            />
           )}
         </Card>
 
         <Card padding="none" className="overflow-hidden">
           <div className="border-b border-ifma-border-light px-6 py-4">
-            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Countries</h2>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Cities</h2>
+            <p className="mt-1 text-xs text-caisbe-muted">From the visitor timezone when a city is not provided.</p>
           </div>
           {loading && !stats ? (
-            <div className="space-y-3 p-6"><Skeleton className="h-10" /><Skeleton className="h-10" /></div>
-          ) : !stats || stats.top_countries.length === 0 ? (
-            <p className="p-6 text-sm text-caisbe-muted">
-              Country appears when the host provides it (for example Cloudflare). IP is always stored.
-            </p>
+            <div className="space-y-3 p-6"><Skeleton className="h-10" /></div>
           ) : (
-            <ul className="divide-y divide-ifma-border-light">
-              {stats.top_countries.map((row) => (
-                <li key={row.country} className="flex items-center justify-between gap-4 px-6 py-3 text-sm">
-                  <span className="font-medium text-caisbe-text">{row.country}</span>
-                  <span className="tabular-nums text-caisbe-muted">{row.views}</span>
-                </li>
-              ))}
-            </ul>
+            <MetricBars
+              items={(stats?.cities ?? []).map((row) => ({
+                label: row.label,
+                views: row.views,
+                detail: `${row.views} views · ${row.unique ?? 0} unique`,
+              }))}
+            />
+          )}
+        </Card>
+
+        <Card padding="none" className="overflow-hidden">
+          <div className="border-b border-ifma-border-light px-6 py-4">
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Referrers</h2>
+          </div>
+          {loading && !stats ? (
+            <div className="space-y-3 p-6"><Skeleton className="h-10" /></div>
+          ) : (
+            <MetricBars
+              items={(stats?.referrers ?? []).map((row) => ({
+                label: row.label,
+                views: row.views,
+                detail: `${row.views} · ${row.unique ?? 0} unique`,
+              }))}
+            />
+          )}
+        </Card>
+
+        <Card padding="none" className="overflow-hidden">
+          <div className="border-b border-ifma-border-light px-6 py-4">
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Browsers</h2>
+          </div>
+          {loading && !stats ? (
+            <div className="space-y-3 p-6"><Skeleton className="h-10" /></div>
+          ) : (
+            <MetricBars
+              items={(stats?.browsers ?? []).map((row) => ({
+                label: row.label,
+                views: row.views,
+                detail: `${row.views} · ${row.unique ?? 0} unique`,
+              }))}
+            />
           )}
         </Card>
       </div>
@@ -138,9 +205,11 @@ export default function SiteActivityPage() {
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Visitor log</h2>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Visitors by date</h2>
             <p className="mt-1 text-xs text-caisbe-muted">
-              {loading ? "Loading…" : `${visits.length} rows · ${uniqueAddresses} unique IP addresses`}
+              {loading
+                ? "Loading…"
+                : `${visits.length} visits${country ? ` in ${country}` : ""}`}
             </p>
           </div>
           <label className="inline-flex items-center gap-2 text-sm text-caisbe-text">
@@ -154,49 +223,15 @@ export default function SiteActivityPage() {
           </label>
         </div>
 
-        <Card padding="none" className="overflow-x-auto">
-          {loading ? (
-            <div className="space-y-3 p-6">{[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-14" />)}</div>
-          ) : visits.length === 0 ? (
-            <div className="p-4"><EmptyState title="No visits yet" description="Open the public website to start recording activity." /></div>
-          ) : (
-            <table className="min-w-[1100px] w-full divide-y divide-ifma-border-light text-left text-sm">
-              <thead className="bg-admin-surface-muted/70">
-                <tr>
-                  <th className="px-6 py-3 font-semibold text-caisbe-text">When</th>
-                  <th className="px-6 py-3 font-semibold text-caisbe-text">Page</th>
-                  <th className="px-6 py-3 font-semibold text-caisbe-text">IP address</th>
-                  <th className="px-6 py-3 font-semibold text-caisbe-text">Location</th>
-                  <th className="px-6 py-3 font-semibold text-caisbe-text">Referrer</th>
-                  <th className="px-6 py-3 font-semibold text-caisbe-text">Browser / language</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-ifma-border-light">
-                {visits.map((row) => (
-                  <tr key={row.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-caisbe-muted">
-                      {formatWhen(row.visited_at)}
-                    </td>
-                    <td className="px-6 py-4 font-medium text-caisbe-text">{row.path}</td>
-                    <td className="px-6 py-4 font-mono text-xs text-caisbe-text">{row.ip_address}</td>
-                    <td className="px-6 py-4 text-caisbe-muted">
-                      {[row.city, row.country].filter(Boolean).join(", ") || "—"}
-                    </td>
-                    <td className="max-w-xs truncate px-6 py-4 text-caisbe-muted" title={row.referrer ?? undefined}>
-                      {row.referrer || "Direct"}
-                    </td>
-                    <td className="px-6 py-4 text-caisbe-muted">
-                      <p>{browserHint(row.user_agent)}</p>
-                      <p className="mt-0.5 text-xs">
-                        {[row.language, row.timezone].filter(Boolean).join(" · ") || "—"}
-                      </p>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Card>
+        {loading ? (
+          <Card><Skeleton className="h-24 w-full" /></Card>
+        ) : visits.length === 0 ? (
+          <Card>
+            <EmptyState title="No visits in this range" description="Open the public website to start recording activity." />
+          </Card>
+        ) : (
+          <VisitorsByDate visits={visits} />
+        )}
       </section>
     </div>
   );

@@ -1,4 +1,10 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+ThemeChoice = Literal["light", "dark"]
+FontSizeChoice = Literal["sm", "md", "lg", "xl"]
+FontChoice = Literal["roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"]
 
 
 class AppSettingsOut(BaseModel):
@@ -7,6 +13,10 @@ class AppSettingsOut(BaseModel):
     membership_cert_title: str
     completion_cert_title: str
     portal_public_url: str
+    ui_theme: ThemeChoice
+    ui_font_size: FontSizeChoice
+    ui_font_body: FontChoice
+    ui_font_display: FontChoice
 
 
 class AppSettingsUpdate(BaseModel):
@@ -14,6 +24,10 @@ class AppSettingsUpdate(BaseModel):
     default_pass_percent: int | None = Field(default=None, ge=0, le=100)
     membership_cert_title: str | None = Field(default=None, min_length=1, max_length=120)
     completion_cert_title: str | None = Field(default=None, min_length=1, max_length=120)
+    ui_theme: ThemeChoice | None = None
+    ui_font_size: FontSizeChoice | None = None
+    ui_font_body: FontChoice | None = None
+    ui_font_display: FontChoice | None = None
 
 
 class AdminPasswordChange(BaseModel):

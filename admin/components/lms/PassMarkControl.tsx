@@ -56,7 +56,7 @@ export default function PassMarkControl({
             value={value}
             onChange={(event) => update(event.target.value)}
             onBlur={onCommit}
-            className="h-11 w-full rounded-lg border border-ifma-border bg-white pl-3 pr-8 text-sm font-semibold tabular-nums text-caisbe-text outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
+            className="h-11 w-full rounded-lg border border-ifma-border bg-admin-surface pl-3 pr-8 text-sm font-semibold tabular-nums text-caisbe-text outline-none focus:border-caisbe-red focus:ring-4 focus:ring-caisbe-red/10"
           />
           <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-caisbe-muted">%</span>
         </label>

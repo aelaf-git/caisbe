@@ -82,7 +82,7 @@ from app.schemas.media import (
     NewsletterSendOut,
     NewsletterSubscriberOut,
 )
-from app.services.analytics import site_visit_stats
+from app.services.analytics import display_city, display_country, site_visit_stats
 from app.services.email import EmailDeliveryError, load_upload_attachment, send_email
 from app.services.settings import default_pass_percent, get_settings_map, set_settings
 
@@ -463,6 +463,11 @@ def admin_dashboard(
     )
 
 
+def _choice(data: dict[str, str], key: str, allowed: set[str], default: str) -> str:
+    value = data.get(key, default)
+    return value if value in allowed else default
+
+
 def _settings_out(db: Session) -> AppSettingsOut:
     data = get_settings_map(db)
     return AppSettingsOut(
@@ -471,6 +476,20 @@ def _settings_out(db: Session) -> AppSettingsOut:
         membership_cert_title=data.get("membership_cert_title", "Certificate of Membership"),
         completion_cert_title=data.get("completion_cert_title", "Certificate of Completion"),
         portal_public_url=settings.portal_public_url,
+        ui_theme=_choice(data, "ui_theme", {"light", "dark"}, "light"),
+        ui_font_size=_choice(data, "ui_font_size", {"sm", "md", "lg", "xl"}, "md"),
+        ui_font_body=_choice(
+            data,
+            "ui_font_body",
+            {"roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"},
+            "roboto",
+        ),
+        ui_font_display=_choice(
+            data,
+            "ui_font_display",
+            {"roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"},
+            "open-sans",
+        ),
     )
 
 
@@ -497,6 +516,14 @@ def admin_update_settings(
         updates["membership_cert_title"] = payload.membership_cert_title.strip()
     if payload.completion_cert_title is not None:
         updates["completion_cert_title"] = payload.completion_cert_title.strip()
+    if payload.ui_theme is not None:
+        updates["ui_theme"] = payload.ui_theme
+    if payload.ui_font_size is not None:
+        updates["ui_font_size"] = payload.ui_font_size
+    if payload.ui_font_body is not None:
+        updates["ui_font_body"] = payload.ui_font_body
+    if payload.ui_font_display is not None:
+        updates["ui_font_display"] = payload.ui_font_display
     if updates:
         set_settings(db, updates)
         db.commit()
@@ -569,27 +596,47 @@ def admin_reports(
 
 @router.get("/site-visits/stats", response_model=SiteVisitStatsOut)
 def admin_site_visit_stats(
+    days: int | None = Query(default=None, ge=1, le=365),
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> SiteVisitStatsOut:
-    return site_visit_stats(db)
+    return site_visit_stats(db, days=days)
 
 
 @router.get("/site-visits", response_model=list[SiteVisitOut])
 def admin_list_site_visits(
     path: str | None = Query(default=None, max_length=512),
     landing_only: bool = Query(default=False),
-    limit: int = Query(default=200, ge=1, le=500),
+    days: int | None = Query(default=None, ge=1, le=365),
+    country: str | None = Query(default=None, max_length=64),
+    limit: int = Query(default=200, ge=1, le=1000),
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[SiteVisitOut]:
     query = db.query(SiteVisit)
+    if days:
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        query = query.filter(SiteVisit.visited_at >= since)
     if landing_only:
         query = query.filter(SiteVisit.path == "/")
     elif path:
         query = query.filter(SiteVisit.path == path)
-    rows = query.order_by(SiteVisit.visited_at.desc()).limit(limit).all()
-    return [SiteVisitOut.model_validate(row) for row in rows]
+    rows = query.order_by(SiteVisit.visited_at.desc()).limit(5000).all()
+    selected = rows
+    if country:
+        wanted = country.strip().casefold()
+        selected = [
+            row
+            for row in rows
+            if display_country(row.country, row.timezone).casefold() == wanted
+        ]
+    payload: list[SiteVisitOut] = []
+    for row in selected[:limit]:
+        item = SiteVisitOut.model_validate(row)
+        item.location_country = display_country(row.country, row.timezone)
+        item.location_city = display_city(row.city, row.timezone)
+        payload.append(item)
+    return payload
 
 
 # --- Students ---
