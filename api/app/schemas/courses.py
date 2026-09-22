@@ -19,6 +19,11 @@ class CourseOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AdminCourseListOut(CourseOut):
+    has_unpublished_changes: bool = False
+
+
+
 class CourseCreate(BaseModel):
     code: str = Field(min_length=2, max_length=32)
     title: str = Field(min_length=2, max_length=255)
@@ -356,6 +361,7 @@ class CertificateTemplateOut(BaseModel):
 
 
 class CourseDetailAdminOut(CourseOut):
+    has_unpublished_changes: bool = False
     chapters: list[ChapterOut] = Field(default_factory=list)
     final_exam: FinalExamOut | None = None
     certificate_template: CertificateTemplateOut | None = None

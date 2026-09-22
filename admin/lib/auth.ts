@@ -16,6 +16,7 @@ export type Course = {
   status?: string;
   cover_url?: string | null;
   pass_percent?: number;
+  has_unpublished_changes?: boolean;
 };
 
 export type Enrollment = {

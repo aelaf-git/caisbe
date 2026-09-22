@@ -4,8 +4,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm.attributes import flag_modified
+from starlette.datastructures import UploadFile
 
 from app.config import settings
 from app.db import get_db
@@ -56,6 +58,7 @@ from app.schemas.courses import (
     CertificateAdminOut,
     CourseCreate,
     CourseDetailAdminOut,
+    AdminCourseListOut,
     CourseOut,
     CourseUpdate,
     FinalExamOut,
@@ -107,6 +110,50 @@ ALLOWED_UPLOAD_EXTENSIONS = {
     ".doc",
     ".docx",
 }
+
+COURSE_DRAFT_META_KEYS = ("code", "title", "description", "slug", "cover_url", "pass_percent")
+
+
+def _live_course_meta(course: Course) -> dict:
+    return {
+        "code": course.code,
+        "title": course.title,
+        "description": course.description,
+        "slug": course.slug,
+        "cover_url": course.cover_url,
+        "pass_percent": course.pass_percent,
+    }
+
+
+def _apply_course_draft_meta(course: Course) -> None:
+    if not course.draft_meta:
+        course.has_unpublished_changes = False
+        course.draft_meta = None
+        return
+    for key, value in course.draft_meta.items():
+        if key in COURSE_DRAFT_META_KEYS:
+            setattr(course, key, value)
+    course.draft_meta = None
+    course.has_unpublished_changes = False
+
+
+def _write_course_meta(course: Course, meta: dict) -> None:
+    """Write details into draft when published; otherwise update live columns."""
+    if not meta:
+        return
+    if course.status == "published":
+        draft = dict(course.draft_meta or _live_course_meta(course))
+        draft.update(meta)
+        course.draft_meta = draft
+        course.has_unpublished_changes = True
+        flag_modified(course, "draft_meta")
+        return
+    for key, value in meta.items():
+        setattr(course, key, value)
+    # Draft courses are the working copy — no separate unpublished buffer.
+    course.draft_meta = None
+    course.has_unpublished_changes = False
+
 
 
 def _validate_assignment_url(url: str | None) -> None:
@@ -366,7 +413,13 @@ def _load_course_admin(db: Session, course_id: int) -> Course:
 
 
 def _course_admin_out(course: Course) -> CourseDetailAdminOut:
-    return CourseDetailAdminOut.model_validate(course)
+    out = CourseDetailAdminOut.model_validate(course)
+    out.has_unpublished_changes = bool(course.has_unpublished_changes)
+    if course.has_unpublished_changes and course.draft_meta:
+        for key in COURSE_DRAFT_META_KEYS:
+            if key in course.draft_meta:
+                setattr(out, key, course.draft_meta[key])
+    return out
 
 
 # --- Dashboard & site activity ---
@@ -724,12 +777,13 @@ def admin_list_enrollments(
 # --- Courses ---
 
 
-@router.get("/courses", response_model=list[CourseOut])
+@router.get("/courses", response_model=list[AdminCourseListOut])
 def admin_list_courses(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> list[Course]:
-    return db.query(Course).order_by(Course.id.desc()).all()
+) -> list[AdminCourseListOut]:
+    rows = db.query(Course).order_by(Course.id.desc()).all()
+    return [AdminCourseListOut.model_validate(row) for row in rows]
 
 
 @router.post("/courses", response_model=CourseDetailAdminOut, status_code=status.HTTP_201_CREATED)
@@ -794,7 +848,8 @@ def admin_update_course(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
     data = payload.model_dump(exclude_unset=True)
-    if "status" in data and data["status"] not in ("draft", "published"):
+    next_status = data.pop("status", None)
+    if next_status is not None and next_status not in ("draft", "published"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
     if "code" in data and data["code"]:
         data["code"] = data["code"].strip().upper()
@@ -802,14 +857,44 @@ def admin_update_course(
         data["slug"] = data["slug"].strip().lower()
     _apply_plain_text_fields(data, "title", "description")
 
-    if data.get("status") == "published":
+    meta = {key: data[key] for key in COURSE_DRAFT_META_KEYS if key in data}
+    _write_course_meta(course, meta)
+
+    if next_status == "published":
         loaded = _load_course_admin(db, course_id)
+        # Validate against working content (draft details are overlaid separately below).
         publish_errors = _publish_content_errors(loaded)
         if publish_errors:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=publish_errors[0])
+        _apply_course_draft_meta(course)
+        course.status = "published"
+    elif next_status == "draft":
+        # Keep any pending detail edits in draft_meta while unpublishing, or fold them in.
+        _apply_course_draft_meta(course)
+        course.status = "draft"
 
-    for key, value in data.items():
-        setattr(course, key, value)
+    db.commit()
+    return _course_admin_out(_load_course_admin(db, course_id))
+
+
+@router.post("/courses/{course_id}/save-changes", response_model=CourseDetailAdminOut)
+def admin_save_course_changes(
+    course_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> CourseDetailAdminOut:
+    """Promote draft detail edits onto the live (published) course fields."""
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if course is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    if course.status == "published":
+        _apply_course_draft_meta(course)
+    else:
+        # Draft courses already persist to live columns on autosave.
+        course.draft_meta = None
+        course.has_unpublished_changes = False
+
     db.commit()
     return _course_admin_out(_load_course_admin(db, course_id))
 

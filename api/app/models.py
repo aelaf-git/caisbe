@@ -5,6 +5,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -49,6 +50,9 @@ class Course(Base):
     status: Mapped[str] = mapped_column(String(32), default="draft", index=True)
     cover_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     pass_percent: Mapped[int] = mapped_column(Integer, default=70)
+    # Working copy of details while status is published; portal keeps reading live columns.
+    draft_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    has_unpublished_changes: Mapped[bool] = mapped_column(Boolean, default=False)
 
     enrollments: Mapped[list["Enrollment"]] = relationship(back_populates="course")
     chapters: Mapped[list["Chapter"]] = relationship(

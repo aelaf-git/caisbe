@@ -8,6 +8,7 @@ import type { Certificate, MembershipCertificate } from "@/lib/lms";
 export default function StudentCertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [membership, setMembership] = useState<MembershipCertificate | null>(null);
+  const [membershipLocked, setMembershipLocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -16,14 +17,25 @@ export default function StudentCertificatesPage() {
     async function load() {
       setLoading(true);
       setError(null);
+      setMembershipLocked(false);
       try {
-        const [completionData, membershipData] = await Promise.all([
-          apiFetch<Certificate[]>("/me/certificates"),
-          apiFetch<MembershipCertificate>("/me/membership-certificate"),
-        ]);
+        const completionData = await apiFetch<Certificate[]>("/me/certificates");
         if (!active) return;
         setCertificates(completionData);
-        setMembership(membershipData);
+
+        try {
+          const membershipData = await apiFetch<MembershipCertificate>("/me/membership-certificate");
+          if (!active) return;
+          setMembership(membershipData);
+        } catch (err) {
+          if (!active) return;
+          if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
+            setMembership(null);
+            setMembershipLocked(true);
+          } else {
+            throw err;
+          }
+        }
       } catch (err) {
         if (!active) return;
         setError(err instanceof ApiError ? err.detail : "Unable to load certificates.");
@@ -52,7 +64,7 @@ export default function StudentCertificatesPage() {
         <div className="border-b border-ifma-border-light px-6 py-4">
           <h2 className="text-lg font-semibold text-caisbe-text">Membership</h2>
           <p className="mt-1 text-sm text-caisbe-muted">
-            Issued when you join CAISBE as a student member.
+            Unlocks automatically after you finish your first course.
           </p>
         </div>
         {loading ? (
@@ -70,6 +82,18 @@ export default function StudentCertificatesPage() {
               className="text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:text-caisbe-red-dark"
             >
               View / Print
+            </Link>
+          </div>
+        ) : membershipLocked ? (
+          <div className="p-6">
+            <p className="text-sm text-caisbe-muted">
+              Complete at least one course to unlock your membership certificate.
+            </p>
+            <Link
+              href="/courses"
+              className="mt-3 inline-flex text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+            >
+              Go to courses
             </Link>
           </div>
         ) : (

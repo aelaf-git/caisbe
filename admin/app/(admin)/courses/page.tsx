@@ -131,13 +131,23 @@ export default function AdminCoursesPage() {
           <ul className="divide-y divide-ifma-border-light">
             {filtered.map((course) => (
               <li key={course.id} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-admin-surface-muted/60 md:px-6">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-caisbe-red/10 text-xs font-bold text-caisbe-red">
-                  {course.code.slice(0, 4)}
+                <span className="relative h-14 w-20 shrink-0 overflow-hidden border border-ifma-border-light bg-[#f3f0ec]">
+                  {course.cover_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={course.cover_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-[10px] font-bold uppercase tracking-wide text-caisbe-red">
+                      {course.code.slice(0, 4)}
+                    </span>
+                  )}
                 </span>
                 <Link href={`/courses/${course.id}`} className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <p className="truncate font-semibold text-caisbe-text group-hover:text-caisbe-red">{course.title}</p>
                     <StatusBadge status={course.status ?? "draft"} />
+                    {course.has_unpublished_changes ? (
+                      <Badge tone="warning">Unsaved publish</Badge>
+                    ) : null}
                   </div>
                   <p className="mt-1 text-xs text-caisbe-muted">{course.code} · /{course.slug}</p>
                 </Link>

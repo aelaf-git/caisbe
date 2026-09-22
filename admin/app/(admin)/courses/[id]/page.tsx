@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import CertificatePreview from "@/components/certificates/CertificatePreview";
 import ChapterCard from "@/components/lms/ChapterCard";
+import CourseCoverField from "@/components/lms/CourseCoverField";
 import { CourseStatusBadge, SaveStatus } from "@/components/lms/CourseEditorChrome";
 import FinalExamEditor, { type ExamDraft } from "@/components/lms/FinalExamEditor";
 import PassMarkControl from "@/components/lms/PassMarkControl";
@@ -38,6 +39,7 @@ type CourseMeta = {
   title: string;
   description: string;
   slug: string;
+  cover_url: string | null;
   pass_percent: number;
 };
 
@@ -63,7 +65,9 @@ function AdminCourseEditorInner() {
   const [contentError, setContentError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
+  const [savingChanges, setSavingChanges] = useState(false);
   const [status, setStatus] = useState("draft");
+  const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(false);
   const [baselineKey, setBaselineKey] = useState(0);
 
   const [meta, setMeta] = useState<CourseMeta>({
@@ -71,8 +75,10 @@ function AdminCourseEditorInner() {
     title: "",
     description: "",
     slug: "",
+    cover_url: null,
     pass_percent: 70,
   });
+  const [coverSaving, setCoverSaving] = useState(false);
 
   const [exam, setExam] = useState<ExamDraft>({
     title: "Final Exam",
@@ -90,11 +96,13 @@ function AdminCourseEditorInner() {
   function hydrateFromCourse(data: CourseDetail) {
     setCourse(data);
     setStatus(data.status);
+    setHasUnpublishedChanges(Boolean(data.has_unpublished_changes));
     setMeta({
       code: data.code,
       title: data.title,
       description: data.description,
       slug: data.slug,
+      cover_url: data.cover_url ?? null,
       pass_percent: data.pass_percent,
     });
     setExam({
@@ -160,6 +168,7 @@ function AdminCourseEditorInner() {
       });
       setCourse(updated);
       setStatus(updated.status);
+      setHasUnpublishedChanges(Boolean(updated.has_unpublished_changes));
     },
   });
 
@@ -167,6 +176,50 @@ function AdminCourseEditorInner() {
     () => metaAutosave.error,
     [metaAutosave.error],
   );
+
+  async function commitCover(cover_url: string | null) {
+    setMeta((current) => ({ ...current, cover_url }));
+    setCoverSaving(true);
+    setError(null);
+    try {
+      // Persist cover immediately as draft when published; live columns stay until Save changes.
+      const updated = await apiFetch<CourseDetail>(`/admin/courses/${courseId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ cover_url }),
+      });
+      const savedCover = updated.cover_url ?? null;
+      setCourse(updated);
+      setStatus(updated.status);
+      setHasUnpublishedChanges(Boolean(updated.has_unpublished_changes));
+      let snapshot: CourseMeta | null = null;
+      setMeta((current) => {
+        snapshot = { ...current, cover_url: savedCover };
+        return snapshot;
+      });
+      if (snapshot) await metaAutosave.flush(snapshot);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Unable to save cover image.");
+      setMeta((current) => ({ ...current, cover_url: course?.cover_url ?? null }));
+    } finally {
+      setCoverSaving(false);
+    }
+  }
+
+  async function saveChanges() {
+    setSavingChanges(true);
+    setError(null);
+    try {
+      await flushAll();
+      const updated = await apiFetch<CourseDetail>(`/admin/courses/${courseId}/save-changes`, {
+        method: "POST",
+      });
+      hydrateFromCourse(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Unable to save changes.");
+    } finally {
+      setSavingChanges(false);
+    }
+  }
 
   async function togglePublish() {
     const next = status === "published" ? "draft" : "published";
@@ -178,8 +231,7 @@ function AdminCourseEditorInner() {
         method: "PATCH",
         body: JSON.stringify({ status: next }),
       });
-      setCourse(updated);
-      setStatus(updated.status);
+      hydrateFromCourse(updated);
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Unable to update status.");
     } finally {
@@ -214,7 +266,13 @@ function AdminCourseEditorInner() {
   }
 
   const isPublished = status === "published";
-  const draftLabel = autosaveLabel(overallStatus);
+  const needsPublishUpdate = isPublished && hasUnpublishedChanges;
+  const draftLabel = autosaveLabel(overallStatus, {
+    published: isPublished,
+    hasUnpublishedChanges,
+  });
+  const saveBusy =
+    savingChanges || publishing || overallStatus === "saving" || overallStatus === "pending";
 
   if (loading) {
     return (
@@ -257,9 +315,16 @@ function AdminCourseEditorInner() {
               Preview as learner
             </a>
             <Button
+              variant={needsPublishUpdate ? "primary" : "secondary"}
+              onClick={() => void saveChanges()}
+              disabled={saveBusy || (isPublished && !hasUnpublishedChanges && overallStatus === "idle")}
+            >
+              {savingChanges ? "Saving…" : "Save changes"}
+            </Button>
+            <Button
               variant={isPublished ? "secondary" : "primary"}
               onClick={() => void togglePublish()}
-              disabled={publishing || overallStatus === "saving" || overallStatus === "pending"}
+              disabled={saveBusy}
             >
               {publishing ? "Working…" : isPublished ? "Unpublish" : "Publish"}
             </Button>
@@ -280,7 +345,9 @@ function AdminCourseEditorInner() {
       <Card id="details" className="scroll-mt-48 space-y-5">
         <div>
           <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Course details</h2>
-          <p className="mt-1 text-sm text-caisbe-muted">Set the learner-facing identity and completion requirement.</p>
+          <p className="mt-1 text-sm text-caisbe-muted">
+            Edits autosave as a draft. Click Save changes to update the published course on the student portal.
+          </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <FormField label="Course code" hint="Updating the code also suggests a matching URL slug.">
@@ -321,6 +388,12 @@ function AdminCourseEditorInner() {
             onBlur={() => void metaAutosave.flush()}
           />
         </FormField>
+        <CourseCoverField
+          value={meta.cover_url}
+          onChange={(cover_url) => commitCover(cover_url)}
+          onError={setError}
+          saving={coverSaving}
+        />
         <PassMarkControl
           value={meta.pass_percent}
           onChange={(pass_percent) => setMeta((current) => ({ ...current, pass_percent }))}

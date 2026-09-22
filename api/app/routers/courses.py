@@ -38,7 +38,7 @@ from app.schemas.courses import (
     QuizAttemptOut,
     QuizSubmitIn,
 )
-from app.services.membership import issue_membership_certificate
+from app.services.membership import issue_membership_certificate, student_has_completed_course
 from app.services.settings import get_setting
 
 router = APIRouter(tags=["courses"])
@@ -201,7 +201,9 @@ def _finalize_course_completion(
 ) -> str:
     enrollment.status = "completed"
     enrollment.progress = 100
-    return _issue_certificate(db, user, course)
+    certificate_code = _issue_certificate(db, user, course)
+    issue_membership_certificate(db, user)
+    return certificate_code
 
 
 def _certificate_to_out(row: Certificate, student_name: str, db: Session) -> CertificateOut:
@@ -514,6 +516,11 @@ def get_my_membership_certificate(
 ) -> MembershipCertificateOut:
     if current_user.role == "admin":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membership certificate not found")
+    if not student_has_completed_course(db, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Complete at least one course to unlock your membership certificate.",
+        )
     row = issue_membership_certificate(db, current_user)
     db.commit()
     db.refresh(row)

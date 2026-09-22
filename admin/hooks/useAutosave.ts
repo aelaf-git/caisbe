@@ -108,7 +108,10 @@ export function useAutosave<T>({
     runSaveRef.current = runSave;
   }, [runSave]);
 
-  const flush = useCallback(async () => {
+  const flush = useCallback(async (override?: T) => {
+    if (override !== undefined) {
+      valueRef.current = override;
+    }
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;

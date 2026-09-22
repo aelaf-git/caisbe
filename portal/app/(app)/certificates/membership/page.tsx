@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -20,6 +21,7 @@ export default function MembershipCertificatePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [cert, setCert] = useState<MembershipCertificate | null>(null);
+  const [locked, setLocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,9 +36,20 @@ export default function MembershipCertificatePage() {
     async function load() {
       try {
         const data = await apiFetch<MembershipCertificate>("/me/membership-certificate");
-        if (active) setCert(data);
+        if (active) {
+          setCert(data);
+          setLocked(false);
+          setError(null);
+        }
       } catch (err) {
-        if (active) setError(err instanceof ApiError ? err.detail : "Certificate not found.");
+        if (!active) return;
+        if (err instanceof ApiError && err.status === 403) {
+          setLocked(true);
+          setCert(null);
+          setError(null);
+          return;
+        }
+        setError(err instanceof ApiError ? err.detail : "Certificate not found.");
       }
     }
     void load();
@@ -49,6 +62,28 @@ export default function MembershipCertificatePage() {
 
   if (loading || !user) {
     return <div className="px-4 py-16 text-center text-sm text-caisbe-muted">Loading…</div>;
+  }
+
+  if (locked) {
+    return (
+      <div>
+        <BackButton href="/certificates" />
+        <div className="mt-6 border border-ifma-border bg-white px-6 py-8">
+          <h1 className="font-display text-2xl font-semibold text-caisbe-text-dark">
+            Membership certificate locked
+          </h1>
+          <p className="mt-2 text-sm text-caisbe-muted">
+            Complete at least one course to unlock your membership certificate.
+          </p>
+          <Link
+            href="/courses"
+            className="mt-4 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:text-caisbe-red-dark"
+          >
+            Go to courses
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
