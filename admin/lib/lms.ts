@@ -63,6 +63,7 @@ export type FinalExam = {
   id: number;
   title: string;
   pass_percent: number;
+  time_limit_minutes?: number | null;
   questions: QuizQuestion[];
 };
 

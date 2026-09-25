@@ -40,6 +40,7 @@ export type ContentBlock = {
   parent_id?: number | null;
   sort_order: number;
   completed?: boolean;
+  review_status?: string | null;
   quiz: Quiz | null;
 };
 
@@ -64,7 +65,23 @@ export type FinalExam = {
   id: number;
   title: string;
   pass_percent: number;
+  time_limit_minutes: number | null;
   questions: QuizQuestion[];
+};
+
+export type ExamOrder = {
+  questions: number[];
+  choices: Record<string, number[]>;
+};
+
+export type ExamSessionState = {
+  in_progress: boolean;
+  started_at: string | null;
+  remaining_seconds: number | null;
+  time_limit_minutes: number | null;
+  latest_score: number | null;
+  latest_passed: boolean | null;
+  order: ExamOrder | null;
 };
 
 export type CertificateTemplate = {
@@ -89,6 +106,7 @@ export type CourseDetail = {
   progress?: number;
   certificate_code?: string | null;
   exam_passed?: boolean;
+  exam_score?: number | null;
 };
 
 export type QuizAnswerReview = {

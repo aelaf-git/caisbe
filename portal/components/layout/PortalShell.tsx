@@ -45,7 +45,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
       ) : null}
 
       <div
-        className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] transition-transform duration-200 md:sticky md:top-0 md:z-0 md:h-screen md:w-64 md:max-w-none md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] transition-transform duration-200 print:hidden md:sticky md:top-0 md:z-0 md:h-screen md:w-64 md:max-w-none md:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
@@ -53,7 +53,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-ifma-border bg-admin-surface px-4 py-3 md:hidden">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-ifma-border bg-admin-surface px-4 py-3 print:hidden md:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -70,7 +70,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
           <p className="text-sm font-bold uppercase tracking-[0.12em] text-caisbe-red">CAISBE Student</p>
         </header>
 
-        <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
+        <main className="min-w-0 flex-1 px-4 py-6 print:p-0 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>

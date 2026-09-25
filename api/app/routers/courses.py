@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import random
 import secrets
-from datetime import datetime
+import uuid
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session, joinedload
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from starlette.datastructures import UploadFile
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.config import settings
 from app.db import get_db
@@ -18,8 +22,10 @@ from app.models import (
     ContentBlock,
     Course,
     Enrollment,
+    ExamSession,
     FinalExam,
     Lesson,
+    AssignmentSubmission,
     BlockCompletion,
     LessonProgress,
     MembershipCertificate,
@@ -29,11 +35,15 @@ from app.models import (
     User,
 )
 from app.schemas.courses import (
+    AssignmentSubmitIn,
     CertificateOut,
+    UploadOut,
     CertificateVerifyOut,
     CourseDetailStudentOut,
     CourseOut,
     EnrollmentOut,
+    ExamOrderOut,
+    ExamSessionOut,
     MembershipCertificateOut,
     QuizAnswerReview,
     QuizAttemptOut,
@@ -55,23 +65,99 @@ def _lesson_ids_for_course(course: Course) -> list[int]:
     return ids
 
 
-def _course_progress_units(course: Course) -> tuple[list[int], list[int], list[int]]:
-    lesson_ids: list[int] = []
-    quiz_ids: list[int] = []
-    assignment_ids: list[int] = []
-    for chapter in course.chapters:
-        for lesson in chapter.lessons:
-            lesson_ids.append(lesson.id)
-        for block in chapter.blocks or []:
-            if block.block_type == "quiz" and block.quiz_id:
-                quiz_ids.append(block.quiz_id)
-            elif block.block_type == "assignment":
-                assignment_ids.append(block.id)
+def _course_progress_units(db: Session, course_id: int) -> tuple[list[int], list[int], list[int]]:
+    lesson_ids = [
+        row[0]
+        for row in (
+            db.query(Lesson.id)
+            .join(Chapter, Chapter.id == Lesson.chapter_id)
+            .filter(Chapter.course_id == course_id)
+            .all()
+        )
+    ]
+    quiz_ids = [
+        row[0]
+        for row in (
+            db.query(ContentBlock.quiz_id)
+            .join(Chapter, Chapter.id == ContentBlock.chapter_id)
+            .filter(
+                Chapter.course_id == course_id,
+                ContentBlock.block_type == "quiz",
+                ContentBlock.quiz_id.isnot(None),
+            )
+            .all()
+        )
+    ]
+    assignment_ids = [
+        row[0]
+        for row in (
+            db.query(ContentBlock.id)
+            .join(Chapter, Chapter.id == ContentBlock.chapter_id)
+            .filter(Chapter.course_id == course_id, ContentBlock.block_type == "assignment")
+            .all()
+        )
+    ]
     return lesson_ids, quiz_ids, assignment_ids
 
 
+def _assignment_review_status(
+    db: Session, user_id: int, assignment_ids: list[int]
+) -> dict[int, str]:
+    if not assignment_ids:
+        return {}
+    # Promote older completion-only rows so progress and review stay linked.
+    existing = {
+        row[0]
+        for row in db.query(AssignmentSubmission.content_block_id)
+        .filter(
+            AssignmentSubmission.user_id == user_id,
+            AssignmentSubmission.content_block_id.in_(assignment_ids),
+        )
+        .all()
+    }
+    legacy_rows = (
+        db.query(BlockCompletion)
+        .filter(
+            BlockCompletion.user_id == user_id,
+            BlockCompletion.content_block_id.in_(assignment_ids),
+        )
+        .all()
+    )
+    created = False
+    for row in legacy_rows:
+        if row.content_block_id in existing:
+            continue
+        db.add(
+            AssignmentSubmission(
+                user_id=user_id,
+                content_block_id=row.content_block_id,
+                body="Submitted earlier.",
+                status="under_review",
+            )
+        )
+        existing.add(row.content_block_id)
+        created = True
+    if created:
+        db.flush()
+
+    status_map = {
+        row.content_block_id: row.status
+        for row in db.query(AssignmentSubmission)
+        .filter(
+            AssignmentSubmission.user_id == user_id,
+            AssignmentSubmission.content_block_id.in_(assignment_ids),
+        )
+        .all()
+    }
+    return status_map
+
+
+def _completed_assignment_ids(db: Session, user_id: int, assignment_ids: list[int]) -> set[int]:
+    return set(_assignment_review_status(db, user_id, assignment_ids).keys())
+
+
 def _recompute_progress(db: Session, user: User, course: Course, enrollment: Enrollment) -> None:
-    lesson_ids, quiz_ids, assignment_ids = _course_progress_units(course)
+    lesson_ids, quiz_ids, assignment_ids = _course_progress_units(db, course.id)
     total = len(lesson_ids) + len(quiz_ids) + len(assignment_ids)
     if total == 0:
         enrollment.progress = 0
@@ -90,23 +176,18 @@ def _recompute_progress(db: Session, user: User, course: Course, enrollment: Enr
             .distinct()
             .count()
         )
-    if assignment_ids:
-        completed += (
-            db.query(BlockCompletion)
-            .filter(
-                BlockCompletion.user_id == user.id,
-                BlockCompletion.content_block_id.in_(assignment_ids),
-            )
-            .count()
-        )
+    completed += len(_completed_assignment_ids(db, user.id, assignment_ids))
     enrollment.progress = int(round(100 * completed / total))
 
 
 def _apply_progress(db: Session, user: User, course_id: int) -> Enrollment:
-    course = _load_published_course(db, course_id)
+    course = db.query(Course).filter(Course.id == course_id, Course.status == "published").first()
+    if course is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
     enrollment = require_active_enrollment(db, user, course_id)
     _recompute_progress(db, user, course, enrollment)
     if enrollment.progress >= 100 and enrollment.status != "completed":
+        course = _load_published_course(db, course_id)
         if course.final_exam is None or _user_passed_final_exam(db, user, course):
             _finalize_course_completion(db, user, course, enrollment)
     return enrollment
@@ -116,19 +197,10 @@ def _load_published_course(db: Session, course_id: int) -> Course:
     course = (
         db.query(Course)
         .options(
-            joinedload(Course.chapters)
-            .joinedload(Chapter.lessons)
-            .joinedload(Lesson.blocks)
-            .joinedload(ContentBlock.quiz)
-            .joinedload(Quiz.questions)
-            .joinedload(QuizQuestion.choices),
-            joinedload(Course.chapters)
-            .joinedload(Chapter.blocks)
-            .joinedload(ContentBlock.quiz)
-            .joinedload(Quiz.questions)
-            .joinedload(QuizQuestion.choices),
-            joinedload(Course.final_exam).joinedload(FinalExam.questions).joinedload(QuizQuestion.choices),
-            joinedload(Course.certificate_template),
+            selectinload(Course.chapters).selectinload(Chapter.lessons).selectinload(Lesson.blocks).selectinload(ContentBlock.quiz).selectinload(Quiz.questions).selectinload(QuizQuestion.choices),
+            selectinload(Course.chapters).selectinload(Chapter.blocks).selectinload(ContentBlock.quiz).selectinload(Quiz.questions).selectinload(QuizQuestion.choices),
+            selectinload(Course.final_exam).selectinload(FinalExam.questions).selectinload(QuizQuestion.choices),
+            selectinload(Course.certificate_template),
         )
         .filter(Course.id == course_id, Course.status == "published")
         .first()
@@ -335,6 +407,7 @@ def get_course_detail(
         .first()
     )
     exam_passed = False
+    exam_score = None
     if course.final_exam:
         attempt = (
             db.query(QuizAttempt)
@@ -343,17 +416,20 @@ def get_course_detail(
                 QuizAttempt.final_exam_id == course.final_exam.id,
                 QuizAttempt.passed.is_(True),
             )
+            .order_by(QuizAttempt.created_at.desc(), QuizAttempt.id.desc())
             .first()
         )
         exam_passed = attempt is not None
+        exam_score = attempt.score if attempt else None
 
     detail = CourseDetailStudentOut.model_validate(course)
     detail.enrolled = True
     detail.progress = enrollment.progress
     detail.certificate_code = cert.certificate_code if cert else None
     detail.exam_passed = exam_passed
+    detail.exam_score = exam_score
 
-    _, quiz_ids, assignment_ids = _course_progress_units(course)
+    _, quiz_ids, assignment_ids = _course_progress_units(db, course_id)
     done_quizzes = set()
     if quiz_ids:
         done_quizzes = {
@@ -363,17 +439,9 @@ def get_course_detail(
             .distinct()
             .all()
         }
-    done_assignments = set()
-    if assignment_ids:
-        done_assignments = {
-            row[0]
-            for row in db.query(BlockCompletion.content_block_id)
-            .filter(
-                BlockCompletion.user_id == current_user.id,
-                BlockCompletion.content_block_id.in_(assignment_ids),
-            )
-            .all()
-        }
+    submission_status = _assignment_review_status(db, current_user.id, assignment_ids)
+    if db.new or db.dirty:
+        db.commit()
 
     for chapter in detail.chapters:
         for lesson in chapter.lessons:
@@ -382,7 +450,8 @@ def get_course_detail(
             if block.block_type == "quiz":
                 block.completed = block.quiz is not None and block.quiz.id in done_quizzes
             elif block.block_type == "assignment":
-                block.completed = block.id in done_assignments
+                block.completed = block.id in submission_status
+                block.review_status = submission_status.get(block.id)
 
     return detail
 
@@ -606,8 +675,94 @@ def submit_quiz(
     )
 
 
-@router.post("/me/blocks/{block_id}/complete")
-def complete_block(
+@router.post("/me/uploads", response_model=UploadOut)
+async def student_upload(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+) -> UploadOut:
+    if current_user.role == "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Use the admin upload.")
+    form = await request.form(max_part_size=25 * 1024 * 1024)
+    uploaded = form.get("file")
+    if not isinstance(uploaded, UploadFile):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing file upload")
+    suffix = Path(uploaded.filename or "file").suffix.lower()
+    if suffix not in {".pdf", ".doc", ".docx"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Upload a PDF or Word file.")
+    upload_root = Path(settings.upload_dir)
+    upload_root.mkdir(parents=True, exist_ok=True)
+    safe_name = f"{uuid.uuid4().hex}{suffix}"
+    dest = upload_root / safe_name
+    data = await uploaded.read()
+    if not data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty")
+    if len(data) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File is too large.")
+    dest.write_bytes(data)
+    return UploadOut(url=f"/api/uploads/{safe_name}", filename=(uploaded.filename or safe_name)[:120])
+
+
+def _assignment_file_ok(url: str | None) -> bool:
+    if not url or not url.strip():
+        return False
+    path = url.strip().split("?")[0].lower()
+    return "/api/uploads/" in path and path.endswith((".pdf", ".doc", ".docx"))
+
+
+@router.post("/me/blocks/{block_id}/submit")
+def submit_assignment(
+    block_id: int,
+    payload: AssignmentSubmitIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, int | str | bool]:
+    block = (
+        db.query(ContentBlock)
+        .options(joinedload(ContentBlock.chapter))
+        .filter(ContentBlock.id == block_id)
+        .first()
+    )
+    if block is None or block.block_type != "assignment" or block.chapter_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+    course = db.query(Course).filter(Course.id == block.chapter.course_id).first()
+    if course is None or course.status != "published":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    require_active_enrollment(db, current_user, course.id)
+    existing = (
+        db.query(AssignmentSubmission)
+        .filter(
+            AssignmentSubmission.user_id == current_user.id,
+            AssignmentSubmission.content_block_id == block.id,
+        )
+        .first()
+    )
+    if existing is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This assignment is already submitted.")
+    body = (payload.body or "").strip()
+    has_file = _assignment_file_ok(payload.url)
+    if has_file == bool(body):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Submit either a document or a written answer.",
+        )
+    db.add(
+        AssignmentSubmission(
+            user_id=current_user.id,
+            content_block_id=block.id,
+            body=body or None,
+            file_url=payload.url.strip() if has_file and payload.url else None,
+            file_name=(payload.file_name or "").strip() or None,
+            status="under_review",
+        )
+    )
+    db.flush()
+    enrollment = _apply_progress(db, current_user, course.id)
+    db.commit()
+    return {"completed": True, "status": "under_review", "progress": enrollment.progress}
+
+
+@router.delete("/me/blocks/{block_id}/submit")
+def unsubmit_assignment(
     block_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -625,16 +780,207 @@ def complete_block(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
     require_active_enrollment(db, current_user, course.id)
     existing = (
+        db.query(AssignmentSubmission)
+        .filter(
+            AssignmentSubmission.user_id == current_user.id,
+            AssignmentSubmission.content_block_id == block.id,
+        )
+        .first()
+    )
+    legacy = (
         db.query(BlockCompletion)
         .filter(BlockCompletion.user_id == current_user.id, BlockCompletion.content_block_id == block.id)
         .first()
     )
-    if existing is None:
-        db.add(BlockCompletion(user_id=current_user.id, content_block_id=block.id))
-        db.flush()
+    if existing is None and legacy is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No submission to withdraw.")
+    if existing is not None:
+        if existing.status != "under_review":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This assignment has already been reviewed.",
+            )
+        db.delete(existing)
+    if legacy is not None:
+        db.delete(legacy)
+    db.flush()
     enrollment = _apply_progress(db, current_user, course.id)
     db.commit()
-    return {"completed": True, "progress": enrollment.progress}
+    return {"completed": False, "progress": enrollment.progress}
+
+
+EXAM_SUBMIT_GRACE = timedelta(seconds=20)
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _exam_time_limit(exam: FinalExam) -> timedelta | None:
+    minutes = exam.time_limit_minutes
+    if minutes is None or minutes <= 0:
+        return None
+    return timedelta(minutes=minutes)
+
+
+def _exam_session(db: Session, user: User, exam: FinalExam) -> ExamSession | None:
+    return (
+        db.query(ExamSession)
+        .filter(ExamSession.user_id == user.id, ExamSession.final_exam_id == exam.id)
+        .first()
+    )
+
+
+def _session_expired(exam: FinalExam, session: ExamSession, now: datetime) -> bool:
+    limit = _exam_time_limit(exam)
+    if limit is None:
+        return False
+    return now > _as_utc(session.started_at) + limit + EXAM_SUBMIT_GRACE
+
+
+def _remaining_seconds(exam: FinalExam, session: ExamSession, now: datetime) -> int | None:
+    limit = _exam_time_limit(exam)
+    if limit is None:
+        return None
+    deadline = _as_utc(session.started_at) + limit
+    return max(0, int((deadline - now).total_seconds()))
+
+
+def _new_exam_order(exam: FinalExam) -> dict[str, list[int] | dict[str, list[int]]]:
+    questions = list(exam.questions)
+    random.shuffle(questions)
+    question_ids: list[int] = []
+    choices: dict[str, list[int]] = {}
+    for question in questions:
+        question_ids.append(question.id)
+        choice_ids = [choice.id for choice in question.choices]
+        random.shuffle(choice_ids)
+        choices[str(question.id)] = choice_ids
+    return {"questions": question_ids, "choices": choices}
+
+
+def _exam_order(session: ExamSession | None) -> ExamOrderOut | None:
+    if session is None or not session.order_json:
+        return None
+    try:
+        raw = json.loads(session.order_json)
+    except json.JSONDecodeError:
+        return None
+    questions = raw.get("questions")
+    choices = raw.get("choices")
+    if not isinstance(questions, list) or not isinstance(choices, dict):
+        return None
+    return ExamOrderOut(
+        questions=[int(item) for item in questions],
+        choices={str(key): [int(choice_id) for choice_id in value] for key, value in choices.items()},
+    )
+
+
+def _ensure_exam_order(db: Session, session: ExamSession, exam: FinalExam) -> None:
+    if session.order_json:
+        return
+    session.order_json = json.dumps(_new_exam_order(exam))
+    db.flush()
+
+
+def _latest_exam_attempt(db: Session, user: User, exam: FinalExam) -> QuizAttempt | None:
+    return (
+        db.query(QuizAttempt)
+        .filter(QuizAttempt.user_id == user.id, QuizAttempt.final_exam_id == exam.id)
+        .order_by(QuizAttempt.created_at.desc(), QuizAttempt.id.desc())
+        .first()
+    )
+
+
+def _close_expired_exam_session(db: Session, user: User, exam: FinalExam, now: datetime) -> QuizAttempt | None:
+    session = (
+        db.query(ExamSession)
+        .filter(ExamSession.user_id == user.id, ExamSession.final_exam_id == exam.id)
+        .with_for_update()
+        .first()
+    )
+    if session is None or not _session_expired(exam, session, now):
+        return None
+    attempt = QuizAttempt(
+        user_id=user.id,
+        final_exam_id=exam.id,
+        score=0,
+        passed=False,
+        answers_json="{}",
+    )
+    db.add(attempt)
+    db.delete(session)
+    db.flush()
+    return attempt
+
+
+def _exam_session_state(db: Session, user: User, exam: FinalExam, now: datetime) -> ExamSessionOut:
+    _close_expired_exam_session(db, user, exam, now)
+    session = _exam_session(db, user, exam)
+    if session is not None:
+        _ensure_exam_order(db, session, exam)
+    latest = _latest_exam_attempt(db, user, exam)
+    in_progress = session is not None
+    return ExamSessionOut(
+        in_progress=in_progress,
+        started_at=session.started_at if session else None,
+        remaining_seconds=_remaining_seconds(exam, session, now) if session else None,
+        time_limit_minutes=exam.time_limit_minutes,
+        latest_score=None if in_progress or latest is None else latest.score,
+        latest_passed=None if in_progress or latest is None else latest.passed,
+        order=_exam_order(session) if in_progress else None,
+    )
+
+
+def _require_open_exam(db: Session, user: User, course: Course) -> FinalExam:
+    require_active_enrollment(db, user, course.id)
+    _require_course_topics_complete(db, user, course)
+    exam = course.final_exam
+    if exam is None or not exam.questions:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Final exam not configured")
+    if _user_passed_final_exam(db, user, course):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You already passed this exam.")
+    return exam
+
+
+@router.get("/me/courses/{course_id}/final-exam/session", response_model=ExamSessionOut)
+def get_final_exam_session(
+    course_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ExamSessionOut:
+    course = _load_published_course(db, course_id)
+    exam = _require_open_exam(db, current_user, course)
+    state = _exam_session_state(db, current_user, exam, datetime.now(timezone.utc))
+    db.commit()
+    return state
+
+
+@router.post("/me/courses/{course_id}/final-exam/start", response_model=ExamSessionOut)
+def start_final_exam(
+    course_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ExamSessionOut:
+    course = _load_published_course(db, course_id)
+    exam = _require_open_exam(db, current_user, course)
+    now = datetime.now(timezone.utc)
+    expired = _close_expired_exam_session(db, current_user, exam, now)
+    session = _exam_session(db, current_user, exam)
+    if session is None and expired is None:
+        session = ExamSession(
+            user_id=current_user.id,
+            final_exam_id=exam.id,
+            started_at=now,
+            order_json=json.dumps(_new_exam_order(exam)),
+        )
+        db.add(session)
+        db.flush()
+    state = _exam_session_state(db, current_user, exam, datetime.now(timezone.utc))
+    db.commit()
+    return state
 
 
 @router.post("/me/courses/{course_id}/final-exam/submit", response_model=QuizAttemptOut)
@@ -645,23 +991,36 @@ def submit_final_exam(
     db: Session = Depends(get_db),
 ) -> QuizAttemptOut:
     course = _load_published_course(db, course_id)
-    require_active_enrollment(db, current_user, course_id)
-    _require_course_topics_complete(db, current_user, course)
+    exam = _require_open_exam(db, current_user, course)
+    now = datetime.now(timezone.utc)
+    session = (
+        db.query(ExamSession)
+        .filter(ExamSession.user_id == current_user.id, ExamSession.final_exam_id == exam.id)
+        .with_for_update()
+        .first()
+    )
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Start the exam before submitting.")
 
-    exam = course.final_exam
-    if exam is None or not exam.questions:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Final exam not configured")
+    timed_out = _session_expired(exam, session, now)
+    if timed_out:
+        score = 0
+        passed = False
+        answers_json = "{}"
+    else:
+        score, _, _ = _score_answers(exam.questions, payload.answers)
+        passed = score >= exam.pass_percent
+        answers_json = json.dumps(payload.answers)
 
-    score, _, _ = _score_answers(exam.questions, payload.answers)
-    passed = score >= exam.pass_percent
     attempt = QuizAttempt(
         user_id=current_user.id,
         final_exam_id=exam.id,
         score=score,
         passed=passed,
-        answers_json=json.dumps(payload.answers),
+        answers_json=answers_json,
     )
     db.add(attempt)
+    db.delete(session)
 
     certificate_code = None
     if passed:
@@ -675,7 +1034,7 @@ def submit_final_exam(
         score=attempt.score,
         passed=attempt.passed,
         certificate_code=certificate_code,
-        reviews=_answer_reviews(exam.questions, payload.answers),
+        reviews=[],
     )
 
 

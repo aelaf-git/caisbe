@@ -134,14 +134,21 @@ export default function StudentCoursesPage() {
           </p>
         ) : (
           <div className="divide-y divide-ifma-border-light">
-            {openEnrollments.map((enrollment) => (
-              <CourseCard
-                key={enrollment.id}
-                course={enrollment.course}
-                progress={enrollment.progress}
-                action={{ href: `/courses/${enrollment.course.id}`, label: "Continue" }}
-              />
-            ))}
+            {openEnrollments.map((enrollment) => {
+              const completed = Boolean(enrollment.certificate_code);
+              return (
+                <CourseCard
+                  key={enrollment.id}
+                  course={enrollment.course}
+                  progress={enrollment.progress}
+                  action={{
+                    href: `/courses/${enrollment.course.id}`,
+                    label: completed ? "Completed" : "Continue",
+                    tone: completed ? "complete" : "primary",
+                  }}
+                />
+              );
+            })}
           </div>
         )}
       </section>

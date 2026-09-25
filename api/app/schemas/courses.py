@@ -262,6 +262,7 @@ class ContentBlockStudentOut(BaseModel):
     parent_id: int | None = None
     sort_order: int
     completed: bool = False
+    review_status: str | None = None
     quiz: QuizStudentOut | None = None
 
     model_config = {"from_attributes": True}
@@ -342,6 +343,7 @@ class ChapterStudentOut(BaseModel):
 class FinalExamUpdate(BaseModel):
     title: str | None = None
     pass_percent: int | None = Field(default=None, ge=0, le=100)
+    time_limit_minutes: int | None = Field(default=None, ge=1, le=480)
     questions: list[QuizQuestionIn] | None = None
 
 
@@ -349,6 +351,7 @@ class FinalExamOut(BaseModel):
     id: int
     title: str
     pass_percent: int
+    time_limit_minutes: int | None = None
     questions: list[QuizQuestionOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
@@ -358,9 +361,25 @@ class FinalExamStudentOut(BaseModel):
     id: int
     title: str
     pass_percent: int
+    time_limit_minutes: int | None = None
     questions: list[QuizQuestionStudentOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
+
+
+class ExamOrderOut(BaseModel):
+    questions: list[int]
+    choices: dict[str, list[int]]
+
+
+class ExamSessionOut(BaseModel):
+    in_progress: bool
+    started_at: datetime | None = None
+    remaining_seconds: int | None = None
+    time_limit_minutes: int | None = None
+    latest_score: int | None = None
+    latest_passed: bool | None = None
+    order: ExamOrderOut | None = None
 
 
 class CertificateTemplateUpdate(BaseModel):
@@ -390,11 +409,34 @@ class CourseDetailStudentOut(CourseOut):
     progress: int = 0
     certificate_code: str | None = None
     exam_passed: bool = False
+    exam_score: int | None = None
 
 
 class UploadOut(BaseModel):
     url: str
     filename: str
+
+
+class AssignmentSubmitIn(BaseModel):
+    body: str | None = None
+    url: str | None = None
+    file_name: str | None = None
+
+
+class AssignmentSubmissionOut(BaseModel):
+    id: int
+    content_block_id: int
+    assignment_title: str
+    course_code: str
+    course_title: str
+    body: str | None = None
+    file_url: str | None = None
+    file_name: str | None = None
+    status: str
+
+
+class AssignmentReviewIn(BaseModel):
+    status: str = Field(pattern="^(passed|failed)$")
 
 
 class QuizSubmitIn(BaseModel):

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Cinzel, Great_Vibes } from "next/font/google";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -69,6 +70,28 @@ export default function MembershipCertificateDocument({
 }: MembershipCertificateDocumentProps) {
   const issuedLabel = formatIssueDate(issuedAt);
   const [heading, ...rest] = title.split(" of ");
+
+  useEffect(() => {
+    function onBeforePrint() {
+      if (document.querySelector(".certificate-print-root")) return;
+      const source = document.querySelector(".certificate-document");
+      if (!(source instanceof HTMLElement)) return;
+      const frame = document.createElement("div");
+      frame.className = "certificate-print-root";
+      frame.appendChild(source.cloneNode(true));
+      document.body.appendChild(frame);
+    }
+    function onAfterPrint() {
+      document.querySelector(".certificate-print-root")?.remove();
+    }
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("afterprint", onAfterPrint);
+    return () => {
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", onAfterPrint);
+      document.querySelector(".certificate-print-root")?.remove();
+    };
+  }, []);
   const subtitle = rest.length > 0 ? `Of ${rest.join(" of ")}` : "Of Membership";
 
   return (
@@ -79,9 +102,32 @@ export default function MembershipCertificateDocument({
             @media print {
               @page {
                 size: A4 landscape;
-                margin: 12mm;
+                margin: 0;
+              }
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+              }
+              body > *:not(.certificate-print-root) {
+                display: none !important;
+              }
+              .certificate-print-root {
+                display: block !important;
               }
               .certificate-document {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 297mm !important;
+                height: 210mm !important;
+                max-width: none !important;
+                margin: 0 !important;
+                aspect-ratio: auto !important;
+                box-shadow: none !important;
+                overflow: hidden !important;
+                break-inside: avoid;
+                page-break-after: avoid;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
               }

@@ -18,6 +18,7 @@ from app.models import (
     Certificate,
     CertificateTemplate,
     Chapter,
+    AssignmentSubmission,
     ContentBlock,
     Course,
     Enrollment,
@@ -63,6 +64,8 @@ from app.schemas.courses import (
     CertificateTemplateUpdate,
     CertificateAdminOut,
     CourseCreate,
+    AssignmentReviewIn,
+    AssignmentSubmissionOut,
     CourseDetailAdminOut,
     AdminCourseListOut,
     CourseOut,
@@ -1407,6 +1410,8 @@ def admin_upsert_final_exam(
         exam.title = strip_plain_text(payload.title) or "Final Exam"
     if payload.pass_percent is not None:
         exam.pass_percent = payload.pass_percent
+    if "time_limit_minutes" in payload.model_fields_set:
+        exam.time_limit_minutes = payload.time_limit_minutes
     if payload.questions is not None:
         _replace_questions(db, payload.questions, final_exam_id=exam.id)
 
@@ -1969,6 +1974,73 @@ def admin_get_student(
             )
             for enrollment in student.enrollments
         ],
+    )
+
+
+@router.get("/students/{student_id}/assignment-submissions", response_model=list[AssignmentSubmissionOut])
+def admin_list_assignment_submissions(
+    student_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[AssignmentSubmissionOut]:
+    rows = (
+        db.query(AssignmentSubmission)
+        .options(joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course))
+        .filter(AssignmentSubmission.user_id == student_id)
+        .order_by(AssignmentSubmission.created_at.desc())
+        .all()
+    )
+    items: list[AssignmentSubmissionOut] = []
+    for row in rows:
+        block = row.block
+        chapter = block.chapter if block else None
+        course = chapter.course if chapter else None
+        items.append(
+            AssignmentSubmissionOut(
+                id=row.id,
+                content_block_id=row.content_block_id,
+                assignment_title=(block.title if block and block.title else "Assignment"),
+                course_code=course.code if course else "",
+                course_title=course.title if course else "",
+                body=row.body,
+                file_url=row.file_url,
+                file_name=row.file_name,
+                status=row.status,
+            )
+        )
+    return items
+
+
+@router.post("/assignment-submissions/{submission_id}/review", response_model=AssignmentSubmissionOut)
+def admin_review_assignment(
+    submission_id: int,
+    payload: AssignmentReviewIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AssignmentSubmissionOut:
+    row = (
+        db.query(AssignmentSubmission)
+        .options(joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course))
+        .filter(AssignmentSubmission.id == submission_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    row.status = payload.status
+    db.commit()
+    block = row.block
+    chapter = block.chapter if block else None
+    course = chapter.course if chapter else None
+    return AssignmentSubmissionOut(
+        id=row.id,
+        content_block_id=row.content_block_id,
+        assignment_title=(block.title if block and block.title else "Assignment"),
+        course_code=course.code if course else "",
+        course_title=course.title if course else "",
+        body=row.body,
+        file_url=row.file_url,
+        file_name=row.file_name,
+        status=row.status,
     )
 
 

@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import QuizPlayer from "@/components/portal/QuizPlayer";
-import { apiFetch, ApiError } from "@/lib/auth";
+import { apiFetch, apiUpload, ApiError } from "@/lib/auth";
 import type { ContentBlock, Lesson, QuizAttempt } from "@/lib/lms";
 import { outlineNumber } from "@/lib/outlineNumber";
 import { isAdminUpload, isLegacyChapterReading } from "@/lib/readings";
@@ -118,16 +118,16 @@ export default function BlockView({
   }
 
   if (block.block_type === "assignment") {
-    return <AssignmentView block={block} onComplete={onAssignmentComplete} />;
+    return <AssignmentView key={block.id} block={block} onComplete={onAssignmentComplete} />;
   }
 
   if (block.block_type === "quiz" && block.quiz) {
     return (
       <QuizPlayer
+        key={block.quiz.id}
         title={block.quiz.title}
         questions={block.quiz.questions}
         onResult={onQuizResult}
-        passedNote="Next opens the assignment."
         onSubmit={async (answers) => {
           const result = await apiFetch<QuizAttempt>(`/me/quizzes/${block.quiz!.id}/submit`, {
             method: "POST",
@@ -143,18 +143,81 @@ export default function BlockView({
   return null;
 }
 
+function reviewLabel(status: string | null | undefined): string {
+  if (status === "passed") return "Passed";
+  if (status === "failed") return "Failed";
+  if (status === "under_review") return "Under review";
+  return "";
+}
+
+function reviewTone(status: string | null | undefined): string {
+  if (status === "passed") return "border-admin-success/40 bg-admin-success-soft text-admin-success";
+  if (status === "failed") return "border-caisbe-red/40 bg-caisbe-red/10 text-caisbe-red";
+  if (status === "under_review") return "border-admin-warning/40 bg-admin-warning-soft text-caisbe-text-dark";
+  return "border-ifma-border bg-admin-surface text-caisbe-muted";
+}
+
+function FileGlyph() {
+  return (
+    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-ifma-border bg-admin-canvas text-caisbe-red">
+      <svg
+        className="h-4 w-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <path d="M14 2v6h6" />
+      </svg>
+    </span>
+  );
+}
+
 function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete?: () => void }) {
-  const [done, setDone] = useState(Boolean(block.completed));
+  const [status, setStatus] = useState(block.review_status ?? (block.completed ? "under_review" : null));
+  const [source, setSource] = useState<"file" | "written">("file");
+  const [file, setFile] = useState<File | null>(null);
+  const [written, setWritten] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileName = block.label || block.title || "Assignment";
 
-  async function submit() {
+  useEffect(() => {
+    setStatus(block.review_status ?? (block.completed ? "under_review" : null));
+  }, [block.id, block.review_status, block.completed]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      await apiFetch(`/me/blocks/${block.id}/complete`, { method: "POST" });
-      setDone(true);
+      let url: string | null = null;
+      let name: string | null = null;
+      let body: string | null = null;
+      if (source === "file") {
+        if (!file) {
+          setError("Choose a PDF or Word file.");
+          return;
+        }
+        const uploaded = await apiUpload("/me/uploads", file);
+        url = uploaded.url;
+        name = uploaded.filename;
+      } else {
+        body = written.trim();
+        if (!body) {
+          setError("Write your answer.");
+          return;
+        }
+      }
+      await apiFetch(`/me/blocks/${block.id}/submit`, {
+        method: "POST",
+        body: JSON.stringify({ body, url, file_name: name }),
+      });
+      setStatus("under_review");
       onComplete?.();
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Unable to submit assignment.");
@@ -163,36 +226,166 @@ function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete
     }
   }
 
+  async function unsubmit() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiFetch(`/me/blocks/${block.id}/submit`, { method: "DELETE" });
+      setStatus(null);
+      setFile(null);
+      setWritten("");
+      onComplete?.();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Unable to unsubmit assignment.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <div className="space-y-4 rounded-md border border-ifma-border bg-[#fafaf8] p-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Assignment</p>
-        <h3 className="mt-1 text-xl font-semibold text-caisbe-text-dark">{block.title || "Assignment"}</h3>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Assignment</p>
+          <h2 className="mt-1 font-display text-2xl font-semibold text-caisbe-text-dark">
+            {block.title || "Assignment"}
+          </h2>
+        </div>
+        {status ? (
+          <span
+            className={`inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${reviewTone(status)}`}
+          >
+            {reviewLabel(status)}
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-md border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+            Not submitted
+          </span>
+        )}
       </div>
-      {block.url ? (
-        <a
-          href={block.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 rounded-md border border-ifma-border bg-admin-surface px-3 py-3 font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
-        >
-          <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">File</span>
-          <span className="min-w-0">{fileName}</span>
-        </a>
-      ) : block.body ? (
-        <div className="whitespace-pre-wrap text-sm text-caisbe-text">{block.body}</div>
-      ) : (
-        <p className="text-sm text-caisbe-muted">No material is attached.</p>
-      )}
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
-      <button
-        type="button"
-        disabled={busy || done}
-        onClick={() => void submit()}
-        className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
-      >
-        {done ? "Submitted" : busy ? "Submitting…" : "Submit"}
-      </button>
+
+      <section className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Instructions</h3>
+        {block.url ? (
+          <a
+            href={block.url}
+            download
+            className="flex items-center gap-3 rounded-md border border-ifma-border bg-admin-surface px-4 py-3 text-caisbe-text transition-colors hover:border-caisbe-red hover:text-caisbe-red"
+          >
+            <FileGlyph />
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+                Download document
+              </span>
+              <span className="mt-0.5 block truncate font-semibold">{fileName}</span>
+            </span>
+          </a>
+        ) : block.body ? (
+          <div className="rounded-md border border-ifma-border bg-admin-surface px-4 py-4 text-sm leading-relaxed text-caisbe-text whitespace-pre-wrap">
+            {block.body}
+          </div>
+        ) : (
+          <p className="rounded-md border border-dashed border-ifma-border px-4 py-6 text-sm text-caisbe-muted">
+            No material is attached.
+          </p>
+        )}
+      </section>
+
+      <section className="space-y-3 border-t border-ifma-border-light pt-6">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Your response</h3>
+        {status ? (
+          <div className={`rounded-md border px-4 py-4 ${reviewTone(status)}`}>
+            <p className="text-sm font-semibold">
+              {status === "under_review"
+                ? "Your work is waiting for review. You can keep going in the course."
+                : status === "passed"
+                  ? "This assignment was marked as passed."
+                  : "This assignment was marked as failed. You can still continue the course."}
+            </p>
+            {status === "under_review" ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void unsubmit()}
+                className="mt-4 rounded-md border-2 border-ifma-border bg-admin-surface px-5 py-2.5 text-sm font-semibold uppercase text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red disabled:opacity-60"
+              >
+                {busy ? "Withdrawing…" : "Unsubmit"}
+              </button>
+            ) : null}
+            {error ? <p className="mt-3 text-sm text-caisbe-red">{error}</p> : null}
+          </div>
+        ) : (
+          <form
+            onSubmit={(event) => void submit(event)}
+            className="space-y-4 rounded-md border border-ifma-border bg-[#fafaf8] p-4 md:p-5"
+          >
+            <p className="text-sm text-caisbe-muted">
+              Complete the exercise, then submit either a document or a written answer.
+            </p>
+            <div className="flex w-full max-w-md rounded-md border border-ifma-border bg-admin-surface p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setSource("file");
+                  setWritten("");
+                }}
+                className={`flex-1 rounded px-3 py-2 text-sm font-semibold ${
+                  source === "file" ? "bg-caisbe-red text-white" : "text-caisbe-text hover:bg-ifma-border-light"
+                }`}
+              >
+                Upload document
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSource("written");
+                  setFile(null);
+                }}
+                className={`flex-1 rounded px-3 py-2 text-sm font-semibold ${
+                  source === "written" ? "bg-caisbe-red text-white" : "text-caisbe-text hover:bg-ifma-border-light"
+                }`}
+              >
+                Written answer
+              </button>
+            </div>
+            {source === "file" ? (
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-caisbe-text">PDF or Word file</span>
+                <input
+                  key="answer-file"
+                  type="file"
+                  required
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                  className="block w-full rounded-md border border-ifma-border bg-admin-surface px-3 py-2.5 text-sm text-caisbe-muted file:mr-3 file:rounded-md file:border-0 file:bg-caisbe-red/10 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-caisbe-red"
+                />
+                {file ? <p className="text-xs text-caisbe-muted">Selected: {file.name}</p> : null}
+              </label>
+            ) : (
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-caisbe-text">Written answer</span>
+                <textarea
+                  key="answer-text"
+                  required
+                  value={written}
+                  onChange={(event) => setWritten(event.target.value)}
+                  rows={6}
+                  placeholder="Write your answer here"
+                  className="w-full rounded-md border border-ifma-border bg-admin-surface px-3 py-2.5 text-sm text-caisbe-text outline-none focus:border-caisbe-red"
+                />
+              </label>
+            )}
+            {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            >
+              {busy ? "Submitting…" : "Submit for review"}
+            </button>
+          </form>
+        )}
+      </section>
     </div>
   );
 }

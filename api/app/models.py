@@ -222,6 +222,7 @@ class FinalExam(Base):
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), unique=True)
     title: Mapped[str] = mapped_column(String(255), default="Final Exam")
     pass_percent: Mapped[int] = mapped_column(Integer, default=70)
+    time_limit_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     course: Mapped[Course] = relationship(back_populates="final_exam")
     questions: Mapped[list["QuizQuestion"]] = relationship(
@@ -230,6 +231,23 @@ class FinalExam(Base):
         order_by="QuizQuestion.sort_order",
     )
     attempts: Mapped[list["QuizAttempt"]] = relationship(back_populates="final_exam")
+    sessions: Mapped[list["ExamSession"]] = relationship(
+        back_populates="final_exam",
+        cascade="all, delete-orphan",
+    )
+
+
+class ExamSession(Base):
+    __tablename__ = "exam_sessions"
+    __table_args__ = (UniqueConstraint("user_id", "final_exam_id", name="uq_user_exam_session"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    final_exam_id: Mapped[int] = mapped_column(ForeignKey("final_exams.id", ondelete="CASCADE"), index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    order_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    final_exam: Mapped[FinalExam] = relationship(back_populates="sessions")
 
 
 class QuizQuestion(Base):
@@ -303,6 +321,25 @@ class BlockCompletion(Base):
         ForeignKey("content_blocks.id", ondelete="CASCADE"), index=True
     )
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped[User] = relationship()
+    block: Mapped["ContentBlock"] = relationship()
+
+
+class AssignmentSubmission(Base):
+    __tablename__ = "assignment_submissions"
+    __table_args__ = (UniqueConstraint("user_id", "content_block_id", name="uq_user_assignment_submission"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    content_block_id: Mapped[int] = mapped_column(
+        ForeignKey("content_blocks.id", ondelete="CASCADE"), index=True
+    )
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="under_review")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped[User] = relationship()
     block: Mapped["ContentBlock"] = relationship()

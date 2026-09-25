@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import BlockView, { TopicSections } from "@/components/portal/BlockView";
-import QuizPlayer from "@/components/portal/QuizPlayer";
-import { apiFetch } from "@/lib/auth";
+import ExamPlayer from "@/components/portal/ExamPlayer";
 import type { ContentBlock, CourseDetail, Lesson, QuizAttempt } from "@/lib/lms";
 import type { NavSelection } from "@/components/portal/coursePlayerTypes";
 import { readingsForChapter } from "@/lib/readings";
@@ -53,48 +52,43 @@ export default function LessonStage({
             })()}
           />
         ) : selection?.kind === "exam" && course.final_exam ? (
-          <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Final exam</p>
-            <h2 className="font-display text-2xl font-semibold text-caisbe-text-dark">
-              {course.final_exam.title}
-            </h2>
-            <p className="text-sm text-caisbe-muted">Pass mark: {course.final_exam.pass_percent}%</p>
-            {course.exam_passed ? (
-              <p className="text-sm text-caisbe-text">
-                You already passed this exam.
-                {course.certificate_code ? (
-                  <>
-                    {" "}
-                    <Link
-                      href={`/certificates/${course.certificate_code}`}
-                      className="font-semibold text-caisbe-red underline"
-                    >
-                      View certificate
-                    </Link>
-                  </>
+          course.exam_passed ? (
+            <div className="space-y-6">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Final exam</p>
+                <h2 className="mt-1 font-display text-2xl font-semibold text-caisbe-text-dark">
+                  {course.final_exam.title}
+                </h2>
+              </div>
+              <div className="rounded-md border border-admin-success/30 bg-admin-success-soft px-5 py-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-admin-success">Passed</p>
+                {course.exam_score != null ? (
+                  <p className="mt-2 font-display text-4xl font-semibold tabular-nums text-caisbe-text-dark">
+                    {course.exam_score}%
+                  </p>
                 ) : null}
-              </p>
-            ) : (
-              <QuizPlayer
-                title={course.final_exam.title}
-                questions={course.final_exam.questions}
-                onResult={onQuizResult}
-                onSubmit={async (answers) => {
-                  const result = await apiFetch<QuizAttempt>(
-                    `/me/courses/${courseId}/final-exam/submit`,
-                    {
-                      method: "POST",
-                      body: JSON.stringify({ answers }),
-                    },
-                  );
-                  await onReload();
-                  return result;
-                }}
-              />
-            )}
-          </div>
+                <p className="mt-2 text-sm text-caisbe-text">Pass mark {course.final_exam.pass_percent}%</p>
+              </div>
+              {course.certificate_code ? (
+                <Link
+                  href={`/certificates/${course.certificate_code}`}
+                  className="inline-flex rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark"
+                >
+                  View certificate
+                </Link>
+              ) : null}
+            </div>
+          ) : (
+            <ExamPlayer
+              key={course.final_exam.id}
+              courseId={courseId}
+              exam={course.final_exam}
+              onFinished={onReload}
+            />
+          )
         ) : activeChapterBlock ? (
           <BlockView
+            key={activeChapterBlock.id}
             block={activeChapterBlock}
             onQuizResult={onQuizResult}
             onAssignmentComplete={() => void onReload()}

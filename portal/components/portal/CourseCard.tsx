@@ -3,8 +3,8 @@ import ProgressBar from "@/components/portal/ProgressBar";
 import type { Course } from "@/lib/auth";
 
 type PrimaryAction =
-  | { href: string; label: string }
-  | { onClick: () => void; label: string; busy?: boolean };
+  | { href: string; label: string; tone?: "primary" | "complete" }
+  | { onClick: () => void; label: string; busy?: boolean; tone?: "primary" | "complete" };
 
 type SecondaryAction =
   | { href: string; label: string }
@@ -12,6 +12,8 @@ type SecondaryAction =
 
 const primaryClass =
   "inline-flex h-11 w-full items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-4 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red-dark disabled:opacity-60";
+const completeClass =
+  "inline-flex h-11 w-full items-center justify-center rounded-md border-2 border-admin-success bg-admin-success-soft px-4 text-sm font-semibold uppercase tracking-wide text-admin-success hover:bg-admin-success hover:text-white disabled:opacity-60";
 const secondaryClass =
   "inline-flex h-11 w-full items-center justify-center rounded-md border-2 border-ifma-border px-4 text-sm font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red disabled:opacity-60";
 
@@ -68,7 +70,7 @@ export default function CourseCard({
         </div>
       ) : null}
       <div className="flex w-full shrink-0 flex-col gap-2 sm:max-w-xs md:w-52">
-        <ActionControl action={action} className={primaryClass} />
+        <ActionControl action={action} className={action.tone === "complete" ? completeClass : primaryClass} />
         {secondaryAction ? <ActionControl action={secondaryAction} className={secondaryClass} /> : null}
         {footer}
       </div>
