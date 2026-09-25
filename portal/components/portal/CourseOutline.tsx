@@ -2,6 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CourseDetail } from "@/lib/lms";
+import {
+  chapterExtrasUnlocked,
+  chapterUnlocked,
+  examUnlocked,
+  topicUnlocked,
+} from "@/lib/courseAccess";
+import { readingsForChapter } from "@/lib/readings";
 import { outlineNumber } from "@/lib/outlineNumber";
 import {
   selectionsEqual,
@@ -14,7 +21,7 @@ function CompletedMark({ done }: { done: boolean }) {
       className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] ${
         done
           ? "border-caisbe-red bg-caisbe-red text-white"
-          : "border-ifma-border bg-white text-transparent"
+          : "border-ifma-border bg-admin-surface text-transparent"
       }`}
       aria-hidden
     >
@@ -23,7 +30,7 @@ function CompletedMark({ done }: { done: boolean }) {
   );
 }
 
-function TypeIcon({ type }: { type: "lecture" | "quiz" | "assignment" | "exam" }) {
+function TypeIcon({ type }: { type: "lecture" | "quiz" | "assignment" | "exam" | "reading" }) {
   const paths =
     type === "quiz"
       ? "M9 9h6M9 13h4M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"
@@ -31,7 +38,9 @@ function TypeIcon({ type }: { type: "lecture" | "quiz" | "assignment" | "exam" }
         ? "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"
         : type === "exam"
           ? "M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"
-          : "M4 6h16M4 12h10M4 18h16";
+          : type === "reading"
+            ? "M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+            : "M4 6h16M4 12h10M4 18h16";
   return (
     <svg
       className="h-3.5 w-3.5 shrink-0 text-caisbe-muted"
@@ -51,29 +60,36 @@ function TypeIcon({ type }: { type: "lecture" | "quiz" | "assignment" | "exam" }
 function ItemButton({
   active,
   done,
+  locked,
   type,
   label,
   onClick,
 }: {
   active: boolean;
   done: boolean;
-  type: "lecture" | "quiz" | "assignment" | "exam";
+  locked?: boolean;
+  type: "lecture" | "quiz" | "assignment" | "exam" | "reading";
   label: string;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
+      disabled={locked}
       onClick={onClick}
-      className={`flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm ${
-        active
-          ? "bg-caisbe-red/10 font-semibold text-caisbe-red"
-          : "text-caisbe-text hover:bg-ifma-border-light"
+      title={locked ? "Complete the previous topic to unlock" : undefined}
+      className={`flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm disabled:cursor-not-allowed ${
+        locked
+          ? "text-caisbe-muted opacity-60"
+          : active
+            ? "bg-caisbe-red/10 font-semibold text-caisbe-red"
+            : "text-caisbe-text hover:bg-ifma-border-light"
       }`}
     >
       <CompletedMark done={done} />
       <TypeIcon type={type} />
       <span className="min-w-0 leading-snug">{label}</span>
+      {locked ? <span className="ml-auto text-xs uppercase tracking-wide">Locked</span> : null}
     </button>
   );
 }
@@ -107,6 +123,7 @@ export default function CourseOutline({
           ?.id ?? null
       );
     }
+    if (selection.kind === "chapter-readings") return selection.chapterId;
     return null;
   }, [course.chapters, selection]);
 
@@ -127,46 +144,74 @@ export default function CourseOutline({
     <nav className="space-y-1">
       {course.chapters.map((chapter, chapterIndex) => {
         const open = openChapters.includes(chapter.id);
+        const chapterOpen = chapterUnlocked(course, chapterIndex);
+        const extrasOpen = chapterExtrasUnlocked(course, chapterIndex);
         return (
           <div key={chapter.id} className="border-b border-ifma-border-light last:border-b-0">
             <button
               type="button"
-              onClick={() => toggleChapter(chapter.id)}
-              className="flex w-full items-center justify-between gap-2 px-2 py-3 text-left"
+              disabled={!chapterOpen}
+              title={chapterOpen ? undefined : "Complete the previous chapter to unlock"}
+              onClick={() => {
+                if (chapterOpen) toggleChapter(chapter.id);
+              }}
+              className="flex w-full items-center justify-between gap-2 px-2 py-3 text-left disabled:cursor-not-allowed disabled:opacity-60"
             >
               <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
                 {chapterIndex + 1}. {chapter.title}
+                {chapterOpen ? "" : " · Locked"}
               </span>
               <span className="text-caisbe-muted" aria-hidden>
-                {open ? "▾" : "▸"}
+                {chapterOpen && open ? "▾" : "▸"}
               </span>
             </button>
-            {open ? (
+            {chapterOpen && open ? (
               <ul className="space-y-0.5 pb-3">
-                {chapter.lessons.map((topic, topicIndex) => (
+                {chapter.lessons.map((topic, topicIndex) => {
+                  const locked = !topicUnlocked(course, chapterIndex, topicIndex);
+                  return (
                   <li key={topic.id}>
                     <ItemButton
                       type="lecture"
+                      locked={locked}
                       done={Boolean(topic.completed)}
                       active={selectionsEqual(selection, { kind: "topic", topicId: topic.id })}
                       label={`${outlineNumber(chapterIndex + 1, topicIndex + 1)} ${topic.title}`}
                       onClick={() => {
+                        if (locked) return;
                         onSelect({ kind: "topic", topicId: topic.id });
                         setMobileOpen(false);
                       }}
                     />
                   </li>
-                ))}
+                  );
+                })}
+                {readingsForChapter(chapter).length > 0 ? (
+                  <li>
+                    <ItemButton
+                      type="reading"
+                      done={false}
+                      active={selectionsEqual(selection, { kind: "chapter-readings", chapterId: chapter.id })}
+                      label="Chapter readings"
+                      onClick={() => {
+                        onSelect({ kind: "chapter-readings", chapterId: chapter.id });
+                        setMobileOpen(false);
+                      }}
+                    />
+                  </li>
+                ) : null}
                 {(chapter.blocks ?? [])
                   .filter((block) => block.block_type === "quiz" || block.block_type === "assignment")
                   .map((block) => (
                     <li key={block.id}>
                       <ItemButton
                         type={block.block_type === "quiz" ? "quiz" : "assignment"}
-                        done={false}
+                        locked={!extrasOpen}
+                        done={Boolean(block.completed)}
                         active={selectionsEqual(selection, { kind: "chapter-block", blockId: block.id })}
                         label={block.title || block.quiz?.title || block.block_type}
                         onClick={() => {
+                          if (!extrasOpen) return;
                           onSelect({ kind: "chapter-block", blockId: block.id });
                           setMobileOpen(false);
                         }}
@@ -181,10 +226,12 @@ export default function CourseOutline({
       {course.final_exam ? (
         <ItemButton
           type="exam"
+          locked={!examUnlocked(course)}
           done={Boolean(course.exam_passed)}
           active={selectionsEqual(selection, { kind: "exam" })}
           label={course.final_exam.title}
           onClick={() => {
+            if (!examUnlocked(course)) return;
             onSelect({ kind: "exam" });
             setMobileOpen(false);
           }}
@@ -199,14 +246,14 @@ export default function CourseOutline({
         <button
           type="button"
           onClick={() => setMobileOpen((open) => !open)}
-          className="flex w-full items-center justify-between border border-ifma-border bg-white px-4 py-3 text-sm font-semibold text-caisbe-text"
+          className="flex w-full items-center justify-between border border-ifma-border bg-admin-surface px-4 py-3 text-sm font-semibold text-caisbe-text"
         >
           Course content
           <span aria-hidden>{mobileOpen ? "▴" : "▾"}</span>
         </button>
-        {mobileOpen ? <div className="border border-t-0 border-ifma-border bg-white p-2">{list}</div> : null}
+        {mobileOpen ? <div className="border border-t-0 border-ifma-border bg-admin-surface p-2">{list}</div> : null}
       </div>
-      <aside className="sticky top-4 hidden max-h-[calc(100vh-6rem)] overflow-y-auto border border-ifma-border bg-white p-3 lg:block">
+      <aside className="sticky top-4 hidden max-h-[calc(100vh-6rem)] overflow-y-auto border border-ifma-border bg-admin-surface p-3 lg:block">
         <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
           Course content
         </p>

@@ -7,6 +7,15 @@ export type AuthUser = {
   phone?: string | null;
   country?: string | null;
   city?: string | null;
+  given_name?: string | null;
+  family_name?: string | null;
+  address?: string | null;
+  organization?: string | null;
+  job_title?: string | null;
+  membership_date?: string | null;
+  membership_type?: string | null;
+  membership_status?: string;
+  profile_completed?: boolean;
   role: "student" | "admin" | string;
 };
 
@@ -28,6 +37,8 @@ export type Course = {
   status?: string;
   cover_url?: string | null;
   pass_percent?: number;
+  price_cents?: number;
+  currency?: string;
 };
 
 export type Enrollment = {
@@ -36,6 +47,8 @@ export type Enrollment = {
   progress: number;
   enrolled_at: string;
   course: Course;
+  exam_passed?: boolean;
+  certificate_code?: string | null;
 };
 
 export type TokenResponse = {

@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     admin_full_name: str = "CAISBE Admin"
     upload_dir: str = "./uploads"
     portal_public_url: str = "http://localhost:3002"
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_publishable_key: str = ""
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""

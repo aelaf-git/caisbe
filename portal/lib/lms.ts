@@ -31,6 +31,7 @@ export type ContentBlock = {
     | "link"
     | "quiz"
     | "assignment"
+    | "reading"
     | string;
   title: string | null;
   body: string | null;
@@ -38,6 +39,7 @@ export type ContentBlock = {
   label: string | null;
   parent_id?: number | null;
   sort_order: number;
+  completed?: boolean;
   quiz: Quiz | null;
 };
 
@@ -89,11 +91,18 @@ export type CourseDetail = {
   exam_passed?: boolean;
 };
 
+export type QuizAnswerReview = {
+  question_id: number;
+  selected_choice_id: number | null;
+  correct_choice_id: number;
+};
+
 export type QuizAttempt = {
   id: number;
   score: number;
   passed: boolean;
   certificate_code: string | null;
+  reviews?: QuizAnswerReview[];
 };
 
 export type Certificate = {
@@ -134,4 +143,5 @@ export type CertificateVerify = {
   membership_number?: string | null;
   issued_at: string;
   issued_by?: string;
+  verify_url?: string | null;
 };

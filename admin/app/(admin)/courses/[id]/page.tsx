@@ -41,6 +41,7 @@ type CourseMeta = {
   slug: string;
   cover_url: string | null;
   pass_percent: number;
+  price_cents: number;
 };
 
 function metaReady(meta: CourseMeta): boolean {
@@ -77,6 +78,7 @@ function AdminCourseEditorInner() {
     slug: "",
     cover_url: null,
     pass_percent: 70,
+    price_cents: 9900,
   });
   const [coverSaving, setCoverSaving] = useState(false);
 
@@ -104,6 +106,7 @@ function AdminCourseEditorInner() {
       slug: data.slug,
       cover_url: data.cover_url ?? null,
       pass_percent: data.pass_percent,
+      price_cents: data.price_cents ?? 9900,
     });
     setExam({
       title: data.final_exam?.title ?? "Final Exam",
@@ -400,6 +403,22 @@ function AdminCourseEditorInner() {
           onCommit={() => void metaAutosave.flush()}
           description="Minimum score required to complete the course and earn a certificate."
         />
+        <FormField label="Course price (USD)" hint="Students pay this at checkout. Use promotions for discounts or complimentary enrollment.">
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            className={fieldClassName}
+            value={(meta.price_cents / 100).toFixed(2)}
+            onChange={(e) =>
+              setMeta((current) => ({
+                ...current,
+                price_cents: Math.max(0, Math.round(Number(e.target.value || 0) * 100)),
+              }))
+            }
+            onBlur={() => void metaAutosave.flush()}
+          />
+        </FormField>
       </Card>
       ) : null}
 

@@ -31,6 +31,7 @@ export type ContentBlock = {
     | "link"
     | "quiz"
     | "assignment"
+    | "reading"
     | string;
   title: string | null;
   body: string | null;
@@ -80,6 +81,7 @@ export type CourseDetail = {
   status: string;
   cover_url: string | null;
   pass_percent: number;
+  price_cents?: number;
   has_unpublished_changes?: boolean;
   chapters: Chapter[];
   final_exam: FinalExam | null;

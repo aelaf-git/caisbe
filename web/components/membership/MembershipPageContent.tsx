@@ -1,5 +1,6 @@
 import ButtonLink from "@/components/ui/ButtonLink";
 import { PageHero, SubsectionIndex } from "@/components/pages/ContentPage";
+import JoinCaisbeForm from "@/components/membership/JoinCaisbeForm";
 import {
   membershipIndexItems,
   membershipPages,
@@ -62,6 +63,7 @@ export function MembershipSubpageContent({ slug }: { slug: MembershipSlug }) {
             Become a Member
           </ButtonLink>
         </div>
+        <JoinCaisbeForm />
       </PageHero>
     );
   }

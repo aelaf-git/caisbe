@@ -16,6 +16,7 @@ export type Course = {
   status?: string;
   cover_url?: string | null;
   pass_percent?: number;
+  price_cents?: number;
   has_unpublished_changes?: boolean;
 };
 
@@ -40,6 +41,15 @@ export type AdminStudent = {
   id: number;
   full_name: string;
   email: string;
+  phone?: string | null;
+  country?: string | null;
+  city?: string | null;
+  address?: string | null;
+  organization?: string | null;
+  job_title?: string | null;
+  membership_date?: string | null;
+  membership_type?: string | null;
+  membership_status?: string;
   enrollments: AdminStudentEnrollment[];
 };
 

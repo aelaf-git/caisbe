@@ -15,6 +15,8 @@ class CourseOut(BaseModel):
     status: str = "draft"
     cover_url: str | None = None
     pass_percent: int = 70
+    price_cents: int = 9900
+    currency: str = "usd"
 
     model_config = {"from_attributes": True}
 
@@ -31,6 +33,7 @@ class CourseCreate(BaseModel):
     slug: str = Field(min_length=2, max_length=64)
     cover_url: str | None = None
     pass_percent: int = Field(default=70, ge=0, le=100)
+    price_cents: int = Field(default=9900, ge=0)
 
 
 class CourseUpdate(BaseModel):
@@ -40,6 +43,7 @@ class CourseUpdate(BaseModel):
     slug: str | None = Field(default=None, min_length=2, max_length=64)
     cover_url: str | None = None
     pass_percent: int | None = Field(default=None, ge=0, le=100)
+    price_cents: int | None = Field(default=None, ge=0)
     status: str | None = None
 
 
@@ -49,6 +53,8 @@ class EnrollmentOut(BaseModel):
     progress: int
     enrolled_at: datetime
     course: CourseOut
+    exam_passed: bool = False
+    certificate_code: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -70,6 +76,15 @@ class AdminStudentOut(BaseModel):
     id: int
     full_name: str
     email: str
+    phone: str | None = None
+    country: str | None = None
+    city: str | None = None
+    address: str | None = None
+    organization: str | None = None
+    job_title: str | None = None
+    membership_date: datetime | None = None
+    membership_type: str | None = None
+    membership_status: str = "pending"
     enrollments: list[AdminStudentEnrollmentOut] = Field(default_factory=list)
 
 
@@ -200,7 +215,7 @@ class QuizUpdate(BaseModel):
 
 class ContentBlockCreate(BaseModel):
     block_type: str = Field(
-        pattern="^(text|video|pdf|document|image|epub|subtopic|link|quiz|assignment)$"
+        pattern="^(text|video|pdf|document|image|epub|subtopic|link|quiz|assignment|reading)$"
     )
     title: str | None = None
     body: str | None = None
@@ -246,6 +261,7 @@ class ContentBlockStudentOut(BaseModel):
     label: str | None
     parent_id: int | None = None
     sort_order: int
+    completed: bool = False
     quiz: QuizStudentOut | None = None
 
     model_config = {"from_attributes": True}
@@ -385,11 +401,18 @@ class QuizSubmitIn(BaseModel):
     answers: dict[str, int] = Field(default_factory=dict)  # question_id -> choice_id
 
 
+class QuizAnswerReview(BaseModel):
+    question_id: int
+    selected_choice_id: int | None = None
+    correct_choice_id: int
+
+
 class QuizAttemptOut(BaseModel):
     id: int
     score: int
     passed: bool
     certificate_code: str | None = None
+    reviews: list[QuizAnswerReview] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 
@@ -430,6 +453,7 @@ class CertificateVerifyOut(BaseModel):
     membership_number: str | None = None
     issued_at: datetime
     issued_by: str = "CAISBE"
+    verify_url: str
 
 
 class CertificateAdminOut(BaseModel):

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { Certificate, MembershipCertificate } from "@/lib/lms";
 
@@ -50,17 +51,18 @@ export default function StudentCertificatesPage() {
   }, []);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">Certificates</h1>
-        <p className="mt-2 text-sm text-caisbe-muted">
-          Your membership certificate and any course completion certificates you have earned.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Credentials"
+        title="Certificates"
+        description="Your membership certificate and any course completion certificates you have earned. Completion certificates stay inactive until you pass the final exam."
+      />
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+      {error ? (
+        <div className="border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">{error}</div>
+      ) : null}
 
-      <section className="border border-ifma-border bg-white">
+      <section className="border border-ifma-border bg-admin-surface">
         <div className="border-b border-ifma-border-light px-6 py-4">
           <h2 className="text-lg font-semibold text-caisbe-text">Membership</h2>
           <p className="mt-1 text-sm text-caisbe-muted">
@@ -101,7 +103,7 @@ export default function StudentCertificatesPage() {
         )}
       </section>
 
-      <section className="border border-ifma-border bg-white">
+      <section className="border border-ifma-border bg-admin-surface">
         <div className="border-b border-ifma-border-light px-6 py-4">
           <h2 className="text-lg font-semibold text-caisbe-text">Course completion</h2>
           <p className="mt-1 text-sm text-caisbe-muted">
@@ -113,7 +115,7 @@ export default function StudentCertificatesPage() {
         ) : certificates.length === 0 ? (
           <div className="p-6">
             <p className="text-sm text-caisbe-muted">
-              Complete a course to earn a digital completion certificate.
+              Complete a course — including the final exam when one is set — to earn a digital completion certificate.
             </p>
             <Link
               href="/courses"

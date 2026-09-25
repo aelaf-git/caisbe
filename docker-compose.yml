@@ -33,7 +33,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./api/.env.example
+      - ./api/.env
     environment:
       API_HOST: 0.0.0.0
       DATABASE_URL: postgresql+psycopg://caisbe:caisbe@postgres:5432/caisbe

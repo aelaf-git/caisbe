@@ -101,8 +101,15 @@ export default function StudentsPage() {
               {filtered.map((student) => (
                 <tr key={student.id} className="align-top transition-colors hover:bg-admin-surface-muted/30">
                   <td className="px-4 py-4 sm:px-6">
-                    <p className="font-semibold text-caisbe-text">{student.full_name}</p>
+                    <p className="font-semibold text-caisbe-text">
+                      <Link href={`/students/${student.id}`} className="hover:text-caisbe-red hover:underline">
+                        {student.full_name}
+                      </Link>
+                    </p>
                     <p className="mt-0.5 text-xs text-caisbe-muted">{student.email}</p>
+                    <p className="mt-1 text-xs text-caisbe-muted">
+                      {student.membership_type || "No type"} · {student.membership_status || "pending"}
+                    </p>
                   </td>
                   <td className="px-4 py-4 sm:px-6">
                     {student.enrollments.length === 0 ? (

@@ -8,10 +8,12 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.security.limiter import limiter
-from app.models import MediaAsset, NewsletterSubscriber
+from app.models import MediaAsset, MembershipApplication, NewsletterSubscriber, User
 from app.schemas.analytics import SiteVisitIn
 from app.schemas.media import MediaAssetOut, NewsletterSubscribeIn
+from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.services.analytics import record_site_visit
+from app.services.commerce import apply_profile_fields, normalize_membership_type
 
 router = APIRouter(tags=["public"])
 
@@ -66,6 +68,53 @@ def subscribe_newsletter(
             detail="Newsletter signup is temporarily unavailable. Try again shortly.",
         ) from exc
     return {"message": "Thank you for subscribing to the CAISBE newsletter."}
+
+
+@router.post("/membership/apply", response_model=MembershipApplicationOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
+def apply_membership(
+    request: Request,
+    payload: MembershipApplicationIn,
+    db: Session = Depends(get_db),
+) -> MembershipApplicationOut:
+    membership_type = normalize_membership_type(payload.membership_type)
+    email = payload.email.lower().strip()
+    user = db.query(User).filter(User.email == email, User.role == "student").first()
+    now = datetime.now(timezone.utc)
+    application = MembershipApplication(
+        user_id=user.id if user else None,
+        full_name=payload.full_name.strip(),
+        email=email,
+        phone=payload.phone.strip(),
+        country=payload.country.strip(),
+        city=payload.city.strip(),
+        address=(payload.address or "").strip() or None,
+        organization=(payload.organization or "").strip() or None,
+        job_title=(payload.job_title or "").strip() or None,
+        membership_type=membership_type or "student",
+        membership_status="pending",
+        membership_date=now,
+    )
+    db.add(application)
+    if user:
+        apply_profile_fields(
+            user,
+            {
+                "full_name": payload.full_name,
+                "phone": payload.phone,
+                "country": payload.country,
+                "city": payload.city,
+                "address": payload.address,
+                "organization": payload.organization,
+                "job_title": payload.job_title,
+                "membership_type": membership_type,
+            },
+        )
+        if user.membership_status == "pending":
+            user.membership_status = "pending"
+    db.commit()
+    db.refresh(application)
+    return MembershipApplicationOut.model_validate(application)
 
 
 @router.post("/analytics/visit", status_code=status.HTTP_204_NO_CONTENT)

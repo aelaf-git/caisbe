@@ -8,7 +8,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { ApiError } from "@/lib/auth";
 
 const inputClass =
-  "h-12 w-full rounded-md border border-ifma-border bg-white px-4 text-sm text-caisbe-text outline-none focus:border-caisbe-red";
+  "h-12 w-full rounded-md border border-ifma-border bg-admin-surface px-4 text-sm text-caisbe-text outline-none focus:border-caisbe-red";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -86,7 +86,7 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      <div className="flex flex-col justify-center overflow-y-auto bg-[#f7f7f5] px-4 py-10 sm:px-10 lg:max-h-screen lg:px-16">
+      <div className="flex flex-col justify-center overflow-y-auto bg-admin-canvas px-4 py-10 sm:px-10 lg:max-h-screen lg:px-16">
         <div className="mx-auto w-full max-w-md">
           <Image
             src="/images/logo.png"

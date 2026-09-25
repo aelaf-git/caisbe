@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import QuizPlayer from "@/components/portal/QuizPlayer";
-import { apiFetch } from "@/lib/auth";
+import { apiFetch, ApiError } from "@/lib/auth";
 import type { ContentBlock, Lesson, QuizAttempt } from "@/lib/lms";
 import { outlineNumber } from "@/lib/outlineNumber";
-import { sanitizeContentBody } from "@/lib/sanitizeHtml";
+import { isAdminUpload, isLegacyChapterReading } from "@/lib/readings";
+import { sanitizeCoursePresentation } from "@/lib/sanitizeHtml";
 
 function ResourceChip({ href, label }: { href: string; label: string }) {
   return (
@@ -13,7 +14,7 @@ function ResourceChip({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center rounded-full border border-ifma-border bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+      className="inline-flex items-center rounded-full border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
     >
       {label}
     </a>
@@ -24,10 +25,12 @@ export default function BlockView({
   block,
   heading,
   onQuizResult,
+  onAssignmentComplete,
 }: {
   block: ContentBlock;
   heading?: string;
-  onQuizResult?: (result: QuizAttempt) => void;
+  onQuizResult?: (result: QuizAttempt | null) => void;
+  onAssignmentComplete?: () => void;
 }) {
   if (block.block_type === "text" || block.block_type === "subtopic") {
     const title = heading ?? block.title;
@@ -35,7 +38,7 @@ export default function BlockView({
       <div className="prose prose-sm max-w-none text-caisbe-text prose-headings:font-display prose-headings:text-caisbe-text-dark prose-a:text-caisbe-red">
         {title ? <h3 className="mb-2 text-lg font-semibold">{title}</h3> : null}
         {block.body ? (
-          <div dangerouslySetInnerHTML={{ __html: sanitizeContentBody(block.body) }} />
+          <div dangerouslySetInnerHTML={{ __html: sanitizeCoursePresentation(block.body) }} />
         ) : null}
       </div>
     );
@@ -88,7 +91,7 @@ export default function BlockView({
         <iframe
           title={block.title || "PDF"}
           src={block.url}
-          className="h-[480px] w-full rounded-md border border-ifma-border bg-white"
+          className="h-[480px] w-full rounded-md border border-ifma-border bg-admin-surface"
         />
       </div>
     );
@@ -106,43 +109,16 @@ export default function BlockView({
     );
   }
 
-  if (block.block_type === "link" && block.url) {
-    return (
-      <div className="space-y-2">
-        {block.title ? <p className="text-sm font-medium text-caisbe-text">{block.title}</p> : null}
-        <ResourceChip href={block.url} label={block.label || "Open link"} />
-      </div>
-    );
+  if (block.block_type === "reading" && block.url && isAdminUpload(block.url)) {
+    return null;
+  }
+
+  if (block.block_type === "link") {
+    return null;
   }
 
   if (block.block_type === "assignment") {
-    const fileLabel = block.label || block.title || "Assignment file";
-    const fileUrl = block.url;
-    const isPdf = fileUrl?.toLowerCase().split("?")[0].endsWith(".pdf");
-
-    return (
-      <div className="rounded-md border border-ifma-border bg-[#fafaf8] p-6">
-        <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Assignment</p>
-        <h3 className="mt-1 text-xl font-semibold text-caisbe-text-dark">{block.title || "Assignment"}</h3>
-        {fileUrl ? (
-          <div className="mt-4 space-y-3">
-            <ResourceChip href={fileUrl} label={isPdf ? `Open PDF — ${fileLabel}` : `Download — ${fileLabel}`} />
-            {isPdf ? (
-              <iframe
-                title={fileLabel}
-                src={fileUrl}
-                className="h-80 w-full rounded-md border border-ifma-border bg-white"
-              />
-            ) : null}
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-caisbe-muted">No file attached to this assignment.</p>
-        )}
-        <p className="mt-4 text-xs text-caisbe-muted">
-          Complete the assignment, then continue with the remaining topics.
-        </p>
-      </div>
-    );
+    return <AssignmentView block={block} onComplete={onAssignmentComplete} />;
   }
 
   if (block.block_type === "quiz" && block.quiz) {
@@ -150,6 +126,8 @@ export default function BlockView({
       <QuizPlayer
         title={block.quiz.title}
         questions={block.quiz.questions}
+        onResult={onQuizResult}
+        passedNote="Next opens the assignment."
         onSubmit={async (answers) => {
           const result = await apiFetch<QuizAttempt>(`/me/quizzes/${block.quiz!.id}/submit`, {
             method: "POST",
@@ -165,8 +143,62 @@ export default function BlockView({
   return null;
 }
 
+function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete?: () => void }) {
+  const [done, setDone] = useState(Boolean(block.completed));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileName = block.label || block.title || "Assignment";
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiFetch(`/me/blocks/${block.id}/complete`, { method: "POST" });
+      setDone(true);
+      onComplete?.();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Unable to submit assignment.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4 rounded-md border border-ifma-border bg-[#fafaf8] p-6">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Assignment</p>
+        <h3 className="mt-1 text-xl font-semibold text-caisbe-text-dark">{block.title || "Assignment"}</h3>
+      </div>
+      {block.url ? (
+        <a
+          href={block.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 rounded-md border border-ifma-border bg-admin-surface px-3 py-3 font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+        >
+          <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">File</span>
+          <span className="min-w-0">{fileName}</span>
+        </a>
+      ) : block.body ? (
+        <div className="whitespace-pre-wrap text-sm text-caisbe-text">{block.body}</div>
+      ) : (
+        <p className="text-sm text-caisbe-muted">No material is attached.</p>
+      )}
+      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+      <button
+        type="button"
+        disabled={busy || done}
+        onClick={() => void submit()}
+        className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+      >
+        {done ? "Submitted" : busy ? "Submitting…" : "Submit"}
+      </button>
+    </div>
+  );
+}
+
 const SECTION_TYPES = new Set(["text", "subtopic"]);
-const MEDIA_TYPES = new Set(["video", "pdf", "document", "image", "epub", "link"]);
+const MEDIA_TYPES = new Set(["video", "pdf", "document", "image", "epub"]);
 
 function sortBlocks(a: ContentBlock, b: ContentBlock) {
   return a.sort_order - b.sort_order || a.id - b.id;
@@ -183,6 +215,15 @@ export function TopicSections({
     const sectionsByParent = new Map<number | "root", ContentBlock[]>();
     const mediaByParent = new Map<number, ContentBlock[]>();
     for (const block of topic.blocks) {
+      if (block.block_type === "image" && block.title?.trim().toLowerCase() === "course cover") {
+        continue;
+      }
+      if (isLegacyChapterReading(block) || block.block_type === "reading" || block.block_type === "link") {
+        continue;
+      }
+      if (block.url && !isAdminUpload(block.url) && block.block_type !== "text" && block.block_type !== "subtopic") {
+        continue;
+      }
       if (SECTION_TYPES.has(block.block_type)) {
         const key = block.parent_id ?? "root";
         const list = sectionsByParent.get(key) ?? [];
@@ -204,7 +245,7 @@ export function TopicSections({
       {topic.body ? (
         <div
           className="prose prose-sm max-w-none text-caisbe-text prose-headings:font-display prose-headings:text-caisbe-text-dark"
-          dangerouslySetInnerHTML={{ __html: sanitizeContentBody(topic.body) }}
+          dangerouslySetInnerHTML={{ __html: sanitizeCoursePresentation(topic.body) }}
         />
       ) : null}
       <OutlineBranch
