@@ -31,18 +31,6 @@ export type IndustryEvent = {
   updated_at: string;
 };
 
-export type CpdActivity = {
-  id: number;
-  activity: string;
-  category: string;
-  hours_reported: number;
-  hours_approved: number;
-  published: boolean;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-};
-
 export type JobPosting = {
   id: number;
   title: string;
@@ -62,6 +50,24 @@ export type JobPosting = {
   created_at: string;
   updated_at: string;
   is_expired: boolean;
+};
+
+export type NewsPost = {
+  id: number;
+  title: string;
+  slug: string;
+  short_description: string | null;
+  long_description: string | null;
+  cover_url: string | null;
+  image_urls: string[];
+  video_urls: string[];
+  tag: string | null;
+  posted_on: string;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Course = {
@@ -156,10 +162,6 @@ export async function fetchPublishedEvents(options?: {
   return apiFetch<IndustryEvent[]>(`/events${query ? `?${query}` : ""}`);
 }
 
-export async function fetchPublishedCpdActivities(): Promise<CpdActivity[]> {
-  return apiFetch<CpdActivity[]>("/cpd-activities");
-}
-
 export async function fetchActiveJobs(options?: {
   featured?: boolean;
 }): Promise<JobPosting[]> {
@@ -167,6 +169,19 @@ export async function fetchActiveJobs(options?: {
   if (options?.featured) params.set("featured", "true");
   const query = params.toString();
   return apiFetch<JobPosting[]>(`/jobs${query ? `?${query}` : ""}`);
+}
+
+export async function fetchPublishedNews(options?: {
+  featured?: boolean;
+}): Promise<NewsPost[]> {
+  const params = new URLSearchParams();
+  if (options?.featured) params.set("featured", "true");
+  const query = params.toString();
+  return apiFetch<NewsPost[]>(`/news${query ? `?${query}` : ""}`);
+}
+
+export async function fetchPublishedNewsBySlug(slug: string): Promise<NewsPost> {
+  return apiFetch<NewsPost>(`/news/${encodeURIComponent(slug)}`);
 }
 
 export async function fetchHeroCarousel(): Promise<HeroCarousel> {

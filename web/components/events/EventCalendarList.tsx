@@ -4,6 +4,16 @@ import { useEffect, useState } from "react";
 import { ContentCard, ContentSection } from "@/components/pages/ContentPage";
 import { fetchPublishedEvents, type IndustryEvent } from "@/lib/api";
 
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  calendar: "Event Calendar",
+  expo: "Africa–Canada Built Environment Expo & Forum",
+  conferences: "Conferences and Webinars",
+};
+
+function eventTypeLabel(raw: string) {
+  return EVENT_TYPE_LABELS[raw] ?? raw;
+}
+
 function formatEventRange(startsOn: string, endsOn: string | null) {
   const start = new Date(startsOn);
   const end = endsOn ? new Date(endsOn) : null;
@@ -64,7 +74,7 @@ export default function EventCalendarList() {
             <ContentCard
               key={event.id}
               title={event.title}
-              meta={`${formatEventRange(event.starts_on, event.ends_on)} · ${event.event_type}${
+              meta={`${formatEventRange(event.starts_on, event.ends_on)} · ${eventTypeLabel(event.event_type)}${
                 event.featured ? " · Featured" : ""
               }`}
               description={event.summary ?? undefined}

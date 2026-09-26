@@ -21,7 +21,6 @@ from app.models import (
     AssignmentSubmission,
     ContentBlock,
     Course,
-    CpdActivity,
     Enrollment,
     FinalExam,
     IndustryEvent,
@@ -29,6 +28,7 @@ from app.models import (
     Lesson,
     MediaAsset,
     MembershipCertificate,
+    NewsPost,
     NewsletterCampaign,
     NewsletterSubscriber,
     QuizAttempt,
@@ -95,9 +95,6 @@ from app.schemas.media import (
     NewsletterSubscriberOut,
 )
 from app.schemas.events import (
-    CpdActivityCreateIn,
-    CpdActivityOut,
-    CpdActivityUpdateIn,
     IndustryEventCreateIn,
     IndustryEventOut,
     IndustryEventUpdateIn,
@@ -106,6 +103,12 @@ from app.schemas.jobs import (
     JobPostingCreateIn,
     JobPostingOut,
     JobPostingUpdateIn,
+)
+from app.schemas.news import (
+    NewsPostCreateIn,
+    NewsPostOut,
+    NewsPostUpdateIn,
+    slugify_title,
 )
 from app.services.analytics import display_city, display_country, site_visit_stats
 from app.services.email import EmailDeliveryError, load_upload_attachment, send_email
@@ -2117,7 +2120,7 @@ def admin_create_event(
         summary=(payload.summary or "").strip() or None,
         location=(payload.location or "").strip() or None,
         region=(payload.region or "").strip() or None,
-        event_type=(payload.event_type or "conference").strip().lower() or "conference",
+        event_type=(payload.event_type or "calendar").strip().lower() or "calendar",
         starts_on=payload.starts_on,
         ends_on=payload.ends_on,
         source_name=(payload.source_name or "").strip() or None,
@@ -2170,79 +2173,6 @@ def admin_delete_event(
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     db.delete(event)
-    db.commit()
-
-
-# --- CPD activities ---
-
-
-@router.get("/cpd-activities", response_model=list[CpdActivityOut])
-def admin_list_cpd_activities(
-    _: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-) -> list[CpdActivityOut]:
-    rows = (
-        db.query(CpdActivity)
-        .order_by(CpdActivity.sort_order.asc(), CpdActivity.activity.asc())
-        .all()
-    )
-    return [CpdActivityOut.model_validate(row) for row in rows]
-
-
-@router.post("/cpd-activities", response_model=CpdActivityOut, status_code=status.HTTP_201_CREATED)
-def admin_create_cpd_activity(
-    payload: CpdActivityCreateIn,
-    _: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-) -> CpdActivityOut:
-    row = CpdActivity(
-        activity=payload.activity.strip(),
-        category=(payload.category or "course").strip().lower() or "course",
-        hours_reported=payload.hours_reported,
-        hours_approved=payload.hours_approved,
-        published=payload.published,
-        sort_order=payload.sort_order,
-    )
-    db.add(row)
-    db.commit()
-    db.refresh(row)
-    return CpdActivityOut.model_validate(row)
-
-
-@router.patch("/cpd-activities/{activity_id}", response_model=CpdActivityOut)
-def admin_update_cpd_activity(
-    activity_id: int,
-    payload: CpdActivityUpdateIn,
-    _: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-) -> CpdActivityOut:
-    row = db.query(CpdActivity).filter(CpdActivity.id == activity_id).first()
-    if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CPD activity not found")
-    data = payload.model_dump(exclude_unset=True)
-    for key, value in data.items():
-        if isinstance(value, str):
-            value = value.strip()
-            if key == "category":
-                value = value.lower()
-            if key == "activity" and not value:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Activity is required")
-        setattr(row, key, value)
-    db.commit()
-    db.refresh(row)
-    return CpdActivityOut.model_validate(row)
-
-
-@router.delete("/cpd-activities/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
-def admin_delete_cpd_activity(
-    activity_id: int,
-    _: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-) -> None:
-    row = db.query(CpdActivity).filter(CpdActivity.id == activity_id).first()
-    if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CPD activity not found")
-    db.delete(row)
     db.commit()
 
 
@@ -2356,5 +2286,141 @@ def admin_delete_job(
     row = db.query(JobPosting).filter(JobPosting.id == job_id).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    db.delete(row)
+    db.commit()
+
+
+def _unique_news_slug(db: Session, base: str, *, exclude_id: int | None = None) -> str:
+    candidate = slugify_title(base)
+    suffix = 2
+    while True:
+        query = db.query(NewsPost).filter(NewsPost.slug == candidate)
+        if exclude_id is not None:
+            query = query.filter(NewsPost.id != exclude_id)
+        if query.first() is None:
+            return candidate
+        candidate = f"{slugify_title(base)[:220]}-{suffix}"
+        suffix += 1
+
+
+def _news_out(row: NewsPost) -> NewsPostOut:
+    return NewsPostOut.model_validate(row)
+
+
+def _normalize_url_list(urls: list[str] | None) -> list[str]:
+    if not urls:
+        return []
+    cleaned: list[str] = []
+    for url in urls:
+        value = (url or "").strip()
+        if value:
+            cleaned.append(value)
+    return cleaned
+
+
+@router.get("/news", response_model=list[NewsPostOut])
+def admin_list_news(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[NewsPostOut]:
+    rows = (
+        db.query(NewsPost)
+        .order_by(NewsPost.posted_on.desc(), NewsPost.sort_order.asc())
+        .all()
+    )
+    return [_news_out(row) for row in rows]
+
+
+@router.post("/news", response_model=NewsPostOut, status_code=status.HTTP_201_CREATED)
+def admin_create_news(
+    payload: NewsPostCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> NewsPostOut:
+    if payload.cover_url:
+        _validate_upload_url(payload.cover_url, field="Cover image")
+    image_urls = _normalize_url_list(payload.image_urls)
+    video_urls = _normalize_url_list(payload.video_urls)
+    for url in image_urls:
+        _validate_upload_url(url, field="Image")
+    for url in video_urls:
+        _validate_upload_url(url, field="Video")
+    slug_base = (payload.slug or payload.title).strip()
+    row = NewsPost(
+        title=payload.title.strip(),
+        slug=_unique_news_slug(db, slug_base),
+        short_description=(payload.short_description or "").strip() or None,
+        long_description=(payload.long_description or "").strip() or None,
+        cover_url=payload.cover_url,
+        image_urls=image_urls or None,
+        video_urls=video_urls or None,
+        tag=(payload.tag or "").strip() or None,
+        posted_on=payload.posted_on,
+        published=payload.published,
+        featured=payload.featured,
+        sort_order=payload.sort_order,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _news_out(row)
+
+
+@router.patch("/news/{post_id}", response_model=NewsPostOut)
+def admin_update_news(
+    post_id: int,
+    payload: NewsPostUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> NewsPostOut:
+    row = db.query(NewsPost).filter(NewsPost.id == post_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "cover_url" in data and data["cover_url"]:
+        _validate_upload_url(data["cover_url"], field="Cover image")
+    if "image_urls" in data:
+        data["image_urls"] = _normalize_url_list(data["image_urls"])
+        for url in data["image_urls"]:
+            _validate_upload_url(url, field="Image")
+        data["image_urls"] = data["image_urls"] or None
+    if "video_urls" in data:
+        data["video_urls"] = _normalize_url_list(data["video_urls"])
+        for url in data["video_urls"]:
+            _validate_upload_url(url, field="Video")
+        data["video_urls"] = data["video_urls"] or None
+    if "slug" in data and data["slug"]:
+        data["slug"] = _unique_news_slug(db, data["slug"], exclude_id=post_id)
+    elif "title" in data and data["title"] and "slug" not in data:
+        # Keep existing slug when title changes unless slug was explicitly sent.
+        pass
+    for key, value in data.items():
+        if isinstance(value, str) and key in {
+            "title",
+            "short_description",
+            "long_description",
+            "tag",
+            "slug",
+        }:
+            value = value.strip()
+            if key == "title" and not value:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title is required")
+            if key != "title" and key != "slug" and not value:
+                value = None
+        setattr(row, key, value)
+    db.commit()
+    db.refresh(row)
+    return _news_out(row)
+
+
+@router.delete("/news/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_news(
+    post_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(NewsPost).filter(NewsPost.id == post_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
     db.delete(row)
     db.commit()

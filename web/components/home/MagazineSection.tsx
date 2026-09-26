@@ -1,5 +1,4 @@
 import ButtonLink from "@/components/ui/ButtonLink";
-import NewsletterSignup from "@/components/newsletter/NewsletterSignup";
 import { fetchPublishedMagazines, type MediaAsset } from "@/lib/api";
 
 export default async function MagazineSection() {
@@ -80,20 +79,6 @@ export default async function MagazineSection() {
             ))}
           </div>
         )}
-
-        <div className="mt-12 border-t border-ifma-border-light pt-10">
-          <div className="mx-auto max-w-2xl text-center">
-            <h3 className="font-display text-xl font-semibold text-caisbe-text-dark">
-              Stay updated
-            </h3>
-            <p className="mt-2 text-sm text-caisbe-muted">
-              Subscribe for new magazine issues and CAISBE news.
-            </p>
-            <div className="mt-6">
-              <NewsletterSignup compact />
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );

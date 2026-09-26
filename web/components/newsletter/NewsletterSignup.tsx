@@ -8,12 +8,18 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 type NewsletterSignupProps = {
   className?: string;
   compact?: boolean;
+  tone?: "light" | "dark";
 };
 
-export default function NewsletterSignup({ className = "", compact = false }: NewsletterSignupProps) {
+export default function NewsletterSignup({
+  className = "",
+  compact = false,
+  tone = "light",
+}: NewsletterSignupProps) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const isDark = tone === "dark";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,7 +52,11 @@ export default function NewsletterSignup({ className = "", compact = false }: Ne
       >
         <label className={compact ? "min-w-0 flex-1 space-y-2" : "block space-y-2"}>
           {!compact ? (
-            <span className="text-sm font-semibold text-ifma-navy">Email</span>
+            <span
+              className={`text-sm font-semibold ${isDark ? "text-white" : "text-ifma-navy"}`}
+            >
+              Email
+            </span>
           ) : null}
           <input
             type="email"
@@ -61,7 +71,9 @@ export default function NewsletterSignup({ className = "", compact = false }: Ne
             title="Enter a valid email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-11 w-full rounded-md border border-ifma-border-light bg-white px-3 text-sm outline-none focus:border-caisbe-red"
+            className={`h-11 w-full rounded-md border bg-white px-3 text-sm outline-none focus:border-caisbe-red ${
+              isDark ? "border-white/25" : "border-ifma-border-light"
+            }`}
             placeholder="name@example.com"
           />
         </label>
@@ -80,7 +92,11 @@ export default function NewsletterSignup({ className = "", compact = false }: Ne
       {message ? (
         <p
           className={`mt-3 text-sm ${
-            status === "error" ? "text-caisbe-red" : "text-caisbe-green"
+            status === "error"
+              ? "text-caisbe-red"
+              : isDark
+                ? "text-white"
+                : "text-caisbe-green"
           }`}
         >
           {message}

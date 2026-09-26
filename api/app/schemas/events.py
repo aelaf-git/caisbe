@@ -1,6 +1,21 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+EventType = Literal["calendar", "expo", "conferences"]
+ALLOWED_EVENT_TYPES = {"calendar", "expo", "conferences"}
+
+
+def normalize_event_type(value: str | None) -> str:
+    raw = (value or "calendar").strip().lower() or "calendar"
+    if raw in ALLOWED_EVENT_TYPES:
+        return raw
+    if raw in {"forum"}:
+        return "expo"
+    if raw in {"conference", "webinar", "seminar", "summit"}:
+        return "conferences"
+    return "calendar"
 
 
 class IndustryEventOut(BaseModel):
@@ -30,7 +45,7 @@ class IndustryEventCreateIn(BaseModel):
     summary: str | None = Field(default=None, max_length=8000)
     location: str | None = Field(default=None, max_length=255)
     region: str | None = Field(default=None, max_length=120)
-    event_type: str = Field(default="conference", max_length=64)
+    event_type: EventType = "calendar"
     starts_on: datetime
     ends_on: datetime | None = None
     source_name: str | None = Field(default=None, max_length=160)
@@ -41,13 +56,18 @@ class IndustryEventCreateIn(BaseModel):
     featured: bool = False
     sort_order: int = 0
 
+    @field_validator("event_type", mode="before")
+    @classmethod
+    def _coerce_event_type(cls, value: object) -> str:
+        return normalize_event_type(str(value) if value is not None else None)
+
 
 class IndustryEventUpdateIn(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     summary: str | None = Field(default=None, max_length=8000)
     location: str | None = Field(default=None, max_length=255)
     region: str | None = Field(default=None, max_length=120)
-    event_type: str | None = Field(default=None, max_length=64)
+    event_type: EventType | None = None
     starts_on: datetime | None = None
     ends_on: datetime | None = None
     source_name: str | None = Field(default=None, max_length=160)
@@ -58,34 +78,9 @@ class IndustryEventUpdateIn(BaseModel):
     featured: bool | None = None
     sort_order: int | None = None
 
-
-class CpdActivityOut(BaseModel):
-    id: int
-    activity: str
-    category: str
-    hours_reported: float
-    hours_approved: float
-    published: bool
-    sort_order: int
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class CpdActivityCreateIn(BaseModel):
-    activity: str = Field(min_length=1, max_length=255)
-    category: str = Field(default="course", max_length=64)
-    hours_reported: float = Field(default=0, ge=0, le=500)
-    hours_approved: float = Field(default=0, ge=0, le=500)
-    published: bool = True
-    sort_order: int = 0
-
-
-class CpdActivityUpdateIn(BaseModel):
-    activity: str | None = Field(default=None, min_length=1, max_length=255)
-    category: str | None = Field(default=None, max_length=64)
-    hours_reported: float | None = Field(default=None, ge=0, le=500)
-    hours_approved: float | None = Field(default=None, ge=0, le=500)
-    published: bool | None = None
-    sort_order: int | None = None
+    @field_validator("event_type", mode="before")
+    @classmethod
+    def _coerce_event_type(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        return normalize_event_type(str(value))

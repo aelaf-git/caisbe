@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/layout/Logo";
+import NewsletterSignup from "@/components/newsletter/NewsletterSignup";
 import {
   courseProgramPath,
   fetchPublishedCourses,
@@ -7,6 +8,7 @@ import {
 import {
   footerAddress,
   footerColumns,
+  siteFullName,
   type FooterColumn,
 } from "@/lib/data/home";
 
@@ -90,11 +92,11 @@ export default async function Footer() {
   return (
     <footer className="border-t-4 border-caisbe-red bg-[#111111] text-white">
       <div className="mx-auto max-w-7xl px-4 py-12">
-        <div className="mb-10 border-b border-white/25 pb-10">
+        <div className="border-b border-white/25 pb-10">
           <Logo variant="footer" />
         </div>
 
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-8 pt-10 sm:grid-cols-2 lg:grid-cols-5">
           {columns.map((column) => (
             <div key={column.title}>
               <Link
@@ -117,27 +119,24 @@ export default async function Footer() {
               </ul>
             </div>
           ))}
-        </div>
 
-        <div className="mt-10 border-t border-white/25 pt-6">
-          <p className="text-sm font-bold uppercase tracking-wide text-white">
-            Contact Us
-          </p>
-          <p className="mt-2 text-sm font-semibold leading-6 text-white">
-            {footerAddress}
-          </p>
-        </div>
-
-        <div className="mt-8 flex flex-col gap-4 border-t border-white/25 pt-6 text-sm font-semibold text-white md:flex-row md:items-center md:justify-between">
-          <p>Copyright © 2026 caisbe.org</p>
-          <div className="flex flex-wrap items-center gap-4">
+          <div>
             <Link
-              href="/privacy-policy"
-              className="transition-colors hover:text-white/85"
+              href="/contact"
+              className="mb-4 block text-sm font-bold uppercase tracking-wide text-white transition-colors hover:text-white/85"
             >
-              Privacy Policy
+              Contact Us
             </Link>
-            <div className="flex items-center gap-3">
+            <p className="text-sm font-semibold leading-6 text-white/95">
+              {footerAddress}
+            </p>
+            <Link
+              href="/contact"
+              className="mt-3 inline-block text-sm font-semibold text-white/95 transition-colors hover:text-white"
+            >
+              Get in touch
+            </Link>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
               {socialLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -151,6 +150,32 @@ export default async function Footer() {
               ))}
             </div>
           </div>
+        </div>
+
+        <div className="mt-10 border-t border-white/25 pt-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-md">
+              <p className="text-sm font-bold uppercase tracking-wide text-white">
+                Subscribe to newsletter
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-white/90">
+                Get magazine issues and CAISBE news by email.
+              </p>
+            </div>
+            <div className="w-full max-w-lg">
+              <NewsletterSignup compact tone="dark" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 flex flex-col gap-3 border-t border-white/25 pt-6 text-sm font-semibold text-white sm:flex-row sm:items-center sm:justify-between">
+          <p>Copyright © 2026 {siteFullName}</p>
+          <Link
+            href="/privacy-policy"
+            className="transition-colors hover:text-white/85"
+          >
+            Privacy Policy
+          </Link>
         </div>
       </div>
     </footer>

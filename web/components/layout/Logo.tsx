@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { siteFullName, siteName } from "@/lib/data/home";
+import { siteFullName } from "@/lib/data/home";
 
 const LOGO_SRC = "/images/logo.png";
 
@@ -12,27 +12,18 @@ export default function Logo({ variant = "header" }: LogoProps) {
     return (
       <Link
         href="/"
-        className="flex flex-col gap-5 sm:flex-row sm:items-center"
+        className="mx-auto flex w-full max-w-2xl flex-col items-center gap-3 text-center sm:gap-4"
       >
         <img
           src={LOGO_SRC}
           alt={`${siteFullName} logo`}
           width={2172}
           height={724}
-          className="h-16 w-auto shrink-0 object-contain sm:h-20"
+          className="h-16 w-auto max-w-full object-contain sm:h-20 md:h-24"
         />
-        <div className="max-w-xl">
-          <p className="text-lg font-bold tracking-wide text-white">
-            {siteName}
-          </p>
-          <p className="mt-2 text-sm font-semibold leading-6 text-white">
-            {siteFullName}
-          </p>
-          <p className="mt-2 text-sm font-semibold leading-6 text-white/90">
-            Advancing sustainable built environments across Canada and Africa
-            through research, education, and collaboration.
-          </p>
-        </div>
+        <p className="text-base font-semibold leading-snug text-white sm:text-lg md:text-xl md:leading-7">
+          {siteFullName}
+        </p>
       </Link>
     );
   }

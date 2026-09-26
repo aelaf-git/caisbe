@@ -9,19 +9,20 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.security.limiter import limiter
 from app.models import (
-    CpdActivity,
     IndustryEvent,
     JobPosting,
     MediaAsset,
     MembershipApplication,
+    NewsPost,
     NewsletterSubscriber,
     User,
 )
 from app.schemas.analytics import SiteVisitIn
 from app.schemas.media import MediaAssetOut, NewsletterSubscribeIn, HeroCarouselOut, HeroSlideOut
 from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
-from app.schemas.events import CpdActivityOut, IndustryEventOut
+from app.schemas.events import IndustryEventOut
 from app.schemas.jobs import JobPostingOut
+from app.schemas.news import NewsPostOut
 from app.services.analytics import record_site_visit
 from app.services.commerce import apply_profile_fields, normalize_membership_type
 from app.services.hero import ensure_default_hero_slides
@@ -98,19 +99,6 @@ def list_published_events(
     return [IndustryEventOut.model_validate(row) for row in rows]
 
 
-@router.get("/cpd-activities", response_model=list[CpdActivityOut])
-def list_published_cpd_activities(
-    db: Session = Depends(get_db),
-) -> list[CpdActivityOut]:
-    rows = (
-        db.query(CpdActivity)
-        .filter(CpdActivity.published.is_(True))
-        .order_by(CpdActivity.sort_order.asc(), CpdActivity.activity.asc())
-        .all()
-    )
-    return [CpdActivityOut.model_validate(row) for row in rows]
-
-
 @router.get("/jobs", response_model=list[JobPostingOut])
 def list_active_jobs(
     featured: bool | None = Query(default=None),
@@ -131,6 +119,34 @@ def list_active_jobs(
         item.is_expired = False
         out.append(item)
     return out
+
+
+@router.get("/news", response_model=list[NewsPostOut])
+def list_published_news(
+    featured: bool | None = Query(default=None),
+    db: Session = Depends(get_db),
+) -> list[NewsPostOut]:
+    query = db.query(NewsPost).filter(NewsPost.published.is_(True))
+    if featured is not None:
+        query = query.filter(NewsPost.featured.is_(featured))
+    rows = query.order_by(NewsPost.posted_on.desc(), NewsPost.sort_order.asc()).all()
+    return [NewsPostOut.model_validate(row) for row in rows]
+
+
+@router.get("/news/{slug}", response_model=NewsPostOut)
+def get_published_news(
+    slug: str,
+    db: Session = Depends(get_db),
+) -> NewsPostOut:
+    row = (
+        db.query(NewsPost)
+        .filter(NewsPost.slug == slug.strip(), NewsPost.published.is_(True))
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
+    return NewsPostOut.model_validate(row)
+
 
 @router.post("/newsletter/subscribe", status_code=status.HTTP_201_CREATED)
 @limiter.limit("20/minute")

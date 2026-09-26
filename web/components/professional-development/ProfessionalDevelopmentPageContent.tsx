@@ -4,7 +4,6 @@ import {
   ContentSection,
   PageHero,
 } from "@/components/pages/ContentPage";
-import CpdActivitiesTable from "@/components/professional-development/CpdActivitiesTable";
 import {
   courseProgramPath,
   fetchPublishedCourses,
@@ -88,8 +87,6 @@ export default async function ProfessionalDevelopmentPageContent() {
           ))}
         </div>
       </ContentSection>
-
-      <CpdActivitiesTable />
 
       <ContentSection title={formats.title} description={formats.description}>
         <ButtonLink href={learningFormatsPath()} variant="secondary">
