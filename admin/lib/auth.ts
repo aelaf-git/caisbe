@@ -118,18 +118,6 @@ export type IndustryEvent = {
   updated_at: string;
 };
 
-export type CpdActivity = {
-  id: number;
-  activity: string;
-  category: string;
-  hours_reported: number;
-  hours_approved: number;
-  published: boolean;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-};
-
 export type JobPosting = {
   id: number;
   title: string;
@@ -149,6 +137,24 @@ export type JobPosting = {
   created_at: string;
   updated_at: string;
   is_expired: boolean;
+};
+
+export type NewsPost = {
+  id: number;
+  title: string;
+  slug: string;
+  short_description: string | null;
+  long_description: string | null;
+  cover_url: string | null;
+  image_urls: string[];
+  video_urls: string[];
+  tag: string | null;
+  posted_on: string;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 };
 
 export type NewsletterSubscriber = {

@@ -63,6 +63,8 @@ services:
       dockerfile: admin/Dockerfile
     container_name: caisbe-admin
     restart: unless-stopped
+    # Webpack avoids Turbopack next/font/google resolution failures in Next 16.2.
+    command: ["npx", "next", "dev", "--hostname", "0.0.0.0", "--port", "3000", "--webpack"]
     ports:
       - "3001:3000"
     environment:
@@ -120,6 +122,8 @@ services:
       dockerfile: web/Dockerfile
     container_name: caisbe-web
     restart: unless-stopped
+    # Webpack avoids Turbopack RSC client-manifest failures in Next 16.2.
+    command: ["npx", "next", "dev", "--hostname", "0.0.0.0", "--port", "3000", "--webpack"]
     ports:
       - "3000:3000"
     environment:

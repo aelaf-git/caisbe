@@ -29,7 +29,8 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Publishing",
     items: [
-      { href: "/events", label: "Events & CPD", icon: "calendar" },
+      { href: "/events", label: "Events", icon: "calendar" },
+      { href: "/news", label: "News", icon: "megaphone" },
       { href: "/jobs", label: "Job board", icon: "briefcase" },
       { href: "/media", label: "Media library", icon: "image" },
       { href: "/site-activity", label: "Site activity", icon: "activity" },
@@ -68,6 +69,7 @@ function NavIcon({ name }: { name: string }) {
     award: <><circle cx="12" cy="8" r="6" /><path d="M8.21 13.89 7 22l5-3 5 3-1.21-8.12" /></>,
     calendar: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>,
     briefcase: <><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M12 12h.01" /></>,
+    megaphone: <><path d="m3 11 18-5v12L3 13v-2Z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></>,
     image: <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></>,
     activity: <path d="M3 12h4l3-9 4 18 3-9h4" />,
     chart: <><path d="M3 3v18h18" /><path d="m7 16 4-5 4 3 5-7" /></>,

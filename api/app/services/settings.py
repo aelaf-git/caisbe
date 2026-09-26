@@ -13,6 +13,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "ui_font_size": "md",
     "ui_font_body": "roboto",
     "ui_font_display": "open-sans",
+    "hero_transition_ms": "3000",
 }
 
 
@@ -58,3 +59,12 @@ def default_pass_percent(db: Session) -> int:
     except (TypeError, ValueError):
         return 70
     return max(0, min(100, value))
+
+
+def hero_transition_ms(db: Session) -> int:
+    raw = get_setting(db, "hero_transition_ms")
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return 3000
+    return max(1000, min(60_000, value))

@@ -4,7 +4,7 @@ import Logo from "@/components/layout/Logo";
 import MainNav from "@/components/layout/MainNav";
 import NavTextLink from "@/components/ui/NavTextLink";
 
-export default function Header() {
+export default async function Header() {
   return (
     <header className="sticky top-0 z-50 overflow-visible bg-white">
       <div className="border-b border-ifma-border-light bg-white">

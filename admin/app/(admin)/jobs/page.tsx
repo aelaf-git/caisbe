@@ -36,7 +36,7 @@ export default function JobsAdminPage() {
       <PageHeader
         eyebrow="Publishing"
         title="Job board"
-        description="Manually upload facility management jobs with post and expiry dates. Expired jobs leave the public board automatically. Paste Indeed, LinkedIn, or Glassdoor apply links when you have them."
+        description="Manually upload facility management jobs with post and expiry dates. Expired jobs leave the public board automatically."
       />
 
       {error ? <Alert tone="error">{error}</Alert> : null}

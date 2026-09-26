@@ -1,3 +1,4 @@
+import BackButton from "@/components/ui/BackButton";
 import ButtonLink from "@/components/ui/ButtonLink";
 
 type PageHeroProps = {
@@ -6,6 +7,8 @@ type PageHeroProps = {
   lead?: string;
   children?: React.ReactNode;
   actions?: React.ReactNode;
+  backHref?: string;
+  backLabel?: string;
 };
 
 export function PageHero({
@@ -14,6 +17,8 @@ export function PageHero({
   lead,
   children,
   actions,
+  backHref,
+  backLabel = "Go back",
 }: PageHeroProps) {
   return (
     <section className="relative overflow-hidden border-b border-ifma-border-light bg-[linear-gradient(135deg,#ffffff_0%,#fafafa_45%,#fff5f6_100%)] py-16 md:py-20">
@@ -21,11 +26,16 @@ export function PageHero({
         aria-hidden
         className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(ellipse_at_top_right,rgba(196,32,50,0.08),transparent_55%)]"
       />
-      <div className="relative mx-auto max-w-4xl px-4 motion-safe:animate-page-fade-in">
+      <div className="relative mx-auto max-w-7xl px-4 motion-safe:animate-page-fade-in">
+        {backHref ? (
+          <div className="mb-8">
+            <BackButton href={backHref} label={backLabel} />
+          </div>
+        ) : null}
         <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
           {eyebrow}
         </p>
-        <h1 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold md:text-4xl">
+        <h1 className="font-display text-caisbe-text-dark mt-3 max-w-3xl text-3xl font-semibold md:text-4xl">
           {title}
         </h1>
         {lead ? (
@@ -47,6 +57,7 @@ type ContentSectionProps = {
   title?: string;
   description?: string;
   children: React.ReactNode;
+  /** @deprecated All sections use the shared max-w-7xl site shell. Kept for call-site compatibility. */
   wide?: boolean;
   className?: string;
 };
@@ -56,19 +67,18 @@ export function ContentSection({
   title,
   description,
   children,
-  wide = false,
+  wide: _wide = false,
   className = "",
 }: ContentSectionProps) {
+  void _wide;
   return (
     <section
       id={id}
       className={`scroll-mt-28 border-b border-ifma-border-light bg-white py-16 md:py-20 ${className}`}
     >
-      <div
-        className={`mx-auto px-4 ${wide ? "max-w-7xl" : "max-w-4xl"}`}
-      >
+      <div className="mx-auto max-w-7xl px-4">
         {title ? (
-          <h2 className="font-display text-caisbe-text-dark text-2xl font-semibold md:text-3xl">
+          <h2 className="font-display text-caisbe-text-dark max-w-3xl text-2xl font-semibold md:text-3xl">
             {title}
           </h2>
         ) : null}

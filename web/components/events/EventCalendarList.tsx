@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ButtonLink from "@/components/ui/ButtonLink";
 import { ContentCard, ContentSection } from "@/components/pages/ContentPage";
 import { fetchPublishedEvents, type IndustryEvent } from "@/lib/api";
+
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  calendar: "Event Calendar",
+  expo: "Africa–Canada Built Environment Expo & Forum",
+  conferences: "Conferences and Webinars",
+};
+
+function eventTypeLabel(raw: string) {
+  return EVENT_TYPE_LABELS[raw] ?? raw;
+}
 
 function formatEventRange(startsOn: string, endsOn: string | null) {
   const start = new Date(startsOn);
@@ -45,7 +54,7 @@ export default function EventCalendarList() {
   return (
     <ContentSection
       title="Facility management events & exhibitions"
-      description="Industry conferences, expos, and forums curated for CAISBE members—including listings drawn from major FM calendars and industry reports. Admins can publish additional events from the CAISBE admin console."
+      description="Industry conferences, expos, and forums curated and published by CAISBE for members and the wider FM community."
       wide
     >
       {loading ? (
@@ -55,14 +64,8 @@ export default function EventCalendarList() {
       {!loading && !error && events.length === 0 ? (
         <div className="rounded-lg border border-dashed border-ifma-border bg-[#fafafa] px-6 py-12 text-center">
           <p className="text-base leading-7 text-caisbe-muted">
-            No published events yet. Check back soon, or contact CAISBE to
-            suggest an industry listing.
+            No published events yet. Check back soon for updates from CAISBE.
           </p>
-          <div className="mt-6 flex justify-center">
-            <ButtonLink href="/contact" variant="secondary">
-              Contact Us
-            </ButtonLink>
-          </div>
         </div>
       ) : null}
       {!loading && events.length > 0 ? (
@@ -71,7 +74,7 @@ export default function EventCalendarList() {
             <ContentCard
               key={event.id}
               title={event.title}
-              meta={`${formatEventRange(event.starts_on, event.ends_on)} · ${event.event_type}${
+              meta={`${formatEventRange(event.starts_on, event.ends_on)} · ${eventTypeLabel(event.event_type)}${
                 event.featured ? " · Featured" : ""
               }`}
               description={event.summary ?? undefined}

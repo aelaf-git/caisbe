@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import EventsManager from "@/components/events/EventsManager";
+import NewsManager from "@/components/news/NewsManager";
 import Alert from "@/components/ui/Alert";
 import PageHeader from "@/components/ui/PageHeader";
 import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
-import { apiFetch, ApiError, type IndustryEvent } from "@/lib/auth";
+import { apiFetch, ApiError, type NewsPost } from "@/lib/auth";
 
-export default function EventsAdminPage() {
-  const [events, setEvents] = useState<IndustryEvent[]>([]);
+export default function NewsAdminPage() {
+  const [posts, setPosts] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -18,10 +18,9 @@ export default function EventsAdminPage() {
     setLoading(true);
     setError(null);
     try {
-      const eventData = await apiFetch<IndustryEvent[]>("/admin/events");
-      setEvents(eventData);
+      setPosts(await apiFetch<NewsPost[]>("/admin/news"));
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to load events.");
+      setError(err instanceof ApiError ? err.detail : "Unable to load news.");
     } finally {
       setLoading(false);
     }
@@ -36,15 +35,15 @@ export default function EventsAdminPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Publishing"
-        title="Events"
-        description="Add facility management events and exhibitions to the public calendar, and upload industry reports."
+        title="News & Announcements"
+        description="Post institute news with a cover image, gallery images, videos, and short and long descriptions."
       />
 
       {error ? <Alert tone="error">{error}</Alert> : null}
       {success ? <Alert tone="success">{success}</Alert> : null}
 
-      <EventsManager
-        events={events}
+      <NewsManager
+        posts={posts}
         loading={loading}
         onRefresh={load}
         onError={(message) => {

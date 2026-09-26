@@ -17,6 +17,7 @@ class AppSettingsOut(BaseModel):
     ui_font_size: FontSizeChoice
     ui_font_body: FontChoice
     ui_font_display: FontChoice
+    hero_transition_ms: int = 3000
 
 
 class AppSettingsUpdate(BaseModel):
@@ -28,6 +29,7 @@ class AppSettingsUpdate(BaseModel):
     ui_font_size: FontSizeChoice | None = None
     ui_font_body: FontChoice | None = None
     ui_font_display: FontChoice | None = None
+    hero_transition_ms: int | None = Field(default=None, ge=1000, le=60_000)
 
 
 class AdminPasswordChange(BaseModel):

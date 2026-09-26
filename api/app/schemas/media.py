@@ -71,6 +71,18 @@ class NewsletterSendOut(BaseModel):
     message: str
 
 
+class HeroSlideOut(BaseModel):
+    id: int | str
+    title: str
+    file_url: str
+    media_type: str  # "image" | "video"
+
+
+class HeroCarouselOut(BaseModel):
+    transition_ms: int
+    slides: list[HeroSlideOut]
+
+
 class NewsletterCampaignOut(BaseModel):
     id: int
     subject: str

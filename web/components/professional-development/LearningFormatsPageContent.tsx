@@ -1,4 +1,3 @@
-import BackButton from "@/components/ui/BackButton";
 import {
   ContentCard,
   ContentSection,
@@ -18,12 +17,8 @@ export default function LearningFormatsPageContent() {
         eyebrow="Professional Development"
         title={formats.title}
         lead={formats.description}
-        actions={
-          <BackButton
-            href="/professional-development"
-            label="Back to certificate programs"
-          />
-        }
+        backHref="/professional-development"
+        backLabel="Back to certificate programs"
       />
       <ContentSection wide>
         <div className="grid gap-6 sm:grid-cols-2">

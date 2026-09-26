@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import ButtonLink from "@/components/ui/ButtonLink";
 import AdvocacyPageContent from "@/components/resources/AdvocacyPageContent";
 import MagazinePageContent from "@/components/resources/MagazinePageContent";
 import { MembersCornerItemContent } from "@/components/resources/MembersCornerContent";
@@ -71,19 +70,11 @@ export default async function ResourceSubpage({ params }: Props) {
   if (slug === "fm-resources") {
     return (
       <PageHero
-        eyebrow="Coming Soon"
+        eyebrow="Under Construction"
         title={page.title}
         lead={page.lead}
-        actions={
-          <>
-            <ButtonLink href="/resources" variant="secondary">
-              All Resources
-            </ButtonLink>
-            <ButtonLink href="/contact" variant="primary">
-              Contact Us
-            </ButtonLink>
-          </>
-        }
+        backHref="/resources"
+        backLabel="Back to resources"
       >
         <p className="mt-6 text-base leading-7 text-caisbe-muted">
           {page.description}

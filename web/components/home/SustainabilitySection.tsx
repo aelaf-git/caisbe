@@ -5,7 +5,7 @@ export default function SustainabilitySection() {
   return (
     <>
       <section className="border-b border-ifma-border-light bg-white py-16">
-        <div className="mx-auto max-w-4xl px-4 text-center">
+        <div className="mx-auto max-w-7xl px-4 text-center">
           <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
             Sustainability
           </p>

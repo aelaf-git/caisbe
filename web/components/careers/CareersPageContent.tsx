@@ -4,8 +4,7 @@ import JobBoardList from "@/components/careers/JobBoardList";
 import { careersContent } from "@/lib/data/careers";
 
 export default function CareersPageContent() {
-  const { title, intro, jobBoard, careerResources, employers, eyebrow } =
-    careersContent;
+  const { title, intro, jobBoard, careerResources, eyebrow } = careersContent;
 
   return (
     <>
@@ -33,16 +32,6 @@ export default function CareersPageContent() {
             </li>
           ))}
         </ul>
-      </ContentSection>
-
-      <ContentSection
-        id="employers"
-        title={employers.title}
-        description={employers.description}
-      >
-        <ButtonLink href={employers.ctaHref} variant="secondary">
-          {employers.ctaLabel}
-        </ButtonLink>
       </ContentSection>
     </>
   );

@@ -15,11 +15,49 @@ import { apiFetch, apiUpload, ApiError, type IndustryEvent } from "@/lib/auth";
 const REPORT_ACCEPT =
   "application/pdf,.pdf,application/msword,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,image/*,.jpg,.jpeg,.png,.webp";
 
+/** Navbar Events categories — only these types are allowed. */
+export const EVENT_TYPE_OPTIONS = [
+  { value: "calendar", label: "Event Calendar" },
+  {
+    value: "expo",
+    label: "Africa–Canada Built Environment Expo & Forum",
+  },
+  { value: "conferences", label: "Conferences and Webinars" },
+] as const;
+
+export type EventTypeValue = (typeof EVENT_TYPE_OPTIONS)[number]["value"];
+
+const EVENT_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  EVENT_TYPE_OPTIONS.map((o) => [o.value, o.label]),
+);
+
+/** Map legacy free-form types onto the three navbar categories. */
+function normalizeEventType(raw: string | null | undefined): EventTypeValue {
+  const value = (raw || "").trim().toLowerCase();
+  if (value === "expo" || value === "forum") return "expo";
+  if (
+    value === "conferences" ||
+    value === "conference" ||
+    value === "webinar" ||
+    value === "seminar" ||
+    value === "summit"
+  ) {
+    return "conferences";
+  }
+  return "calendar";
+}
+
+function eventTypeLabel(raw: string | null | undefined): string {
+  const normalized = normalizeEventType(raw);
+  return EVENT_TYPE_LABELS[normalized] ?? "Event Calendar";
+}
+
 type AskConfirm = (options: {
   title: string;
   description: string;
   confirmLabel?: string;
 }) => Promise<boolean>;
+
 
 function resetFileInput(ref: RefObject<HTMLInputElement | null>) {
   if (ref.current) ref.current.value = "";
@@ -60,7 +98,7 @@ export default function EventsManager({
   const [summary, setSummary] = useState("");
   const [location, setLocation] = useState("");
   const [region, setRegion] = useState("");
-  const [eventType, setEventType] = useState("conference");
+  const [eventType, setEventType] = useState("calendar");
   const [startsOn, setStartsOn] = useState("");
   const [endsOn, setEndsOn] = useState("");
   const [sourceName, setSourceName] = useState("");
@@ -78,7 +116,7 @@ export default function EventsManager({
     setSummary("");
     setLocation("");
     setRegion("");
-    setEventType("conference");
+    setEventType("calendar");
     setStartsOn("");
     setEndsOn("");
     setSourceName("");
@@ -97,7 +135,7 @@ export default function EventsManager({
     setSummary(event.summary ?? "");
     setLocation(event.location ?? "");
     setRegion(event.region ?? "");
-    setEventType(event.event_type || "conference");
+    setEventType(normalizeEventType(event.event_type));
     setStartsOn(toInputDate(event.starts_on));
     setEndsOn(toInputDate(event.ends_on));
     setSourceName(event.source_name ?? "");
@@ -141,7 +179,7 @@ export default function EventsManager({
         summary: summary.trim() || null,
         location: location.trim() || null,
         region: region.trim() || null,
-        event_type: eventType.trim() || "conference",
+        event_type: normalizeEventType(eventType),
         starts_on: fromInputDate(startsOn),
         ends_on: fromInputDate(endsOn),
         source_name: sourceName.trim() || null,
@@ -232,13 +270,11 @@ export default function EventsManager({
               value={eventType}
               onChange={(e) => setEventType(e.target.value)}
             >
-              <option value="conference">Conference</option>
-              <option value="exhibition">Exhibition</option>
-              <option value="expo">Expo</option>
-              <option value="forum">Forum</option>
-              <option value="summit">Summit</option>
-              <option value="webinar">Webinar</option>
-              <option value="seminar">Seminar</option>
+              {EVENT_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </FormField>
           <FormField label="Start date">
@@ -422,7 +458,7 @@ export default function EventsManager({
                   <p className="mt-1 text-sm text-caisbe-muted">
                     {toInputDate(event.starts_on)}
                     {event.ends_on ? ` – ${toInputDate(event.ends_on)}` : ""} ·{" "}
-                    {event.event_type}
+                    {eventTypeLabel(event.event_type)}
                     {event.location ? ` · ${event.location}` : ""}
                   </p>
                 </div>
