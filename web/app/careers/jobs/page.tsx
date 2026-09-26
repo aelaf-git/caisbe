@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import BackButton from "@/components/ui/BackButton";
-import ButtonLink from "@/components/ui/ButtonLink";
 import { PageHero } from "@/components/pages/ContentPage";
 import JobBoardList from "@/components/careers/JobBoardList";
 
@@ -17,14 +15,8 @@ export default function AllJobsPage() {
         eyebrow="CAISBE Job Board"
         title="View All Jobs"
         lead="Facility management opportunities published by CAISBE across Canada, Africa, and global markets."
-        actions={
-          <>
-            <BackButton href="/careers" label="Back to careers" />
-            <ButtonLink href="/careers" variant="secondary">
-              Career Resources
-            </ButtonLink>
-          </>
-        }
+        backHref="/careers"
+        backLabel="Back to careers"
       >
         <p className="mt-6 text-base leading-7 text-caisbe-muted">
           Openings are published by CAISBE. Each listing has a post date and an

@@ -100,19 +100,11 @@ function SponsorComingSoon() {
   const page = eventsPages.sponsor;
   return (
     <PageHero
-      eyebrow="Coming Soon"
+      eyebrow="Under Construction"
       title={page.title}
       lead="Sponsorship and advertising packages for CAISBE events are being finalized. Thank you for your patience—we will publish opportunities here soon."
-      actions={
-        <>
-          <ButtonLink href="/events/calendar" variant="primary">
-            View Event Calendar
-          </ButtonLink>
-          <ButtonLink href="/contact" variant="secondary">
-            Contact Us
-          </ButtonLink>
-        </>
-      }
+      backHref="/events"
+      backLabel="Back to events"
     >
       <p className="mt-6 text-base leading-7 text-caisbe-muted">
         {page.description}

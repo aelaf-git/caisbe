@@ -1,5 +1,3 @@
-import BackButton from "@/components/ui/BackButton";
-import ButtonLink from "@/components/ui/ButtonLink";
 import {
   ContentSection,
   PageHero,
@@ -25,23 +23,8 @@ export default function TopicPageContent({
         eyebrow={eyebrow}
         title={page.title}
         lead={page.lead}
-        actions={
-          <>
-            <BackButton href={indexHref} label={indexLabel} />
-            {page.ctaHref && page.ctaLabel ? (
-              <ButtonLink href={page.ctaHref} variant="primary">
-                {page.ctaLabel}
-              </ButtonLink>
-            ) : (
-              <ButtonLink href="/contact" variant="primary">
-                Contact Us
-              </ButtonLink>
-            )}
-            <ButtonLink href={indexHref} variant="secondary">
-              {indexLabel}
-            </ButtonLink>
-          </>
-        }
+        backHref={indexHref}
+        backLabel={indexLabel}
       >
         <p className="mt-6 text-base leading-7 text-caisbe-muted">
           {page.description}

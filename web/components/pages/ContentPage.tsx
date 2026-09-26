@@ -1,3 +1,4 @@
+import BackButton from "@/components/ui/BackButton";
 import ButtonLink from "@/components/ui/ButtonLink";
 
 type PageHeroProps = {
@@ -6,6 +7,8 @@ type PageHeroProps = {
   lead?: string;
   children?: React.ReactNode;
   actions?: React.ReactNode;
+  backHref?: string;
+  backLabel?: string;
 };
 
 export function PageHero({
@@ -14,6 +17,8 @@ export function PageHero({
   lead,
   children,
   actions,
+  backHref,
+  backLabel = "Go back",
 }: PageHeroProps) {
   return (
     <section className="relative overflow-hidden border-b border-ifma-border-light bg-[linear-gradient(135deg,#ffffff_0%,#fafafa_45%,#fff5f6_100%)] py-16 md:py-20">
@@ -22,6 +27,11 @@ export function PageHero({
         className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(ellipse_at_top_right,rgba(196,32,50,0.08),transparent_55%)]"
       />
       <div className="relative mx-auto max-w-7xl px-4 motion-safe:animate-page-fade-in">
+        {backHref ? (
+          <div className="mb-8">
+            <BackButton href={backHref} label={backLabel} />
+          </div>
+        ) : null}
         <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
           {eyebrow}
         </p>
