@@ -56,17 +56,16 @@ export default function JobBoardList({
       {!loading && !error && jobs.length === 0 ? (
         <div className="rounded-lg border border-dashed border-ifma-border bg-[#fafafa] px-6 py-12 text-center">
           <p className="text-base leading-7 text-caisbe-muted">
-            No open roles right now. Check back soon, or contact CAISBE to post
-            a vacancy.
+            No open roles right now. Check back soon for new postings from
+            CAISBE.
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-4">
-            <ButtonLink href="/contact" variant="primary">
-              Post a Job
-            </ButtonLink>
-            <ButtonLink href="/careers/jobs" variant="secondary">
-              View Job Board
-            </ButtonLink>
-          </div>
+          {limit ? (
+            <div className="mt-6 flex flex-wrap justify-center gap-4">
+              <ButtonLink href="/careers/jobs" variant="secondary">
+                View Job Board
+              </ButtonLink>
+            </div>
+          ) : null}
         </div>
       ) : null}
       {!loading && jobs.length > 0 ? (
@@ -111,14 +110,6 @@ export default function JobBoardList({
                     </dt>
                     <dd className="inline">{formatDate(job.expires_on)}</dd>
                   </div>
-                  {job.source_label ? (
-                    <div>
-                      <dt className="inline font-semibold text-caisbe-text">
-                        Source:{" "}
-                      </dt>
-                      <dd className="inline capitalize">{job.source_label}</dd>
-                    </div>
-                  ) : null}
                 </dl>
                 {job.attachment_url ? (
                   <a

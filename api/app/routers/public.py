@@ -18,14 +18,48 @@ from app.models import (
     User,
 )
 from app.schemas.analytics import SiteVisitIn
-from app.schemas.media import MediaAssetOut, NewsletterSubscribeIn
+from app.schemas.media import MediaAssetOut, NewsletterSubscribeIn, HeroCarouselOut, HeroSlideOut
 from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.schemas.events import CpdActivityOut, IndustryEventOut
 from app.schemas.jobs import JobPostingOut
 from app.services.analytics import record_site_visit
 from app.services.commerce import apply_profile_fields, normalize_membership_type
+from app.services.hero import ensure_default_hero_slides
+from app.services.settings import hero_transition_ms
 
 router = APIRouter(tags=["public"])
+
+VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".m4v"}
+
+
+def _media_type_from_url(url: str) -> str:
+    path = url.split("?")[0].lower()
+    if any(path.endswith(ext) for ext in VIDEO_EXTENSIONS):
+        return "video"
+    return "image"
+
+
+@router.get("/hero", response_model=HeroCarouselOut)
+def get_hero_carousel(db: Session = Depends(get_db)) -> HeroCarouselOut:
+    ensure_default_hero_slides(db)
+    db.commit()
+    transition = hero_transition_ms(db)
+    rows = (
+        db.query(MediaAsset)
+        .filter(MediaAsset.published.is_(True), MediaAsset.category == "hero")
+        .order_by(MediaAsset.sort_order.asc(), MediaAsset.created_at.asc())
+        .all()
+    )
+    slides = [
+        HeroSlideOut(
+            id=row.id,
+            title=row.title,
+            file_url=row.file_url,
+            media_type=_media_type_from_url(row.file_url),
+        )
+        for row in rows
+    ]
+    return HeroCarouselOut(transition_ms=transition, slides=slides)
 
 
 @router.get("/media", response_model=list[MediaAssetOut])

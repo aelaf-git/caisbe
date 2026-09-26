@@ -6,14 +6,24 @@ import {
 } from "@/components/pages/ContentPage";
 import CpdActivitiesTable from "@/components/professional-development/CpdActivitiesTable";
 import {
-  certificatePath,
+  courseProgramPath,
+  fetchPublishedCourses,
+} from "@/lib/api";
+import {
   learningFormatsPath,
   professionalDevelopmentContent,
 } from "@/lib/data/professional-development";
 
-export default function ProfessionalDevelopmentPageContent() {
-  const { certificatesTitle, certificatesIntro, certificates, seminars, formats } =
+export default async function ProfessionalDevelopmentPageContent() {
+  const { certificatesTitle, certificatesIntro, seminars, formats } =
     professionalDevelopmentContent;
+
+  let courses: Awaited<ReturnType<typeof fetchPublishedCourses>> = [];
+  try {
+    courses = await fetchPublishedCourses();
+  } catch {
+    courses = [];
+  }
 
   return (
     <>
@@ -35,22 +45,28 @@ export default function ProfessionalDevelopmentPageContent() {
 
       <ContentSection
         title="Certificate courses"
-        description="All CAISBE certificate programs for facility, property, and built-environment professionals."
+        description="Published CAISBE certificate programs for facility, property, and built-environment professionals."
         wide
       >
-        <div className="grid gap-6 md:grid-cols-2">
-          {certificates.map((certificate, index) => (
-            <ContentCard
-              key={certificate.slug}
-              title={certificate.title}
-              meta={certificate.code}
-              description={certificate.description}
-              href={certificatePath(certificate.slug)}
-              hrefLabel="View Program"
-              style={{ animationDelay: `${index * 70}ms` }}
-            />
-          ))}
-        </div>
+        {courses.length === 0 ? (
+          <p className="text-base leading-7 text-caisbe-muted">
+            No certificate programs are published yet. Check back soon.
+          </p>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {courses.map((course, index) => (
+              <ContentCard
+                key={course.id}
+                title={course.title}
+                meta={course.code}
+                description={course.description || undefined}
+                href={courseProgramPath(course.slug)}
+                hrefLabel="View Program"
+                style={{ animationDelay: `${index * 70}ms` }}
+              />
+            ))}
+          </div>
+        )}
       </ContentSection>
 
       <ContentSection

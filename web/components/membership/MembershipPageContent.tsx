@@ -81,7 +81,7 @@ export function BecomeAMemberContent({
         lead={page.description}
       />
       <ContentSection wide>
-        <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <MemberPathCard
             title="New Member"
             description="Register for CAISBE membership. Fill the form online or download it, complete it, and upload."
@@ -96,7 +96,7 @@ export function BecomeAMemberContent({
           />
         </div>
 
-        <div className="mx-auto mt-10 max-w-4xl">
+        <div className="mt-10">
           {path === "new" ? <MembershipRegistrationForm /> : null}
           {path === "existing" ? <MembershipRenewalForm /> : null}
           {path == null ? (

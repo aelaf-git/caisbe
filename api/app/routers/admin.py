@@ -109,7 +109,8 @@ from app.schemas.jobs import (
 )
 from app.services.analytics import display_city, display_country, site_visit_stats
 from app.services.email import EmailDeliveryError, load_upload_attachment, send_email
-from app.services.settings import default_pass_percent, get_settings_map, set_settings
+from app.services.settings import default_pass_percent, get_settings_map, set_settings, hero_transition_ms
+from app.services.hero import ensure_default_hero_slides
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -552,6 +553,7 @@ def _settings_out(db: Session) -> AppSettingsOut:
             {"roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"},
             "open-sans",
         ),
+        hero_transition_ms=hero_transition_ms(db),
     )
 
 
@@ -586,6 +588,8 @@ def admin_update_settings(
         updates["ui_font_body"] = payload.ui_font_body
     if payload.ui_font_display is not None:
         updates["ui_font_display"] = payload.ui_font_display
+    if payload.hero_transition_ms is not None:
+        updates["hero_transition_ms"] = str(payload.hero_transition_ms)
     if updates:
         set_settings(db, updates)
         db.commit()
@@ -1589,9 +1593,13 @@ def admin_list_media(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[MediaAssetOut]:
+    category_key = category.strip().lower() if category else None
+    if category_key == "hero":
+        ensure_default_hero_slides(db)
+        db.commit()
     query = db.query(MediaAsset)
-    if category:
-        query = query.filter(MediaAsset.category == category.strip().lower())
+    if category_key:
+        query = query.filter(MediaAsset.category == category_key)
     rows = query.order_by(MediaAsset.sort_order.asc(), MediaAsset.created_at.desc()).all()
     return [MediaAssetOut.model_validate(row) for row in rows]
 

@@ -135,36 +135,7 @@ const rawNavigation: readonly RawNavSection[] = [
       {
         title: "Certificate Programs",
         href: "/professional-development",
-        links: [
-          {
-            label: "Facilities Management Certificate (FMC)",
-            href: "/professional-development/fmc",
-          },
-          {
-            label: "Property Management Certificate (PMC)",
-            href: "/professional-development/pmc",
-          },
-          {
-            label: "Condominium/Cooperative Housing Management (CHMC)",
-            href: "/professional-development/chmc",
-          },
-          {
-            label: "Health & Safety Certificate (HSC)",
-            href: "/professional-development/hsc",
-          },
-          {
-            label: "Energy Efficiency & Building Energy Management (CEEBM)",
-            href: "/professional-development/ceebm",
-          },
-          {
-            label: "Real Estate Investment & Property Valuation (RIPVC)",
-            href: "/professional-development/ripvc",
-          },
-          {
-            label: "Smart Real Estate Technologies",
-            href: "/professional-development/sret",
-          },
-        ],
+        links: [],
       },
       {
         title: "Learning Formats",

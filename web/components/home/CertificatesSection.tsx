@@ -1,9 +1,44 @@
 import Link from "next/link";
 import ButtonLink from "@/components/ui/ButtonLink";
-import { certificates, certificatesIntro } from "@/lib/data/home";
-import { certificatePath } from "@/lib/data/professional-development";
+import {
+  courseProgramPath,
+  fetchPublishedCourses,
+} from "@/lib/api";
+import { certificatesIntro } from "@/lib/data/home";
 
-export default function CertificatesSection() {
+export default async function CertificatesSection() {
+  let courses: Awaited<ReturnType<typeof fetchPublishedCourses>> = [];
+  try {
+    courses = await fetchPublishedCourses();
+  } catch {
+    courses = [];
+  }
+
+  if (courses.length === 0) {
+    return (
+      <section className="border-b border-ifma-border-light bg-white py-16">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold md:text-4xl">
+                {certificatesIntro.title}
+              </h2>
+              <p className="mt-2 text-lg text-ifma-muted">
+                {certificatesIntro.subtitle}
+              </p>
+            </div>
+            <ButtonLink href="/professional-development" variant="text">
+              {certificatesIntro.cta}
+            </ButtonLink>
+          </div>
+          <p className="text-base leading-7 text-caisbe-muted">
+            Certificate programs will appear here once published by CAISBE.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="border-b border-ifma-border-light bg-white py-16">
       <div className="mx-auto max-w-7xl px-4">
@@ -22,20 +57,20 @@ export default function CertificatesSection() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {certificates.map((certificate) => (
+          {courses.map((course) => (
             <Link
-              key={certificate.code}
-              href={certificatePath(certificate.code.toLowerCase())}
+              key={course.id}
+              href={courseProgramPath(course.slug)}
               className="shadow-brand-card flex flex-col border border-ifma-border-light bg-white p-6 transition-colors hover:border-caisbe-red"
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
-                {certificate.code}
+                {course.code}
               </p>
               <h3 className="mt-3 text-lg font-semibold leading-snug text-ifma-navy">
-                {certificate.title}
+                {course.title}
               </h3>
               <p className="mt-4 flex-1 text-sm leading-6 text-ifma-muted">
-                {certificate.description}
+                {course.description}
               </p>
               <span className="mt-6 text-sm font-semibold uppercase tracking-wide text-caisbe-red">
                 View Program

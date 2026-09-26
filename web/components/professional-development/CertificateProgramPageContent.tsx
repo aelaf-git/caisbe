@@ -1,23 +1,23 @@
 import ButtonLink from "@/components/ui/ButtonLink";
 import { PageHero } from "@/components/pages/ContentPage";
-import type { CertificateProgram } from "@/lib/data/professional-development";
+import { courseEnrollUrl, type Course } from "@/lib/api";
 import { learningFormatsPath } from "@/lib/data/professional-development";
 
 type CertificateProgramPageContentProps = {
-  certificate: CertificateProgram;
+  course: Course;
 };
 
 export default function CertificateProgramPageContent({
-  certificate,
+  course,
 }: CertificateProgramPageContentProps) {
   return (
     <PageHero
       eyebrow="Certificate Programs"
-      title={certificate.title}
-      lead={certificate.description}
+      title={course.title}
+      lead={course.description || "A CAISBE certificate program for built-environment professionals."}
       actions={
         <>
-          <ButtonLink href="/register" variant="primary">
+          <ButtonLink href={courseEnrollUrl(course.id)} variant="primary">
             Enroll / Register
           </ButtonLink>
           <ButtonLink href={learningFormatsPath()} variant="secondary">
@@ -30,7 +30,7 @@ export default function CertificateProgramPageContent({
       }
     >
       <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
-        {certificate.code}
+        {course.code}
       </p>
     </PageHero>
   );

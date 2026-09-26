@@ -78,11 +78,11 @@ function CalendarPage() {
         lead={page.lead}
         actions={
           <>
-            <ButtonLink href="/contact" variant="primary">
-              Suggest an Event
-            </ButtonLink>
-            <ButtonLink href="/events" variant="secondary">
+            <ButtonLink href="/events" variant="primary">
               All Events
+            </ButtonLink>
+            <ButtonLink href="/contact" variant="secondary">
+              Contact Us
             </ButtonLink>
           </>
         }

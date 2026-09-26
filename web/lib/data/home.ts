@@ -5,10 +5,7 @@ export const siteFullName =
 export const siteTagline = "Transforming Buildings. Empowering Communities.";
 
 export const heroIntro =
-  "CAISBE prepares the next generation of facility and property management professionals to lead sustainable transformation across buildings and infrastructure in Africa — leveraging Canadian expertise, global standards, and green innovation.";
-
-export const heroCta =
-  "Join CAISBE for world-class education, industry standards, and professional membership.";
+  "CAISBE prepares the next generation of facility and property management professionals to lead sustainable transformation across buildings and infrastructure in Africa — leveraging Canadian expertise, global standards, and green innovation. Join for world-class education, industry standards, and professional membership.";
 
 export const stats = [
   { value: "12+", label: "Certified courses" },
@@ -33,51 +30,6 @@ export const certificatesIntro = {
   subtitle: "Quality Educational Certification programs",
   cta: "View All",
 };
-
-export const certificates = [
-  {
-    code: "FMC",
-    title: "Facilities Management Certificate (FMC)",
-    description:
-      "This certificate provides foundational knowledge and practical skills for managing modern facilities. Participants learn how to oversee building operations, maintenance planning, space management, vendor coordination, and sustainability practices to ensure efficient, safe, and cost-effective facility performance.",
-  },
-  {
-    code: "PMC",
-    title: "Property Management Certificate (PMC)",
-    description:
-      "This program equips learners with essential skills in property operations, leasing, tenant relations, rent management, maintenance coordination, and legal compliance. Ideal for those managing residential, commercial, or mixed-use properties in rapidly growing real estate markets.",
-  },
-  {
-    code: "CHMC",
-    title: "Condominium/Cooperative Housing Management Certificate (CHMC)",
-    description:
-      "This certificate focuses on the unique governance, financial management, maintenance, and community leadership skills needed to manage condominium and cooperative housing developments. It covers owner/tenant coordination, board relations, budgeting, and conflict resolution.",
-  },
-  {
-    code: "HSC",
-    title: "Health & Safety Certificate for FM Professionals (HSC)",
-    description:
-      "Designed for facility and property management professionals, this certificate covers workplace safety standards, risk assessment, emergency preparedness, hazard control, and compliance with health and safety regulations. Graduates gain the skills to create safe and compliant building environments.",
-  },
-  {
-    code: "CEEBM",
-    title: "Certificate in Energy Efficiency & Building Energy Management (CEEBM)",
-    description:
-      "Participants learn practical strategies for reducing building energy consumption through audits, energy monitoring, HVAC optimization, lighting upgrades, and sustainable design principles. The program emphasizes cost-effective approaches suitable for developing and advanced markets.",
-  },
-  {
-    code: "RIPVC",
-    title: "Real Estate Investment & Property Valuation Certificate (RIPVC)",
-    description:
-      "This certificate introduces learners to investment analysis, valuation techniques, market assessment, and financial modeling for real estate assets. Participants gain skills in estimating property value, analyzing risk, and evaluating investment opportunities in emerging and mature property markets.",
-  },
-  {
-    code: "SRET",
-    title: "Certificate in Smart Real Estate Technologies",
-    description:
-      "A forward-looking program covering digital tools that are transforming real estate, including smart building systems, IoT sensors, building automation, AI-powered valuation tools, mobile property management platforms, and blockchain-based land registration solutions.",
-  },
-];
 
 export const sustainabilityContent = {
   title: "Committed To Keep People, Built Environment Healthy & Safe",
@@ -316,13 +268,11 @@ const rawFooterColumns = [
     title: "Programs",
     href: "/professional-development",
     links: [
-      { label: "FMC", href: "/professional-development/fmc" },
-      { label: "PMC", href: "/professional-development/pmc" },
-      { label: "CHMC", href: "/professional-development/chmc" },
-      { label: "HSC", href: "/professional-development/hsc" },
-      { label: "CEEBM", href: "/professional-development/ceebm" },
-      { label: "RIPVC", href: "/professional-development/ripvc" },
-      { label: "SRET", href: "/professional-development/sret" },
+      { label: "All certificate programs", href: "/professional-development" },
+      {
+        label: "Learning formats",
+        href: "/professional-development/learning-formats",
+      },
     ],
   },
   {

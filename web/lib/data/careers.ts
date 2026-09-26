@@ -1,22 +1,14 @@
 export const careersContent = {
   seoTitle: "FM Careers & Job Board | CAISBE",
   metaDescription:
-    "Explore facility management jobs, internships, and career development resources.",
+    "Explore facility management jobs, internships, and career development resources published by CAISBE.",
   eyebrow: "Resources",
   title: "Careers & Job Opportunities",
   intro:
-    "Advance your FM career with access to job postings, internships, and employer partnerships.",
+    "Browse facility management roles and career resources published by CAISBE for professionals across Canada, Africa, and global markets.",
   jobBoard: {
     title: "CAISBE Job Board",
-    roles: [
-      "Maintenance Technician",
-      "Facility Manager",
-      "Energy Manager",
-      "Safety Officer",
-      "HVAC Specialist",
-      "Building Operations Supervisor",
-    ],
-    ctaLabel: "View All Jobs (Canada, Africa and Global)",
+    ctaLabel: "View All Jobs",
     ctaHref: "/careers/jobs",
   },
   careerResources: {
@@ -26,12 +18,5 @@ export const careersContent = {
       "Interview Preparation Guides",
       "PM Career Ladder",
     ],
-  },
-  employers: {
-    title: "Employers",
-    description:
-      "Partner organizations can post vacancies, internships, or talent needs. CAISBE admins publish listings with post and expiry dates from the Job board console.",
-    ctaLabel: "Post a Job",
-    ctaHref: "/contact",
   },
 };

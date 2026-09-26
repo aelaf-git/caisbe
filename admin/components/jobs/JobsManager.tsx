@@ -74,7 +74,6 @@ export default function JobsManager({
   const [description, setDescription] = useState("");
   const [applyUrl, setApplyUrl] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
-  const [sourceLabel, setSourceLabel] = useState("manual");
   const [postedOn, setPostedOn] = useState(todayInput());
   const [expiresOn, setExpiresOn] = useState(defaultExpiryInput());
   const [published, setPublished] = useState(true);
@@ -92,7 +91,6 @@ export default function JobsManager({
     setDescription("");
     setApplyUrl("");
     setAttachmentUrl(null);
-    setSourceLabel("manual");
     setPostedOn(todayInput());
     setExpiresOn(defaultExpiryInput());
     setPublished(true);
@@ -111,7 +109,6 @@ export default function JobsManager({
     setDescription(job.description ?? "");
     setApplyUrl(job.apply_url ?? "");
     setAttachmentUrl(job.attachment_url);
-    setSourceLabel(job.source_label || "manual");
     setPostedOn(toInputDate(job.posted_on));
     setExpiresOn(toInputDate(job.expires_on));
     setPublished(job.published);
@@ -157,7 +154,7 @@ export default function JobsManager({
         description: description.trim() || null,
         apply_url: applyUrl.trim() || null,
         attachment_url: attachmentUrl,
-        source_label: sourceLabel.trim() || "manual",
+        source_label: "manual",
         posted_on: fromInputDate(postedOn),
         expires_on: fromInputDate(expiresOn, true),
         published,
@@ -213,9 +210,7 @@ export default function JobsManager({
             <p className="mt-1 text-sm text-caisbe-muted">
               Manually add openings for the CAISBE Job Board. Set an upload date
               and expiry date—listings disappear from the public board after
-              expiry. You can paste an Indeed, LinkedIn, or Glassdoor apply link
-              when available (partner auto-import requires those platforms’
-              official APIs).
+              expiry.
             </p>
           </div>
 
@@ -273,23 +268,10 @@ export default function JobsManager({
             <FormField label="Apply URL (optional)">
               <input
                 className={fieldClassName}
-                placeholder="https://indeed.com/... or LinkedIn / Glassdoor link"
+                placeholder="https://example.com/careers/job"
                 value={applyUrl}
                 onChange={(e) => setApplyUrl(e.target.value)}
               />
-            </FormField>
-            <FormField label="Source label">
-              <select
-                className={fieldClassName}
-                value={sourceLabel}
-                onChange={(e) => setSourceLabel(e.target.value)}
-              >
-                <option value="manual">Manual upload</option>
-                <option value="indeed">Indeed</option>
-                <option value="linkedin">LinkedIn</option>
-                <option value="glassdoor">Glassdoor</option>
-                <option value="employer">Employer direct</option>
-              </select>
             </FormField>
           </div>
 
@@ -420,7 +402,6 @@ export default function JobsManager({
                     {toInputDate(job.expires_on)}
                     {job.company ? ` · ${job.company}` : ""}
                     {job.location ? ` · ${job.location}` : ""}
-                    {job.source_label ? ` · ${job.source_label}` : ""}
                   </p>
                 </div>
                 <div className="flex gap-2">

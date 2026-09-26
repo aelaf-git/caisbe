@@ -87,11 +87,11 @@ export const resourcesPages: TopicPage[] = [
         ],
       },
       {
-        title: "List your organization",
-        body: "Providers serving FM markets in Africa and Canada can inquire about visibility through CAISBE channels and events.",
+        title: "Working with CAISBE",
+        body: "Providers serving FM markets in Africa and Canada can learn more about institute programs, events, and partnership channels.",
       },
     ],
-    { label: "Inquire About Listing", href: "/contact" },
+    { label: "Contact Us", href: "/contact" },
   ),
   topic(
     "esg-facility-management",
@@ -174,11 +174,11 @@ export const resourcesPages: TopicPage[] = [
         ],
       },
       {
-        title: "Submit an update",
-        body: "Component leaders can send activity highlights for inclusion in institute summaries.",
+        title: "Questions",
+        body: "For questions about published summaries or regional activity, contact the CAISBE team.",
       },
     ],
-    { label: "Share a Report", href: "/contact" },
+    { label: "Contact Us", href: "/contact" },
   ),
 ];
 
