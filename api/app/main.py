@@ -15,6 +15,7 @@ from app.routers import admin, auth, commerce, courses, health, public
 from app.security.limiter import limiter
 from app.security.middleware import SecurityHeadersMiddleware
 from app.seeds.admin import seed_admin
+from app.seeds.events_cpd import seed_industry_events_and_cpd
 
 
 @asynccontextmanager
@@ -26,6 +27,7 @@ async def lifespan(_: FastAPI):
     db = SessionLocal()
     try:
         seed_admin(db)
+        seed_industry_events_and_cpd(db)
     finally:
         db.close()
     yield

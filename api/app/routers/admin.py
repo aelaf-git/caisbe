@@ -21,8 +21,11 @@ from app.models import (
     AssignmentSubmission,
     ContentBlock,
     Course,
+    CpdActivity,
     Enrollment,
     FinalExam,
+    IndustryEvent,
+    JobPosting,
     Lesson,
     MediaAsset,
     MembershipCertificate,
@@ -90,6 +93,19 @@ from app.schemas.media import (
     NewsletterSendIn,
     NewsletterSendOut,
     NewsletterSubscriberOut,
+)
+from app.schemas.events import (
+    CpdActivityCreateIn,
+    CpdActivityOut,
+    CpdActivityUpdateIn,
+    IndustryEventCreateIn,
+    IndustryEventOut,
+    IndustryEventUpdateIn,
+)
+from app.schemas.jobs import (
+    JobPostingCreateIn,
+    JobPostingOut,
+    JobPostingUpdateIn,
 )
 from app.services.analytics import display_city, display_country, site_visit_stats
 from app.services.email import EmailDeliveryError, load_upload_attachment, send_email
@@ -2062,3 +2078,275 @@ def admin_list_membership_applications(
         }
         for row in rows
     ]
+
+
+# --- Industry events calendar ---
+
+
+@router.get("/events", response_model=list[IndustryEventOut])
+def admin_list_events(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[IndustryEventOut]:
+    rows = (
+        db.query(IndustryEvent)
+        .order_by(IndustryEvent.starts_on.asc(), IndustryEvent.sort_order.asc())
+        .all()
+    )
+    return [IndustryEventOut.model_validate(row) for row in rows]
+
+
+@router.post("/events", response_model=IndustryEventOut, status_code=status.HTTP_201_CREATED)
+def admin_create_event(
+    payload: IndustryEventCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> IndustryEventOut:
+    if payload.report_file_url:
+        _validate_upload_url(payload.report_file_url, field="Report file")
+    event = IndustryEvent(
+        title=payload.title.strip(),
+        summary=(payload.summary or "").strip() or None,
+        location=(payload.location or "").strip() or None,
+        region=(payload.region or "").strip() or None,
+        event_type=(payload.event_type or "conference").strip().lower() or "conference",
+        starts_on=payload.starts_on,
+        ends_on=payload.ends_on,
+        source_name=(payload.source_name or "").strip() or None,
+        source_url=(payload.source_url or "").strip() or None,
+        report_file_url=payload.report_file_url,
+        cpd_hours=payload.cpd_hours,
+        published=payload.published,
+        featured=payload.featured,
+        sort_order=payload.sort_order,
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return IndustryEventOut.model_validate(event)
+
+
+@router.patch("/events/{event_id}", response_model=IndustryEventOut)
+def admin_update_event(
+    event_id: int,
+    payload: IndustryEventUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> IndustryEventOut:
+    event = db.query(IndustryEvent).filter(IndustryEvent.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "report_file_url" in data and data["report_file_url"]:
+        _validate_upload_url(data["report_file_url"], field="Report file")
+    for key, value in data.items():
+        if isinstance(value, str):
+            value = value.strip() or None if key != "title" and key != "event_type" else value.strip()
+            if key == "title" and not value:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title is required")
+            if key == "event_type" and value:
+                value = value.lower()
+        setattr(event, key, value)
+    db.commit()
+    db.refresh(event)
+    return IndustryEventOut.model_validate(event)
+
+
+@router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_event(
+    event_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    event = db.query(IndustryEvent).filter(IndustryEvent.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    db.delete(event)
+    db.commit()
+
+
+# --- CPD activities ---
+
+
+@router.get("/cpd-activities", response_model=list[CpdActivityOut])
+def admin_list_cpd_activities(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[CpdActivityOut]:
+    rows = (
+        db.query(CpdActivity)
+        .order_by(CpdActivity.sort_order.asc(), CpdActivity.activity.asc())
+        .all()
+    )
+    return [CpdActivityOut.model_validate(row) for row in rows]
+
+
+@router.post("/cpd-activities", response_model=CpdActivityOut, status_code=status.HTTP_201_CREATED)
+def admin_create_cpd_activity(
+    payload: CpdActivityCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> CpdActivityOut:
+    row = CpdActivity(
+        activity=payload.activity.strip(),
+        category=(payload.category or "course").strip().lower() or "course",
+        hours_reported=payload.hours_reported,
+        hours_approved=payload.hours_approved,
+        published=payload.published,
+        sort_order=payload.sort_order,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return CpdActivityOut.model_validate(row)
+
+
+@router.patch("/cpd-activities/{activity_id}", response_model=CpdActivityOut)
+def admin_update_cpd_activity(
+    activity_id: int,
+    payload: CpdActivityUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> CpdActivityOut:
+    row = db.query(CpdActivity).filter(CpdActivity.id == activity_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CPD activity not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        if isinstance(value, str):
+            value = value.strip()
+            if key == "category":
+                value = value.lower()
+            if key == "activity" and not value:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Activity is required")
+        setattr(row, key, value)
+    db.commit()
+    db.refresh(row)
+    return CpdActivityOut.model_validate(row)
+
+
+@router.delete("/cpd-activities/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_cpd_activity(
+    activity_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(CpdActivity).filter(CpdActivity.id == activity_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CPD activity not found")
+    db.delete(row)
+    db.commit()
+
+
+def _job_out(row: JobPosting, *, now: datetime | None = None) -> JobPostingOut:
+    current = now or datetime.now(timezone.utc)
+    expires = row.expires_on
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    payload = JobPostingOut.model_validate(row)
+    payload.is_expired = expires < current
+    return payload
+
+
+@router.get("/jobs", response_model=list[JobPostingOut])
+def admin_list_jobs(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[JobPostingOut]:
+    now = datetime.now(timezone.utc)
+    rows = (
+        db.query(JobPosting)
+        .order_by(JobPosting.posted_on.desc(), JobPosting.sort_order.asc())
+        .all()
+    )
+    return [_job_out(row, now=now) for row in rows]
+
+
+@router.post("/jobs", response_model=JobPostingOut, status_code=status.HTTP_201_CREATED)
+def admin_create_job(
+    payload: JobPostingCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> JobPostingOut:
+    if payload.expires_on < payload.posted_on:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Expiry date must be on or after the upload/post date.",
+        )
+    if payload.attachment_url:
+        _validate_upload_url(payload.attachment_url, field="Attachment")
+    row = JobPosting(
+        title=payload.title.strip(),
+        company=(payload.company or "").strip() or None,
+        location=(payload.location or "").strip() or None,
+        employment_type=(payload.employment_type or "full-time").strip().lower() or "full-time",
+        summary=(payload.summary or "").strip() or None,
+        description=(payload.description or "").strip() or None,
+        apply_url=(payload.apply_url or "").strip() or None,
+        attachment_url=payload.attachment_url,
+        source_label=(payload.source_label or "").strip() or None,
+        posted_on=payload.posted_on,
+        expires_on=payload.expires_on,
+        published=payload.published,
+        featured=payload.featured,
+        sort_order=payload.sort_order,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _job_out(row)
+
+
+@router.patch("/jobs/{job_id}", response_model=JobPostingOut)
+def admin_update_job(
+    job_id: int,
+    payload: JobPostingUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> JobPostingOut:
+    row = db.query(JobPosting).filter(JobPosting.id == job_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "attachment_url" in data and data["attachment_url"]:
+        _validate_upload_url(data["attachment_url"], field="Attachment")
+    for key, value in data.items():
+        if isinstance(value, str) and key in {
+            "title",
+            "company",
+            "location",
+            "employment_type",
+            "summary",
+            "description",
+            "apply_url",
+            "source_label",
+        }:
+            value = value.strip()
+            if key == "title" and not value:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title is required")
+            if key == "employment_type" and value:
+                value = value.lower()
+            if key != "title" and not value:
+                value = None
+        setattr(row, key, value)
+    if row.expires_on < row.posted_on:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Expiry date must be on or after the upload/post date.",
+        )
+    db.commit()
+    db.refresh(row)
+    return _job_out(row)
+
+
+@router.delete("/jobs/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_job(
+    job_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(JobPosting).filter(JobPosting.id == job_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    db.delete(row)
+    db.commit()

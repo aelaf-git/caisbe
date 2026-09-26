@@ -30,7 +30,7 @@ export const careersContent = {
   employers: {
     title: "Employers",
     description:
-      "Partner organizations can post vacancies, internships, or talent needs.",
+      "Partner organizations can post vacancies, internships, or talent needs. CAISBE admins publish listings with post and expiry dates from the Job board console.",
     ctaLabel: "Post a Job",
     ctaHref: "/contact",
   },

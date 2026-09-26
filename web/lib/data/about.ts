@@ -1,3 +1,16 @@
+export type LeadershipPerson = {
+  role: string;
+  name: string;
+  credentials: string;
+  email: string;
+};
+
+export type AdvisoryMember = {
+  name: string;
+  shortName: string;
+  description: string;
+};
+
 export const aboutContent = {
   seoTitle:
     "About CAISBE | Canada Africa Institute for the Sustainable Built Environment (CAISBE)",
@@ -31,20 +44,72 @@ export const aboutContent = {
   },
   leadership: {
     title: "Our Leadership",
-    roles: [
+    intro:
+      "CAISBE is led by practitioners and specialists advancing facility management, membership, regional coordination, advocacy, and technology.",
+    people: [
       {
-        title: "Executive Director",
-        bio: "To be completed",
+        role: "Executive Director",
+        name: "Mr. Dawit Zegeyea",
+        credentials: "MCOM, CFM, FMP, SFP, SMT",
+        email: "dawit.zegeyea@caisbe.org",
       },
       {
-        title: "Board Chair",
-        bio: "To be completed",
+        role: "Membership Development and Support",
+        name: "Mr. Ramazani Mangaals",
+        credentials: "BA, FMP",
+        email: "ramazani.mangaals@caisbe.org",
       },
       {
-        title: "Advisory Council",
-        bio: "To be completed",
+        role: "East Africa Secretariat Office",
+        name: "Mr. Okey Simisola",
+        credentials: "BSc, MA",
+        email: "okey.simisola@caisbe.org",
       },
-    ],
+      {
+        role: "Advocacy and International Relations",
+        name: "Mr. Yared Alemu",
+        credentials: "Dip, International Cooperation",
+        email: "yared.alemu@caisbe.org",
+      },
+      {
+        role: "IT Operations and Service Desk",
+        name: "Mr. Aelaf Eskinder",
+        credentials: "BSc, Software Engineering",
+        email: "aelaf.eskinder@caisbe.org",
+      },
+    ] satisfies LeadershipPerson[],
+  },
+  advisoryCouncil: {
+    title: "Advisory Council — Honorary Members",
+    intro:
+      "Honorary institutional partners advising CAISBE on continental collaboration, infrastructure, and sustainable growth.",
+    members: [
+      {
+        name: "African Union Commission",
+        shortName: "AUC",
+        description: "Continental policy and partnership liaison.",
+      },
+      {
+        name: "COMESA",
+        shortName: "COMESA",
+        description: "Regional economic community collaboration.",
+      },
+      {
+        name: "African Infrastructure Bank",
+        shortName: "AIB",
+        description: "Infrastructure and development dialogue.",
+      },
+      {
+        name: "Green Growth Africa",
+        shortName: "GGA",
+        description: "Sustainability and green growth advisory.",
+      },
+      {
+        name: "African Facility Management Union (AFMU)",
+        shortName: "AFMU",
+        description: "Professional FM network across Africa.",
+      },
+    ] satisfies AdvisoryMember[],
   },
   builtEnvironment: {
     slug: "what-is-built-environment",

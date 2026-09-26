@@ -32,6 +32,7 @@ export default function MagazinePageContent() {
       <PageHero
         eyebrow="Members Corner"
         title={item.title}
+        lead={item.lead}
         actions={
           <>
             <ButtonLink href="/resources/members-corner" variant="secondary">
@@ -43,12 +44,16 @@ export default function MagazinePageContent() {
           </>
         }
       >
-        <p className="mt-6 text-base leading-7 text-caisbe-muted">{item.description}</p>
+        <p className="mt-6 text-base leading-7 text-caisbe-muted">
+          {item.description}
+        </p>
       </PageHero>
 
-      <section className="border-b border-ifma-border-light bg-white py-16">
+      <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4">
-          <h2 className="font-display text-2xl font-semibold text-caisbe-text-dark">Latest issues</h2>
+          <h2 className="font-display text-2xl font-semibold text-caisbe-text-dark">
+            Latest issues
+          </h2>
           {loading ? (
             <p className="mt-6 text-sm text-caisbe-muted">Loading…</p>
           ) : issues.length === 0 ? (

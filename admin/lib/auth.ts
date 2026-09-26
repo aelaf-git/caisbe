@@ -98,6 +98,59 @@ export type MediaAsset = {
   created_at: string;
 };
 
+export type IndustryEvent = {
+  id: number;
+  title: string;
+  summary: string | null;
+  location: string | null;
+  region: string | null;
+  event_type: string;
+  starts_on: string;
+  ends_on: string | null;
+  source_name: string | null;
+  source_url: string | null;
+  report_file_url: string | null;
+  cpd_hours: number | null;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CpdActivity = {
+  id: number;
+  activity: string;
+  category: string;
+  hours_reported: number;
+  hours_approved: number;
+  published: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type JobPosting = {
+  id: number;
+  title: string;
+  company: string | null;
+  location: string | null;
+  employment_type: string;
+  summary: string | null;
+  description: string | null;
+  apply_url: string | null;
+  attachment_url: string | null;
+  source_label: string | null;
+  posted_on: string;
+  expires_on: string;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  is_expired: boolean;
+};
+
 export type NewsletterSubscriber = {
   id: number;
   email: string;

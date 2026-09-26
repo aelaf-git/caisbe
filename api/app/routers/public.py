@@ -8,10 +8,20 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.security.limiter import limiter
-from app.models import MediaAsset, MembershipApplication, NewsletterSubscriber, User
+from app.models import (
+    CpdActivity,
+    IndustryEvent,
+    JobPosting,
+    MediaAsset,
+    MembershipApplication,
+    NewsletterSubscriber,
+    User,
+)
 from app.schemas.analytics import SiteVisitIn
 from app.schemas.media import MediaAssetOut, NewsletterSubscribeIn
 from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
+from app.schemas.events import CpdActivityOut, IndustryEventOut
+from app.schemas.jobs import JobPostingOut
 from app.services.analytics import record_site_visit
 from app.services.commerce import apply_profile_fields, normalize_membership_type
 
@@ -35,6 +45,58 @@ def list_published_media(
     )
     return [MediaAssetOut.model_validate(row) for row in rows]
 
+
+@router.get("/events", response_model=list[IndustryEventOut])
+def list_published_events(
+    featured: bool | None = Query(default=None),
+    event_type: str | None = Query(default=None, max_length=64),
+    db: Session = Depends(get_db),
+) -> list[IndustryEventOut]:
+    query = db.query(IndustryEvent).filter(IndustryEvent.published.is_(True))
+    if featured is not None:
+        query = query.filter(IndustryEvent.featured.is_(featured))
+    if event_type:
+        query = query.filter(IndustryEvent.event_type == event_type.strip().lower())
+    rows = (
+        query.order_by(IndustryEvent.starts_on.asc(), IndustryEvent.sort_order.asc())
+        .all()
+    )
+    return [IndustryEventOut.model_validate(row) for row in rows]
+
+
+@router.get("/cpd-activities", response_model=list[CpdActivityOut])
+def list_published_cpd_activities(
+    db: Session = Depends(get_db),
+) -> list[CpdActivityOut]:
+    rows = (
+        db.query(CpdActivity)
+        .filter(CpdActivity.published.is_(True))
+        .order_by(CpdActivity.sort_order.asc(), CpdActivity.activity.asc())
+        .all()
+    )
+    return [CpdActivityOut.model_validate(row) for row in rows]
+
+
+@router.get("/jobs", response_model=list[JobPostingOut])
+def list_active_jobs(
+    featured: bool | None = Query(default=None),
+    db: Session = Depends(get_db),
+) -> list[JobPostingOut]:
+    """Published jobs that have not reached their expiry date."""
+    now = datetime.now(timezone.utc)
+    query = db.query(JobPosting).filter(
+        JobPosting.published.is_(True),
+        JobPosting.expires_on >= now,
+    )
+    if featured is not None:
+        query = query.filter(JobPosting.featured.is_(featured))
+    rows = query.order_by(JobPosting.posted_on.desc(), JobPosting.sort_order.asc()).all()
+    out: list[JobPostingOut] = []
+    for row in rows:
+        item = JobPostingOut.model_validate(row)
+        item.is_expired = False
+        out.append(item)
+    return out
 
 @router.post("/newsletter/subscribe", status_code=status.HTTP_201_CREATED)
 @limiter.limit("20/minute")

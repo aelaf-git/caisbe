@@ -65,6 +65,28 @@ export const professionalDevelopmentContent = {
         "A forward-looking program covering digital tools that are transforming real estate, including smart building systems, IoT sensors, building automation, AI-powered valuation tools, mobile property management platforms, and blockchain-based land registration solutions.",
     },
   ] satisfies CertificateProgram[],
+  seminars: [
+    {
+      title: "Sustainable Facility Operations Seminar",
+      description:
+        "A practice-focused seminar on energy, maintenance planning, and day-to-day sustainable operations for FM teams.",
+    },
+    {
+      title: "Workplace Experience & Soft Services Seminar",
+      description:
+        "Explore service quality, occupant experience, and soft-services coordination across commercial and institutional sites.",
+    },
+    {
+      title: "Africa–Canada Built Environment Leadership Seminar",
+      description:
+        "Cross-border dialogue on partnership models, capacity building, and professional standards in the built environment.",
+    },
+    {
+      title: "Health, Safety & Risk for Facility Leaders",
+      description:
+        "Seminar covering risk assessment, emergency readiness, and compliance essentials for facility and property managers.",
+    },
+  ],
   formats: {
     slug: "learning-formats",
     title: "Learning Formats",

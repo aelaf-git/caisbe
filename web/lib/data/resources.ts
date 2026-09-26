@@ -48,24 +48,56 @@ export const membersCornerContent = {
       title: "CAISBE Magazine",
       description:
         "Read features, insights, and updates from across the CAISBE professional community.",
+      lead: "Features and updates from practitioners shaping facility management across Africa and Canada.",
+      highlights: [
+        "Member stories and chapter highlights",
+        "Practice insights on operations and sustainability",
+        "Event recaps and upcoming program previews",
+      ],
+      ctaLabel: "Browse Magazine",
+      ctaHref: "/resources/magazine",
     },
     {
       slug: "youtube",
       title: "YouTube",
       description:
         "Watch CAISBE videos, event highlights, and educational content.",
+      lead: "Video sessions, event highlights, and short learning clips from CAISBE programs.",
+      highlights: [
+        "Forum and expo session highlights",
+        "Learning snippets for FM practitioners",
+        "Institute updates and partner features",
+      ],
+      ctaLabel: "Contact for Channel Access",
+      ctaHref: "/contact",
     },
     {
       slug: "podcast",
       title: "Podcast",
       description:
         "Listen to conversations with leaders shaping facility management across Africa and Canada.",
+      lead: "Conversations with leaders on operations, sustainability, and Africa–Canada collaboration.",
+      highlights: [
+        "Practitioner interviews and leadership lessons",
+        "Regional perspectives from Africa and Canada",
+        "Trends in workplace, assets, and green buildings",
+      ],
+      ctaLabel: "Ask About Episodes",
+      ctaHref: "/contact",
     },
     {
       slug: "blog",
       title: "Blog",
       description:
         "Stay informed with articles and commentary on facility management and the built environment.",
+      lead: "Articles and commentary on facility management practice and the sustainable built environment.",
+      highlights: [
+        "Practical tips for ops and workplace teams",
+        "Policy and advocacy context for FM leaders",
+        "Announcements tied to programs and learning",
+      ],
+      ctaLabel: "Suggest a Topic",
+      ctaHref: "/contact",
     },
   ],
 };

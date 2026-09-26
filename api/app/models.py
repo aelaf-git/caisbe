@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     JSON,
@@ -614,3 +615,72 @@ class MembershipApplication(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped[User | None] = relationship()
+
+
+class IndustryEvent(Base):
+    """Facility management / built-environment events shown on the public calendar."""
+
+    __tablename__ = "industry_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    region: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    event_type: Mapped[str] = mapped_column(String(64), default="conference", index=True)
+    starts_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    ends_on: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    source_name: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    report_file_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    cpd_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    published: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    featured: Mapped[bool] = mapped_column(Boolean, default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class JobPosting(Base):
+    """CAISBE job board listings with manual publish and expiry dates."""
+
+    __tablename__ = "job_postings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    company: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    employment_type: Mapped[str] = mapped_column(String(64), default="full-time")
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    apply_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    attachment_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    source_label: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    posted_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    expires_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    featured: Mapped[bool] = mapped_column(Boolean, default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+class CpdActivity(Base):
+    """CPD activities listed on Professional Development (courses, seminars, events)."""
+
+    __tablename__ = "cpd_activities"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    activity: Mapped[str] = mapped_column(String(255))
+    category: Mapped[str] = mapped_column(String(64), default="course", index=True)
+    hours_reported: Mapped[float] = mapped_column(Float, default=0.0)
+    hours_approved: Mapped[float] = mapped_column(Float, default=0.0)
+    published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

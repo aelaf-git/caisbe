@@ -46,6 +46,10 @@ export const utilityLinks: SimpleLink[] = [
   { label: "Contact", href: "/contact" },
 ];
 
+const PORTAL_LOGIN =
+  (process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3002").replace(/\/$/, "") +
+  "/login";
+
 const rawNavigation: readonly RawNavSection[] = [
   {
     label: "Membership",
@@ -60,13 +64,20 @@ const rawNavigation: readonly RawNavSection[] = [
             href: "/membership/overview",
           },
           { label: "Join / Register", href: "/membership/join" },
-          { label: "Manage Account (login)", href: "/login" },
+          {
+            label: "Manage Account (login)",
+            href: PORTAL_LOGIN,
+          },
           {
             label: "Types of Membership",
             href: "/membership/types",
           },
           {
             label: "Become a Member",
+            href: "/membership/become-a-member",
+          },
+          {
+            label: "Renew Membership",
             href: "/membership/become-a-member",
           },
         ],
@@ -192,13 +203,8 @@ const rawNavigation: readonly RawNavSection[] = [
             label: "Advocacy and Government",
             href: "/resources/advocacy-government-affairs",
           },
-          { label: "What is FM?", href: "/resources/what-is-fm" },
+          { label: "FM Resources", href: "/resources/fm-resources" },
           { label: "Knowledge Library", href: "/resources/knowledge-library" },
-          {
-            label: "Research & Benchmarking",
-            href: "/resources/research-benchmarking",
-          },
-          { label: "Speaker Directory", href: "/resources/speaker-directory" },
           { label: "Buyer's Guide", href: "/resources/buyers-guide" },
         ],
       },
@@ -228,11 +234,8 @@ const rawNavigation: readonly RawNavSection[] = [
             href: "/about/what-is-built-environment",
           },
           { label: "Our Leadership", href: "/about#leadership" },
-          { label: "Board of Directors", href: "/about/board-of-directors" },
           { label: "Staff", href: "/about/staff" },
-          { label: "Governance", href: "/about/governance" },
           { label: "Volunteering", href: "/about/volunteering" },
-          { label: "Brand Assets", href: "/about/brand-assets" },
         ],
       },
     ],

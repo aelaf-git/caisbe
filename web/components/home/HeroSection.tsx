@@ -42,28 +42,28 @@ export default function HeroSection() {
       ))}
       <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/55 to-caisbe-red/25" />
 
-      <div className="relative z-10 mx-auto flex min-h-[32rem] max-w-7xl flex-col justify-center px-4 py-16 md:min-h-[40rem] md:py-24 lg:min-h-[44rem]">
-        <div className="max-w-4xl border-l-4 border-caisbe-red pl-6 md:pl-8">
+      <div className="relative z-10 mx-auto flex min-h-[32rem] max-w-7xl items-center px-4 py-16 md:min-h-[40rem] md:py-20 lg:min-h-[44rem]">
+        <div className="w-full max-w-3xl border-l-4 border-caisbe-red pl-5 md:pl-6">
           <h1 className="text-[clamp(1.75rem,3.5vw,3.25rem)] font-semibold leading-tight text-white">
             {siteFullName}
           </h1>
-          <p className="mt-6 max-w-3xl text-[clamp(1rem,2vw,1.125rem)] leading-relaxed text-white/90">
+          <p className="mt-6 text-[clamp(1rem,2vw,1.125rem)] leading-relaxed text-white/95">
             {heroIntro}
           </p>
-          <p className="mt-4 max-w-3xl text-base leading-relaxed text-white/75">
+          <p className="mt-4 text-base leading-relaxed text-white/85">
             {heroCta}
           </p>
-        </div>
-        <div className="mt-8 flex flex-wrap gap-4 pl-6 md:pl-8">
-          <ButtonLink href="/membership/join" variant="primary">
-            Join {siteName}
-          </ButtonLink>
-          <ButtonLink href="/our-services" variant="secondary">
-            Our Services
-          </ButtonLink>
-          <ButtonLink href="/contact" variant="secondary">
-            Contact Us
-          </ButtonLink>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <ButtonLink href="/membership/become-a-member" variant="primary">
+              Join {siteName}
+            </ButtonLink>
+            <ButtonLink href="/our-services" variant="secondary">
+              Our Services
+            </ButtonLink>
+            <ButtonLink href="/contact" variant="secondary">
+              Contact Us
+            </ButtonLink>
+          </div>
         </div>
       </div>
     </section>
