@@ -1,5 +1,11 @@
 import ContactForm from "@/components/contact/ContactForm";
-import { contactContent, offices } from "@/lib/data/home";
+import { PageHero, ContentSection } from "@/components/pages/ContentPage";
+import {
+  contactContent,
+  officeDirectionsUrl,
+  officeEmbedUrl,
+  offices,
+} from "@/lib/data/home";
 
 type ContactSectionProps = {
   title?: string;
@@ -13,40 +19,51 @@ export default function ContactSection({
   showOffices = false,
 }: ContactSectionProps) {
   return (
-    <section className="border-b border-ifma-border-light bg-white py-16">
-      <div className="mx-auto max-w-3xl px-4">
-        <p className="text-caisbe-red text-center text-sm font-semibold uppercase tracking-[0.25em]">
-          {eyebrow}
-        </p>
-        <h2 className="font-display text-caisbe-text-dark mt-3 text-center text-3xl font-semibold">
-          {title}
-        </h2>
-
-        <div className="mt-10">
+    <>
+      <PageHero eyebrow={eyebrow} title={title} lead={contactContent.lead}>
+        <div className="mt-10 max-w-2xl">
           <ContactForm cta={contactContent.cta} />
         </div>
+      </PageHero>
 
-        {showOffices && (
-          <div className="mt-16 border-t border-ifma-border-light pt-12">
-            <h3 className="font-display text-caisbe-text-dark text-center text-xl font-semibold">
-              Our Offices
-            </h3>
-            <div className="mt-8 grid gap-6 sm:grid-cols-3">
-              {offices.map((office) => (
-                <div
-                  key={office.region}
-                  className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white p-5 text-center"
-                >
+      {showOffices ? (
+        <ContentSection title="Our Offices" wide>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {offices.map((office, index) => (
+              <div
+                key={office.region}
+                className="shadow-brand-card overflow-hidden rounded-lg border border-ifma-border-light bg-white motion-safe:animate-page-fade-in"
+                style={{ animationDelay: `${index * 70}ms` }}
+              >
+                <div className="aspect-[16/10] w-full bg-[#fafafa]">
+                  <iframe
+                    title={`${office.region} office map`}
+                    src={officeEmbedUrl(office.mapQuery)}
+                    className="h-full w-full border-0"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    allowFullScreen
+                  />
+                </div>
+                <div className="p-5 text-center">
                   <p className="font-semibold text-caisbe-red">{office.region}</p>
-                  <p className="mt-2 text-sm leading-6 text-caisbe-muted">
+                  <p className="mt-2 whitespace-pre-line text-sm leading-6 text-caisbe-muted">
                     {office.address}
                   </p>
+                  <a
+                    href={officeDirectionsUrl(office.mapQuery)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red transition-colors hover:text-caisbe-red-dark"
+                  >
+                    Direction
+                  </a>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
-    </section>
+        </ContentSection>
+      ) : null}
+    </>
   );
 }

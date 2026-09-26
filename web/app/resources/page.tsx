@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import ButtonLink from "@/components/ui/ButtonLink";
-import { SubsectionIndex } from "@/components/pages/ContentPage";
+import {
+  ContentCard,
+  ContentSection,
+  SubsectionIndex,
+} from "@/components/pages/ContentPage";
 import { advocacyContent, membersCornerContent } from "@/lib/data/resources";
 import { resourcesPages } from "@/lib/data/site-pages";
 
@@ -40,37 +43,20 @@ export default function ResourcesPage() {
         items={featuredResources}
       />
 
-      <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mx-auto max-w-4xl">
-            <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold">
-              More Resources
-            </h2>
-          </div>
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
-            {resourcesPages.map((item) => (
-              <article
-                key={item.slug}
-                className="shadow-brand-card flex flex-col rounded-lg border border-ifma-border-light bg-white p-6"
-              >
-                <h3 className="text-xl font-semibold text-caisbe-text-dark">
-                  {item.title}
-                </h3>
-                <p className="mt-3 flex-1 text-sm leading-6 text-caisbe-muted">
-                  {item.description}
-                </p>
-                <ButtonLink
-                  href={`/resources/${item.slug}`}
-                  variant="text"
-                  className="mt-6"
-                >
-                  Learn More
-                </ButtonLink>
-              </article>
-            ))}
-          </div>
+      <ContentSection title="More Resources" wide>
+        <div className="grid gap-6 md:grid-cols-2">
+          {resourcesPages.map((item, index) => (
+            <ContentCard
+              key={item.slug}
+              title={item.title}
+              meta={item.slug === "fm-resources" ? "Coming soon" : undefined}
+              description={item.description}
+              href={`/resources/${item.slug}`}
+              style={{ animationDelay: `${index * 50}ms` }}
+            />
+          ))}
         </div>
-      </section>
+      </ContentSection>
     </>
   );
 }

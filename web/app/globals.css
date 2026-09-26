@@ -2,29 +2,41 @@
 
 @theme inline {
   --color-background: #ffffff;
-  --color-foreground: #1f2937;
+  --color-foreground: #111827;
   --color-caisbe-red: #c42032;
   --color-caisbe-red-dark: #9e1a28;
   --color-caisbe-green: #c42032;
   --color-caisbe-green-mid: #9e1a28;
   --color-caisbe-text: #1f2937;
-  --color-caisbe-text-dark: #111827;
-  --color-caisbe-muted: #5f6b7a;
-  --color-caisbe-border: #e5e7eb;
-  --color-caisbe-border-light: #f0f0f0;
-  --color-ifma-navy: #111827;
+  --color-caisbe-text-dark: #0f172a;
+  --color-caisbe-muted: #3f4b5a;
+  --color-caisbe-border: #d1d5db;
+  --color-caisbe-border-light: #e5e7eb;
+  --color-ifma-navy: #0f172a;
   --color-ifma-blue: #c42032;
   --color-ifma-blue-bright: #c42032;
   --color-ifma-red: #c42032;
   --color-ifma-text: #1f2937;
-  --color-ifma-text-dark: #111827;
-  --color-ifma-muted: #5f6b7a;
-  --color-ifma-border: #e5e7eb;
-  --color-ifma-border-light: #f0f0f0;
+  --color-ifma-text-dark: #0f172a;
+  --color-ifma-muted: #3f4b5a;
+  --color-ifma-border: #d1d5db;
+  --color-ifma-border-light: #e5e7eb;
   --color-ifma-surface: #ffffff;
   --color-ifma-highlight: #ffffff;
   --font-sans: var(--font-roboto);
   --font-display: var(--font-open-sans);
   --shadow-brand-card: 0 8px 24px rgba(17, 24, 39, 0.06);
   --shadow-brand-nav: 0 1px 0 rgba(17, 24, 39, 0.06);
+  --animate-page-fade-in: page-fade-in 0.55s ease-out both;
+
+  @keyframes page-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.6rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }

@@ -64,9 +64,9 @@ export const membershipPages = {
     description:
       "Join CAISBE or renew your membership to access training, networking, and professional resources.",
     joinLabel: "Join Now",
-    joinHref: "/register",
+    joinHref: "/membership/become-a-member",
     renewLabel: "Renew Membership",
-    renewHref: "/login",
+    renewHref: "/membership/become-a-member",
   },
 } as const;
 

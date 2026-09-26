@@ -11,6 +11,7 @@ import type { QuizQuestion } from "@/lib/lms";
 export type ExamDraft = {
   title: string;
   pass_percent: number;
+  time_limit_minutes: number | null;
   questions: QuizQuestion[];
 };
 
@@ -59,6 +60,7 @@ export default function FinalExamEditor({
           body: JSON.stringify({
             title: next.title,
             pass_percent: next.pass_percent,
+            time_limit_minutes: next.time_limit_minutes,
             questions: serializeQuestions(next.questions),
           }),
         });
@@ -99,9 +101,36 @@ export default function FinalExamEditor({
         value={exam.pass_percent}
         onChange={(pass_percent) => onChange({ ...exam, pass_percent })}
         onCommit={() => void autosave.flush()}
-        description="Minimum score required to pass the final exam."
+        description="Minimum score required to pass the final exam. A lower score can be retaken."
         ariaLabel="Exam pass percent"
       />
+      <FormField
+        label="Time limit (minutes)"
+        hint="Optional. Leave blank if this exam is not timed. The timer starts when the student begins."
+      >
+        <input
+          type="number"
+          min={1}
+          max={480}
+          placeholder="No time limit"
+          value={exam.time_limit_minutes ?? ""}
+          onChange={(event) => {
+            const raw = event.target.value.trim();
+            if (!raw) {
+              onChange({ ...exam, time_limit_minutes: null });
+              return;
+            }
+            const next = Number(raw);
+            if (!Number.isFinite(next)) return;
+            onChange({
+              ...exam,
+              time_limit_minutes: Math.min(480, Math.max(1, Math.trunc(next))),
+            });
+          }}
+          onBlur={() => void autosave.flush()}
+          className={fieldClassName}
+        />
+      </FormField>
       <QuizQuestionEditor
         questions={exam.questions}
         onChange={(questions) => onChange({ ...exam, questions })}

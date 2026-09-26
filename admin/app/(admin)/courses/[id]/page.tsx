@@ -41,6 +41,7 @@ type CourseMeta = {
   slug: string;
   cover_url: string | null;
   pass_percent: number;
+  price_cents: number;
 };
 
 function metaReady(meta: CourseMeta): boolean {
@@ -77,12 +78,14 @@ function AdminCourseEditorInner() {
     slug: "",
     cover_url: null,
     pass_percent: 70,
+    price_cents: 9900,
   });
   const [coverSaving, setCoverSaving] = useState(false);
 
   const [exam, setExam] = useState<ExamDraft>({
     title: "Final Exam",
     pass_percent: 70,
+    time_limit_minutes: null,
     questions: [emptyQuestion()],
   });
 
@@ -104,10 +107,12 @@ function AdminCourseEditorInner() {
       slug: data.slug,
       cover_url: data.cover_url ?? null,
       pass_percent: data.pass_percent,
+      price_cents: data.price_cents ?? 9900,
     });
     setExam({
       title: data.final_exam?.title ?? "Final Exam",
       pass_percent: data.final_exam?.pass_percent ?? data.pass_percent,
+      time_limit_minutes: data.final_exam?.time_limit_minutes ?? null,
       questions: data.final_exam?.questions?.length
         ? data.final_exam.questions.map((q) => ({
             prompt: q.prompt,
@@ -400,6 +405,22 @@ function AdminCourseEditorInner() {
           onCommit={() => void metaAutosave.flush()}
           description="Minimum score required to complete the course and earn a certificate."
         />
+        <FormField label="Course price (USD)" hint="Students pay this at checkout. Use promotions for discounts or complimentary enrollment.">
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            className={fieldClassName}
+            value={(meta.price_cents / 100).toFixed(2)}
+            onChange={(e) =>
+              setMeta((current) => ({
+                ...current,
+                price_cents: Math.max(0, Math.round(Number(e.target.value || 0) * 100)),
+              }))
+            }
+            onBlur={() => void metaAutosave.flush()}
+          />
+        </FormField>
       </Card>
       ) : null}
 
@@ -449,8 +470,9 @@ function AdminCourseEditorInner() {
       <Card id="exam" className="scroll-mt-48 space-y-5">
         <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Final exam</h2>
         <p className="text-sm text-caisbe-muted">
-          Build the final exam here. Changes autosave when every question has a prompt,
-          filled choices, and exactly one correct answer marked.
+          Build the final exam here. Set the pass mark and, if you want, a time limit.
+          Students who score below the pass mark can retake it. Correct answers stay hidden.
+          Changes autosave when every question has a prompt, filled choices, and exactly one correct answer marked.
         </p>
         <FinalExamEditor
           courseId={courseId}

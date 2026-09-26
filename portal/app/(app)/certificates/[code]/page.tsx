@@ -9,10 +9,10 @@ import { apiFetch, ApiError } from "@/lib/auth";
 import type { Certificate } from "@/lib/lms";
 
 function verifyUrlFor(cert: Certificate): string {
-  if (cert.verify_url) return cert.verify_url;
   if (typeof window !== "undefined") {
     return `${window.location.origin}/certificates/verify/${cert.certificate_code}`;
   }
+  if (cert.verify_url && /^https?:\/\//i.test(cert.verify_url)) return cert.verify_url;
   return `/certificates/verify/${cert.certificate_code}`;
 }
 

@@ -13,14 +13,19 @@ import {
 } from "@/components/portal/coursePlayerTypes";
 import BackButton from "@/components/ui/BackButton";
 import { apiFetch, ApiError } from "@/lib/auth";
-import type { ContentBlock, CourseDetail, Lesson } from "@/lib/lms";
+import type { ContentBlock, CourseDetail, Lesson, QuizAttempt } from "@/lib/lms";
 import { outlineNumber } from "@/lib/outlineNumber";
+import { selectionUnlocked } from "@/lib/courseAccess";
+import { isAdminUpload, isLegacyChapterReading, readingsForChapter } from "@/lib/readings";
 
 function buildPlaylist(course: CourseDetail): PlaylistItem[] {
   const items: PlaylistItem[] = [];
   for (const chapter of course.chapters) {
     for (const topic of chapter.lessons) {
       items.push({ kind: "topic", topicId: topic.id, chapterId: chapter.id });
+    }
+    if (readingsForChapter(chapter).length > 0) {
+      items.push({ kind: "chapter-readings", chapterId: chapter.id });
     }
     for (const block of chapter.blocks ?? []) {
       if (block.block_type === "quiz" || block.block_type === "assignment") {
@@ -42,6 +47,7 @@ export default function CoursePlayerPage() {
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<NavSelection | null>(null);
   const [busy, setBusy] = useState(false);
+  const [quizPassed, setQuizPassed] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -63,9 +69,13 @@ export default function CoursePlayerPage() {
         return null;
       });
     } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        router.replace(`/courses/${courseId}/checkout`);
+        return;
+      }
       setError(err instanceof ApiError ? err.detail : "Unable to load course.");
     }
-  }, [courseId]);
+  }, [courseId, router]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -76,6 +86,10 @@ export default function CoursePlayerPage() {
   useEffect(() => {
     if (user) void load();
   }, [user, load]);
+
+  useEffect(() => {
+    setQuizPassed(false);
+  }, [selection]);
 
   const topics = useMemo(() => {
     if (!course) return [] as Lesson[];
@@ -105,9 +119,15 @@ export default function CoursePlayerPage() {
     );
   }, [activeTopic, course]);
   const chapterMedia = useMemo(() => {
-    const mediaTypes = new Set(["video", "pdf", "document", "image", "epub", "link"]);
+    const mediaTypes = new Set(["video", "pdf", "document", "image", "epub"]);
     return (activeTopicChapter?.blocks ?? [])
-      .filter((block) => mediaTypes.has(block.block_type))
+      .filter(
+        (block) =>
+          mediaTypes.has(block.block_type) &&
+          isAdminUpload(block.url) &&
+          block.block_type !== "reading" &&
+          !isLegacyChapterReading(block),
+      )
       .slice()
       .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
   }, [activeTopicChapter]);
@@ -127,6 +147,18 @@ export default function CoursePlayerPage() {
     selection?.kind === "chapter-block"
       ? chapterBlocks.find((b) => b.id === selection.blockId) ?? null
       : null;
+
+  const assignmentAfterQuiz = useMemo((): NavSelection | null => {
+    if (!course || selection?.kind !== "chapter-block" || activeChapterBlock?.block_type !== "quiz") return null;
+    const chapter = course.chapters.find((item) =>
+      (item.blocks ?? []).some((block) => block.id === activeChapterBlock.id),
+    );
+    const assignment = (chapter?.blocks ?? [])
+      .filter((block) => block.block_type === "assignment")
+      .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id)[0];
+    if (!assignment) return null;
+    return { kind: "chapter-block", blockId: assignment.id };
+  }, [activeChapterBlock, course, selection]);
 
   async function markComplete() {
     if (!activeTopic) return;
@@ -160,13 +192,12 @@ export default function CoursePlayerPage() {
 
   return (
     <section className="space-y-5">
-      <div className="sticky top-0 z-10 bg-[#f7f7f5] pb-1">
+      <div className="sticky top-0 z-10 bg-admin-canvas pb-1">
         <CoursePlayerHeader
           code={course.code}
           title={course.title}
           progress={course.progress ?? 0}
           certificateCode={course.certificate_code}
-          coverUrl={course.cover_url}
         />
       </div>
 
@@ -185,15 +216,39 @@ export default function CoursePlayerPage() {
           busy={busy}
           onMarkComplete={() => void markComplete()}
           onReload={load}
+          onQuizResult={(result: QuizAttempt | null) => {
+            setQuizPassed(result != null);
+            if (result) void load();
+          }}
           hasPrev={playlistIndex > 0}
-          hasNext={playlistIndex >= 0 && playlistIndex < playlist.length - 1}
+          hasNext={
+            activeChapterBlock?.block_type === "quiz"
+              ? quizPassed &&
+                ((assignmentAfterQuiz != null && selectionUnlocked(course, assignmentAfterQuiz)) ||
+                  (assignmentAfterQuiz == null &&
+                    playlistIndex >= 0 &&
+                    playlistIndex < playlist.length - 1 &&
+                    selectionUnlocked(course, playlist[playlistIndex + 1])))
+              : playlistIndex >= 0 &&
+                playlistIndex < playlist.length - 1 &&
+                selectionUnlocked(course, playlist[playlistIndex + 1])
+          }
           onPrev={() => {
+            setQuizPassed(false);
             if (playlistIndex > 0) setSelection(playlist[playlistIndex - 1]);
           }}
           onNext={() => {
-            if (playlistIndex >= 0 && playlistIndex < playlist.length - 1) {
-              setSelection(playlist[playlistIndex + 1]);
+            if (activeChapterBlock?.block_type === "quiz") {
+              if (quizPassed && assignmentAfterQuiz && selectionUnlocked(course, assignmentAfterQuiz)) {
+                setSelection(assignmentAfterQuiz);
+                return;
+              }
+              const next = playlist[playlistIndex + 1];
+              if (quizPassed && next && selectionUnlocked(course, next)) setSelection(next);
+              return;
             }
+            const next = playlist[playlistIndex + 1];
+            if (next && selectionUnlocked(course, next)) setSelection(next);
           }}
         />
       </div>

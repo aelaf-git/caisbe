@@ -11,10 +11,11 @@ from app import models  # noqa: F401 — register SQLAlchemy models
 from app.config import settings, validate_production_settings
 from app.db_migrations import upgrade_to_head
 from app.db import SessionLocal
-from app.routers import admin, auth, courses, health, public
+from app.routers import admin, auth, commerce, courses, health, public
 from app.security.limiter import limiter
 from app.security.middleware import SecurityHeadersMiddleware
 from app.seeds.admin import seed_admin
+from app.seeds.events_cpd import seed_industry_events_and_cpd
 
 
 @asynccontextmanager
@@ -26,6 +27,7 @@ async def lifespan(_: FastAPI):
     db = SessionLocal()
     try:
         seed_admin(db)
+        seed_industry_events_and_cpd(db)
     finally:
         db.close()
     yield
@@ -54,6 +56,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(courses.router, prefix="/api")
+app.include_router(commerce.router, prefix="/api")
 app.include_router(public.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 

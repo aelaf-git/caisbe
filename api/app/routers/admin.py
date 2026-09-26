@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session, joinedload
@@ -17,10 +18,14 @@ from app.models import (
     Certificate,
     CertificateTemplate,
     Chapter,
+    AssignmentSubmission,
     ContentBlock,
     Course,
+    CpdActivity,
     Enrollment,
     FinalExam,
+    IndustryEvent,
+    JobPosting,
     Lesson,
     MediaAsset,
     MembershipCertificate,
@@ -32,7 +37,12 @@ from app.models import (
     QuizChoice,
     QuizQuestion,
     User,
+    MembershipApplication,
+    Order,
+    Payment,
+    Promotion,
 )
+from app.schemas.commerce import PaymentOut, PromotionIn, PromotionOut
 from app.schemas.admin_ops import (
     AdminPasswordChange,
     AdminReportsOut,
@@ -57,6 +67,8 @@ from app.schemas.courses import (
     CertificateTemplateUpdate,
     CertificateAdminOut,
     CourseCreate,
+    AssignmentReviewIn,
+    AssignmentSubmissionOut,
     CourseDetailAdminOut,
     AdminCourseListOut,
     CourseOut,
@@ -82,6 +94,19 @@ from app.schemas.media import (
     NewsletterSendOut,
     NewsletterSubscriberOut,
 )
+from app.schemas.events import (
+    CpdActivityCreateIn,
+    CpdActivityOut,
+    CpdActivityUpdateIn,
+    IndustryEventCreateIn,
+    IndustryEventOut,
+    IndustryEventUpdateIn,
+)
+from app.schemas.jobs import (
+    JobPostingCreateIn,
+    JobPostingOut,
+    JobPostingUpdateIn,
+)
 from app.services.analytics import display_city, display_country, site_visit_stats
 from app.services.email import EmailDeliveryError, load_upload_attachment, send_email
 from app.services.settings import default_pass_percent, get_settings_map, set_settings
@@ -91,7 +116,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 TOPIC_BLOCK_TYPES = {"text", "video", "pdf", "document", "image", "epub", "subtopic", "link"}
 TOPIC_SECTION_TYPES = {"text", "subtopic"}
 TOPIC_MEDIA_TYPES = {"video", "pdf", "document", "image", "epub", "link"}
-CHAPTER_BLOCK_TYPES = {"quiz", "assignment"}
+CHAPTER_BLOCK_TYPES = {"quiz", "assignment", "reading"}
 CHAPTER_UPLOAD_TYPES = TOPIC_MEDIA_TYPES
 CHAPTER_ALLOWED_BLOCK_TYPES = CHAPTER_BLOCK_TYPES | CHAPTER_UPLOAD_TYPES
 
@@ -111,7 +136,7 @@ ALLOWED_UPLOAD_EXTENSIONS = {
     ".docx",
 }
 
-COURSE_DRAFT_META_KEYS = ("code", "title", "description", "slug", "cover_url", "pass_percent")
+COURSE_DRAFT_META_KEYS = ("code", "title", "description", "slug", "cover_url", "pass_percent", "price_cents")
 
 
 def _live_course_meta(course: Course) -> dict:
@@ -122,6 +147,7 @@ def _live_course_meta(course: Course) -> dict:
         "slug": course.slug,
         "cover_url": course.cover_url,
         "pass_percent": course.pass_percent,
+        "price_cents": course.price_cents,
     }
 
 
@@ -156,18 +182,54 @@ def _write_course_meta(course: Course, meta: dict) -> None:
 
 
 
-def _validate_assignment_url(url: str | None) -> None:
+def _reading_display_name(url: str) -> str:
+    path = unquote(url.split("?")[0].rstrip("/"))
+    name = path.split("/")[-1].strip()
+    if name:
+        stem = name.rsplit(".", 1)[0].strip() if "." in name else name
+        cleaned = (stem or name).replace("-", " ").replace("_", " ").strip()
+        if cleaned:
+            return cleaned
+    host = urlparse(url.strip()).netloc.removeprefix("www.")
+    return host or "Reading"
+
+
+def _validate_reading_url(url: str | None) -> None:
     if not url or not url.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Assignment requires an attached PDF or Word file.",
+            detail="Add a link or an uploaded document.",
         )
-    path = url.split("?")[0].lower()
-    if not path.endswith((".pdf", ".doc", ".docx")):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Assignments must be a PDF or Word (.doc, .docx) file.",
-        )
+    raw = url.strip()
+    lowered = raw.split("?")[0].lower()
+    if "/api/uploads/" in lowered and lowered.endswith((".pdf", ".doc", ".docx", ".epub")):
+        return
+    parsed = urlparse(raw)
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="A reading must be either a link or an uploaded PDF, Word, or EPUB file.",
+    )
+
+
+def _validate_assignment(url: str | None, body: str | None) -> None:
+    has_body = bool(body and body.strip())
+    has_url = bool(url and url.strip())
+    if has_url:
+        path = url.split("?")[0].lower()
+        if not path.endswith((".pdf", ".doc", ".docx")):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Assignments must be a PDF or Word (.doc, .docx) file.",
+            )
+        return
+    if has_body:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Add an uploaded document or written instructions.",
+    )
 
 
 def _validate_upload_url(url: str | None, *, field: str = "file") -> None:
@@ -675,6 +737,15 @@ def admin_list_students(
             id=student.id,
             full_name=student.full_name,
             email=student.email,
+            phone=student.phone,
+            country=student.country,
+            city=student.city,
+            address=student.address,
+            organization=student.organization,
+            job_title=student.job_title,
+            membership_date=student.membership_date,
+            membership_type=student.membership_type,
+            membership_status=student.membership_status,
             enrollments=[
                 AdminStudentEnrollmentOut(
                     course_id=enrollment.course_id,
@@ -859,6 +930,7 @@ def admin_create_course(
         status="draft",
         cover_url=payload.cover_url,
         pass_percent=pass_percent,
+        price_cents=payload.price_cents,
     )
     db.add(course)
     db.flush()
@@ -1156,7 +1228,7 @@ def admin_create_chapter_block(
     if payload.block_type not in CHAPTER_ALLOWED_BLOCK_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Chapter blocks only support quiz, assignment, or media uploads",
+            detail="Chapter blocks only support quiz, assignment, reading, or media uploads",
         )
     if payload.block_type in CHAPTER_UPLOAD_TYPES and payload.parent_id is not None:
         raise HTTPException(
@@ -1192,14 +1264,19 @@ def admin_create_chapter_block(
         quiz_id = quiz.id
 
     if payload.block_type == "assignment":
-        _validate_assignment_url(payload.url)
+        _validate_assignment(payload.url, payload.body)
+    title = strip_plain_text(payload.title)
+    if payload.block_type == "reading":
+        _validate_reading_url(payload.url)
+        if not title:
+            title = _reading_display_name(payload.url or "")
 
     block = ContentBlock(
         lesson_id=None,
         chapter_id=chapter_id,
         parent_id=None,
         block_type=payload.block_type,
-        title=strip_plain_text(payload.title),
+        title=title,
         body=sanitize_html(payload.body),
         url=payload.url,
         label=strip_plain_text(payload.label),
@@ -1234,8 +1311,15 @@ def admin_update_block(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Block not found")
 
     data = payload.model_dump(exclude_unset=True)
-    if block.block_type == "assignment" and "url" in data:
-        _validate_assignment_url(data.get("url"))
+    if block.block_type == "assignment" and ("url" in data or "body" in data):
+        _validate_assignment(data.get("url", block.url), data.get("body", block.body))
+    if block.block_type == "reading" and ("url" in data or "title" in data):
+        if "url" in data:
+            _validate_reading_url(data.get("url"))
+        url = data.get("url", block.url) or ""
+        next_title = strip_plain_text(data["title"]) if "title" in data else block.title
+        if not (next_title or "").strip() and url:
+            data["title"] = _reading_display_name(url)
 
     quiz_questions = data.pop("quiz_questions", None)
     quiz_title = data.pop("quiz_title", None)
@@ -1342,6 +1426,8 @@ def admin_upsert_final_exam(
         exam.title = strip_plain_text(payload.title) or "Final Exam"
     if payload.pass_percent is not None:
         exam.pass_percent = payload.pass_percent
+    if "time_limit_minutes" in payload.model_fields_set:
+        exam.time_limit_minutes = payload.time_limit_minutes
     if payload.questions is not None:
         _replace_questions(db, payload.questions, final_exam_id=exam.id)
 
@@ -1686,3 +1772,581 @@ def admin_send_newsletter(
         recipient_count=sent_count,
         message=message,
     )
+
+
+def _payment_out(row: Payment) -> PaymentOut:
+    order = row.order
+    items = order.items if order and order.items else []
+    if not items:
+        course_title = ""
+    elif len(items) == 1:
+        course_title = items[0].title
+    else:
+        course_title = f"{items[0].title} +{len(items) - 1} more"
+    user = row.user
+    return PaymentOut(
+        id=row.id,
+        status=row.status,
+        provider=row.provider,
+        amount_cents=row.amount_cents,
+        created_at=row.created_at,
+        order_number=order.number if order else "",
+        student_name=user.full_name if user else "",
+        student_email=user.email if user else "",
+        course_title=course_title,
+        receipt_printed_at=row.receipt_printed_at,
+        reviewed_at=row.reviewed_at,
+    )
+
+
+@router.get("/payments", response_model=list[PaymentOut])
+def admin_list_payments(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[PaymentOut]:
+    rows = (
+        db.query(Payment)
+        .options(
+            joinedload(Payment.user),
+            joinedload(Payment.order).joinedload(Order.items),
+        )
+        .order_by(Payment.created_at.desc())
+        .limit(200)
+        .all()
+    )
+    return [_payment_out(row) for row in rows]
+
+
+@router.get("/payments/{payment_id}", response_model=PaymentOut)
+def admin_get_payment(
+    payment_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> PaymentOut:
+    row = (
+        db.query(Payment)
+        .options(joinedload(Payment.user), joinedload(Payment.order).joinedload(Order.items))
+        .filter(Payment.id == payment_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+    return _payment_out(row)
+
+
+@router.post("/payments/{payment_id}/print", response_model=PaymentOut)
+def admin_mark_receipt_printed(
+    payment_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> PaymentOut:
+    row = db.query(Payment).options(joinedload(Payment.user), joinedload(Payment.order).joinedload(Order.items)).filter(Payment.id == payment_id).first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+    row.receipt_printed_at = datetime.now(timezone.utc)
+    row.reviewed_at = row.reviewed_at or datetime.now(timezone.utc)
+    row.reviewed_by_id = admin.id
+    db.commit()
+    db.refresh(row)
+    row = (
+        db.query(Payment)
+        .options(joinedload(Payment.user), joinedload(Payment.order).joinedload(Order.items))
+        .filter(Payment.id == payment_id)
+        .one()
+    )
+    return _payment_out(row)
+
+
+@router.post("/payments/{payment_id}/refund", response_model=PaymentOut)
+def admin_refund_payment(
+    payment_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> PaymentOut:
+    from app.services.commerce import refund_payment
+
+    row = (
+        db.query(Payment)
+        .options(joinedload(Payment.user), joinedload(Payment.order).joinedload(Order.items), joinedload(Payment.order).joinedload(Order.invoices))
+        .filter(Payment.id == payment_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+    if row.status == "refunded":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already refunded")
+    try:
+        refund_payment(db, row, admin)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    row = (
+        db.query(Payment)
+        .options(joinedload(Payment.user), joinedload(Payment.order).joinedload(Order.items))
+        .filter(Payment.id == payment_id)
+        .one()
+    )
+    return _payment_out(row)
+
+
+@router.get("/promotions", response_model=list[PromotionOut])
+def admin_list_promotions(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[Promotion]:
+    return db.query(Promotion).order_by(Promotion.created_at.desc()).all()
+
+
+@router.post("/promotions", response_model=PromotionOut, status_code=status.HTTP_201_CREATED)
+def admin_create_promotion(
+    payload: PromotionIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Promotion:
+    code = payload.code.strip().upper()
+    if db.query(Promotion).filter(Promotion.code == code).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code already exists")
+    promo = Promotion(
+        code=code,
+        description=payload.description.strip(),
+        percent_off=payload.percent_off,
+        amount_off_cents=payload.amount_off_cents,
+        complimentary=payload.complimentary or (payload.percent_off or 0) >= 100,
+        max_redemptions=payload.max_redemptions,
+        expires_at=payload.expires_at,
+        course_id=payload.course_id,
+        active=payload.active,
+    )
+    db.add(promo)
+    db.commit()
+    db.refresh(promo)
+    return promo
+
+
+@router.patch("/promotions/{promotion_id}", response_model=PromotionOut)
+def admin_update_promotion(
+    promotion_id: int,
+    payload: PromotionIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Promotion:
+    promo = db.query(Promotion).filter(Promotion.id == promotion_id).first()
+    if promo is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Promotion not found")
+    code = payload.code.strip().upper()
+    clash = db.query(Promotion).filter(Promotion.code == code, Promotion.id != promotion_id).first()
+    if clash:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code already exists")
+    promo.code = code
+    promo.description = payload.description.strip()
+    promo.percent_off = payload.percent_off
+    promo.amount_off_cents = payload.amount_off_cents
+    promo.complimentary = payload.complimentary or (payload.percent_off or 0) >= 100
+    promo.max_redemptions = payload.max_redemptions
+    promo.expires_at = payload.expires_at
+    promo.course_id = payload.course_id
+    promo.active = payload.active
+    db.commit()
+    db.refresh(promo)
+    return promo
+
+
+@router.get("/students/{student_id}", response_model=AdminStudentOut)
+def admin_get_student(
+    student_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminStudentOut:
+    student = (
+        db.query(User)
+        .options(joinedload(User.enrollments).joinedload(Enrollment.course))
+        .filter(User.id == student_id, User.role == "student")
+        .first()
+    )
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    return AdminStudentOut(
+        id=student.id,
+        full_name=student.full_name,
+        email=student.email,
+        phone=student.phone,
+        country=student.country,
+        city=student.city,
+        address=student.address,
+        organization=student.organization,
+        job_title=student.job_title,
+        membership_date=student.membership_date,
+        membership_type=student.membership_type,
+        membership_status=student.membership_status,
+        enrollments=[
+            AdminStudentEnrollmentOut(
+                course_id=enrollment.course_id,
+                course_code=enrollment.course.code,
+                course_title=enrollment.course.title,
+                progress=enrollment.progress,
+                status=enrollment.status,
+                enrolled_at=enrollment.enrolled_at,
+            )
+            for enrollment in student.enrollments
+        ],
+    )
+
+
+@router.get("/students/{student_id}/assignment-submissions", response_model=list[AssignmentSubmissionOut])
+def admin_list_assignment_submissions(
+    student_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[AssignmentSubmissionOut]:
+    rows = (
+        db.query(AssignmentSubmission)
+        .options(joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course))
+        .filter(AssignmentSubmission.user_id == student_id)
+        .order_by(AssignmentSubmission.created_at.desc())
+        .all()
+    )
+    items: list[AssignmentSubmissionOut] = []
+    for row in rows:
+        block = row.block
+        chapter = block.chapter if block else None
+        course = chapter.course if chapter else None
+        items.append(
+            AssignmentSubmissionOut(
+                id=row.id,
+                content_block_id=row.content_block_id,
+                assignment_title=(block.title if block and block.title else "Assignment"),
+                course_code=course.code if course else "",
+                course_title=course.title if course else "",
+                body=row.body,
+                file_url=row.file_url,
+                file_name=row.file_name,
+                status=row.status,
+            )
+        )
+    return items
+
+
+@router.post("/assignment-submissions/{submission_id}/review", response_model=AssignmentSubmissionOut)
+def admin_review_assignment(
+    submission_id: int,
+    payload: AssignmentReviewIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AssignmentSubmissionOut:
+    row = (
+        db.query(AssignmentSubmission)
+        .options(joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course))
+        .filter(AssignmentSubmission.id == submission_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    row.status = payload.status
+    db.commit()
+    block = row.block
+    chapter = block.chapter if block else None
+    course = chapter.course if chapter else None
+    return AssignmentSubmissionOut(
+        id=row.id,
+        content_block_id=row.content_block_id,
+        assignment_title=(block.title if block and block.title else "Assignment"),
+        course_code=course.code if course else "",
+        course_title=course.title if course else "",
+        body=row.body,
+        file_url=row.file_url,
+        file_name=row.file_name,
+        status=row.status,
+    )
+
+
+@router.get("/membership-applications")
+def admin_list_membership_applications(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    rows = db.query(MembershipApplication).order_by(MembershipApplication.created_at.desc()).limit(200).all()
+    return [
+        {
+            "id": row.id,
+            "full_name": row.full_name,
+            "email": row.email,
+            "phone": row.phone,
+            "membership_type": row.membership_type,
+            "membership_status": row.membership_status,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row in rows
+    ]
+
+
+# --- Industry events calendar ---
+
+
+@router.get("/events", response_model=list[IndustryEventOut])
+def admin_list_events(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[IndustryEventOut]:
+    rows = (
+        db.query(IndustryEvent)
+        .order_by(IndustryEvent.starts_on.asc(), IndustryEvent.sort_order.asc())
+        .all()
+    )
+    return [IndustryEventOut.model_validate(row) for row in rows]
+
+
+@router.post("/events", response_model=IndustryEventOut, status_code=status.HTTP_201_CREATED)
+def admin_create_event(
+    payload: IndustryEventCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> IndustryEventOut:
+    if payload.report_file_url:
+        _validate_upload_url(payload.report_file_url, field="Report file")
+    event = IndustryEvent(
+        title=payload.title.strip(),
+        summary=(payload.summary or "").strip() or None,
+        location=(payload.location or "").strip() or None,
+        region=(payload.region or "").strip() or None,
+        event_type=(payload.event_type or "conference").strip().lower() or "conference",
+        starts_on=payload.starts_on,
+        ends_on=payload.ends_on,
+        source_name=(payload.source_name or "").strip() or None,
+        source_url=(payload.source_url or "").strip() or None,
+        report_file_url=payload.report_file_url,
+        cpd_hours=payload.cpd_hours,
+        published=payload.published,
+        featured=payload.featured,
+        sort_order=payload.sort_order,
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return IndustryEventOut.model_validate(event)
+
+
+@router.patch("/events/{event_id}", response_model=IndustryEventOut)
+def admin_update_event(
+    event_id: int,
+    payload: IndustryEventUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> IndustryEventOut:
+    event = db.query(IndustryEvent).filter(IndustryEvent.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "report_file_url" in data and data["report_file_url"]:
+        _validate_upload_url(data["report_file_url"], field="Report file")
+    for key, value in data.items():
+        if isinstance(value, str):
+            value = value.strip() or None if key != "title" and key != "event_type" else value.strip()
+            if key == "title" and not value:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title is required")
+            if key == "event_type" and value:
+                value = value.lower()
+        setattr(event, key, value)
+    db.commit()
+    db.refresh(event)
+    return IndustryEventOut.model_validate(event)
+
+
+@router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_event(
+    event_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    event = db.query(IndustryEvent).filter(IndustryEvent.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    db.delete(event)
+    db.commit()
+
+
+# --- CPD activities ---
+
+
+@router.get("/cpd-activities", response_model=list[CpdActivityOut])
+def admin_list_cpd_activities(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[CpdActivityOut]:
+    rows = (
+        db.query(CpdActivity)
+        .order_by(CpdActivity.sort_order.asc(), CpdActivity.activity.asc())
+        .all()
+    )
+    return [CpdActivityOut.model_validate(row) for row in rows]
+
+
+@router.post("/cpd-activities", response_model=CpdActivityOut, status_code=status.HTTP_201_CREATED)
+def admin_create_cpd_activity(
+    payload: CpdActivityCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> CpdActivityOut:
+    row = CpdActivity(
+        activity=payload.activity.strip(),
+        category=(payload.category or "course").strip().lower() or "course",
+        hours_reported=payload.hours_reported,
+        hours_approved=payload.hours_approved,
+        published=payload.published,
+        sort_order=payload.sort_order,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return CpdActivityOut.model_validate(row)
+
+
+@router.patch("/cpd-activities/{activity_id}", response_model=CpdActivityOut)
+def admin_update_cpd_activity(
+    activity_id: int,
+    payload: CpdActivityUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> CpdActivityOut:
+    row = db.query(CpdActivity).filter(CpdActivity.id == activity_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CPD activity not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        if isinstance(value, str):
+            value = value.strip()
+            if key == "category":
+                value = value.lower()
+            if key == "activity" and not value:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Activity is required")
+        setattr(row, key, value)
+    db.commit()
+    db.refresh(row)
+    return CpdActivityOut.model_validate(row)
+
+
+@router.delete("/cpd-activities/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_cpd_activity(
+    activity_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(CpdActivity).filter(CpdActivity.id == activity_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CPD activity not found")
+    db.delete(row)
+    db.commit()
+
+
+def _job_out(row: JobPosting, *, now: datetime | None = None) -> JobPostingOut:
+    current = now or datetime.now(timezone.utc)
+    expires = row.expires_on
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    payload = JobPostingOut.model_validate(row)
+    payload.is_expired = expires < current
+    return payload
+
+
+@router.get("/jobs", response_model=list[JobPostingOut])
+def admin_list_jobs(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[JobPostingOut]:
+    now = datetime.now(timezone.utc)
+    rows = (
+        db.query(JobPosting)
+        .order_by(JobPosting.posted_on.desc(), JobPosting.sort_order.asc())
+        .all()
+    )
+    return [_job_out(row, now=now) for row in rows]
+
+
+@router.post("/jobs", response_model=JobPostingOut, status_code=status.HTTP_201_CREATED)
+def admin_create_job(
+    payload: JobPostingCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> JobPostingOut:
+    if payload.expires_on < payload.posted_on:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Expiry date must be on or after the upload/post date.",
+        )
+    if payload.attachment_url:
+        _validate_upload_url(payload.attachment_url, field="Attachment")
+    row = JobPosting(
+        title=payload.title.strip(),
+        company=(payload.company or "").strip() or None,
+        location=(payload.location or "").strip() or None,
+        employment_type=(payload.employment_type or "full-time").strip().lower() or "full-time",
+        summary=(payload.summary or "").strip() or None,
+        description=(payload.description or "").strip() or None,
+        apply_url=(payload.apply_url or "").strip() or None,
+        attachment_url=payload.attachment_url,
+        source_label=(payload.source_label or "").strip() or None,
+        posted_on=payload.posted_on,
+        expires_on=payload.expires_on,
+        published=payload.published,
+        featured=payload.featured,
+        sort_order=payload.sort_order,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _job_out(row)
+
+
+@router.patch("/jobs/{job_id}", response_model=JobPostingOut)
+def admin_update_job(
+    job_id: int,
+    payload: JobPostingUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> JobPostingOut:
+    row = db.query(JobPosting).filter(JobPosting.id == job_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "attachment_url" in data and data["attachment_url"]:
+        _validate_upload_url(data["attachment_url"], field="Attachment")
+    for key, value in data.items():
+        if isinstance(value, str) and key in {
+            "title",
+            "company",
+            "location",
+            "employment_type",
+            "summary",
+            "description",
+            "apply_url",
+            "source_label",
+        }:
+            value = value.strip()
+            if key == "title" and not value:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title is required")
+            if key == "employment_type" and value:
+                value = value.lower()
+            if key != "title" and not value:
+                value = None
+        setattr(row, key, value)
+    if row.expires_on < row.posted_on:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Expiry date must be on or after the upload/post date.",
+        )
+    db.commit()
+    db.refresh(row)
+    return _job_out(row)
+
+
+@router.delete("/jobs/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_job(
+    job_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(JobPosting).filter(JobPosting.id == job_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    db.delete(row)
+    db.commit()

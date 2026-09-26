@@ -127,17 +127,32 @@ export const globalMission = {
 export const offices = [
   {
     region: "Canada",
-    address: "815-4AVE SW, CALGARY Alberta, T2P 5N7 (Canada)",
+    address: "815-4AVE SW, CALGARY Alberta,\nT2P 5N7",
+    mapQuery: "815 4 Ave SW, Calgary, AB T2P 5N7, Canada",
   },
   {
     region: "United States",
     address: "2367 Speers Road, Brampton",
+    mapQuery: "2367 Speers Road, Brampton, ON, Canada",
   },
   {
     region: "Africa",
     address: "Africa Union, Mexico road, Addis Ababa",
+    mapQuery: "African Union Headquarters, Mexico Road, Addis Ababa, Ethiopia",
   },
 ];
+
+export function officeMapsUrl(mapQuery: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
+}
+
+export function officeDirectionsUrl(mapQuery: string) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapQuery)}`;
+}
+
+export function officeEmbedUrl(mapQuery: string) {
+  return `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=15&output=embed`;
+}
 
 export const testimonialsIntro = {
   eyebrow: "Testimonials",
@@ -174,6 +189,7 @@ export const testimonials = [
 export const contactContent = {
   title: "Build Your FM Future With Us",
   eyebrow: "Contact Us",
+  lead: "Reach the CAISBE team for membership, programs, partnerships, and general inquiries.",
   fields: ["Enter your name", "Enter your email address", "Subject", "Message"],
   cta: "Send Message",
 };
@@ -277,7 +293,7 @@ export const services = [
 ];
 
 export const footerAddress =
-  "815-4AVE SW, CALGARY Alberta, T2P 5N7 (Canada)";
+  "815-4AVE SW, CALGARY Alberta, T2P 5N7";
 
 const rawFooterColumns = [
   {

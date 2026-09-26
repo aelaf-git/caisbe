@@ -1,4 +1,5 @@
 import ButtonLink from "@/components/ui/ButtonLink";
+import { PageHero } from "@/components/pages/ContentPage";
 import { learningFormatsPath } from "@/lib/data/professional-development";
 
 type LearningFormatPageContentProps = {
@@ -11,29 +12,23 @@ export default function LearningFormatPageContent({
   description,
 }: LearningFormatPageContentProps) {
   return (
-    <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
-      <div className="mx-auto max-w-4xl px-4">
-        <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
-          Learning Formats
-        </p>
-        <h1 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold md:text-4xl">
-          {title}
-        </h1>
-        <p className="mt-6 text-base leading-7 text-caisbe-muted">
-          {description}
-        </p>
-        <div className="mt-10 flex flex-wrap gap-4">
+    <PageHero
+      eyebrow="Learning Formats"
+      title={title}
+      lead={description}
+      actions={
+        <>
           <ButtonLink href="/contact" variant="primary">
             Contact Us
           </ButtonLink>
           <ButtonLink href={learningFormatsPath()} variant="secondary">
             All Learning Formats
           </ButtonLink>
-          <ButtonLink href="/professional-development" variant="text">
+          <ButtonLink href="/professional-development" variant="secondary">
             Certificate Programs
           </ButtonLink>
-        </div>
-      </div>
-    </section>
+        </>
+      }
+    />
   );
 }

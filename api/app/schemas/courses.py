@@ -15,6 +15,8 @@ class CourseOut(BaseModel):
     status: str = "draft"
     cover_url: str | None = None
     pass_percent: int = 70
+    price_cents: int = 9900
+    currency: str = "usd"
 
     model_config = {"from_attributes": True}
 
@@ -31,6 +33,7 @@ class CourseCreate(BaseModel):
     slug: str = Field(min_length=2, max_length=64)
     cover_url: str | None = None
     pass_percent: int = Field(default=70, ge=0, le=100)
+    price_cents: int = Field(default=9900, ge=0)
 
 
 class CourseUpdate(BaseModel):
@@ -40,6 +43,7 @@ class CourseUpdate(BaseModel):
     slug: str | None = Field(default=None, min_length=2, max_length=64)
     cover_url: str | None = None
     pass_percent: int | None = Field(default=None, ge=0, le=100)
+    price_cents: int | None = Field(default=None, ge=0)
     status: str | None = None
 
 
@@ -49,6 +53,8 @@ class EnrollmentOut(BaseModel):
     progress: int
     enrolled_at: datetime
     course: CourseOut
+    exam_passed: bool = False
+    certificate_code: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -70,6 +76,15 @@ class AdminStudentOut(BaseModel):
     id: int
     full_name: str
     email: str
+    phone: str | None = None
+    country: str | None = None
+    city: str | None = None
+    address: str | None = None
+    organization: str | None = None
+    job_title: str | None = None
+    membership_date: datetime | None = None
+    membership_type: str | None = None
+    membership_status: str = "pending"
     enrollments: list[AdminStudentEnrollmentOut] = Field(default_factory=list)
 
 
@@ -200,7 +215,7 @@ class QuizUpdate(BaseModel):
 
 class ContentBlockCreate(BaseModel):
     block_type: str = Field(
-        pattern="^(text|video|pdf|document|image|epub|subtopic|link|quiz|assignment)$"
+        pattern="^(text|video|pdf|document|image|epub|subtopic|link|quiz|assignment|reading)$"
     )
     title: str | None = None
     body: str | None = None
@@ -246,6 +261,8 @@ class ContentBlockStudentOut(BaseModel):
     label: str | None
     parent_id: int | None = None
     sort_order: int
+    completed: bool = False
+    review_status: str | None = None
     quiz: QuizStudentOut | None = None
 
     model_config = {"from_attributes": True}
@@ -326,6 +343,7 @@ class ChapterStudentOut(BaseModel):
 class FinalExamUpdate(BaseModel):
     title: str | None = None
     pass_percent: int | None = Field(default=None, ge=0, le=100)
+    time_limit_minutes: int | None = Field(default=None, ge=1, le=480)
     questions: list[QuizQuestionIn] | None = None
 
 
@@ -333,6 +351,7 @@ class FinalExamOut(BaseModel):
     id: int
     title: str
     pass_percent: int
+    time_limit_minutes: int | None = None
     questions: list[QuizQuestionOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
@@ -342,9 +361,25 @@ class FinalExamStudentOut(BaseModel):
     id: int
     title: str
     pass_percent: int
+    time_limit_minutes: int | None = None
     questions: list[QuizQuestionStudentOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
+
+
+class ExamOrderOut(BaseModel):
+    questions: list[int]
+    choices: dict[str, list[int]]
+
+
+class ExamSessionOut(BaseModel):
+    in_progress: bool
+    started_at: datetime | None = None
+    remaining_seconds: int | None = None
+    time_limit_minutes: int | None = None
+    latest_score: int | None = None
+    latest_passed: bool | None = None
+    order: ExamOrderOut | None = None
 
 
 class CertificateTemplateUpdate(BaseModel):
@@ -374,6 +409,7 @@ class CourseDetailStudentOut(CourseOut):
     progress: int = 0
     certificate_code: str | None = None
     exam_passed: bool = False
+    exam_score: int | None = None
 
 
 class UploadOut(BaseModel):
@@ -381,8 +417,36 @@ class UploadOut(BaseModel):
     filename: str
 
 
+class AssignmentSubmitIn(BaseModel):
+    body: str | None = None
+    url: str | None = None
+    file_name: str | None = None
+
+
+class AssignmentSubmissionOut(BaseModel):
+    id: int
+    content_block_id: int
+    assignment_title: str
+    course_code: str
+    course_title: str
+    body: str | None = None
+    file_url: str | None = None
+    file_name: str | None = None
+    status: str
+
+
+class AssignmentReviewIn(BaseModel):
+    status: str = Field(pattern="^(passed|failed)$")
+
+
 class QuizSubmitIn(BaseModel):
     answers: dict[str, int] = Field(default_factory=dict)  # question_id -> choice_id
+
+
+class QuizAnswerReview(BaseModel):
+    question_id: int
+    selected_choice_id: int | None = None
+    correct_choice_id: int
 
 
 class QuizAttemptOut(BaseModel):
@@ -390,6 +454,7 @@ class QuizAttemptOut(BaseModel):
     score: int
     passed: bool
     certificate_code: str | None = None
+    reviews: list[QuizAnswerReview] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 
@@ -430,6 +495,7 @@ class CertificateVerifyOut(BaseModel):
     membership_number: str | None = None
     issued_at: datetime
     issued_by: str = "CAISBE"
+    verify_url: str
 
 
 class CertificateAdminOut(BaseModel):

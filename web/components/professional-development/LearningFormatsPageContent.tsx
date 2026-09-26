@@ -1,5 +1,9 @@
 import BackButton from "@/components/ui/BackButton";
-import ButtonLink from "@/components/ui/ButtonLink";
+import {
+  ContentCard,
+  ContentSection,
+  PageHero,
+} from "@/components/pages/ContentPage";
 import {
   learningFormatPath,
   professionalDevelopmentContent,
@@ -9,45 +13,31 @@ export default function LearningFormatsPageContent() {
   const { formats } = professionalDevelopmentContent;
 
   return (
-    <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
-      <div className="mx-auto max-w-4xl px-4">
-        <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
-          Professional Development
-        </p>
-        <h1 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold md:text-4xl">
-          {formats.title}
-        </h1>
-        <p className="mt-6 text-base leading-7 text-caisbe-muted">
-          {formats.description}
-        </p>
-
-        <div className="mt-10 grid gap-6 sm:grid-cols-2">
-          {formats.items.map((format) => (
-            <article
+    <>
+      <PageHero
+        eyebrow="Professional Development"
+        title={formats.title}
+        lead={formats.description}
+        actions={
+          <BackButton
+            href="/professional-development"
+            label="Back to certificate programs"
+          />
+        }
+      />
+      <ContentSection wide>
+        <div className="grid gap-6 sm:grid-cols-2">
+          {formats.items.map((format, index) => (
+            <ContentCard
               key={format.slug}
-              className="shadow-brand-card flex flex-col rounded-lg border border-ifma-border-light bg-white p-6"
-            >
-              <h2 className="text-lg font-semibold text-caisbe-text-dark">
-                {format.title}
-              </h2>
-              <p className="mt-3 flex-1 text-sm leading-6 text-caisbe-muted">
-                {format.description}
-              </p>
-              <ButtonLink
-                href={learningFormatPath(format.slug)}
-                variant="text"
-                className="mt-6"
-              >
-                Learn More
-              </ButtonLink>
-            </article>
+              title={format.title}
+              description={format.description}
+              href={learningFormatPath(format.slug)}
+              style={{ animationDelay: `${index * 70}ms` }}
+            />
           ))}
         </div>
-
-        <div className="mt-10">
-          <BackButton href="/professional-development" label="Back to certificate programs" />
-        </div>
-      </div>
-    </section>
+      </ContentSection>
+    </>
   );
 }
