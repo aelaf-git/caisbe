@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AdvocacyPageContent from "@/components/resources/AdvocacyPageContent";
 import MagazinePageContent from "@/components/resources/MagazinePageContent";
-import { MembersCornerItemContent } from "@/components/resources/MembersCornerContent";
-import { PageHero } from "@/components/pages/ContentPage";
+import { MediaItemContent } from "@/components/resources/MembersCornerContent";
 import TopicPageContent from "@/components/pages/TopicPageContent";
 import {
   advocacyContent,
-  getMembersCornerItem,
-  membersCornerSlugs,
+  getMediaItem,
+  mediaSlugs,
 } from "@/lib/data/resources";
 import { getResourcePage, resourcesPages } from "@/lib/data/site-pages";
 
@@ -17,7 +16,7 @@ type Props = { params: Promise<{ slug: string }> };
 export function generateStaticParams() {
   const slugs = new Set([
     ...resourcesPages.map((page) => page.slug),
-    ...membersCornerSlugs,
+    ...mediaSlugs,
     advocacyContent.slug,
   ]);
   return Array.from(slugs).map((slug) => ({ slug }));
@@ -33,11 +32,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const membersItem = getMembersCornerItem(slug);
-  if (membersItem) {
+  const mediaItem = getMediaItem(slug);
+  if (mediaItem) {
     return {
-      title: `${membersItem.title} | CAISBE`,
-      description: membersItem.description,
+      title: `${mediaItem.title} | CAISBE`,
+      description: mediaItem.description,
     };
   }
 
@@ -60,32 +59,12 @@ export default async function ResourceSubpage({ params }: Props) {
     return <MagazinePageContent />;
   }
 
-  if (membersCornerSlugs.includes(slug)) {
-    return <MembersCornerItemContent slug={slug} />;
+  if (mediaSlugs.includes(slug)) {
+    return <MediaItemContent slug={slug} />;
   }
 
   const page = getResourcePage(slug);
   if (!page) notFound();
-
-  if (slug === "fm-resources") {
-    return (
-      <PageHero
-        eyebrow="Under Construction"
-        title={page.title}
-        lead={page.lead}
-        backHref="/resources"
-        backLabel="Back to resources"
-      >
-        <p className="mt-6 text-base leading-7 text-caisbe-muted">
-          {page.description}
-        </p>
-        <p className="mt-4 text-base leading-7 text-caisbe-muted">
-          This placeholder will become a single hub for facility management
-          resources. Content is being prepared—thank you for your patience.
-        </p>
-      </PageHero>
-    );
-  }
 
   return (
     <TopicPageContent

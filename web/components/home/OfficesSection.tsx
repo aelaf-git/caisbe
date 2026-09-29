@@ -1,34 +1,21 @@
-import {
-  globalMission,
-  officeDirectionsUrl,
-  officeEmbedUrl,
-  offices,
-} from "@/lib/data/home";
-import ButtonLink from "@/components/ui/ButtonLink";
+import { officeDirectionsUrl, officeEmbedUrl, offices } from "@/lib/data/home";
 
 export default function OfficesSection() {
   return (
-    <section className="border-b border-ifma-border-light bg-white py-16">
+    <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
       <div className="mx-auto max-w-7xl px-4">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
-            Global Presence
-          </p>
-          <h2 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold leading-tight md:text-4xl">
-            {globalMission.title}
-          </h2>
-          <p className="mt-4 text-base leading-7 text-caisbe-muted">
-            {globalMission.description}
-          </p>
-        </div>
+        <h2 className="font-display text-3xl font-semibold text-caisbe-text-dark motion-safe:animate-page-fade-in md:text-4xl">
+          Offices
+        </h2>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {offices.map((office) => (
+        <div className="mt-8 grid gap-6 md:grid-cols-3">
+          {offices.map((office, index) => (
             <div
               key={office.region}
-              className="shadow-brand-card overflow-hidden rounded-lg border border-ifma-border-light bg-white"
+              className="shadow-brand-card overflow-hidden rounded-lg border border-ifma-border-light bg-white transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in"
+              style={{ animationDelay: `${index * 80}ms` }}
             >
-              <div className="aspect-[16/10] w-full bg-admin-canvas">
+              <div className="aspect-[16/10] w-full bg-[#fafafa]">
                 <iframe
                   title={`${office.region} office map`}
                   src={officeEmbedUrl(office.mapQuery)}
@@ -39,7 +26,9 @@ export default function OfficesSection() {
                 />
               </div>
               <div className="p-6">
-                <h3 className="text-lg font-semibold text-caisbe-text-dark">{office.region}</h3>
+                <h3 className="text-lg font-semibold text-caisbe-text-dark">
+                  {office.region}
+                </h3>
                 <p className="mt-3 whitespace-pre-line text-sm leading-6 text-caisbe-muted">
                   {office.address}
                 </p>
@@ -55,12 +44,6 @@ export default function OfficesSection() {
             </div>
           ))}
         </div>
-
-        <p className="mt-8 text-center">
-          <ButtonLink href="/contact" variant="textGreen">
-            Contact our offices
-          </ButtonLink>
-        </p>
       </div>
     </section>
   );

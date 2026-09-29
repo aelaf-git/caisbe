@@ -1,10 +1,7 @@
 import Link from "next/link";
 import Logo from "@/components/layout/Logo";
 import NewsletterSignup from "@/components/newsletter/NewsletterSignup";
-import {
-  courseProgramPath,
-  fetchPublishedCourses,
-} from "@/lib/api";
+import { courseProgramPath, fetchPublishedCourses } from "@/lib/api";
 import {
   footerAddress,
   footerColumns,
@@ -79,7 +76,7 @@ export default async function Footer() {
         return {
           ...column,
           links: courses.map((course) => ({
-            label: course.code || course.title,
+            label: course.title,
             href: courseProgramPath(course.slug),
           })),
         };
@@ -125,7 +122,7 @@ export default async function Footer() {
               href="/contact"
               className="mb-4 block text-sm font-bold uppercase tracking-wide text-white transition-colors hover:text-white/85"
             >
-              Contact Us
+              Contact
             </Link>
             <p className="text-sm font-semibold leading-6 text-white/95">
               {footerAddress}

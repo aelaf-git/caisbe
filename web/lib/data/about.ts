@@ -9,6 +9,7 @@ export type AdvisoryMember = {
   name: string;
   shortName: string;
   description: string;
+  logoSrc?: string;
 };
 
 export const aboutContent = {
@@ -88,21 +89,25 @@ export const aboutContent = {
         name: "African Union Commission",
         shortName: "AUC",
         description: "Continental policy and partnership liaison.",
+        logoSrc: "/logos/African_Union.webp",
       },
       {
         name: "COMESA",
         shortName: "COMESA",
         description: "Regional economic community collaboration.",
+        logoSrc: "/logos/comesa.png",
       },
       {
         name: "African Infrastructure Bank",
         shortName: "AIB",
         description: "Infrastructure and development dialogue.",
+        logoSrc: "/logos/logo-aib.jpeg",
       },
       {
         name: "Green Growth Africa",
         shortName: "GGA",
         description: "Sustainability and green growth advisory.",
+        logoSrc: "/logos/greengrowthafrica.jpeg",
       },
       {
         name: "African Facility Management Union (AFMU)",

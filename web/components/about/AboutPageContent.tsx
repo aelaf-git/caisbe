@@ -118,12 +118,21 @@ export default function AboutPageContent() {
               style={{ animationDelay: `${index * 60}ms` }}
             >
               <div
-                aria-hidden
-                className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-caisbe-red/30 bg-[linear-gradient(145deg,#fff,#f8f8f8)]"
+                aria-hidden={!member.logoSrc}
+                className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-caisbe-red/30 bg-white"
               >
-                <span className="font-display text-sm font-bold tracking-wide text-caisbe-red">
-                  {member.shortName}
-                </span>
+                {member.logoSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={member.logoSrc}
+                    alt=""
+                    className="h-full w-full object-contain p-2"
+                  />
+                ) : (
+                  <span className="font-display text-sm font-bold tracking-wide text-caisbe-red">
+                    {member.shortName}
+                  </span>
+                )}
               </div>
               <h3 className="font-display mt-4 text-base font-semibold leading-snug text-caisbe-text-dark">
                 {member.name}
@@ -134,10 +143,6 @@ export default function AboutPageContent() {
             </article>
           ))}
         </div>
-        <p className="mt-8 text-sm leading-6 text-caisbe-muted">
-          Logo marks shown are placeholders. Official partner logos can replace
-          these when brand assets are provided.
-        </p>
       </ContentSection>
 
       <ContentSection className="!py-20 md:!py-24 text-center">

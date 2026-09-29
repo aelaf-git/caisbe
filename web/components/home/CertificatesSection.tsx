@@ -57,11 +57,12 @@ export default async function CertificatesSection() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {courses.map((course) => (
+          {courses.map((course, index) => (
             <Link
               key={course.id}
               href={courseProgramPath(course.slug)}
-              className="shadow-brand-card flex flex-col border border-ifma-border-light bg-white p-6 transition-colors hover:border-caisbe-red"
+              className="shadow-brand-card flex flex-col border border-ifma-border-light bg-white p-6 transition duration-300 hover:-translate-y-1 hover:border-caisbe-red motion-safe:animate-page-fade-in"
+              style={{ animationDelay: `${index * 70}ms` }}
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
                 {course.code}

@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ButtonLink from "@/components/ui/ButtonLink";
-import NewsletterSignup from "@/components/newsletter/NewsletterSignup";
 import { PageHero } from "@/components/pages/ContentPage";
 import { fetchPublishedMagazines, type MediaAsset } from "@/lib/api";
-import { membersCornerContent } from "@/lib/data/resources";
+import { mediaContent } from "@/lib/data/resources";
 
 export default function MagazinePageContent() {
-  const item = membersCornerContent.items.find((row) => row.slug === "magazine");
+  const item = mediaContent.items.find((row) => row.slug === "magazine");
   const [issues, setIssues] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,24 +28,10 @@ export default function MagazinePageContent() {
   return (
     <>
       <PageHero
-        eyebrow="Members Corner"
+        eyebrow="Resources"
         title={item.title}
         lead={item.lead}
-        actions={
-          <>
-            <ButtonLink href="/resources/members-corner" variant="secondary">
-              Members Corner
-            </ButtonLink>
-            <ButtonLink href="/contact" variant="primary">
-              Contact Us
-            </ButtonLink>
-          </>
-        }
-      >
-        <p className="mt-6 text-base leading-7 text-caisbe-muted">
-          {item.description}
-        </p>
-      </PageHero>
+      />
 
       <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4">
@@ -101,20 +85,6 @@ export default function MagazinePageContent() {
               ))}
             </div>
           )}
-        </div>
-      </section>
-
-      <section className="border-b border-ifma-border-light bg-[#fafaf8] py-16">
-        <div className="mx-auto max-w-xl px-4">
-          <h2 className="font-display text-center text-2xl font-semibold text-caisbe-text-dark">
-            Subscribe to the newsletter
-          </h2>
-          <p className="mt-3 text-center text-sm leading-6 text-caisbe-muted">
-            Get CAISBE updates and magazine announcements in your inbox.
-          </p>
-          <div className="mt-8">
-            <NewsletterSignup />
-          </div>
         </div>
       </section>
     </>

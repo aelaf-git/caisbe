@@ -11,13 +11,41 @@ type ContactSectionProps = {
   title?: string;
   eyebrow?: string;
   showOffices?: boolean;
+  variant?: "page" | "home";
 };
 
 export default function ContactSection({
   title = contactContent.title,
   eyebrow = contactContent.eyebrow,
   showOffices = false,
+  variant = "page",
 }: ContactSectionProps) {
+  if (variant === "home") {
+    return (
+      <section className="bg-white py-16 md:py-20">
+        <div className="mx-auto grid max-w-7xl items-start gap-10 px-4 lg:grid-cols-[0.85fr_1.15fr]">
+          <div className="motion-safe:animate-page-fade-in">
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-caisbe-red">
+              {eyebrow}
+            </p>
+            <h2 className="font-display mt-3 text-3xl font-semibold leading-tight text-caisbe-text-dark md:text-4xl">
+              {title}
+            </h2>
+            <p className="mt-4 text-base leading-7 text-caisbe-muted">
+              {contactContent.lead}
+            </p>
+          </div>
+          <div
+            className="motion-safe:animate-page-fade-in"
+            style={{ animationDelay: "120ms" }}
+          >
+            <ContactForm cta={contactContent.cta} />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <>
       <PageHero eyebrow={eyebrow} title={title} lead={contactContent.lead}>

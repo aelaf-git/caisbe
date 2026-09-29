@@ -252,14 +252,14 @@ const rawFooterColumns = [
     title: "Our Services",
     href: "/professional-development",
     links: [
-      { label: "Professional certifications", href: "/professional-development" },
+      { label: "Professional Development", href: "/professional-development" },
       {
-        label: "Corporate training & consultancy",
+        label: "On-site Corporate Training",
         href: "/professional-development/learning-formats/on-site-corporate-training",
       },
       { label: "Membership", href: "/membership" },
       {
-        label: "Advocacy and Policy Dialogue",
+        label: "Advocacy and Government",
         href: "/resources/advocacy-government-affairs",
       },
     ],
@@ -268,21 +268,21 @@ const rawFooterColumns = [
     title: "Programs",
     href: "/professional-development",
     links: [
-      { label: "All certificate programs", href: "/professional-development" },
+      { label: "Certificate Programs", href: "/professional-development" },
       {
-        label: "Learning formats",
+        label: "Learning Formats",
         href: "/professional-development/learning-formats",
       },
     ],
   },
   {
-    title: "About Us",
+    title: "About CAISBE",
     href: "/about",
     links: [
       { label: "Our Mission", href: "/about#mission" },
       { label: "Offices", href: "/contact" },
       { label: "Projects", href: "/projects" },
-      { label: "Contact Us", href: "/contact" },
+      { label: "Contact", href: "/contact" },
       { label: "Membership", href: "/membership" },
     ],
   },
@@ -290,9 +290,9 @@ const rawFooterColumns = [
     title: "Resources",
     href: "/resources",
     links: [
-      { label: "Certificate", href: "/professional-development" },
+      { label: "Certificate Programs", href: "/professional-development" },
       {
-        label: "Corporate Training",
+        label: "On-site Corporate Training",
         href: "/professional-development/learning-formats/on-site-corporate-training",
       },
       { label: "FAQ", href: "/faq" },

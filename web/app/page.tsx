@@ -19,7 +19,7 @@ export default function Home() {
       <SustainabilitySection />
       <OfficesSection />
       <Testimonials />
-      <ContactSection />
+      <ContactSection variant="home" />
     </>
   );
 }

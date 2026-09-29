@@ -85,7 +85,7 @@ export default function HeroSection() {
     <section className="relative min-h-[32rem] overflow-hidden border-b border-ifma-border-light md:min-h-[40rem] lg:min-h-[44rem]">
       {slides.map((slide, slideIndex) => {
         const active = slideIndex === index;
-        const commonClass = `absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-700 ${
+        const commonClass = `absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-700 ease-out ${
           active ? "opacity-100" : "opacity-0"
         }`;
 
@@ -122,7 +122,10 @@ export default function HeroSection() {
       <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/55 to-caisbe-red/25" />
 
       <div className="relative z-10 mx-auto flex min-h-[32rem] max-w-7xl items-center px-4 py-16 md:min-h-[40rem] md:py-20 lg:min-h-[44rem]">
-        <div className="w-full max-w-3xl border-l-4 border-caisbe-red pl-5 md:pl-6">
+        <div
+          key={slides[index]?.id ?? index}
+          className="w-full max-w-3xl border-l-4 border-caisbe-red pl-5 motion-safe:animate-page-fade-in md:pl-6"
+        >
           <h1 className="text-[clamp(1.75rem,3.5vw,3.25rem)] font-semibold leading-tight text-white">
             {siteFullName}
           </h1>
@@ -132,9 +135,6 @@ export default function HeroSection() {
           <div className="mt-8 flex flex-wrap gap-3">
             <ButtonLink href="/membership/become-a-member" variant="primary">
               Join {siteName}
-            </ButtonLink>
-            <ButtonLink href="/our-services" variant="secondary">
-              Our Services
             </ButtonLink>
           </div>
         </div>

@@ -63,7 +63,10 @@ const rawNavigation: readonly RawNavSection[] = [
             label: "Membership Overview and Benefits",
             href: "/membership/overview",
           },
-          { label: "Join / Register", href: "/membership/join" },
+          {
+            label: "Join / Register / Renew",
+            href: "/membership/join",
+          },
           {
             label: "Manage Account (login)",
             href: PORTAL_LOGIN,
@@ -71,14 +74,6 @@ const rawNavigation: readonly RawNavSection[] = [
           {
             label: "Types of Membership",
             href: "/membership/types",
-          },
-          {
-            label: "Become a Member",
-            href: "/membership/become-a-member",
-          },
-          {
-            label: "Renew Membership",
-            href: "/membership/become-a-member",
           },
         ],
       },
@@ -174,14 +169,11 @@ const rawNavigation: readonly RawNavSection[] = [
             label: "Advocacy and Government",
             href: "/resources/advocacy-government-affairs",
           },
-          { label: "FM Resources", href: "/resources/fm-resources" },
-          { label: "Knowledge Library", href: "/resources/knowledge-library" },
-          { label: "Buyer's Guide", href: "/resources/buyers-guide" },
         ],
       },
       {
-        title: "Members Corner",
-        href: "/resources/members-corner",
+        title: "Media",
+        href: "/resources/media",
         links: [
           { label: "CAISBE Magazine", href: "/resources/magazine" },
           { label: "YouTube", href: "/resources/youtube" },

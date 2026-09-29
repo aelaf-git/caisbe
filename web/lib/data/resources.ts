@@ -38,8 +38,8 @@ export const advocacyContent = {
     "Through these services, we support the development of resilient, efficient, and sustainable built environments across Africa by sharing global expertise and fostering long-term partnerships.",
 };
 
-export const membersCornerContent = {
-  title: "Members Corner",
+export const mediaContent = {
+  title: "Media",
   description:
     "Stay connected with CAISBE through our magazine, video, podcast, and blog channels.",
   items: [
@@ -47,7 +47,7 @@ export const membersCornerContent = {
       slug: "magazine",
       title: "CAISBE Magazine",
       description:
-        "Read features, insights, and updates from across the CAISBE professional community.",
+        "CAISBE Magazine features and updates for facility management professionals.",
       lead: "Features and updates from practitioners shaping facility management across Africa and Canada.",
       highlights: [
         "Member stories and chapter highlights",
@@ -102,10 +102,19 @@ export const membersCornerContent = {
   ],
 };
 
-export const membersCornerSlugs = membersCornerContent.items.map(
-  (item) => item.slug,
-);
+/** @deprecated Use mediaContent */
+export const membersCornerContent = mediaContent;
 
+export const mediaSlugs = mediaContent.items.map((item) => item.slug);
+
+/** @deprecated Use mediaSlugs */
+export const membersCornerSlugs = mediaSlugs;
+
+export function getMediaItem(slug: string) {
+  return mediaContent.items.find((item) => item.slug === slug);
+}
+
+/** @deprecated Use getMediaItem */
 export function getMembersCornerItem(slug: string) {
-  return membersCornerContent.items.find((item) => item.slug === slug);
+  return getMediaItem(slug);
 }
