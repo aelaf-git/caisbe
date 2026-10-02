@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import PortalSidebar from "@/components/layout/PortalSidebar";
@@ -8,13 +8,15 @@ import PortalSidebar from "@/components/layout/PortalSidebar";
 export default function PortalShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || user.role === "admin")) {
-      router.replace("/login");
+      const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
+      router.replace(`/login${next}`);
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, pathname]);
 
   useEffect(() => {
     if (!mobileOpen) return;

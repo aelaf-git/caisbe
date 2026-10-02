@@ -22,6 +22,19 @@ class MembershipCertificateTypeOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MembershipCertificateTypePublicOut(BaseModel):
+    """Public pricing/catalog for membership application forms."""
+
+    membership_type: str
+    label: str
+    price_cents: int
+    currency: str
+    validity_months: int | None = None
+    sort_order: int
+
+    model_config = {"from_attributes": True}
+
+
 class MembershipCertificateTypeUpdateIn(BaseModel):
     label: str | None = Field(default=None, min_length=1, max_length=120)
     title: str | None = Field(default=None, min_length=1, max_length=255)

@@ -66,7 +66,7 @@ export default function StudentCertificatesPage() {
         <div className="border-b border-ifma-border-light px-6 py-4">
           <h2 className="text-lg font-semibold text-caisbe-text">Membership</h2>
           <p className="mt-1 text-sm text-caisbe-muted">
-            Student membership is free and available on registration. Other membership types unlock after you finish your first course and include a validity period.
+            Student membership is free on registration. Download it here, or upgrade and renew from Membership.
           </p>
         </div>
         {loading ? (

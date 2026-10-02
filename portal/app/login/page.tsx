@@ -2,27 +2,30 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ApiError, clearToken } from "@/lib/auth";
+import { safeNextPath } from "@/lib/membershipApplication";
 
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001";
 
-export default function PortalLoginPage() {
+function PortalLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading, login, logout } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const nextPath = safeNextPath(searchParams.get("next"), "/dashboard");
 
   useEffect(() => {
     if (!loading && user && user.role !== "admin") {
-      router.replace("/dashboard");
+      router.replace(nextPath);
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, nextPath]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,7 +39,7 @@ export default function PortalLoginPage() {
         setError("Administrators should use the Admin portal.");
         return;
       }
-      router.push("/dashboard");
+      router.push(nextPath);
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Unable to log in. Please try again.");
     } finally {
@@ -161,12 +164,29 @@ export default function PortalLoginPage() {
 
           <p className="mt-6 text-sm text-caisbe-muted">
             New to CAISBE?{" "}
-            <Link href="/register" className="font-semibold text-caisbe-red hover:text-caisbe-red-dark">
+            <Link
+              href={`/register?next=${encodeURIComponent(nextPath)}`}
+              className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+            >
               Register
             </Link>
           </p>
         </div>
       </div>
     </section>
+  );
+}
+
+export default function PortalLoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-1 items-center justify-center px-4 py-16 text-sm text-caisbe-muted">
+          Loading…
+        </div>
+      }
+    >
+      <PortalLoginForm />
+    </Suspense>
   );
 }

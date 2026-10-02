@@ -9,7 +9,6 @@ export const membershipApplicationCopy = {
     "By completing this membership application you agree to adhere to the CAISBE bylaws and code of ethics. For a complete copy of bylaws and code of ethics, visit CAISBE.org. Membership fees to CAISBE are not deductible as a charitable contribution for income tax purposes, but may be partially deductible as an ordinary business expense.",
 };
 
-/** Base options without prices — prices come from admin certificate types. */
 export const baseMembershipOptions = [
   { id: "professional", api: "professional", name: "Professional" },
   { id: "senior", api: "senior-fellow", name: "Senior member" },
@@ -68,4 +67,16 @@ export function withBaseMembershipLabels(
     api: option.api,
     label: baseMembershipLabel(option, prices),
   }));
+}
+
+export function siteUrl(path = "") {
+  const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const suffix = path.startsWith("/") ? path : path ? `/${path}` : "";
+  return `${base}${suffix}`;
+}
+
+export function safeNextPath(value: string | null | undefined, fallback = "/dashboard") {
+  if (!value) return fallback;
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("://")) return fallback;
+  return value;
 }

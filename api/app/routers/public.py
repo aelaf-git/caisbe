@@ -18,6 +18,7 @@ from app.models import (
     JobPosting,
     MediaAsset,
     MembershipApplication,
+    MembershipCertificateType,
     NewsPost,
     NewsletterSubscriber,
     Testimonial,
@@ -29,6 +30,7 @@ from app.schemas.media import MediaAssetOut, NewsletterSubscribeIn, HeroCarousel
 from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.schemas.events import IndustryEventOut
 from app.schemas.jobs import JobPostingOut
+from app.schemas.membership_certificates import MembershipCertificateTypePublicOut
 from app.schemas.news import NewsPostOut
 from app.schemas.testimonials import TestimonialOut
 from app.services.analytics import record_site_visit
@@ -232,6 +234,19 @@ def subscribe_newsletter(
             detail="Newsletter signup is temporarily unavailable. Try again shortly.",
         ) from exc
     return {"message": "Thank you for subscribing to the CAISBE newsletter."}
+
+
+@router.get("/membership/certificate-types", response_model=list[MembershipCertificateTypePublicOut])
+def list_public_membership_certificate_types(
+    db: Session = Depends(get_db),
+) -> list[MembershipCertificateTypePublicOut]:
+    rows = (
+        db.query(MembershipCertificateType)
+        .filter(MembershipCertificateType.active.is_(True))
+        .order_by(MembershipCertificateType.sort_order.asc(), MembershipCertificateType.id.asc())
+        .all()
+    )
+    return [MembershipCertificateTypePublicOut.model_validate(row) for row in rows]
 
 
 @router.post("/membership/apply", response_model=MembershipApplicationOut, status_code=status.HTTP_201_CREATED)

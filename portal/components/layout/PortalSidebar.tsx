@@ -26,6 +26,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/courses", label: "My courses", icon: "book", match: "prefix" },
       { href: "/cart", label: "Cart", icon: "cart", match: "exact" },
       { href: "/certificates", label: "Certificates", icon: "award", match: "prefix" },
+      { href: "/membership", label: "Membership", icon: "badge", match: "prefix" },
     ],
   },
   {
@@ -70,6 +71,11 @@ function NavIcon({ name }: { name: string }) {
         <path d="M8.21 13.89 7 22l5-3 5 3-1.21-8.12" />
       </>
     ),
+    badge: (
+      <>
+        <path d="M12 3 14.5 8.5 20.5 9.5 16 13.5 17.2 19.5 12 16.8 6.8 19.5 8 13.5 3.5 9.5 9.5 8.5Z" />
+      </>
+    ),
     user: (
       <>
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -102,22 +108,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const [certsReady, setCertsReady] = useState(false);
   const [cartCount, setCartCount] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    void apiFetch<{ id: number }[]>("/me/certificates")
-      .then((rows) => {
-        if (active) setCertsReady(rows.length > 0);
-      })
-      .catch(() => {
-        if (active) setCertsReady(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [user?.id]);
 
   useEffect(() => {
     let active = true;
@@ -160,26 +151,20 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
             <div className="space-y-1">
               {group.items.map((item) => {
                 const active = isActive(pathname, item);
-                const certsInactive = item.href === "/certificates" && !certsReady;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
                     className={`flex items-center justify-between gap-2 rounded-full px-3 py-2.5 text-sm transition-colors ${
-                      certsInactive
-                        ? "cursor-default text-caisbe-muted/50"
-                        : active
-                          ? "bg-caisbe-red/10 font-semibold text-caisbe-red"
-                          : "text-caisbe-muted hover:bg-[#f8fafc] hover:text-caisbe-text"
+                      active
+                        ? "bg-caisbe-red/10 font-semibold text-caisbe-red"
+                        : "text-caisbe-muted hover:bg-[#f8fafc] hover:text-caisbe-text"
                     }`}
                   >
                     <span className="flex min-w-0 items-center gap-3">
                       <NavIcon name={item.icon} />
-                      <span className="truncate">
-                        {item.label}
-                        {certsInactive ? " (inactive)" : ""}
-                      </span>
+                      <span className="truncate">{item.label}</span>
                     </span>
                     {item.href === "/cart" && cartCount > 0 ? (
                       <span className="rounded-full bg-caisbe-red px-2 py-0.5 text-xs font-semibold text-white">

@@ -216,6 +216,22 @@ export function courseEnrollUrl(courseId: number) {
   return `${portal}/courses/${courseId}/checkout`;
 }
 
+export function portalUrl(path = "") {
+  const portal = (
+    process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3002"
+  ).replace(/\/$/, "");
+  const suffix = path.startsWith("/") ? path : path ? `/${path}` : "";
+  return `${portal}${suffix}`;
+}
+
+export function portalMembershipRegisterUrl() {
+  return portalUrl("/register?next=/membership");
+}
+
+export function portalMembershipLoginUrl() {
+  return portalUrl("/login?next=/membership");
+}
+
 export async function subscribeNewsletter(payload: {
   email: string;
 }): Promise<{ message: string }> {

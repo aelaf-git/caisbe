@@ -20,6 +20,13 @@ class UserCreate(BaseModel):
     country: str = Field(min_length=2, max_length=100)
     city: str = Field(min_length=2, max_length=100)
     password: str = Field(min_length=8, max_length=128)
+    given_name: str | None = Field(default=None, max_length=80)
+    family_name: str | None = Field(default=None, max_length=80)
+    address: str | None = Field(default=None, max_length=255)
+    organization: str | None = Field(default=None, max_length=160)
+    job_title: str | None = Field(default=None, max_length=120)
+    membership_type: str | None = Field(default=None, max_length=40)
+    details: str | None = Field(default=None, max_length=8000)
 
 
 class UserLogin(BaseModel):
@@ -117,6 +124,7 @@ class MembershipApplicationIn(BaseModel):
     job_title: str | None = Field(default=None, max_length=120)
     membership_type: str = Field(min_length=2, max_length=40)
     details: str | None = Field(default=None, max_length=8000)
+    kind: str | None = Field(default=None, max_length=20)
 
 
 class MembershipApplicationOut(BaseModel):

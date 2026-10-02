@@ -30,8 +30,16 @@ export default function ButtonLink({
   variant = "primary",
   className = "",
 }: ButtonLinkProps) {
+  const classNameFull = `${variantStyles[variant]} ${className}`;
+  if (href.startsWith("http://") || href.startsWith("https://")) {
+    return (
+      <a href={href} className={classNameFull}>
+        {children}
+      </a>
+    );
+  }
   return (
-    <Link href={href} className={`${variantStyles[variant]} ${className}`}>
+    <Link href={href} className={classNameFull}>
       {children}
     </Link>
   );

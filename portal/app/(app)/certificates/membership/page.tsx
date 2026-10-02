@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import DownloadCertificateButton from "@/components/certificates/DownloadCertificateButton";
 import MembershipCertificateDocument from "@/components/certificates/MembershipCertificateDocument";
 import BackButton from "@/components/ui/BackButton";
+import { certificatePdfFileName } from "@/lib/certificatePdf";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { MembershipCertificate } from "@/lib/lms";
 
@@ -27,7 +29,7 @@ export default function MembershipCertificatePage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace("/login");
+      router.replace("/login?next=/certificates/membership");
     }
   }, [loading, user, router]);
 
@@ -77,7 +79,7 @@ export default function MembershipCertificatePage() {
           </h1>
           <p className="mt-2 text-sm text-caisbe-muted">
             {lockedMessage ||
-              "Complete at least one course to unlock your non-student membership certificate. Student membership is available immediately after registration."}
+              "Your membership certificate is not available yet. Open Membership to view your student certificate or complete an upgrade."}
           </p>
           <Link
             href="/courses"
@@ -123,14 +125,10 @@ export default function MembershipCertificatePage() {
         />
       </div>
 
-      <div className="mt-6 text-center print:hidden">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark"
-        >
-          Print / Save PDF
-        </button>
+      <div className="mt-6 flex justify-center print:hidden">
+        <DownloadCertificateButton
+          fileName={certificatePdfFileName(["CAISBE", cert.membership_number, "membership"])}
+        />
       </div>
     </section>
   );

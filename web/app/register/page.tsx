@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import { portalMembershipRegisterUrl } from "@/lib/api";
 
-/** Legacy /register on the marketing site now opens membership registration. */
+/** Legacy /register on the marketing site opens portal membership registration. */
 export default function RegisterRedirectPage() {
-  redirect("/membership/become-a-member");
+  redirect(portalMembershipRegisterUrl());
 }

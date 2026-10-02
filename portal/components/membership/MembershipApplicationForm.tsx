@@ -1,23 +1,26 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
-import { apiFetch } from "@/lib/api";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { apiFetch, ApiError, type AuthUser } from "@/lib/auth";
 import {
   additionalMembershipOptions,
   baseMembershipOptions,
   chapterMembershipOptions,
   membershipApplicationCopy,
+  siteUrl,
   withBaseMembershipLabels,
   type AdditionalMembershipId,
   type BaseMembershipId,
   type MembershipCertificateTypePublic,
-} from "@/lib/data/membershipApplication";
+} from "@/lib/membershipApplication";
 
 const inputClass =
   "mt-1 h-11 w-full rounded-md border border-ifma-border bg-white px-3 text-sm outline-none focus:border-caisbe-red";
 
 type Mode = "online" | "upload";
 type Kind = "application" | "renewal";
+type Variant = "register" | "account";
 type FlagMap<T extends string> = Record<T, boolean>;
 
 const emptyFlags = <T extends string>(ids: readonly T[]): FlagMap<T> =>
@@ -68,29 +71,56 @@ function SectionBar({ title }: { title: string }) {
   );
 }
 
-export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
+function splitName(fullName?: string | null) {
+  const parts = (fullName || "").trim().split(/\s+/);
+  if (parts.length === 0 || !parts[0]) return { first: "", last: "" };
+  if (parts.length === 1) return { first: parts[0], last: "" };
+  return { first: parts[0], last: parts.slice(1).join(" ") };
+}
+
+export default function MembershipApplicationForm({
+  kind,
+  variant = "account",
+  user = null,
+  onRegistered,
+  onSuccess,
+}: {
+  kind: Kind;
+  variant?: Variant;
+  user?: AuthUser | null;
+  onRegistered?: () => void;
+  onSuccess?: () => void;
+}) {
+  const { register } = useAuth();
+  const names = splitName(user?.full_name || user?.given_name);
   const [mode, setMode] = useState<Mode>("online");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState(user?.given_name || names.first);
+  const [lastName, setLastName] = useState(user?.family_name || names.last);
   const [designation, setDesignation] = useState("");
-  const [position, setPosition] = useState("");
-  const [organization, setOrganization] = useState("");
-  const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
+  const [position, setPosition] = useState(user?.job_title || "");
+  const [organization, setOrganization] = useState(user?.organization || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [mobile, setMobile] = useState(user?.phone || "");
+  const [address, setAddress] = useState(user?.address || "");
+  const [city, setCity] = useState(user?.city || "");
   const [stateProvince, setStateProvince] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [postalCode, setPostalCode] = useState("");
-  const [country, setCountry] = useState("");
+  const [country, setCountry] = useState(user?.country || "");
   const [businessPhone, setBusinessPhone] = useState("");
   const [membershipNumber, setMembershipNumber] = useState("");
   const [chapterName, setChapterName] = useState("");
-  const [base, setBase] = useState<FlagMap<BaseMembershipId>>(() => emptyFlags(baseIds));
+  const [base, setBase] = useState<FlagMap<BaseMembershipId>>(() => {
+    const flags = emptyFlags(baseIds);
+    if (variant === "register") flags.student = true;
+    return flags;
+  });
   const [chapter, setChapter] = useState<FlagMap<BaseMembershipId>>(() => emptyFlags(chapterIds));
   const [additional, setAdditional] = useState<FlagMap<AdditionalMembershipId>>(() =>
     emptyFlags(additionalIds),
   );
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -99,14 +129,19 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
   const [certPrices, setCertPrices] = useState<MembershipCertificateTypePublic[] | null>(null);
 
   const isRenewal = kind === "renewal";
-  const title = isRenewal ? "Membership Renewal" : "Membership Application";
-  const printHref = isRenewal ? "/membership/forms/renewal" : "/membership/forms/application";
+  const isRegister = variant === "register";
+  const title = isRegister
+    ? "Create your CAISBE account"
+    : isRenewal
+      ? "Membership Renewal"
+      : "Upgrade membership";
+  const printHref = siteUrl(isRenewal ? "/membership/forms/renewal" : "/membership/forms/application");
 
   const labeledBaseOptions = useMemo(() => withBaseMembershipLabels(certPrices), [certPrices]);
 
   useEffect(() => {
     let active = true;
-    apiFetch<MembershipCertificateTypePublic[]>("/membership/certificate-types")
+    apiFetch<MembershipCertificateTypePublic[]>("/membership/certificate-types", { auth: false })
       .then((rows) => {
         if (active) setCertPrices(rows);
       })
@@ -134,6 +169,10 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
         setError("Please upload your completed membership form.");
         return;
       }
+      if (isRegister) {
+        setError("Create your account with the online form first, then you can upload renewals from Membership.");
+        return;
+      }
       setBusy(true);
       setError(null);
       setMessage(null);
@@ -141,25 +180,16 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
         const body = new FormData();
         body.append("file", file);
         body.append("kind", kind);
-        const response = await fetch("/api/membership/apply-file", { method: "POST", body });
-        if (!response.ok) {
-          let detail = "Unable to upload the form.";
-          try {
-            const data = (await response.json()) as { detail?: string };
-            if (typeof data.detail === "string") detail = data.detail;
-          } catch {
-            // keep default
-          }
-          throw new Error(detail);
-        }
+        await apiFetch("/me/membership/apply-file", { method: "POST", body });
         setMessage(
           isRenewal
-            ? "Your completed renewal form was received."
-            : "Your completed membership form was received.",
+            ? "Your completed renewal form was received and your membership was updated."
+            : "Your completed membership form was received and your membership was updated.",
         );
         setFile(null);
+        onSuccess?.();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to upload the form.");
+        setError(err instanceof ApiError ? err.detail : "Unable to upload the form.");
       } finally {
         setBusy(false);
       }
@@ -173,14 +203,19 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       setError("Please agree to the CAISBE bylaws and code of ethics.");
       return;
     }
+    if (isRegister && password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
     const phone = mobile.trim() || businessPhone.trim();
+    const selectedType = selectedBase.find((option) => option.api !== "student")?.api || selectedBase[0].api;
     const baseLabels = checkedLabels(labeledBaseOptions, base);
     const chapterLabels = checkedLabels(chapterMembershipOptions, chapter);
     const additionalLabels = checkedLabels(additionalMembershipOptions, additional);
     const lines = [
-      isRenewal ? "Renewal" : "New membership",
+      isRenewal ? "Renewal" : isRegister ? "New account" : "Membership upgrade",
       membershipNumber.trim() ? `Membership number: ${membershipNumber.trim()}` : null,
       designation.trim() ? `Designation: ${designation.trim()}` : null,
       stateProvince.trim() ? `State/Province: ${stateProvince.trim()}` : null,
@@ -191,7 +226,6 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       chapterName.trim() ? `Chapter: ${chapterName.trim()}` : null,
       chapterLabels.length ? `Chapter membership: ${chapterLabels.join(", ")}` : null,
       additionalLabels.length ? `Additional options: ${additionalLabels.join(", ")}` : null,
-      mode === "upload" && file ? `Form upload: ${file.name}` : null,
       "Agreed to CAISBE bylaws and code of ethics.",
     ].filter(Boolean);
 
@@ -199,7 +233,26 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
     setError(null);
     setMessage(null);
     try {
-      await apiFetch("/membership/apply", {
+      if (isRegister) {
+        await register({
+          full_name: fullName,
+          email,
+          phone,
+          country,
+          city,
+          password,
+          given_name: firstName.trim() || null,
+          family_name: lastName.trim() || null,
+          address: address.trim() || null,
+          organization: organization.trim().slice(0, 160) || null,
+          job_title: position.trim().slice(0, 120) || null,
+          membership_type: selectedType,
+          details: lines.join("\n").slice(0, 8000),
+        });
+        onRegistered?.();
+        return;
+      }
+      await apiFetch("/me/membership/apply", {
         method: "POST",
         body: JSON.stringify({
           full_name: fullName,
@@ -210,20 +263,19 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
           address: address.trim() || null,
           organization: organization.trim().slice(0, 160) || null,
           job_title: position.trim().slice(0, 120) || null,
-          membership_type: selectedBase[0].api,
+          membership_type: selectedType,
           details: lines.join("\n").slice(0, 8000),
+          kind,
         }),
       });
       setMessage(
         isRenewal
-          ? "Renewal request received. Our team will confirm your membership renewal."
-          : mode === "upload"
-            ? "Your completed form was received. Our team will review your membership application."
-            : "Application received. Our team will review your membership registration.",
+          ? "Renewal received. Your membership certificate validity has been refreshed."
+          : "Membership updated. Your certificate now matches the selected type.",
       );
-      setFile(null);
+      onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to submit.");
+      setError(err instanceof ApiError ? err.detail : err instanceof Error ? err.message : "Unable to submit.");
     } finally {
       setBusy(false);
     }
@@ -232,7 +284,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
   return (
     <form
       onSubmit={(e) => void submit(e)}
-      className="mt-8 rounded-[20px] bg-white p-6 shadow-hopewell md:p-8"
+      className="rounded-[20px] bg-white p-6 shadow-hopewell md:p-8"
     >
       <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
         {title}
@@ -245,32 +297,34 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
         </a>
       </p>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => setMode("online")}
-          className={`rounded-full border-2 px-4 py-3 text-left text-sm font-semibold ${
-            mode === "online"
-              ? "border-caisbe-red bg-caisbe-red/5 text-caisbe-red"
-              : "border-ifma-border text-caisbe-text hover:border-caisbe-red"
-          }`}
-        >
-          Fill on the website
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("upload")}
-          className={`rounded-full border-2 px-4 py-3 text-left text-sm font-semibold ${
-            mode === "upload"
-              ? "border-caisbe-red bg-caisbe-red/5 text-caisbe-red"
-              : "border-ifma-border text-caisbe-text hover:border-caisbe-red"
-          }`}
-        >
-          Download &amp; upload form
-        </button>
-      </div>
+      {isRegister ? null : (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setMode("online")}
+            className={`rounded-full border-2 px-4 py-3 text-left text-sm font-semibold ${
+              mode === "online"
+                ? "border-caisbe-red bg-caisbe-red/5 text-caisbe-red"
+                : "border-ifma-border text-caisbe-text hover:border-caisbe-red"
+            }`}
+          >
+            Fill on the website
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("upload")}
+            className={`rounded-full border-2 px-4 py-3 text-left text-sm font-semibold ${
+              mode === "upload"
+                ? "border-caisbe-red bg-caisbe-red/5 text-caisbe-red"
+                : "border-ifma-border text-caisbe-text hover:border-caisbe-red"
+            }`}
+          >
+            Download &amp; upload form
+          </button>
+        </div>
+      )}
 
-      {mode === "upload" ? (
+      {mode === "upload" && !isRegister ? (
         <div className="mt-4 rounded-[20px] bg-[#f8fafc] px-4 py-4 text-sm text-caisbe-text">
           <p className="font-semibold text-caisbe-text-dark">
             {isRenewal ? "Renewal form" : "Membership form"}
@@ -281,7 +335,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
           <div className="mt-3 flex flex-wrap gap-4">
             {isRenewal ? null : (
               <a
-                href="/forms/caisbe-membership-registration.docx"
+                href={siteUrl("/forms/caisbe-membership-registration.docx")}
                 download="CAISBE-Membership-Registration.docx"
                 className="inline-flex text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
               >
@@ -313,7 +367,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       {error ? <p className="mt-4 text-sm text-caisbe-red">{error}</p> : null}
       {message ? <p className="mt-4 text-sm text-caisbe-text">{message}</p> : null}
 
-      {mode === "online" ? (
+      {mode === "online" || isRegister ? (
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         {isRenewal ? (
           <Field label="Membership number" className="md:col-span-2">
@@ -350,11 +404,35 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            readOnly={!isRegister && Boolean(user?.email)}
           />
         </Field>
         <Field label="Mobile/Phone Number">
           <input className={inputClass} required value={mobile} onChange={(e) => setMobile(e.target.value)} />
         </Field>
+        {isRegister ? (
+          <Field label="Password" hint="At least 8 characters." className="md:col-span-2">
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                className={`${inputClass} pr-12`}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((open) => !open)}
+                className="absolute inset-y-0 right-0 top-1 inline-flex h-11 w-12 items-center justify-center text-caisbe-muted hover:text-caisbe-red"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+          </Field>
+        ) : null}
         <Field label="Address">
           <input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} />
         </Field>
@@ -435,7 +513,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       </div>
       ) : null}
 
-      {mode === "online" ? (
+      {mode === "online" || isRegister ? (
       <label className="mt-8 flex gap-3 rounded-[20px] bg-caisbe-text-dark px-4 py-4 text-sm leading-6 text-white">
         <input
           type="checkbox"
@@ -455,13 +533,15 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
         >
           {busy
             ? "Submitting…"
-            : isRenewal
-              ? mode === "upload"
-                ? "Upload renewal"
-                : "Submit renewal"
-              : mode === "upload"
-                ? "Upload application"
-                : "Submit application"}
+            : isRegister
+              ? "Create account"
+              : isRenewal
+                ? mode === "upload"
+                  ? "Upload renewal"
+                  : "Submit renewal"
+                : mode === "upload"
+                  ? "Upload application"
+                  : "Submit application"}
         </button>
       </div>
     </form>

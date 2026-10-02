@@ -34,6 +34,7 @@ from app.models import (
     QuizQuestion,
     User,
 )
+from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.schemas.courses import (
     AssignmentSubmitIn,
     CertificateOut,
@@ -50,14 +51,15 @@ from app.schemas.courses import (
     QuizSubmitIn,
 )
 from app.services.membership import (
+    activate_membership,
     issue_membership_certificate,
     membership_certificate_copy,
-    membership_is_accessible,
     membership_is_expired,
+    record_membership_application,
 )
 from app.services.settings import get_setting
 
-from app.services.commerce import require_active_enrollment
+from app.services.commerce import apply_profile_fields, normalize_membership_type, require_active_enrollment
 
 router = APIRouter(tags=["courses"])
 
@@ -1071,20 +1073,107 @@ def get_my_membership_certificate(
 ) -> MembershipCertificateOut:
     if current_user.role == "admin":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membership certificate not found")
-    if not membership_is_accessible(db, current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Complete at least one course to unlock your membership certificate.",
-        )
     row = issue_membership_certificate(db, current_user)
-    if membership_is_expired(row):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Your membership certificate has expired. Renew your membership to continue.",
-        )
     db.commit()
     db.refresh(row)
     return _membership_to_out(row, current_user.full_name, db)
+
+
+@router.post("/me/membership/apply", response_model=MembershipApplicationOut, status_code=status.HTTP_201_CREATED)
+def apply_my_membership(
+    payload: MembershipApplicationIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MembershipApplicationOut:
+    if current_user.role == "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins cannot apply for membership.")
+    membership_type = normalize_membership_type(payload.membership_type) or "student"
+    apply_profile_fields(
+        current_user,
+        {
+            "full_name": payload.full_name,
+            "phone": payload.phone,
+            "country": payload.country,
+            "city": payload.city,
+            "address": payload.address,
+            "organization": payload.organization,
+            "job_title": payload.job_title,
+        },
+    )
+    renew = (payload.kind or "").strip().lower() == "renewal"
+    activate_membership(db, current_user, membership_type, renew=renew)
+    application = record_membership_application(
+        db,
+        current_user,
+        membership_type=membership_type,
+        details=payload.details,
+        status_value="active",
+    )
+    db.commit()
+    db.refresh(application)
+    return MembershipApplicationOut.model_validate(application)
+
+
+@router.post("/me/membership/apply-file", response_model=MembershipApplicationOut, status_code=status.HTTP_201_CREATED)
+async def apply_my_membership_file(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MembershipApplicationOut:
+    if current_user.role == "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins cannot apply for membership.")
+    form = await request.form(max_part_size=20 * 1024 * 1024)
+    uploaded = form.get("file")
+    if not isinstance(uploaded, UploadFile):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose a completed form to upload.")
+    suffix = Path(uploaded.filename or "").suffix.lower()
+    if suffix not in {".pdf", ".doc", ".docx"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Upload a PDF or Word file.")
+    upload_root = Path(settings.upload_dir)
+    upload_root.mkdir(parents=True, exist_ok=True)
+    safe_name = f"{uuid.uuid4().hex}{suffix}"
+    dest = upload_root / safe_name
+    written = 0
+    try:
+        with dest.open("wb") as out:
+            while True:
+                chunk = await uploaded.read(1024 * 1024)
+                if not chunk:
+                    break
+                written += len(chunk)
+                if written > 20 * 1024 * 1024:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail="File is too large. Maximum size is 20 MB.",
+                    )
+                out.write(chunk)
+    except HTTPException:
+        dest.unlink(missing_ok=True)
+        raise
+    except Exception:
+        dest.unlink(missing_ok=True)
+        raise
+    if written == 0:
+        dest.unlink(missing_ok=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
+
+    kind = str(form.get("kind") or "application").strip().lower()
+    kind_label = "Renewal" if kind == "renewal" else "New membership"
+    original_name = Path(uploaded.filename or safe_name).name
+    file_url = f"/api/uploads/{safe_name}"
+    details = f"{kind_label}\nUploaded form: {original_name}\nFile: {file_url}"
+    membership_type = current_user.membership_type or "student"
+    activate_membership(db, current_user, membership_type, renew=kind == "renewal")
+    application = record_membership_application(
+        db,
+        current_user,
+        membership_type=membership_type,
+        details=details,
+        status_value="active",
+    )
+    db.commit()
+    db.refresh(application)
+    return MembershipApplicationOut.model_validate(application)
 
 
 @router.get("/me/certificates/{certificate_code}", response_model=CertificateOut)

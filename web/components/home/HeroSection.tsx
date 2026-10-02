@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import ButtonLink from "@/components/ui/ButtonLink";
-import { fetchHeroCarousel, type HeroSlide } from "@/lib/api";
+import { fetchHeroCarousel, portalMembershipRegisterUrl, type HeroSlide } from "@/lib/api";
 import { heroIntro, siteFullName, siteName } from "@/lib/data/home";
 
 const DEFAULT_SLIDES: HeroSlide[] = [
@@ -92,7 +92,7 @@ export default function HeroSection() {
             {heroIntro}
           </p>
           <div className="mt-8">
-            <ButtonLink href="/membership/become-a-member" variant="pill">
+            <ButtonLink href={portalMembershipRegisterUrl()} variant="pill">
               Join {siteName}
             </ButtonLink>
           </div>

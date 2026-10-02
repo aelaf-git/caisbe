@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from app.db import get_db
 from app.security.auth import create_access_token, get_current_user, hash_password, verify_password
 from app.security.limiter import limiter
-from app.models import SecurityQuestion, User
+from app.models import MembershipApplication, SecurityQuestion, User
 from app.schemas.auth import (
     PasswordChangeIn,
     ProfileUpdate,
@@ -16,8 +16,9 @@ from app.schemas.auth import (
     UserLogin,
     UserOut,
 )
-from app.services.commerce import apply_profile_fields, profile_is_complete
+from app.services.commerce import apply_profile_fields, normalize_membership_type, profile_is_complete
 from app.services.membership import (
+    activate_membership,
     is_student_membership,
     issue_membership_certificate,
     membership_is_accessible,
@@ -41,12 +42,20 @@ def register(request: Request, payload: UserCreate, db: Session = Depends(get_db
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
     now = datetime.now(timezone.utc)
+    requested_type = (
+        normalize_membership_type(payload.membership_type) if payload.membership_type else "student"
+    )
     user = User(
         full_name=payload.full_name.strip(),
         email=email,
         phone=payload.phone.strip(),
         country=payload.country.strip(),
         city=payload.city.strip(),
+        given_name=(payload.given_name or "").strip() or None,
+        family_name=(payload.family_name or "").strip() or None,
+        address=(payload.address or "").strip() or None,
+        organization=(payload.organization or "").strip() or None,
+        job_title=(payload.job_title or "").strip() or None,
         hashed_password=hash_password(payload.password),
         role="student",
         membership_type="student",
@@ -56,6 +65,26 @@ def register(request: Request, payload: UserCreate, db: Session = Depends(get_db
     db.add(user)
     db.flush()
     issue_membership_certificate(db, user)
+    if requested_type != "student":
+        activate_membership(db, user, requested_type)
+    if payload.details and payload.details.strip():
+        db.add(
+            MembershipApplication(
+                user_id=user.id,
+                full_name=user.full_name,
+                email=user.email,
+                phone=user.phone or "",
+                country=user.country or "",
+                city=user.city or "",
+                address=user.address,
+                organization=user.organization,
+                job_title=user.job_title,
+                details=payload.details.strip()[:8000],
+                membership_type=user.membership_type or "student",
+                membership_status="active",
+                membership_date=now,
+            )
+        )
     db.refresh(user)
     db.commit()
     db.refresh(user)
