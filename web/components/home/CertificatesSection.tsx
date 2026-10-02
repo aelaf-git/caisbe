@@ -16,14 +16,14 @@ export default async function CertificatesSection() {
 
   if (courses.length === 0) {
     return (
-      <section className="border-b border-ifma-border-light bg-white py-16">
+      <section className="bg-white py-16 md:py-24">
         <div className="mx-auto max-w-7xl px-4">
-          <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold md:text-4xl">
+              <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
                 {certificatesIntro.title}
               </h2>
-              <p className="mt-2 text-lg text-ifma-muted">
+              <p className="mt-2 text-base text-caisbe-muted">
                 {certificatesIntro.subtitle}
               </p>
             </div>
@@ -40,14 +40,14 @@ export default async function CertificatesSection() {
   }
 
   return (
-    <section className="border-b border-ifma-border-light bg-white py-16">
+    <section className="bg-[#f8fafc] py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold md:text-4xl">
+            <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
               {certificatesIntro.title}
             </h2>
-            <p className="mt-2 text-lg text-ifma-muted">
+            <p className="mt-2 text-base text-caisbe-muted">
               {certificatesIntro.subtitle}
             </p>
           </div>
@@ -56,26 +56,39 @@ export default async function CertificatesSection() {
           </ButtonLink>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {courses.map((course, index) => (
             <Link
               key={course.id}
               href={courseProgramPath(course.slug)}
-              className="shadow-brand-card flex flex-col border border-ifma-border-light bg-white p-6 transition duration-300 hover:-translate-y-1 hover:border-caisbe-red motion-safe:animate-page-fade-in"
+              className="flex flex-col overflow-hidden rounded-[20px] bg-white shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in"
               style={{ animationDelay: `${index * 70}ms` }}
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
-                {course.code}
-              </p>
-              <h3 className="mt-3 text-lg font-semibold leading-snug text-ifma-navy">
-                {course.title}
-              </h3>
-              <p className="mt-4 flex-1 text-sm leading-6 text-ifma-muted">
-                {course.description}
-              </p>
-              <span className="mt-6 text-sm font-semibold uppercase tracking-wide text-caisbe-red">
-                View Program
-              </span>
+              {course.cover_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={course.cover_url}
+                  alt=""
+                  className="aspect-video w-full object-cover"
+                />
+              ) : (
+                <div className="flex aspect-video items-center bg-[#f7f9fa] px-4">
+                  <p className="text-sm font-semibold text-caisbe-red">
+                    {course.code}
+                  </p>
+                </div>
+              )}
+              <div className="flex flex-1 flex-col p-5">
+                <h3 className="font-hopewell-display text-lg font-bold leading-snug text-caisbe-text-dark">
+                  {course.title}
+                </h3>
+                <p className="mt-2 line-clamp-3 flex-1 text-sm leading-6 text-caisbe-muted">
+                  {course.description}
+                </p>
+                <span className="mt-4 text-sm font-bold text-caisbe-red">
+                  View Program
+                </span>
+              </div>
             </Link>
           ))}
         </div>

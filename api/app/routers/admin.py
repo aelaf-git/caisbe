@@ -29,6 +29,7 @@ from app.models import (
     MediaAsset,
     MembershipCertificate,
     NewsPost,
+    Testimonial,
     NewsletterCampaign,
     NewsletterSubscriber,
     QuizAttempt,
@@ -103,6 +104,11 @@ from app.schemas.jobs import (
     JobPostingCreateIn,
     JobPostingOut,
     JobPostingUpdateIn,
+)
+from app.schemas.testimonials import (
+    TestimonialCreateIn,
+    TestimonialOut,
+    TestimonialUpdateIn,
 )
 from app.schemas.news import (
     NewsPostCreateIn,
@@ -547,14 +553,32 @@ def _settings_out(db: Session) -> AppSettingsOut:
         ui_font_body=_choice(
             data,
             "ui_font_body",
-            {"roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"},
-            "roboto",
+            {
+                "nunito",
+                "poppins",
+                "roboto",
+                "open-sans",
+                "inter",
+                "source-sans",
+                "merriweather",
+                "source-serif",
+            },
+            "nunito",
         ),
         ui_font_display=_choice(
             data,
             "ui_font_display",
-            {"roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"},
-            "open-sans",
+            {
+                "nunito",
+                "poppins",
+                "roboto",
+                "open-sans",
+                "inter",
+                "source-sans",
+                "merriweather",
+                "source-serif",
+            },
+            "poppins",
         ),
         hero_transition_ms=hero_transition_ms(db),
     )
@@ -2084,6 +2108,10 @@ def admin_list_membership_applications(
             "email": row.email,
             "phone": row.phone,
             "membership_type": row.membership_type,
+            "organization": row.organization,
+            "city": row.city,
+            "country": row.country,
+            "details": row.details,
             "membership_status": row.membership_status,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         }
@@ -2422,5 +2450,75 @@ def admin_delete_news(
     row = db.query(NewsPost).filter(NewsPost.id == post_id).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
+    db.delete(row)
+    db.commit()
+
+
+@router.get("/testimonials", response_model=list[TestimonialOut])
+def admin_list_testimonials(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[TestimonialOut]:
+    rows = (
+        db.query(Testimonial)
+        .order_by(Testimonial.sort_order.asc(), Testimonial.id.asc())
+        .all()
+    )
+    return [TestimonialOut.model_validate(row) for row in rows]
+
+
+@router.post("/testimonials", response_model=TestimonialOut, status_code=status.HTTP_201_CREATED)
+def admin_create_testimonial(
+    payload: TestimonialCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> TestimonialOut:
+    row = Testimonial(
+        quote=payload.quote.strip(),
+        name=payload.name.strip(),
+        role=payload.role.strip(),
+        published=payload.published,
+        sort_order=payload.sort_order,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return TestimonialOut.model_validate(row)
+
+
+@router.patch("/testimonials/{testimonial_id}", response_model=TestimonialOut)
+def admin_update_testimonial(
+    testimonial_id: int,
+    payload: TestimonialUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> TestimonialOut:
+    row = db.query(Testimonial).filter(Testimonial.id == testimonial_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Testimonial not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Quote, name, and role are required.",
+                )
+        setattr(row, key, value)
+    db.commit()
+    db.refresh(row)
+    return TestimonialOut.model_validate(row)
+
+
+@router.delete("/testimonials/{testimonial_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_testimonial(
+    testimonial_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(Testimonial).filter(Testimonial.id == testimonial_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Testimonial not found")
     db.delete(row)
     db.commit()

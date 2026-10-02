@@ -32,20 +32,20 @@ function MemberPathCard({
   description,
   selected,
   onSelect,
+  mark,
 }: {
   title: string;
   description: string;
   selected: boolean;
   onSelect: () => void;
+  mark: string;
 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`rounded-lg border-2 p-6 text-left transition-colors ${
-        selected
-          ? "border-caisbe-red bg-caisbe-red/5 shadow-brand-card"
-          : "border-ifma-border bg-white hover:border-caisbe-red"
+      className={`rounded-[20px] p-6 text-left shadow-hopewell transition duration-300 hover:-translate-y-1 ${
+        selected ? "bg-caisbe-red/5 ring-2 ring-caisbe-red" : "bg-white"
       }`}
     >
       <span
@@ -55,7 +55,7 @@ function MemberPathCard({
             : "bg-[#fafafa] text-caisbe-red"
         }`}
       >
-        {title.startsWith("New") ? "N" : "E"}
+        {mark}
       </span>
       <h3 className="mt-4 font-display text-xl font-semibold text-caisbe-text-dark">
         {title}
@@ -67,8 +67,14 @@ function MemberPathCard({
 
 export function BecomeAMemberContent({
   initialPath = null,
+  eyebrow = "Membership",
+  title,
+  lead,
 }: {
   initialPath?: "new" | "existing" | null;
+  eyebrow?: string;
+  title?: string;
+  lead?: string;
 }) {
   const page = membershipPages["become-a-member"];
   const [path, setPath] = useState<"new" | "existing" | null>(initialPath);
@@ -76,23 +82,25 @@ export function BecomeAMemberContent({
   return (
     <>
       <PageHero
-        eyebrow="Membership"
-        title={page.title}
-        lead={page.description}
+        eyebrow={eyebrow}
+        title={title ?? page.title}
+        lead={lead ?? page.description}
       />
       <ContentSection wide>
         <div className="grid gap-6 md:grid-cols-2">
           <MemberPathCard
-            title="New Member"
+            title="Become a New Member"
             description="Register for CAISBE membership. Fill the form online or download it, complete it, and upload."
             selected={path === "new"}
             onSelect={() => setPath("new")}
+            mark="1"
           />
           <MemberPathCard
-            title="Existing Member"
+            title="Renew Membership"
             description="Renew your membership online, or download the renewal form, complete it, and upload."
             selected={path === "existing"}
             onSelect={() => setPath("existing")}
+            mark="2"
           />
         </div>
 
@@ -101,7 +109,7 @@ export function BecomeAMemberContent({
           {path === "existing" ? <MembershipRenewalForm /> : null}
           {path == null ? (
             <p className="text-center text-sm text-caisbe-muted">
-              Choose New Member or Existing Member to continue.
+              Choose Become a New Member or Renew Membership to continue.
             </p>
           ) : null}
         </div>
@@ -144,35 +152,11 @@ export function MembershipSubpageContent({ slug }: { slug: MembershipSlug }) {
   if (slug === "join") {
     const page = membershipPages.join;
     return (
-      <>
-        <PageHero
-          eyebrow={page.eyebrow}
-          title={page.title}
-          lead={page.paragraphs[0]}
-          actions={
-            <>
-              <ButtonLink href="/membership/become-a-member" variant="primary">
-                Become a Member
-              </ButtonLink>
-              <ButtonLink href="/membership/types" variant="secondary">
-                Membership Types
-              </ButtonLink>
-            </>
-          }
-        >
-          {page.paragraphs.slice(1).map((paragraph) => (
-            <p
-              key={paragraph.slice(0, 40)}
-              className="mt-6 text-base leading-7 text-caisbe-muted"
-            >
-              {paragraph}
-            </p>
-          ))}
-        </PageHero>
-        <ContentSection>
-          <MembershipRegistrationForm title="Join CAISBE" />
-        </ContentSection>
-      </>
+      <BecomeAMemberContent
+        eyebrow={page.eyebrow}
+        title={page.title}
+        lead={page.description}
+      />
     );
   }
 

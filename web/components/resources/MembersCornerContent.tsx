@@ -39,7 +39,7 @@ export function MediaItemContent({ slug }: { slug: string }) {
           {item.highlights.map((highlight) => (
             <li
               key={highlight}
-              className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-text"
+              className="rounded-[20px] bg-white px-4 py-3 text-sm font-medium text-caisbe-text shadow-hopewell"
             >
               {highlight}
             </li>

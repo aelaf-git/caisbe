@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from starlette.datastructures import UploadFile
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db import get_db
 from app.security.limiter import limiter
 from app.models import (
@@ -15,6 +19,7 @@ from app.models import (
     MembershipApplication,
     NewsPost,
     NewsletterSubscriber,
+    Testimonial,
     User,
 )
 from app.schemas.analytics import SiteVisitIn
@@ -23,6 +28,7 @@ from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.schemas.events import IndustryEventOut
 from app.schemas.jobs import JobPostingOut
 from app.schemas.news import NewsPostOut
+from app.schemas.testimonials import TestimonialOut
 from app.services.analytics import record_site_visit
 from app.services.commerce import apply_profile_fields, normalize_membership_type
 from app.services.hero import ensure_default_hero_slides
@@ -121,6 +127,19 @@ def list_active_jobs(
     return out
 
 
+@router.get("/testimonials", response_model=list[TestimonialOut])
+def list_published_testimonials(
+    db: Session = Depends(get_db),
+) -> list[TestimonialOut]:
+    rows = (
+        db.query(Testimonial)
+        .filter(Testimonial.published.is_(True))
+        .order_by(Testimonial.sort_order.asc(), Testimonial.id.asc())
+        .all()
+    )
+    return [TestimonialOut.model_validate(row) for row in rows]
+
+
 @router.get("/news", response_model=list[NewsPostOut])
 def list_published_news(
     featured: bool | None = Query(default=None),
@@ -202,7 +221,8 @@ def apply_membership(
         city=payload.city.strip(),
         address=(payload.address or "").strip() or None,
         organization=(payload.organization or "").strip() or None,
-        job_title=(payload.job_title or "").strip() or None,
+        job_title=((payload.job_title or "").strip() or None),
+        details=((payload.details or "").strip() or None),
         membership_type=membership_type or "student",
         membership_status="pending",
         membership_date=now,
@@ -218,12 +238,83 @@ def apply_membership(
                 "city": payload.city,
                 "address": payload.address,
                 "organization": payload.organization,
-                "job_title": payload.job_title,
+                "job_title": (payload.job_title or "")[:120] or None,
                 "membership_type": membership_type,
             },
         )
         if user.membership_status == "pending":
             user.membership_status = "pending"
+    db.commit()
+    db.refresh(application)
+    return MembershipApplicationOut.model_validate(application)
+
+
+FORM_UPLOAD_EXTENSIONS = {".pdf", ".doc", ".docx"}
+MAX_FORM_UPLOAD_BYTES = 20 * 1024 * 1024
+
+
+@router.post("/membership/apply-file", response_model=MembershipApplicationOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
+async def apply_membership_file(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> MembershipApplicationOut:
+    form = await request.form(max_part_size=MAX_FORM_UPLOAD_BYTES)
+    uploaded = form.get("file")
+    if not isinstance(uploaded, UploadFile):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose a completed form to upload.")
+    suffix = Path(uploaded.filename or "").suffix.lower()
+    if suffix not in FORM_UPLOAD_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Upload a PDF or Word file.",
+        )
+    upload_root = Path(settings.upload_dir)
+    upload_root.mkdir(parents=True, exist_ok=True)
+    safe_name = f"{uuid.uuid4().hex}{suffix}"
+    dest = upload_root / safe_name
+    written = 0
+    try:
+        with dest.open("wb") as out:
+            while True:
+                chunk = await uploaded.read(1024 * 1024)
+                if not chunk:
+                    break
+                written += len(chunk)
+                if written > MAX_FORM_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail="File is too large. Maximum size is 20 MB.",
+                    )
+                out.write(chunk)
+    except HTTPException:
+        dest.unlink(missing_ok=True)
+        raise
+    except Exception:
+        dest.unlink(missing_ok=True)
+        raise
+    if written == 0:
+        dest.unlink(missing_ok=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
+
+    original_name = Path(uploaded.filename or safe_name).name
+    display_name = original_name[:120] if len(original_name) >= 2 else "Uploaded form"
+    kind = str(form.get("kind") or "application").strip().lower()
+    kind_label = "Renewal" if kind == "renewal" else "New membership"
+    file_url = f"/api/uploads/{safe_name}"
+    application = MembershipApplication(
+        full_name=display_name,
+        email=f"upload-{uuid.uuid4().hex[:12]}@example.com",
+        phone="uploaded",
+        country="N/A",
+        city="N/A",
+        job_title=None,
+        details=f"{kind_label}\nUploaded form: {original_name}\nFile: {file_url}",
+        membership_type="professional",
+        membership_status="pending",
+        membership_date=datetime.now(timezone.utc),
+    )
+    db.add(application)
     db.commit()
     db.refresh(application)
     return MembershipApplicationOut.model_validate(application)

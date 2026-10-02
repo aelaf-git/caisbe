@@ -87,8 +87,8 @@ export default async function Footer() {
   }
 
   return (
-    <footer className="border-t-4 border-caisbe-red bg-[#111111] text-white">
-      <div className="mx-auto max-w-7xl px-4 py-12">
+    <footer className="font-hopewell bg-[#111111] text-white">
+      <div className="mx-auto max-w-7xl px-4 py-16 md:py-20">
         <div className="border-b border-white/25 pb-10">
           <Logo variant="footer" />
         </div>
@@ -98,7 +98,7 @@ export default async function Footer() {
             <div key={column.title}>
               <Link
                 href={column.href}
-                className="mb-4 block text-sm font-bold uppercase tracking-wide text-white transition-colors hover:text-white/85"
+                className="font-hopewell-display mb-4 block text-sm font-bold uppercase tracking-wide text-white transition-colors hover:text-white/85"
               >
                 {column.title}
               </Link>
@@ -120,7 +120,7 @@ export default async function Footer() {
           <div>
             <Link
               href="/contact"
-              className="mb-4 block text-sm font-bold uppercase tracking-wide text-white transition-colors hover:text-white/85"
+              className="font-hopewell-display mb-4 block text-sm font-bold uppercase tracking-wide text-white transition-colors hover:text-white/85"
             >
               Contact
             </Link>
@@ -140,7 +140,7 @@ export default async function Footer() {
                   href={link.href}
                   aria-label={link.label}
                   title={link.label}
-                  className="inline-flex text-white/95 transition-colors hover:text-white"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/25 text-white/95 transition hover:border-white hover:text-white"
                 >
                   {link.icon}
                 </Link>
@@ -152,7 +152,7 @@ export default async function Footer() {
         <div className="mt-10 border-t border-white/25 pt-10">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-md">
-              <p className="text-sm font-bold uppercase tracking-wide text-white">
+              <p className="font-hopewell-display text-sm font-bold uppercase tracking-wide text-white">
                 Subscribe to newsletter
               </p>
               <p className="mt-2 text-sm font-semibold leading-6 text-white/90">

@@ -1,32 +1,46 @@
+import { fetchPublishedTestimonials } from "@/lib/api";
 import { testimonials, testimonialsIntro } from "@/lib/data/home";
 
-export default function Testimonials() {
+export default async function Testimonials() {
+  let items = testimonials.map((item, index) => ({ ...item, id: index }));
+  try {
+    const published = await fetchPublishedTestimonials();
+    items = published.map((item) => ({
+      id: item.id,
+      quote: item.quote,
+      name: item.name,
+      role: item.role,
+    }));
+  } catch {
+    items = testimonials.map((item, index) => ({ ...item, id: index }));
+  }
+
+  if (items.length === 0) return null;
+
   return (
-    <section className="border-b border-ifma-border-light bg-[#fafafa] py-16 md:py-20">
+    <section className="bg-[#f8fafc] py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4">
         <div className="mb-10 motion-safe:animate-page-fade-in">
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-caisbe-red">
+          <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark">
             {testimonialsIntro.eyebrow}
           </p>
-          <h2 className="font-display mt-3 text-3xl font-semibold text-caisbe-text-dark md:text-4xl">
+          <h2 className="font-hopewell-display mt-4 text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
             {testimonialsIntro.title}
           </h2>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          {testimonials.map((item, index) => (
+          {items.map((item, index) => (
             <blockquote
-              key={item.name}
-              className="rounded-lg border border-ifma-border-light border-l-4 border-l-caisbe-red bg-white p-6 transition duration-300 hover:-translate-y-1 hover:shadow-brand-card motion-safe:animate-page-fade-in md:p-8"
+              key={item.id}
+              className="rounded-[20px] bg-white p-6 shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in md:p-8"
               style={{ animationDelay: `${index * 80}ms` }}
             >
-              <p className="text-base leading-8 text-caisbe-text md:text-lg">
+              <p className="text-sm leading-6 text-caisbe-text md:text-base">
                 &ldquo;{item.quote}&rdquo;
               </p>
-              <footer className="mt-6">
-                <p className="text-base font-semibold text-caisbe-text-dark">
-                  {item.name}
-                </p>
+              <footer className="mt-4">
+                <p className="text-sm font-bold text-caisbe-text-dark">{item.name}</p>
                 <p className="mt-1 text-sm text-caisbe-muted">{item.role}</p>
               </footer>
             </blockquote>

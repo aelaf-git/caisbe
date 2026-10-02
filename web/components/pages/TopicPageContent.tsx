@@ -43,7 +43,7 @@ export default function TopicPageContent({
               {section.items.map((item) => (
                 <li
                   key={item}
-                  className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-text"
+                  className="rounded-[20px] bg-white px-4 py-3 text-sm font-medium text-caisbe-text shadow-hopewell"
                 >
                   {item}
                 </li>

@@ -13,7 +13,7 @@ export default function AuthNav() {
       </a>
       <a
         href="/membership/become-a-member"
-        className="inline-flex h-8 items-center font-semibold text-caisbe-red transition-colors hover:text-caisbe-red-dark"
+        className="inline-flex h-8 items-center rounded-full bg-caisbe-red px-4 text-sm font-bold text-white transition hover:bg-caisbe-red-dark"
       >
         Register
       </a>

@@ -11,8 +11,8 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "completion_cert_title": "Certificate of Completion",
     "ui_theme": "light",
     "ui_font_size": "md",
-    "ui_font_body": "roboto",
-    "ui_font_display": "open-sans",
+    "ui_font_body": "nunito",
+    "ui_font_display": "poppins",
     "hero_transition_ms": "3000",
 }
 

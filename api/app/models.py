@@ -610,6 +610,7 @@ class MembershipApplication(Base):
     organization: Mapped[str | None] = mapped_column(String(160), nullable=True)
     job_title: Mapped[str | None] = mapped_column(String(120), nullable=True)
     membership_type: Mapped[str] = mapped_column(String(40))
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)
     membership_status: Mapped[str] = mapped_column(String(32), default="pending")
     membership_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -660,6 +661,23 @@ class NewsPost(Base):
     posted_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     published: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     featured: Mapped[bool] = mapped_column(Boolean, default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class Testimonial(Base):
+    """Quotes shown on the public homepage."""
+
+    __tablename__ = "testimonials"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    quote: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(String(120))
+    role: Mapped[str] = mapped_column(String(160))
+    published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

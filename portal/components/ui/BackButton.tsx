@@ -16,7 +16,7 @@ export default function BackButton({
       href={href}
       aria-label={label}
       title={label}
-      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border-2 border-caisbe-red text-caisbe-red transition-colors hover:bg-caisbe-red hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-caisbe-red/20 ${className}`}
+      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-caisbe-red text-caisbe-red transition-colors hover:bg-caisbe-red hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-caisbe-red/20 ${className}`}
     >
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M19 12H5" />

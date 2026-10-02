@@ -43,11 +43,11 @@ function MobileNavSection({
   onNavigate: () => void;
 }) {
   return (
-    <div className="border-b border-ifma-border-light">
+    <div className="px-3 py-1">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-4 text-left text-sm font-semibold text-caisbe-text-dark"
+        className="flex w-full items-center justify-between rounded-full px-4 py-3 text-left text-sm font-semibold text-caisbe-text-dark hover:bg-[#f8fafc]"
       >
         <Link
           href={section.href}
@@ -58,26 +58,26 @@ function MobileNavSection({
         >
           {section.label}
         </Link>
-        <span className="text-ifma-muted">{isOpen ? "−" : "+"}</span>
+        <span className="text-caisbe-muted">{isOpen ? "−" : "+"}</span>
       </button>
       {isOpen && (
-        <div className="space-y-6 bg-white px-4 pb-4">
+        <div className="mt-1 space-y-5 rounded-[20px] bg-[#f8fafc] px-4 py-4">
           {section.groups.map((group) => (
             <div key={group.title}>
               <Link
                 href={group.href}
                 onClick={onNavigate}
-                className="mb-2 block text-xs font-semibold uppercase tracking-[0.15em] text-caisbe-red"
+                className="font-hopewell-display mb-2 inline-flex rounded-full bg-caisbe-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-caisbe-red-dark"
               >
                 {group.title}
               </Link>
-              <ul className="space-y-2">
+              <ul className="space-y-1">
                 {group.links.map((link) => (
                   <li key={link.label}>
                     <Link
                       href={link.href}
                       onClick={onNavigate}
-                      className="block text-sm text-ifma-muted transition-colors hover:text-caisbe-red"
+                      className="block rounded-full px-3 py-1.5 text-sm text-caisbe-text transition-colors hover:bg-white hover:text-caisbe-red"
                     >
                       {link.label}
                     </Link>
@@ -101,7 +101,7 @@ export default function MobileNav({ sections }: { sections: NavSectionData[] }) 
       <button
         type="button"
         onClick={() => setMobileOpen((prev) => !prev)}
-        className="inline-flex items-center justify-center rounded-md border border-caisbe-red p-2 text-caisbe-red transition-colors hover:bg-caisbe-red/5"
+        className="inline-flex items-center justify-center rounded-full border border-caisbe-red p-2 text-caisbe-red transition-colors hover:bg-caisbe-red/5"
         aria-expanded={mobileOpen}
         aria-label={mobileOpen ? "Close menu" : "Open menu"}
       >
@@ -109,7 +109,7 @@ export default function MobileNav({ sections }: { sections: NavSectionData[] }) 
       </button>
 
       {mobileOpen && (
-        <div className="absolute left-0 right-0 top-full max-h-[80vh] overflow-y-auto border-t border-ifma-border-light bg-white shadow-lg">
+        <div className="font-hopewell absolute left-3 right-3 top-full max-h-[80vh] overflow-y-auto rounded-[20px] bg-white py-2 shadow-hopewell">
           {sections.map((section) => (
             <MobileNavSection
               key={section.label}

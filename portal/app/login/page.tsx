@@ -66,14 +66,14 @@ export default function PortalLoginPage() {
         <div className="absolute inset-0 bg-linear-to-t from-black/75 via-caisbe-red/20 to-black/10 lg:bg-linear-to-r lg:from-black/20 lg:via-transparent lg:to-caisbe-red/35" />
         <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10 lg:p-12">
           <p className="text-xs font-semibold uppercase tracking-wide text-white/80">CAISBE Students</p>
-          <p className="mt-2 max-w-md font-display text-2xl font-semibold text-white sm:text-3xl">
+          <p className="font-hopewell-display mt-2 max-w-md text-2xl font-extrabold text-white sm:text-3xl">
             Continue your courses and certificates with CAISBE
           </p>
         </div>
       </div>
 
       <div className="flex flex-col justify-center bg-admin-canvas px-4 py-10 sm:px-10 lg:px-16">
-        <div className="mx-auto w-full max-w-md">
+        <div className="mx-auto w-full max-w-md rounded-[20px] bg-white p-6 shadow-hopewell sm:p-8">
           <Image
             src="/images/logo.png"
             alt="CAISBE logo"
@@ -82,7 +82,9 @@ export default function PortalLoginPage() {
             priority
             className="h-20 w-auto object-contain sm:h-24"
           />
-          <h1 className="mt-6 font-display text-2xl font-semibold text-caisbe-text-dark">Student login</h1>
+          <h1 className="font-hopewell-display mt-6 text-2xl font-extrabold tracking-tight text-caisbe-text-dark">
+            Student login
+          </h1>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <div>
@@ -96,7 +98,7 @@ export default function PortalLoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 w-full rounded-md border border-ifma-border bg-admin-surface px-4 text-sm outline-none focus:border-caisbe-red"
+                className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface px-4 text-sm outline-none focus:border-caisbe-red"
               />
             </div>
             <div>
@@ -111,7 +113,7 @@ export default function PortalLoginPage() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 w-full rounded-md border border-ifma-border bg-admin-surface px-4 pr-12 text-sm outline-none focus:border-caisbe-red"
+                  className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface px-4 pr-12 text-sm outline-none focus:border-caisbe-red"
                 />
                 <button
                   type="button"
@@ -151,7 +153,7 @@ export default function PortalLoginPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex min-w-[180px] items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-8 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:border-caisbe-red-dark hover:bg-caisbe-red-dark disabled:opacity-60"
+              className="inline-flex min-w-[180px] items-center justify-center rounded-full bg-caisbe-red px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark disabled:opacity-60"
             >
               {submitting ? "Signing in…" : "Sign in"}
             </button>

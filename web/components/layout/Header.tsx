@@ -6,7 +6,7 @@ import NavTextLink from "@/components/ui/NavTextLink";
 
 export default async function Header() {
   return (
-    <header className="sticky top-0 z-50 overflow-visible bg-white">
+    <header className="font-hopewell sticky top-0 z-50 overflow-visible bg-white shadow-hopewell-nav">
       <div className="border-b border-ifma-border-light bg-white">
         <div className="mx-auto flex h-11 max-w-7xl items-center justify-between gap-4 px-4 text-sm">
           <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
@@ -26,8 +26,8 @@ export default async function Header() {
         </div>
       </div>
 
-      <div className="shadow-brand-nav relative overflow-visible border-b-2 border-caisbe-red bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 overflow-visible px-4 py-2.5">
+      <div className="relative overflow-visible bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 overflow-visible px-4">
           <Logo variant="header" />
           <MainNav />
         </div>

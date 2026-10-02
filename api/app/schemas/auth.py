@@ -116,6 +116,7 @@ class MembershipApplicationIn(BaseModel):
     organization: str | None = Field(default=None, max_length=160)
     job_title: str | None = Field(default=None, max_length=120)
     membership_type: str = Field(min_length=2, max_length=40)
+    details: str | None = Field(default=None, max_length=8000)
 
 
 class MembershipApplicationOut(BaseModel):

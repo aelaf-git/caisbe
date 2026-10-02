@@ -31,6 +31,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/events", label: "Events", icon: "calendar" },
       { href: "/news", label: "News", icon: "megaphone" },
+      { href: "/testimonials", label: "Testimonials", icon: "quote" },
       { href: "/jobs", label: "Job board", icon: "briefcase" },
       { href: "/media", label: "Media library", icon: "image" },
       { href: "/site-activity", label: "Site activity", icon: "activity" },
@@ -70,6 +71,7 @@ function NavIcon({ name }: { name: string }) {
     calendar: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>,
     briefcase: <><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M12 12h.01" /></>,
     megaphone: <><path d="m3 11 18-5v12L3 13v-2Z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></>,
+    quote: <><path d="M8 10H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3v6Z" /><path d="M8 10a4 4 0 0 1-4 4" /><path d="M19 10h-3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3v6Z" /><path d="M19 10a4 4 0 0 1-4 4" /></>,
     image: <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></>,
     activity: <path d="M3 12h4l3-9 4 18 3-9h4" />,
     chart: <><path d="M3 3v18h18" /><path d="m7 16 4-5 4 3 5-7" /></>,
@@ -86,8 +88,8 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
   const router = useRouter();
 
   return (
-    <aside className={`flex h-full w-full flex-col border-r border-ifma-border bg-admin-surface ${className}`}>
-      <div className="border-b border-ifma-border-light px-5 py-5">
+    <aside className={`flex h-full w-full flex-col bg-admin-surface shadow-hopewell-nav ${className}`}>
+      <div className="px-5 py-5">
         <Link href="/dashboard" onClick={onNavigate} className="flex flex-col gap-2">
           <Image
             src="/images/logo.png"
@@ -97,14 +99,16 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
             priority
             className="h-10 w-auto max-w-full object-contain"
           />
-          <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Admin</p>
+          <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-caisbe-red-dark">
+            Admin
+          </p>
         </Link>
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
-            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-caisbe-muted/70">
+            <p className="font-hopewell-display mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-caisbe-muted/70">
               {group.label}
             </p>
             <div className="space-y-1">
@@ -115,10 +119,10 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${
+                    className={`flex items-center gap-3 rounded-full px-3 py-2.5 text-sm transition-colors ${
                       active
                         ? "bg-caisbe-red/10 font-semibold text-caisbe-red"
-                        : "text-caisbe-muted hover:bg-ifma-border-light hover:text-caisbe-text"
+                        : "text-caisbe-muted hover:bg-[#f8fafc] hover:text-caisbe-text"
                     }`}
                   >
                     <NavIcon name={item.icon} />
@@ -131,7 +135,7 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
         ))}
       </nav>
 
-      <div className="mt-auto border-t border-ifma-border-light px-5 py-4">
+      <div className="mt-auto px-5 py-4">
         <div className="flex items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-caisbe-red text-sm font-bold text-white">
             {user?.full_name?.charAt(0).toUpperCase() || "A"}
@@ -147,7 +151,7 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
             logout();
             router.push("/login");
           }}
-          className="mt-3 inline-flex items-center justify-center rounded-md border border-ifma-border px-3 py-2 text-sm font-medium text-caisbe-muted transition-colors hover:border-caisbe-red hover:text-caisbe-red"
+          className="mt-3 inline-flex items-center justify-center rounded-full border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
         >
           Logout
         </button>

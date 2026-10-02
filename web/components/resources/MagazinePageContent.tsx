@@ -33,9 +33,9 @@ export default function MagazinePageContent() {
         lead={item.lead}
       />
 
-      <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
+      <section className="bg-transparent py-16 md:py-24">
         <div className="mx-auto max-w-7xl px-4">
-          <h2 className="font-display text-2xl font-semibold text-caisbe-text-dark">
+          <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
             Latest issues
           </h2>
           {loading ? (
@@ -49,7 +49,7 @@ export default function MagazinePageContent() {
               {issues.map((issue) => (
                 <article
                   key={issue.id}
-                  className="shadow-brand-card flex flex-col overflow-hidden border border-ifma-border-light bg-white"
+                  className="flex flex-col overflow-hidden rounded-[20px] bg-white shadow-hopewell"
                 >
                   {issue.cover_url ? (
                     // eslint-disable-next-line @next/next/no-img-element

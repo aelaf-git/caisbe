@@ -14,14 +14,16 @@ export default function CoursePlayerHeader({
   certificateCode?: string | null;
 }) {
   return (
-    <header className="overflow-hidden border border-ifma-border bg-admin-surface shadow-brand-card">
+    <header className="overflow-hidden rounded-[20px] bg-admin-surface shadow-hopewell">
       <div className="px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
             <BackButton href="/courses" className="mt-0.5 shrink-0" />
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">{code}</p>
-              <h1 className="font-display text-2xl font-semibold text-caisbe-text-dark md:text-3xl">
+              <p className="inline-flex rounded-full bg-caisbe-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-caisbe-red-dark">
+                {code}
+              </p>
+              <h1 className="font-hopewell-display mt-2 text-2xl font-extrabold tracking-tight text-caisbe-text-dark md:text-3xl">
                 {title}
               </h1>
             </div>
@@ -29,12 +31,12 @@ export default function CoursePlayerHeader({
           {certificateCode ? (
             <Link
               href={`/certificates/${certificateCode}`}
-              className="shrink-0 rounded-md border-2 border-caisbe-red px-4 py-2 text-sm font-semibold uppercase text-caisbe-red hover:bg-caisbe-red hover:text-white"
+              className="shrink-0 rounded-full border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
             >
               View certificate
             </Link>
           ) : (
-            <span className="shrink-0 rounded-md border-2 border-ifma-border px-4 py-2 text-sm font-semibold uppercase text-caisbe-muted">
+            <span className="shrink-0 rounded-full border border-ifma-border px-4 py-2 text-sm font-semibold text-caisbe-muted">
               Pass the exam to unlock
             </span>
           )}

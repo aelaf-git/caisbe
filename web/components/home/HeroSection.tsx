@@ -48,7 +48,7 @@ export default function HeroSection() {
           setTransitionMs(data.transition_ms);
         }
       } catch {
-        // Keep defaults on fetch failure.
+        // Keep the default slides on fetch failure.
       }
     }
     void load();
@@ -82,60 +82,60 @@ export default function HeroSection() {
   }, [index, slides]);
 
   return (
-    <section className="relative min-h-[32rem] overflow-hidden border-b border-ifma-border-light md:min-h-[40rem] lg:min-h-[44rem]">
-      {slides.map((slide, slideIndex) => {
-        const active = slideIndex === index;
-        const commonClass = `absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-700 ease-out ${
-          active ? "opacity-100" : "opacity-0"
-        }`;
-
-        if (slide.media_type === "video") {
-          return (
-            // eslint-disable-next-line jsx-a11y/media-has-caption
-            <video
-              key={slide.id}
-              ref={(el) => {
-                if (el) videoRefs.current.set(slide.id, el);
-                else videoRefs.current.delete(slide.id);
-              }}
-              src={slide.file_url}
-              muted
-              loop
-              playsInline
-              className={commonClass}
-              aria-hidden={!active}
-            />
-          );
-        }
-
-        return (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={slide.id}
-            src={slide.file_url}
-            alt={slide.title}
-            className={commonClass}
-            fetchPriority={slideIndex === 0 ? "high" : "auto"}
-          />
-        );
-      })}
-      <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/55 to-caisbe-red/25" />
-
-      <div className="relative z-10 mx-auto flex min-h-[32rem] max-w-7xl items-center px-4 py-16 md:min-h-[40rem] md:py-20 lg:min-h-[44rem]">
-        <div
-          key={slides[index]?.id ?? index}
-          className="w-full max-w-3xl border-l-4 border-caisbe-red pl-5 motion-safe:animate-page-fade-in md:pl-6"
-        >
-          <h1 className="text-[clamp(1.75rem,3.5vw,3.25rem)] font-semibold leading-tight text-white">
+    <section className="relative overflow-hidden bg-[#f8fafc]">
+      <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 md:py-20 lg:grid-cols-2 lg:gap-16 lg:py-24">
+        <div>
+          <h1 className="font-hopewell-display text-4xl font-extrabold leading-[1.08] tracking-tight text-caisbe-text-dark md:text-5xl">
             {siteFullName}
           </h1>
-          <p className="mt-6 text-[clamp(1rem,2vw,1.125rem)] leading-relaxed text-white/95">
+          <p className="mt-5 max-w-xl text-lg leading-8 text-caisbe-muted">
             {heroIntro}
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href="/membership/become-a-member" variant="primary">
+          <div className="mt-8">
+            <ButtonLink href="/membership/become-a-member" variant="pill">
               Join {siteName}
             </ButtonLink>
+          </div>
+        </div>
+
+        <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-[28px] shadow-[0_20px_45px_-12px_rgba(196,32,50,0.28)] sm:aspect-[5/4] lg:aspect-[4/5]">
+            {slides.map((slide, slideIndex) => {
+              const active = slideIndex === index;
+              const commonClass = `absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-700 ease-out ${
+                active ? "opacity-100" : "opacity-0"
+              }`;
+
+              if (slide.media_type === "video") {
+                return (
+                  // eslint-disable-next-line jsx-a11y/media-has-caption
+                  <video
+                    key={slide.id}
+                    ref={(element) => {
+                      if (element) videoRefs.current.set(slide.id, element);
+                      else videoRefs.current.delete(slide.id);
+                    }}
+                    src={slide.file_url}
+                    muted
+                    loop
+                    playsInline
+                    className={commonClass}
+                    aria-hidden={!active}
+                  />
+                );
+              }
+
+              return (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={slide.id}
+                  src={slide.file_url}
+                  alt={slide.title}
+                  className={commonClass}
+                  fetchPriority={slideIndex === 0 ? "high" : "auto"}
+                />
+              );
+            })}
           </div>
         </div>
       </div>

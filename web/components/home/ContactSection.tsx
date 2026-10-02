@@ -22,13 +22,13 @@ export default function ContactSection({
 }: ContactSectionProps) {
   if (variant === "home") {
     return (
-      <section className="bg-white py-16 md:py-20">
+      <section className="bg-white py-16 md:py-24">
         <div className="mx-auto grid max-w-7xl items-start gap-10 px-4 lg:grid-cols-[0.85fr_1.15fr]">
           <div className="motion-safe:animate-page-fade-in">
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-caisbe-red">
+            <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark">
               {eyebrow}
             </p>
-            <h2 className="font-display mt-3 text-3xl font-semibold leading-tight text-caisbe-text-dark md:text-4xl">
+            <h2 className="font-hopewell-display mt-4 text-3xl font-extrabold leading-tight tracking-tight text-caisbe-text-dark md:text-4xl">
               {title}
             </h2>
             <p className="mt-4 text-base leading-7 text-caisbe-muted">
@@ -36,7 +36,7 @@ export default function ContactSection({
             </p>
           </div>
           <div
-            className="motion-safe:animate-page-fade-in"
+            className="rounded-[20px] bg-white p-5 shadow-hopewell motion-safe:animate-page-fade-in md:p-8"
             style={{ animationDelay: "120ms" }}
           >
             <ContactForm cta={contactContent.cta} />
@@ -60,7 +60,7 @@ export default function ContactSection({
             {offices.map((office, index) => (
               <div
                 key={office.region}
-                className="shadow-brand-card overflow-hidden rounded-lg border border-ifma-border-light bg-white motion-safe:animate-page-fade-in"
+                className="overflow-hidden rounded-[20px] bg-white shadow-hopewell motion-safe:animate-page-fade-in"
                 style={{ animationDelay: `${index * 70}ms` }}
               >
                 <div className="aspect-[16/10] w-full bg-[#fafafa]">

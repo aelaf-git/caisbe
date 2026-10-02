@@ -13,7 +13,7 @@ import type { NavGroupData, NavSectionData } from "@/components/layout/nav-types
 
 const VIEWPORT_PADDING = 16;
 const PANEL_MAX_WIDTH = 720;
-const PANEL_OVERLAP = 6;
+const PANEL_GAP = 10;
 
 type PanelPosition = {
   top: number;
@@ -37,7 +37,7 @@ function getPanelPosition(
   const maxLeft = window.innerWidth - width - VIEWPORT_PADDING;
   left = Math.max(VIEWPORT_PADDING, Math.min(left, maxLeft));
 
-  let top = triggerRect.bottom - PANEL_OVERLAP;
+  let top = triggerRect.bottom + PANEL_GAP;
   const maxTop = window.innerHeight - panelHeight - VIEWPORT_PADDING;
   if (top > maxTop) {
     top = Math.max(VIEWPORT_PADDING, maxTop);
@@ -98,7 +98,7 @@ function DropdownPanel({
         width: position.width,
         maxWidth: `calc(100vw - ${VIEWPORT_PADDING * 2}px)`,
       }}
-      className="z-[100] max-h-[calc(100vh-5rem)] overflow-x-hidden overflow-y-auto border border-ifma-border-light bg-white py-6 shadow-lg"
+      className="font-hopewell z-[100] max-h-[calc(100vh-5rem)] overflow-x-hidden overflow-y-auto rounded-[20px] bg-white py-6 shadow-hopewell"
     >
       <div className={`grid gap-6 px-5 ${gridClass}`}>
         {groups.map((group) => (
@@ -106,17 +106,17 @@ function DropdownPanel({
             <Link
               href={group.href}
               onClick={onNavigate}
-              className="mb-3 block text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red hover:underline"
+              className="font-hopewell-display mb-3 inline-flex rounded-full bg-caisbe-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-caisbe-red-dark transition hover:bg-caisbe-red hover:text-white"
             >
               {group.title}
             </Link>
-            <ul className="space-y-2">
+            <ul className="space-y-1">
               {group.links.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
                     onClick={onNavigate}
-                    className="block text-sm leading-5 break-words text-ifma-text-dark transition-colors hover:text-caisbe-red"
+                    className="block rounded-full px-3 py-1.5 text-sm leading-5 break-words text-caisbe-text transition-colors hover:bg-[#f8fafc] hover:text-caisbe-red"
                   >
                     {link.label}
                   </Link>
@@ -178,7 +178,7 @@ function DesktopNavItem({
     left = Math.max(VIEWPORT_PADDING, Math.min(left, maxLeft));
 
     setPosition({
-      top: triggerRect.bottom - PANEL_OVERLAP,
+      top: triggerRect.bottom + PANEL_GAP,
       left,
       width,
     });
@@ -257,10 +257,10 @@ function DesktopNavItem({
         ref={triggerRef}
         onMouseEnter={handleTriggerEnter}
         onMouseLeave={handleTriggerLeave}
-        className={`flex items-center gap-1 border-b-2 px-3 py-5 text-[14px] font-medium transition-colors ${
+        className={`flex items-center gap-1 px-3 py-5 text-[15px] font-semibold transition-colors ${
           isOpen
-            ? "border-caisbe-red text-caisbe-red"
-            : "border-transparent text-ifma-text-dark hover:border-caisbe-red hover:text-caisbe-red"
+            ? "text-caisbe-red"
+            : "text-caisbe-text-dark hover:text-caisbe-red"
         }`}
       >
         <Link href={section.href}>{section.label}</Link>

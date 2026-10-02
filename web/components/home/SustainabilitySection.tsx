@@ -2,13 +2,13 @@ import { bestPractices } from "@/lib/data/home";
 
 export default function SustainabilitySection() {
   return (
-    <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
+    <section className="bg-[#f8fafc] py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4">
-        <div className="flex flex-col gap-3 md:max-w-2xl motion-safe:animate-page-fade-in">
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-caisbe-red">
+        <div className="flex max-w-2xl flex-col gap-3 motion-safe:animate-page-fade-in">
+          <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark">
             Practice
           </p>
-          <h2 className="font-display text-3xl font-semibold text-caisbe-text-dark md:text-4xl">
+          <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
             {bestPractices.title}
           </h2>
           <p className="text-base leading-7 text-caisbe-muted">
@@ -20,13 +20,13 @@ export default function SustainabilitySection() {
           {bestPractices.items.map((item, index) => (
             <article
               key={item.title}
-              className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white p-6 text-left transition duration-300 hover:-translate-y-1 hover:border-caisbe-red/40 motion-safe:animate-page-fade-in"
+              className="rounded-[20px] bg-white p-6 text-left shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in"
               style={{ animationDelay: `${index * 70}ms` }}
             >
-              <h3 className="text-lg font-semibold text-caisbe-text-dark">
+              <h3 className="font-hopewell-display text-lg font-bold text-caisbe-text-dark">
                 {item.title}
               </h3>
-              <p className="mt-3 text-sm leading-6 text-caisbe-muted">
+              <p className="mt-2 text-sm leading-6 text-caisbe-muted">
                 {item.description}
               </p>
             </article>

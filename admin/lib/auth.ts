@@ -139,6 +139,17 @@ export type JobPosting = {
   is_expired: boolean;
 };
 
+export type Testimonial = {
+  id: number;
+  quote: string;
+  name: string;
+  role: string;
+  published: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type NewsPost = {
   id: number;
   title: string;

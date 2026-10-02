@@ -90,6 +90,15 @@ export type HeroSlide = {
   media_type: "image" | "video" | string;
 };
 
+export type Testimonial = {
+  id: number;
+  quote: string;
+  name: string;
+  role: string;
+  published: boolean;
+  sort_order: number;
+};
+
 export type HeroCarousel = {
   transition_ms: number;
   slides: HeroSlide[];
@@ -169,6 +178,10 @@ export async function fetchActiveJobs(options?: {
   if (options?.featured) params.set("featured", "true");
   const query = params.toString();
   return apiFetch<JobPosting[]>(`/jobs${query ? `?${query}` : ""}`);
+}
+
+export async function fetchPublishedTestimonials(): Promise<Testimonial[]> {
+  return apiFetch<Testimonial[]>("/testimonials");
 }
 
 export async function fetchPublishedNews(options?: {

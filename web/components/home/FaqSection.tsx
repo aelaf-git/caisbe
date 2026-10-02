@@ -24,17 +24,17 @@ export default function FaqSection() {
         lead="Answers about CAISBE programs, learning, membership, and how to get started."
       />
       <ContentSection>
-        <div className="overflow-hidden rounded-xl border border-ifma-border bg-white shadow-brand-card">
+        <div className="grid gap-4">
           {faqs.map((faq) => (
             <details
               key={faq.question}
-              className="group border-b border-ifma-border last:border-b-0"
+              className="group rounded-[20px] bg-white shadow-hopewell"
             >
-              <summary className="flex cursor-pointer list-none items-center gap-4 px-5 py-5 text-left transition-colors hover:bg-[#f8fafc] marker:content-none group-open:bg-[#f8fafc] [&::-webkit-details-marker]:hidden">
-                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-caisbe-red/20 bg-caisbe-red/5 text-caisbe-red transition-transform group-open:rotate-180">
+              <summary className="flex cursor-pointer list-none items-center gap-4 px-5 py-5 text-left marker:content-none [&::-webkit-details-marker]:hidden">
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-caisbe-red/10 text-caisbe-red transition-transform group-open:rotate-180">
                   <ChevronIcon />
                 </span>
-                <h3 className="font-display flex-1 text-base font-semibold leading-snug text-caisbe-text-dark md:text-lg">
+                <h3 className="font-hopewell-display flex-1 text-base font-bold leading-snug text-caisbe-text-dark md:text-lg">
                   {faq.question}
                 </h3>
               </summary>

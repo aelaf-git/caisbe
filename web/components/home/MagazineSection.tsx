@@ -14,14 +14,14 @@ export default async function MagazineSection() {
   }
 
   return (
-    <section className="border-b border-ifma-border-light bg-white py-16">
+    <section className="bg-white py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="font-display text-3xl font-semibold text-caisbe-text-dark md:text-4xl">
+            <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
               CAISBE Magazine
             </h2>
-            <p className="mt-2 text-lg text-ifma-muted">
+            <p className="mt-2 text-base text-caisbe-muted">
               Read the latest features and insights from across the CAISBE community.
             </p>
           </div>
@@ -35,32 +35,32 @@ export default async function MagazineSection() {
             New magazine issues will appear here once published by the CAISBE team.
           </p>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {issues.map((issue) => (
               <article
                 key={issue.id}
-                className="shadow-brand-card flex flex-col overflow-hidden border border-ifma-border-light bg-white transition duration-300 hover:-translate-y-1 hover:border-caisbe-red"
+                className="flex flex-col overflow-hidden rounded-[20px] bg-white shadow-hopewell transition duration-300 hover:-translate-y-1"
               >
                 {issue.cover_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={issue.cover_url}
                     alt=""
-                    className="aspect-[4/3] w-full object-cover"
+                    className="aspect-video w-full object-cover"
                   />
                 ) : (
-                  <div className="flex aspect-[4/3] items-center justify-center bg-[#fafaf8]">
-                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
+                  <div className="flex aspect-video items-center justify-center bg-[#f7f9fa]">
+                    <span className="text-sm font-semibold text-caisbe-red">
                       Magazine
                     </span>
                   </div>
                 )}
-                <div className="flex flex-1 flex-col p-6">
-                  <h3 className="text-lg font-semibold leading-snug text-ifma-navy">
+                <div className="flex flex-1 flex-col p-5">
+                  <h3 className="font-hopewell-display text-lg font-bold leading-snug text-caisbe-text-dark">
                     {issue.title}
                   </h3>
                   {issue.description ? (
-                    <p className="mt-3 flex-1 text-sm leading-6 text-ifma-muted">
+                    <p className="mt-2 line-clamp-3 flex-1 text-sm leading-6 text-caisbe-muted">
                       {issue.description}
                     </p>
                   ) : (
@@ -70,7 +70,7 @@ export default async function MagazineSection() {
                     href={issue.file_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-6 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
+                    className="mt-4 text-sm font-bold text-caisbe-red hover:underline"
                   >
                     Read issue
                   </a>

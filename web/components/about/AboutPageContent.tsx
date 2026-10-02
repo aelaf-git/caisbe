@@ -60,7 +60,7 @@ export default function AboutPageContent() {
           {whatWeDo.items.map((item) => (
             <li
               key={item}
-              className="shadow-brand-card rounded-lg border border-ifma-border bg-white px-5 py-4 text-sm font-semibold leading-6 text-caisbe-text-dark"
+              className="rounded-[20px] bg-white px-5 py-4 shadow-hopewell text-sm font-semibold leading-6 text-caisbe-text-dark"
             >
               <span className="mr-2 inline-block h-2 w-2 rounded-full bg-caisbe-red align-middle" />
               {item}
@@ -80,7 +80,7 @@ export default function AboutPageContent() {
           {leadership.people.map((person, index) => (
             <article
               key={person.email}
-              className="shadow-brand-card flex flex-col rounded-lg border border-ifma-border bg-white p-6 motion-safe:animate-page-fade-in"
+              className="flex flex-col rounded-[20px] bg-white p-6 shadow-hopewell motion-safe:animate-page-fade-in"
               style={{ animationDelay: `${index * 60}ms` }}
             >
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-caisbe-red">
@@ -114,7 +114,7 @@ export default function AboutPageContent() {
           {advisoryCouncil.members.map((member, index) => (
             <article
               key={member.name}
-              className="shadow-brand-card flex flex-col items-center rounded-lg border border-ifma-border bg-white p-5 text-center motion-safe:animate-page-fade-in"
+              className="flex flex-col items-center rounded-[20px] bg-white p-5 shadow-hopewell text-center motion-safe:animate-page-fade-in"
               style={{ animationDelay: `${index * 60}ms` }}
             >
               <div

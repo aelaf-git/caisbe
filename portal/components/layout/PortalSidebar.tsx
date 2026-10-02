@@ -134,8 +134,8 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
   }, [user?.id, pathname]);
 
   return (
-    <aside className={`flex h-full w-full flex-col border-r border-ifma-border bg-admin-surface ${className}`}>
-      <div className="border-b border-ifma-border-light px-5 py-5">
+    <aside className={`flex h-full w-full flex-col bg-admin-surface shadow-hopewell-nav ${className}`}>
+      <div className="px-5 py-5">
         <Link href="/dashboard" onClick={onNavigate} className="flex flex-col gap-2">
           <Image
             src="/images/logo.png"
@@ -145,14 +145,16 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
             priority
             className="h-10 w-auto max-w-full object-contain"
           />
-          <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Student</p>
+          <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-caisbe-red-dark">
+            Student
+          </p>
         </Link>
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
-            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-caisbe-muted/70">
+            <p className="font-hopewell-display mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-caisbe-muted/70">
               {group.label}
             </p>
             <div className="space-y-1">
@@ -164,12 +166,12 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    className={`flex items-center justify-between gap-2 rounded-md px-3 py-2.5 text-sm transition-colors ${
+                    className={`flex items-center justify-between gap-2 rounded-full px-3 py-2.5 text-sm transition-colors ${
                       certsInactive
                         ? "cursor-default text-caisbe-muted/50"
                         : active
                           ? "bg-caisbe-red/10 font-semibold text-caisbe-red"
-                          : "text-caisbe-muted hover:bg-ifma-border-light hover:text-caisbe-text"
+                          : "text-caisbe-muted hover:bg-[#f8fafc] hover:text-caisbe-text"
                     }`}
                   >
                     <span className="flex min-w-0 items-center gap-3">
@@ -192,7 +194,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
         ))}
       </nav>
 
-      <div className="mt-auto border-t border-ifma-border-light px-5 py-4">
+      <div className="mt-auto px-5 py-4">
         <div className="flex items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-caisbe-red text-sm font-bold text-white">
             {user?.full_name?.charAt(0).toUpperCase() || "S"}
@@ -208,7 +210,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
             logout();
             router.push("/login");
           }}
-          className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-ifma-border px-3 py-2 text-sm font-medium text-caisbe-muted transition-colors hover:border-caisbe-red hover:text-caisbe-red"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-full border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
         >
           Logout
         </button>
