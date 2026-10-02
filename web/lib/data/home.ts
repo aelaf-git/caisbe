@@ -139,10 +139,19 @@ export const testimonials = [
 ];
 
 export const contactContent = {
-  title: "Build Your FM Future With Us",
+  title: "Contact Us",
   eyebrow: "Contact Us",
-  lead: "Reach the CAISBE team for membership, programs, partnerships, and general inquiries.",
-  fields: ["Enter your name", "Enter your email address", "Subject", "Message"],
+  lead: "Thank you for your interest in CAISBE Education. Let us know how we can help!",
+  detailsHeading: "Contact Us",
+  addressLabel: "Our Address",
+  address: "815-4Ave SW, Calgary, AB\nTWP 3G8",
+  phoneLabel: "Phone",
+  phone: "1825-454-5383 / 4039039047 / 4048349904",
+  emailLabel: "Email",
+  email: "info@caisbe.org",
+  hoursLabel: "Business Hours",
+  hours: "Weekdays: 9am to 5pm ET",
+  formHeading: "How can we help",
   cta: "Send Message",
 };
 

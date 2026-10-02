@@ -385,12 +385,38 @@ class MembershipCertificate(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True)
+    membership_type: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
     membership_number: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     certificate_code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User] = relationship(back_populates="membership_certificate")
 
+
+class MembershipCertificateType(Base):
+    """One certificate template + price per membership category."""
+
+    __tablename__ = "membership_certificate_types"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    membership_type: Mapped[str] = mapped_column(String(40), unique=True, index=True)
+    label: Mapped[str] = mapped_column(String(120))
+    title: Mapped[str] = mapped_column(String(255), default="Certificate of Membership")
+    body: Mapped[str] = mapped_column(
+        Text,
+        default="is a recognised member of {issued_by}, admitted on {issued_at}.",
+    )
+    price_cents: Mapped[int] = mapped_column(Integer, default=0)
+    currency: Mapped[str] = mapped_column(String(8), default="cad")
+    # NULL = lifetime (student). Non-student types use months (default 12).
+    validity_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 class AppSetting(Base):
     __tablename__ = "app_settings"
@@ -680,6 +706,30 @@ class Testimonial(Base):
     published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ContactMessage(Base):
+    """Public Contact Us form submissions for admin review and reply."""
+
+    __tablename__ = "contact_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    first_name: Mapped[str] = mapped_column(String(80))
+    last_name: Mapped[str] = mapped_column(String(80))
+    company: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    job_title: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    help_topic: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    comments: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(32), default="new", index=True)
+    admin_reply: Mapped[str | None] = mapped_column(Text, nullable=True)
+    replied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    replied_by_admin_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

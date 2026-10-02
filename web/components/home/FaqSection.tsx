@@ -19,11 +19,12 @@ export default function FaqSection() {
   return (
     <>
       <PageHero
+        className="pb-8 md:pb-10"
         eyebrow={faqIntro.eyebrow}
         title={faqIntro.title}
         lead="Answers about CAISBE programs, learning, membership, and how to get started."
       />
-      <ContentSection>
+      <ContentSection className="!pt-6 md:!pt-8">
         <div className="grid gap-4">
           {faqs.map((faq) => (
             <details

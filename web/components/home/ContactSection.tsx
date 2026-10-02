@@ -14,6 +14,39 @@ type ContactSectionProps = {
   variant?: "page" | "home";
 };
 
+function ContactDetails() {
+  return (
+    <div className="mt-8 space-y-5">
+      <h3 className="font-hopewell-display text-lg font-extrabold uppercase tracking-wide text-caisbe-text-dark">
+        {contactContent.detailsHeading}
+      </h3>
+      <div>
+        <p className="text-sm font-semibold text-caisbe-text-dark">{contactContent.addressLabel}</p>
+        <p className="mt-1 whitespace-pre-line text-sm leading-6 text-caisbe-muted">
+          {contactContent.address}
+        </p>
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-caisbe-text-dark">{contactContent.phoneLabel}</p>
+        <p className="mt-1 text-sm leading-6 text-caisbe-muted">{contactContent.phone}</p>
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-caisbe-text-dark">{contactContent.emailLabel}</p>
+        <a
+          href={`mailto:${contactContent.email}`}
+          className="mt-1 inline-block text-sm leading-6 text-caisbe-red transition-colors hover:text-caisbe-red-dark"
+        >
+          {contactContent.email}
+        </a>
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-caisbe-text-dark">{contactContent.hoursLabel}</p>
+        <p className="mt-1 text-sm leading-6 text-caisbe-muted">{contactContent.hours}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function ContactSection({
   title = contactContent.title,
   eyebrow = contactContent.eyebrow,
@@ -34,12 +67,13 @@ export default function ContactSection({
             <p className="mt-4 text-base leading-7 text-caisbe-muted">
               {contactContent.lead}
             </p>
+            <ContactDetails />
           </div>
           <div
             className="rounded-[20px] bg-white p-5 shadow-hopewell motion-safe:animate-page-fade-in md:p-8"
             style={{ animationDelay: "120ms" }}
           >
-            <ContactForm cta={contactContent.cta} />
+            <ContactForm cta={contactContent.cta} heading={contactContent.formHeading} />
           </div>
         </div>
       </section>
@@ -49,8 +83,9 @@ export default function ContactSection({
   return (
     <>
       <PageHero eyebrow={eyebrow} title={title} lead={contactContent.lead}>
-        <div className="mt-10 max-w-2xl">
-          <ContactForm cta={contactContent.cta} />
+        <div className="mt-10 grid max-w-5xl gap-10 lg:grid-cols-[0.85fr_1.15fr]">
+          <ContactDetails />
+          <ContactForm cta={contactContent.cta} heading={contactContent.formHeading} />
         </div>
       </PageHero>
 

@@ -477,9 +477,13 @@ class MembershipCertificateOut(BaseModel):
     id: int
     certificate_code: str
     membership_number: str
+    membership_type: str | None = None
+    membership_type_label: str | None = None
     issued_at: datetime
+    expires_at: datetime | None = None
     student_name: str
     title: str
+    body: str | None = None
     verify_url: str | None = None
     issued_by: str = "CAISBE"
 
@@ -494,6 +498,7 @@ class CertificateVerifyOut(BaseModel):
     course_title: str | None = None
     membership_number: str | None = None
     issued_at: datetime
+    expires_at: datetime | None = None
     issued_by: str = "CAISBE"
     verify_url: str
 

@@ -16,6 +16,7 @@ import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import PageHeader from "@/components/ui/PageHeader";
+import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
 import Tabs from "@/components/ui/Tabs";
 import { AutosaveProvider, autosaveLabel, useAutosaveRegistry } from "@/hooks/autosaveContext";
@@ -278,6 +279,7 @@ function AdminCourseEditorInner() {
   });
   const saveBusy =
     savingChanges || publishing || overallStatus === "saving" || overallStatus === "pending";
+  const saveDirty = !isPublished || hasUnpublishedChanges || overallStatus !== "idle";
 
   if (loading) {
     return (
@@ -319,13 +321,14 @@ function AdminCourseEditorInner() {
             >
               Preview as learner
             </a>
-            <Button
+            <SaveButton
               variant={needsPublishUpdate ? "primary" : "secondary"}
+              dirty={saveDirty}
+              saving={savingChanges}
+              disabled={saveBusy && !savingChanges}
+              idleLabel="Save changes"
               onClick={() => void saveChanges()}
-              disabled={saveBusy || (isPublished && !hasUnpublishedChanges && overallStatus === "idle")}
-            >
-              {savingChanges ? "Saving…" : "Save changes"}
-            </Button>
+            />
             <Button
               variant={isPublished ? "secondary" : "primary"}
               onClick={() => void togglePublish()}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type RefObject } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
@@ -9,7 +9,9 @@ import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import ProgressBar from "@/components/ui/ProgressBar";
+import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, apiUpload, ApiError, type MediaAsset } from "@/lib/auth";
 
 const MAGAZINE_ACCEPT =
@@ -76,6 +78,18 @@ export default function MagazineManager({
   const uploading = uploadingKind !== null;
   const isEditing = editingId !== null;
 
+  const formValues = useMemo(
+    () => ({
+      title: title.trim(),
+      description: description.trim(),
+      file_url: fileUrl,
+      cover_url: coverUrl,
+      featured,
+    }),
+    [title, description, fileUrl, coverUrl, featured],
+  );
+  const { dirty, resetBaseline } = useDirtyForm(formValues);
+
   function clearForm() {
     setEditingId(null);
     setTitle("");
@@ -87,6 +101,13 @@ export default function MagazineManager({
     setCoverProgress(0);
     resetFileInput(fileInputRef);
     resetFileInput(coverInputRef);
+    resetBaseline({
+      title: "",
+      description: "",
+      file_url: null,
+      cover_url: null,
+      featured: false,
+    });
   }
 
   function startEdit(asset: MediaAsset) {
@@ -100,6 +121,13 @@ export default function MagazineManager({
     setCoverProgress(0);
     resetFileInput(fileInputRef);
     resetFileInput(coverInputRef);
+    resetBaseline({
+      title: asset.title.trim(),
+      description: (asset.description ?? "").trim(),
+      file_url: asset.file_url,
+      cover_url: asset.cover_url,
+      featured: asset.featured,
+    });
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -132,6 +160,7 @@ export default function MagazineManager({
   }
 
   async function submitMagazine() {
+    if (!dirty) return;
     if (!fileUrl) {
       onError("Upload a magazine PDF or EPUB first.");
       return;
@@ -407,9 +436,14 @@ export default function MagazineManager({
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Button disabled={uploading || saving} onClick={() => void submitMagazine()}>
-            {uploading ? "Uploading…" : saving ? "Saving…" : isEditing ? "Save changes" : "Publish"}
-          </Button>
+          <SaveButton
+            dirty={dirty}
+            saving={saving}
+            disabled={uploading}
+            idleLabel={uploading ? "Uploading…" : isEditing ? "Save changes" : "Publish"}
+            savingLabel="Saving…"
+            onClick={() => void submitMagazine()}
+          />
           {isEditing ? (
             <Button type="button" variant="secondary" disabled={uploading || saving} onClick={clearForm}>
               Cancel

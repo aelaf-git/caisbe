@@ -8,11 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function ContactPage() {
-  return (
-    <ContactSection
-      eyebrow="Contact Us"
-      title="Build Your FM Future With Us"
-      showOffices
-    />
-  );
+  return <ContactSection showOffices />;
 }

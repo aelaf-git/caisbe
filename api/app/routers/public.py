@@ -13,6 +13,7 @@ from app.config import settings
 from app.db import get_db
 from app.security.limiter import limiter
 from app.models import (
+    ContactMessage,
     IndustryEvent,
     JobPosting,
     MediaAsset,
@@ -23,6 +24,7 @@ from app.models import (
     User,
 )
 from app.schemas.analytics import SiteVisitIn
+from app.schemas.contact import ContactMessageIn, ContactMessageOut
 from app.schemas.media import MediaAssetOut, NewsletterSubscribeIn, HeroCarouselOut, HeroSlideOut
 from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.schemas.events import IndustryEventOut
@@ -165,6 +167,37 @@ def get_published_news(
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
     return NewsPostOut.model_validate(row)
+
+
+@router.post("/contact", response_model=ContactMessageOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
+def submit_contact_message(
+    request: Request,
+    payload: ContactMessageIn,
+    db: Session = Depends(get_db),
+) -> ContactMessageOut:
+    try:
+        row = ContactMessage(
+            first_name=payload.first_name.strip(),
+            last_name=payload.last_name.strip(),
+            company=(payload.company or "").strip() or None,
+            job_title=(payload.job_title or "").strip() or None,
+            phone=(payload.phone or "").strip() or None,
+            email=str(payload.email).lower().strip(),
+            help_topic=(payload.help_topic or "").strip() or None,
+            comments=payload.comments.strip(),
+            status="new",
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+    except (OperationalError, ProgrammingError) as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Contact form is temporarily unavailable. Try again shortly.",
+        ) from exc
+    return ContactMessageOut.model_validate(row)
 
 
 @router.post("/newsletter/subscribe", status_code=status.HTTP_201_CREATED)

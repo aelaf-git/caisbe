@@ -49,7 +49,12 @@ from app.schemas.courses import (
     QuizAttemptOut,
     QuizSubmitIn,
 )
-from app.services.membership import issue_membership_certificate, student_has_completed_course
+from app.services.membership import (
+    issue_membership_certificate,
+    membership_certificate_copy,
+    membership_is_accessible,
+    membership_is_expired,
+)
 from app.services.settings import get_setting
 
 from app.services.commerce import require_active_enrollment
@@ -353,15 +358,21 @@ def _certificate_to_out(row: Certificate, student_name: str, db: Session) -> Cer
 
 
 def _membership_to_out(row: MembershipCertificate, student_name: str, db: Session) -> MembershipCertificateOut:
-    title = get_setting(db, "membership_cert_title") or "Certificate of Membership"
+    title, body_template, type_label = membership_certificate_copy(db, row.membership_type)
     issued_by = get_setting(db, "institute_name") or "CAISBE"
+    issued_label = row.issued_at.strftime("%B %d, %Y") if row.issued_at else ""
+    body = body_template.format(issued_by=issued_by, issued_at=issued_label)
     return MembershipCertificateOut(
         id=row.id,
         certificate_code=row.certificate_code,
         membership_number=row.membership_number,
+        membership_type=row.membership_type,
+        membership_type_label=type_label,
         issued_at=row.issued_at,
+        expires_at=row.expires_at,
         student_name=strip_plain_text(student_name) or student_name,
-        title=title,
+        title=strip_plain_text(title) or title,
+        body=strip_plain_text(body) or body,
         verify_url=_certificate_verify_url(row.certificate_code),
         issued_by=issued_by,
     )
@@ -1060,12 +1071,17 @@ def get_my_membership_certificate(
 ) -> MembershipCertificateOut:
     if current_user.role == "admin":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membership certificate not found")
-    if not student_has_completed_course(db, current_user.id):
+    if not membership_is_accessible(db, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Complete at least one course to unlock your membership certificate.",
         )
     row = issue_membership_certificate(db, current_user)
+    if membership_is_expired(row):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your membership certificate has expired. Renew your membership to continue.",
+        )
     db.commit()
     db.refresh(row)
     return _membership_to_out(row, current_user.full_name, db)
@@ -1124,13 +1140,14 @@ def verify_certificate(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certificate not found")
 
     return CertificateVerifyOut(
-        valid=True,
+        valid=not membership_is_expired(membership),
         kind="membership",
         certificate_code=membership.certificate_code,
         student_name=membership.user.full_name,
         course_title=None,
         membership_number=membership.membership_number,
         issued_at=membership.issued_at,
+        expires_at=membership.expires_at,
         issued_by=issued_by,
         verify_url=_certificate_verify_url(membership.certificate_code),
     )

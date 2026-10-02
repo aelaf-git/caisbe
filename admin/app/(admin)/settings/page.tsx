@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/auth";
 import {
   applyAppearance,
@@ -18,7 +18,9 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import FormField, { fieldClassName } from "@/components/ui/FormField";
 import PageHeader from "@/components/ui/PageHeader";
+import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 
 type AppSettings = {
   institute_name: string;
@@ -29,6 +31,17 @@ type AppSettings = {
   ui_font_size: FontSizeId;
   ui_font_body: FontId;
   ui_font_display: FontId;
+};
+
+const EMPTY_SETTINGS: AppSettings = {
+  institute_name: "",
+  default_pass_percent: 70,
+  membership_cert_title: "",
+  completion_cert_title: "",
+  ui_theme: "light",
+  ui_font_size: "md",
+  ui_font_body: "nunito",
+  ui_font_display: "poppins",
 };
 
 export default function SettingsPage() {
@@ -44,6 +57,9 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const formValues = useMemo(() => settings ?? EMPTY_SETTINGS, [settings]);
+  const { dirty, markSaved, resetBaseline } = useDirtyForm(formValues);
+
   useEffect(() => {
     let active = true;
     async function load() {
@@ -51,7 +67,10 @@ export default function SettingsPage() {
       setError(null);
       try {
         const data = await apiFetch<AppSettings>("/admin/settings");
-        if (active) setSettings(data);
+        if (active) {
+          setSettings(data);
+          resetBaseline(data);
+        }
       } catch (err) {
         if (active) setError(err instanceof ApiError ? err.detail : "Unable to load settings.");
       } finally {
@@ -62,11 +81,11 @@ export default function SettingsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [resetBaseline]);
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
-    if (!settings) return;
+    if (!settings || !dirty) return;
     setSaving(true);
     setError(null);
     setMessage(null);
@@ -85,6 +104,7 @@ export default function SettingsPage() {
         }),
       });
       setSettings(updated);
+      markSaved(updated);
       writeStoredAppearance({
         theme: updated.ui_theme,
         fontSize: updated.ui_font_size,
@@ -329,9 +349,7 @@ export default function SettingsPage() {
               <p className="mt-1 text-sm text-caisbe-muted">Secondary text stays readable in light and dark themes.</p>
             </div>
 
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save settings"}
-            </Button>
+            <SaveButton type="submit" dirty={dirty} saving={saving} idleLabel="Save settings" />
           </div>
       </Card>
         </form>

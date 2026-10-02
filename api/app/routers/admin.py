@@ -19,6 +19,7 @@ from app.models import (
     CertificateTemplate,
     Chapter,
     AssignmentSubmission,
+    ContactMessage,
     ContentBlock,
     Course,
     Enrollment,
@@ -28,6 +29,7 @@ from app.models import (
     Lesson,
     MediaAsset,
     MembershipCertificate,
+    MembershipCertificateType,
     NewsPost,
     Testimonial,
     NewsletterCampaign,
@@ -109,6 +111,16 @@ from app.schemas.testimonials import (
     TestimonialCreateIn,
     TestimonialOut,
     TestimonialUpdateIn,
+)
+from app.schemas.contact import (
+    CONTACT_STATUSES,
+    ContactMessageOut,
+    ContactMessageReplyIn,
+    ContactMessageStatusIn,
+)
+from app.schemas.membership_certificates import (
+    MembershipCertificateTypeOut,
+    MembershipCertificateTypeUpdateIn,
 )
 from app.schemas.news import (
     NewsPostCreateIn,
@@ -525,6 +537,9 @@ def admin_dashboard(
         .filter(NewsletterSubscriber.unsubscribed_at.is_(None))
         .count(),
         newsletters_sent=db.query(NewsletterCampaign).count(),
+        contact_messages_open=db.query(ContactMessage)
+        .filter(ContactMessage.status.in_(("new", "read")))
+        .count(),
         magazines_published=db.query(MediaAsset)
         .filter(MediaAsset.category == "magazine", MediaAsset.published.is_(True))
         .count(),
@@ -2522,3 +2537,169 @@ def admin_delete_testimonial(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Testimonial not found")
     db.delete(row)
     db.commit()
+
+
+@router.get("/contact-messages", response_model=list[ContactMessageOut])
+def admin_list_contact_messages(
+    status_filter: str | None = Query(default=None, alias="status"),
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[ContactMessageOut]:
+    query = db.query(ContactMessage)
+    if status_filter:
+        wanted = status_filter.strip().lower()
+        if wanted not in CONTACT_STATUSES:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status filter.")
+        query = query.filter(ContactMessage.status == wanted)
+    rows = query.order_by(ContactMessage.created_at.desc(), ContactMessage.id.desc()).limit(500).all()
+    return [ContactMessageOut.model_validate(row) for row in rows]
+
+
+@router.get("/contact-messages/{message_id}", response_model=ContactMessageOut)
+def admin_get_contact_message(
+    message_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> ContactMessageOut:
+    row = db.query(ContactMessage).filter(ContactMessage.id == message_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact message not found")
+    if row.status == "new":
+        row.status = "read"
+        db.commit()
+        db.refresh(row)
+    return ContactMessageOut.model_validate(row)
+
+
+@router.patch("/contact-messages/{message_id}", response_model=ContactMessageOut)
+def admin_update_contact_message_status(
+    message_id: int,
+    payload: ContactMessageStatusIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> ContactMessageOut:
+    row = db.query(ContactMessage).filter(ContactMessage.id == message_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact message not found")
+    next_status = payload.status.strip().lower()
+    if next_status not in CONTACT_STATUSES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status.")
+    row.status = next_status
+    db.commit()
+    db.refresh(row)
+    return ContactMessageOut.model_validate(row)
+
+
+@router.post("/contact-messages/{message_id}/reply", response_model=ContactMessageOut)
+def admin_reply_contact_message(
+    message_id: int,
+    payload: ContactMessageReplyIn,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> ContactMessageOut:
+    row = db.query(ContactMessage).filter(ContactMessage.id == message_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact message not found")
+
+    body = payload.body.strip()
+    subject = payload.subject.strip() or "Re: Your message to CAISBE"
+    full_name = f"{row.first_name} {row.last_name}".strip()
+    html_body = (
+        f"<p>Hello {full_name},</p>"
+        f"<p>{body.replace(chr(10), '<br>')}</p>"
+        "<p>— CAISBE Education</p>"
+        "<hr>"
+        "<p><small>In reply to your message:</small></p>"
+        f"<blockquote>{row.comments.replace(chr(10), '<br>')}</blockquote>"
+    )
+    try:
+        send_email(to=row.email, subject=subject, html_body=html_body)
+    except EmailDeliveryError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+    row.admin_reply = body
+    row.replied_at = datetime.now(timezone.utc)
+    row.replied_by_admin_id = admin.id
+    row.status = "replied"
+    db.commit()
+    db.refresh(row)
+    return ContactMessageOut.model_validate(row)
+
+
+@router.delete("/contact-messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_contact_message(
+    message_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(ContactMessage).filter(ContactMessage.id == message_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact message not found")
+    db.delete(row)
+    db.commit()
+
+
+@router.get("/membership-certificate-types", response_model=list[MembershipCertificateTypeOut])
+def admin_list_membership_certificate_types(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[MembershipCertificateTypeOut]:
+    rows = (
+        db.query(MembershipCertificateType)
+        .order_by(MembershipCertificateType.sort_order.asc(), MembershipCertificateType.id.asc())
+        .all()
+    )
+    return [MembershipCertificateTypeOut.model_validate(row) for row in rows]
+
+
+@router.patch(
+    "/membership-certificate-types/{type_id}",
+    response_model=MembershipCertificateTypeOut,
+)
+def admin_update_membership_certificate_type(
+    type_id: int,
+    payload: MembershipCertificateTypeUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> MembershipCertificateTypeOut:
+    row = db.query(MembershipCertificateType).filter(MembershipCertificateType.id == type_id).first()
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Membership certificate type not found",
+        )
+    data = payload.model_dump(exclude_unset=True)
+    if "currency" in data and data["currency"] is not None:
+        currency = data["currency"].strip().lower()
+        if currency not in {"cad", "usd"}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Currency must be CAD or USD.",
+            )
+        data["currency"] = currency
+
+    is_student = row.membership_type == "student"
+    if is_student:
+        # Student membership is always free and lifetime.
+        data["price_cents"] = 0
+        data["validity_months"] = None
+    elif "validity_months" in data:
+        months = data["validity_months"]
+        if months is None or months < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Non-student memberships require a validity period of at least 1 month.",
+            )
+
+    for key, value in data.items():
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Label, title, and body cannot be empty.",
+                )
+        setattr(row, key, value)
+    db.commit()
+    db.refresh(row)
+    return MembershipCertificateTypeOut.model_validate(row)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type RefObject } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
@@ -9,7 +9,9 @@ import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import ProgressBar from "@/components/ui/ProgressBar";
+import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, apiUpload, ApiError, type NewsPost } from "@/lib/auth";
 
 const IMAGE_ACCEPT = "image/*,.jpg,.jpeg,.png,.webp,.gif";
@@ -75,7 +77,25 @@ export default function NewsManager({
 
   const isEditing = editingId !== null;
 
+  const formValues = useMemo(
+    () => ({
+      title: title.trim(),
+      tag: tag.trim(),
+      short_description: shortDescription.trim(),
+      long_description: longDescription.trim(),
+      cover_url: coverUrl,
+      image_urls: imageUrls,
+      video_urls: videoUrls,
+      posted_on: postedOn,
+      published,
+      featured,
+    }),
+    [title, tag, shortDescription, longDescription, coverUrl, imageUrls, videoUrls, postedOn, published, featured],
+  );
+  const { dirty, resetBaseline } = useDirtyForm(formValues);
+
   function clearForm() {
+    const posted = todayInput();
     setEditingId(null);
     setTitle("");
     setTag("");
@@ -84,13 +104,25 @@ export default function NewsManager({
     setCoverUrl(null);
     setImageUrls([]);
     setVideoUrls([]);
-    setPostedOn(todayInput());
+    setPostedOn(posted);
     setPublished(true);
     setFeatured(false);
     setUploadProgress(0);
     resetFileInput(coverInputRef);
     resetFileInput(imagesInputRef);
     resetFileInput(videoInputRef);
+    resetBaseline({
+      title: "",
+      tag: "",
+      short_description: "",
+      long_description: "",
+      cover_url: null,
+      image_urls: [],
+      video_urls: [],
+      posted_on: posted,
+      published: true,
+      featured: false,
+    });
   }
 
   function startEdit(post: NewsPost) {
@@ -108,6 +140,18 @@ export default function NewsManager({
     resetFileInput(coverInputRef);
     resetFileInput(imagesInputRef);
     resetFileInput(videoInputRef);
+    resetBaseline({
+      title: post.title.trim(),
+      tag: (post.tag ?? "").trim(),
+      short_description: (post.short_description ?? "").trim(),
+      long_description: (post.long_description ?? "").trim(),
+      cover_url: post.cover_url,
+      image_urls: post.image_urls ?? [],
+      video_urls: post.video_urls ?? [],
+      posted_on: toInputDate(post.posted_on),
+      published: post.published,
+      featured: post.featured,
+    });
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -171,6 +215,7 @@ export default function NewsManager({
   }
 
   async function handleSave() {
+    if (!dirty) return;
     if (!title.trim()) {
       onError("Title is required.");
       return;
@@ -432,9 +477,13 @@ export default function NewsManager({
           {uploading ? <ProgressBar value={uploadProgress} /> : null}
 
           <div className="flex flex-wrap gap-3">
-            <Button onClick={() => void handleSave()} disabled={saving || uploading}>
-              {saving ? "Saving…" : isEditing ? "Update post" : "Create post"}
-            </Button>
+            <SaveButton
+              dirty={dirty}
+              saving={saving}
+              disabled={uploading}
+              idleLabel={isEditing ? "Update post" : "Create post"}
+              onClick={() => void handleSave()}
+            />
             {isEditing ? (
               <Button variant="secondary" onClick={clearForm}>
                 Cancel edit

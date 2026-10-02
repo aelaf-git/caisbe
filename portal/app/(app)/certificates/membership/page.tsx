@@ -22,6 +22,7 @@ export default function MembershipCertificatePage() {
   const { user, loading } = useAuth();
   const [cert, setCert] = useState<MembershipCertificate | null>(null);
   const [locked, setLocked] = useState(false);
+  const [lockedMessage, setLockedMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function MembershipCertificatePage() {
         if (active) {
           setCert(data);
           setLocked(false);
+          setLockedMessage(null);
           setError(null);
         }
       } catch (err) {
@@ -46,6 +48,7 @@ export default function MembershipCertificatePage() {
         if (err instanceof ApiError && err.status === 403) {
           setLocked(true);
           setCert(null);
+          setLockedMessage(err.detail);
           setError(null);
           return;
         }
@@ -73,7 +76,8 @@ export default function MembershipCertificatePage() {
             Membership certificate locked
           </h1>
           <p className="mt-2 text-sm text-caisbe-muted">
-            Complete at least one course to unlock your membership certificate.
+            {lockedMessage ||
+              "Complete at least one course to unlock your non-student membership certificate. Student membership is available immediately after registration."}
           </p>
           <Link
             href="/courses"
@@ -110,10 +114,12 @@ export default function MembershipCertificatePage() {
           studentName={cert.student_name}
           membershipNumber={cert.membership_number}
           issuedAt={cert.issued_at}
+          validUntil={cert.expires_at}
           verifyUrl={verifyUrl}
           certificateCode={cert.certificate_code}
           issuedBy={cert.issued_by}
           title={cert.title}
+          body={cert.body ?? undefined}
         />
       </div>
 

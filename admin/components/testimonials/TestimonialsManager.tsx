@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
@@ -8,7 +8,9 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
+import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, ApiError, type Testimonial } from "@/lib/auth";
 
 type AskConfirm = (options: {
@@ -16,6 +18,16 @@ type AskConfirm = (options: {
   description: string;
   confirmLabel?: string;
 }) => Promise<boolean>;
+
+function emptyForm(itemCount: number) {
+  return {
+    quote: "",
+    name: "",
+    role: "",
+    published: true,
+    sort_order: String(itemCount),
+  };
+}
 
 export default function TestimonialsManager({
   items,
@@ -42,14 +54,33 @@ export default function TestimonialsManager({
   const [sortOrder, setSortOrder] = useState("0");
 
   const isEditing = editingId !== null;
+  const formValues = useMemo(
+    () => ({
+      quote: quote.trim(),
+      name: name.trim(),
+      role: role.trim(),
+      published,
+      sort_order: String(Number(sortOrder) || 0),
+    }),
+    [quote, name, role, published, sortOrder],
+  );
+  const { dirty, resetBaseline } = useDirtyForm(formValues);
 
   function clearForm() {
+    const next = emptyForm(items.length);
     setEditingId(null);
-    setQuote("");
-    setName("");
-    setRole("");
-    setPublished(true);
-    setSortOrder(String(items.length));
+    setQuote(next.quote);
+    setName(next.name);
+    setRole(next.role);
+    setPublished(next.published);
+    setSortOrder(next.sort_order);
+    resetBaseline({
+      quote: next.quote,
+      name: next.name,
+      role: next.role,
+      published: next.published,
+      sort_order: String(Number(next.sort_order) || 0),
+    });
   }
 
   function startEdit(item: Testimonial) {
@@ -59,10 +90,18 @@ export default function TestimonialsManager({
     setRole(item.role);
     setPublished(item.published);
     setSortOrder(String(item.sort_order));
+    resetBaseline({
+      quote: item.quote.trim(),
+      name: item.name.trim(),
+      role: item.role.trim(),
+      published: item.published,
+      sort_order: String(item.sort_order || 0),
+    });
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   async function handleSave() {
+    if (!dirty) return;
     if (!quote.trim() || !name.trim() || !role.trim()) {
       onError("Quote, name, and role are required.");
       return;
@@ -175,9 +214,12 @@ export default function TestimonialsManager({
             </label>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button type="button" onClick={() => void handleSave()} disabled={saving}>
-              {saving ? "Saving…" : isEditing ? "Save changes" : "Add testimonial"}
-            </Button>
+            <SaveButton
+              dirty={dirty}
+              saving={saving}
+              idleLabel={isEditing ? "Save changes" : "Add testimonial"}
+              onClick={() => void handleSave()}
+            />
             {isEditing ? (
               <Button type="button" variant="secondary" onClick={clearForm}>
                 Cancel

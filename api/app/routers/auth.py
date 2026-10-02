@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 
 from app.db import get_db
 from app.security.auth import create_access_token, get_current_user, hash_password, verify_password
@@ -16,6 +17,11 @@ from app.schemas.auth import (
     UserOut,
 )
 from app.services.commerce import apply_profile_fields, profile_is_complete
+from app.services.membership import (
+    is_student_membership,
+    issue_membership_certificate,
+    membership_is_accessible,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -34,6 +40,7 @@ def register(request: Request, payload: UserCreate, db: Session = Depends(get_db
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
+    now = datetime.now(timezone.utc)
     user = User(
         full_name=payload.full_name.strip(),
         email=email,
@@ -42,10 +49,13 @@ def register(request: Request, payload: UserCreate, db: Session = Depends(get_db
         city=payload.city.strip(),
         hashed_password=hash_password(payload.password),
         role="student",
-        membership_status="pending",
+        membership_type="student",
+        membership_status="active",
+        membership_date=now,
     )
     db.add(user)
     db.flush()
+    issue_membership_certificate(db, user)
     db.refresh(user)
     db.commit()
     db.refresh(user)
@@ -77,7 +87,16 @@ def update_profile(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> UserOut:
+    previous_type = current_user.membership_type
     apply_profile_fields(current_user, payload.model_dump(exclude_unset=True))
+    if current_user.membership_type != previous_type:
+        if is_student_membership(current_user.membership_type):
+            current_user.membership_status = "active"
+            if current_user.membership_date is None:
+                current_user.membership_date = datetime.now(timezone.utc)
+            issue_membership_certificate(db, current_user)
+        elif membership_is_accessible(db, current_user):
+            issue_membership_certificate(db, current_user)
     db.commit()
     db.refresh(current_user)
     return user_to_out(current_user)

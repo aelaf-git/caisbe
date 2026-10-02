@@ -73,11 +73,21 @@ export default function VerifyCertificatePage() {
           </div>
         ) : (
           <div className="w-full max-w-5xl">
+            {!result.valid ? (
+              <div className="mb-4 border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-center text-sm text-caisbe-red print:hidden">
+                This membership certificate has expired
+                {result.expires_at
+                  ? ` (valid until ${new Date(result.expires_at).toLocaleDateString(undefined, { dateStyle: "long" })})`
+                  : ""}
+                .
+              </div>
+            ) : null}
             {isMembership && result.membership_number ? (
               <MembershipCertificateDocument
                 studentName={result.student_name}
                 membershipNumber={result.membership_number}
                 issuedAt={result.issued_at}
+                validUntil={result.expires_at}
                 verifyUrl={verifyUrl}
                 certificateCode={result.certificate_code}
                 issuedBy={result.issued_by}

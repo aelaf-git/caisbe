@@ -16,6 +16,10 @@ const greatVibes = Great_Vibes({
   variable: "--font-great-vibes",
 });
 
+/** Fixed A4 landscape design size — do not fluid-scale internal layout. */
+export const CERTIFICATE_WIDTH_PX = 900;
+export const CERTIFICATE_HEIGHT_PX = 636;
+
 export type MembershipCertificateDocumentProps = {
   studentName: string;
   membershipNumber: string;
@@ -24,6 +28,8 @@ export type MembershipCertificateDocumentProps = {
   certificateCode?: string;
   issuedBy?: string;
   title?: string;
+  body?: string;
+  validUntil?: string | null;
 };
 
 function formatIssueDate(iso: string): string {
@@ -33,7 +39,9 @@ function formatIssueDate(iso: string): string {
 function CornerTopLeft() {
   return (
     <svg
-      className="pointer-events-none absolute left-0 top-0 h-[28%] w-[22%] min-h-[80px] min-w-[100px]"
+      className="pointer-events-none absolute left-0 top-0"
+      width={198}
+      height={178}
       viewBox="0 0 200 160"
       fill="none"
       aria-hidden
@@ -47,7 +55,9 @@ function CornerTopLeft() {
 function CornerBottomRight() {
   return (
     <svg
-      className="pointer-events-none absolute bottom-0 right-0 h-[20%] w-[14%] min-h-[56px] min-w-[64px]"
+      className="pointer-events-none absolute bottom-0 right-0"
+      width={126}
+      height={127}
       viewBox="0 0 200 160"
       fill="none"
       aria-hidden
@@ -67,9 +77,16 @@ export default function MembershipCertificateDocument({
   certificateCode,
   issuedBy = "CAISBE",
   title = "Certificate of Membership",
+  body,
+  validUntil,
 }: MembershipCertificateDocumentProps) {
   const issuedLabel = formatIssueDate(issuedAt);
+  const validUntilLabel = validUntil ? formatIssueDate(validUntil) : null;
   const [heading, ...rest] = title.split(" of ");
+  const subtitle = rest.length > 0 ? `Of ${rest.join(" of ")}` : "Of Membership";
+  const statement =
+    body ||
+    `is a recognised member of ${issuedBy}, admitted on ${issuedLabel}.`;
 
   useEffect(() => {
     function onBeforePrint() {
@@ -92,7 +109,6 @@ export default function MembershipCertificateDocument({
       document.querySelector(".certificate-print-root")?.remove();
     };
   }, []);
-  const subtitle = rest.length > 0 ? `Of ${rest.join(" of ")}` : "Of Membership";
 
   return (
     <>
@@ -113,17 +129,20 @@ export default function MembershipCertificateDocument({
                 display: none !important;
               }
               .certificate-print-root {
-                display: block !important;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
               }
               .certificate-document {
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 297mm !important;
-                height: 210mm !important;
+                position: relative !important;
+                width: ${CERTIFICATE_WIDTH_PX}px !important;
+                height: ${CERTIFICATE_HEIGHT_PX}px !important;
+                min-width: ${CERTIFICATE_WIDTH_PX}px !important;
+                min-height: ${CERTIFICATE_HEIGHT_PX}px !important;
                 max-width: none !important;
                 margin: 0 !important;
-                aspect-ratio: auto !important;
                 box-shadow: none !important;
                 overflow: hidden !important;
                 break-inside: avoid;
@@ -137,60 +156,105 @@ export default function MembershipCertificateDocument({
       />
 
       <article
-        className={`certificate-document relative mx-auto aspect-[297/210] w-full max-w-[900px] overflow-hidden bg-white shadow-brand-card print:max-w-none print:shadow-none ${cinzel.variable} ${greatVibes.variable}`}
+        className={`certificate-document relative mx-auto overflow-hidden bg-white shadow-brand-card print:shadow-none ${cinzel.variable} ${greatVibes.variable}`}
+        style={{
+          width: CERTIFICATE_WIDTH_PX,
+          height: CERTIFICATE_HEIGHT_PX,
+          minWidth: CERTIFICATE_WIDTH_PX,
+          minHeight: CERTIFICATE_HEIGHT_PX,
+        }}
       >
-        <div className="absolute inset-3 border-2 border-[#7b1e3a] print:inset-2" />
-        <div className="absolute inset-5 border border-[#c9a227]/40 print:inset-4" />
+        <div className="absolute inset-[12px] border-2 border-[#7b1e3a]" />
+        <div className="absolute inset-[20px] border border-[#c9a227]/40" />
         <CornerTopLeft />
         <CornerBottomRight />
 
-        <div className="relative flex h-full flex-col px-[8%] py-[7%] text-center">
-          <header className="shrink-0 pt-[1%]">
+        <div
+          className="relative flex h-full flex-col text-center"
+          style={{ padding: "44px 72px 36px" }}
+        >
+          <header className="shrink-0">
             <img
               src="/images/logo.png"
               alt="CAISBE"
               width={2172}
               height={724}
-              className="mx-auto mb-2 h-[clamp(1.75rem,5vw,2.75rem)] w-auto object-contain"
+              className="mx-auto mb-2 object-contain"
+              style={{ height: 44, width: "auto" }}
             />
-            <p className="text-[clamp(0.55rem,1.2vw,0.7rem)] font-semibold uppercase tracking-[0.28em] text-[#7b1e3a]">
+            <p
+              className="font-semibold uppercase text-[#7b1e3a]"
+              style={{ fontSize: 11, letterSpacing: "0.28em", lineHeight: 1.35 }}
+            >
               Canada Africa Institute for the Sustainable Built Environment
             </p>
-            <h1 className="mt-2 font-[family-name:var(--font-cinzel)] text-[clamp(1.6rem,4.2vw,2.5rem)] font-bold uppercase tracking-[0.08em] text-[#7b1e3a]">
+            <h1
+              className="mt-2 font-[family-name:var(--font-cinzel)] font-bold uppercase text-[#7b1e3a]"
+              style={{ fontSize: 40, letterSpacing: "0.08em", lineHeight: 1.1 }}
+            >
               {heading || "Certificate"}
             </h1>
-            <p className="mt-1 font-[family-name:var(--font-cinzel)] text-[clamp(0.75rem,2vw,1rem)] font-normal uppercase tracking-[0.35em] text-[#c9a227]">
+            <p
+              className="mt-1 font-[family-name:var(--font-cinzel)] font-normal uppercase text-[#c9a227]"
+              style={{ fontSize: 16, letterSpacing: "0.35em", lineHeight: 1.2 }}
+            >
               {subtitle}
             </p>
           </header>
 
-          <div className="mt-[4%] shrink-0">
-            <p className="text-[clamp(0.65rem,1.6vw,0.85rem)] text-[#5c5348]">
+          <div className="shrink-0" style={{ marginTop: 28 }}>
+            <p className="text-[#5c5348]" style={{ fontSize: 14, lineHeight: 1.4 }}>
               This certifies that
             </p>
-            <p className="mx-auto mt-2 max-w-[85%] font-[family-name:var(--font-great-vibes)] text-[clamp(2rem,6vw,3.25rem)] leading-tight text-[#7b1e3a]">
+            <p
+              className="mx-auto font-[family-name:var(--font-great-vibes)] leading-tight text-[#7b1e3a]"
+              style={{ marginTop: 8, maxWidth: 640, fontSize: 52 }}
+            >
               {studentName}
             </p>
-            <div className="mx-auto mt-2 h-px w-[min(55%,320px)] bg-[#c9a227]" />
+            <div className="mx-auto bg-[#c9a227]" style={{ marginTop: 8, height: 1, width: 280 }} />
           </div>
 
-          <p className="mx-auto mt-[4%] max-w-[78%] shrink-0 text-[clamp(0.65rem,1.5vw,0.82rem)] leading-relaxed text-[#5c5348]">
-            is a recognised member of{" "}
-            <span className="font-semibold text-[#3d3832]">{issuedBy}</span>, admitted on{" "}
-            <span className="font-semibold text-[#3d3832]">{issuedLabel}</span>.
+          <p
+            className="mx-auto shrink-0 leading-relaxed text-[#5c5348]"
+            style={{ marginTop: 24, maxWidth: 620, fontSize: 14 }}
+          >
+            {statement}
           </p>
 
-          <p className="mt-3 text-[clamp(0.65rem,1.4vw,0.8rem)] font-semibold tracking-wide text-[#7b1e3a]">
+          <p
+            className="shrink-0 font-semibold tracking-wide text-[#7b1e3a]"
+            style={{ marginTop: 12, fontSize: 13 }}
+          >
             Membership No. {membershipNumber}
           </p>
+          {validUntilLabel ? (
+            <p
+              className="shrink-0 font-semibold tracking-wide text-[#7b1e3a]"
+              style={{ marginTop: 6, fontSize: 13 }}
+            >
+              Valid until {validUntilLabel}
+            </p>
+          ) : null}
 
-          <footer className="relative z-10 mt-auto grid shrink-0 grid-cols-[minmax(0,1fr)_7.5rem_minmax(0,1fr)] items-end gap-x-6 pb-[3%] pt-[4%]">
+          <footer
+            className="relative z-10 mt-auto grid shrink-0 items-end"
+            style={{
+              gridTemplateColumns: "1fr 120px 1fr",
+              columnGap: 24,
+              paddingTop: 20,
+              paddingBottom: 4,
+            }}
+          >
             <div className="col-start-1 row-start-1 justify-self-center px-2 text-center">
-              <p className="mb-1 text-[clamp(0.7rem,1.4vw,0.85rem)] font-medium text-[#3d3832]">
+              <p className="mb-1 font-medium text-[#3d3832]" style={{ fontSize: 14 }}>
                 {issuedLabel}
               </p>
-              <div className="mx-auto h-px w-28 bg-[#c9a227]" />
-              <p className="mt-1.5 text-[clamp(0.6rem,1.2vw,0.75rem)] font-bold uppercase tracking-wide text-[#7b1e3a]">
+              <div className="mx-auto bg-[#c9a227]" style={{ height: 1, width: 112 }} />
+              <p
+                className="mt-1.5 font-bold uppercase tracking-wide text-[#7b1e3a]"
+                style={{ fontSize: 12 }}
+              >
                 Member Since
               </p>
             </div>
@@ -202,15 +266,23 @@ export default function MembershipCertificateDocument({
             </div>
 
             <div className="col-start-3 row-start-1 justify-self-center px-2 text-center">
-              <p className="mb-1 text-[clamp(0.7rem,1.4vw,0.85rem)] font-medium text-[#3d3832]">{issuedBy}</p>
-              <div className="mx-auto h-px w-28 bg-[#c9a227]" />
-              <p className="mt-1.5 text-[clamp(0.6rem,1.2vw,0.75rem)] font-bold uppercase tracking-wide text-[#7b1e3a]">
+              <p className="mb-1 font-medium text-[#3d3832]" style={{ fontSize: 14 }}>
+                {issuedBy}
+              </p>
+              <div className="mx-auto bg-[#c9a227]" style={{ height: 1, width: 112 }} />
+              <p
+                className="mt-1.5 font-bold uppercase tracking-wide text-[#7b1e3a]"
+                style={{ fontSize: 12 }}
+              >
                 Issued By
               </p>
             </div>
 
             {certificateCode ? (
-              <p className="col-start-2 row-start-2 mt-1 w-full break-all text-center font-mono text-[8px] leading-tight text-[#5c5348]">
+              <p
+                className="col-start-2 row-start-2 mt-1 w-full break-all text-center font-mono leading-tight text-[#5c5348]"
+                style={{ fontSize: 8 }}
+              >
                 {certificateCode}
               </p>
             ) : null}

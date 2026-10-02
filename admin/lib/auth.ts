@@ -150,6 +150,39 @@ export type Testimonial = {
   updated_at: string;
 };
 
+export type ContactMessage = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  company: string | null;
+  job_title: string | null;
+  phone: string | null;
+  email: string;
+  help_topic: string | null;
+  comments: string;
+  status: "new" | "read" | "replied" | "archived" | string;
+  admin_reply: string | null;
+  replied_at: string | null;
+  replied_by_admin_id: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MembershipCertificateType = {
+  id: number;
+  membership_type: string;
+  label: string;
+  title: string;
+  body: string;
+  price_cents: number;
+  currency: string;
+  validity_months: number | null;
+  sort_order: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type NewsPost = {
   id: number;
   title: string;
@@ -196,6 +229,7 @@ export type AdminDashboard = {
   membership_certificates?: number;
   newsletter_subscribers: number;
   newsletters_sent: number;
+  contact_messages_open?: number;
   magazines_published: number;
   site_views_today: number;
   site_unique_today: number;

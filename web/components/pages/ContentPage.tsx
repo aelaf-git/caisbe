@@ -9,6 +9,7 @@ type PageHeroProps = {
   actions?: React.ReactNode;
   backHref?: string;
   backLabel?: string;
+  className?: string;
 };
 
 export function PageHero({
@@ -19,9 +20,10 @@ export function PageHero({
   actions,
   backHref,
   backLabel = "Go back",
+  className = "",
 }: PageHeroProps) {
   return (
-    <section className="relative overflow-hidden bg-[#f8fafc] py-16 md:py-24">
+    <section className={`relative overflow-hidden bg-[#f8fafc] py-16 md:py-24 ${className}`}>
       <div className="relative mx-auto max-w-7xl px-4 motion-safe:animate-page-fade-in">
         {backHref ? (
           <div className="mb-8">

@@ -66,7 +66,7 @@ export default function StudentCertificatesPage() {
         <div className="border-b border-ifma-border-light px-6 py-4">
           <h2 className="text-lg font-semibold text-caisbe-text">Membership</h2>
           <p className="mt-1 text-sm text-caisbe-muted">
-            Unlocks automatically after you finish your first course.
+            Student membership is free and available on registration. Other membership types unlock after you finish your first course and include a validity period.
           </p>
         </div>
         {loading ? (
@@ -77,6 +77,9 @@ export default function StudentCertificatesPage() {
               <p className="font-semibold text-caisbe-text">{membership.title}</p>
               <p className="mt-1 text-sm text-caisbe-muted">
                 {membership.membership_number} · {membership.certificate_code}
+                {membership.expires_at
+                  ? ` · Valid until ${new Date(membership.expires_at).toLocaleDateString(undefined, { dateStyle: "long" })}`
+                  : " · Lifetime"}
               </p>
             </div>
             <Link
@@ -89,7 +92,7 @@ export default function StudentCertificatesPage() {
         ) : membershipLocked ? (
           <div className="p-6">
             <p className="text-sm text-caisbe-muted">
-              Complete at least one course to unlock your membership certificate.
+              Complete at least one course to unlock your non-student membership certificate.
             </p>
             <Link
               href="/courses"
