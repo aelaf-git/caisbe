@@ -1,7 +1,7 @@
 """Seed three CAISBE demo courses."""
 
 from app.db import SessionLocal
-from app.seed_courses import seed_courses
+from app.seeds.courses import seed_courses
 
 
 def main() -> None:

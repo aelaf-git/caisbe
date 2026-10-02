@@ -1,73 +1,98 @@
 import ButtonLink from "@/components/ui/ButtonLink";
 import {
-  certificatePath,
+  ContentCard,
+  ContentSection,
+  PageHero,
+} from "@/components/pages/ContentPage";
+import {
+  courseProgramPath,
+  fetchPublishedCourses,
+} from "@/lib/api";
+import {
   learningFormatsPath,
   professionalDevelopmentContent,
 } from "@/lib/data/professional-development";
 
-export default function ProfessionalDevelopmentPageContent() {
-  const { certificatesTitle, certificatesIntro, certificates, formats } =
+export default async function ProfessionalDevelopmentPageContent() {
+  const { certificatesTitle, certificatesIntro, seminars, formats } =
     professionalDevelopmentContent;
+
+  let courses: Awaited<ReturnType<typeof fetchPublishedCourses>> = [];
+  try {
+    courses = await fetchPublishedCourses();
+  } catch {
+    courses = [];
+  }
 
   return (
     <>
-      <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mx-auto max-w-4xl">
-            <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
-              {professionalDevelopmentContent.eyebrow}
-            </p>
-            <h1 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold md:text-4xl">
-              {certificatesTitle}
-            </h1>
-            <p className="mt-6 text-base leading-7 text-caisbe-muted">
-              {certificatesIntro}
-            </p>
-          </div>
+      <PageHero
+        eyebrow={professionalDevelopmentContent.eyebrow}
+        title={certificatesTitle}
+        lead={certificatesIntro}
+        actions={
+          <>
+            <ButtonLink href={learningFormatsPath()} variant="primary">
+              Learning Formats
+            </ButtonLink>
+            <ButtonLink href="/events/calendar" variant="secondary">
+              Events Calendar
+            </ButtonLink>
+          </>
+        }
+      />
 
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
-            {certificates.map((certificate) => (
-              <article
-                key={certificate.slug}
-                className="shadow-brand-card flex flex-col rounded-lg border border-ifma-border-light bg-white p-6"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
-                  {certificate.code}
-                </p>
-                <h2 className="mt-3 text-xl font-semibold leading-snug text-caisbe-text-dark">
-                  {certificate.title}
-                </h2>
-                <p className="mt-4 flex-1 text-sm leading-6 text-caisbe-muted">
-                  {certificate.description}
-                </p>
-                <ButtonLink
-                  href={certificatePath(certificate.slug)}
-                  variant="text"
-                  className="mt-6"
-                >
-                  View Program
-                </ButtonLink>
-              </article>
+      <ContentSection
+        title="Certificate courses"
+        description="Published CAISBE certificate programs for facility, property, and built-environment professionals."
+        wide
+      >
+        {courses.length === 0 ? (
+          <p className="text-base leading-7 text-caisbe-muted">
+            No certificate programs are published yet. Check back soon.
+          </p>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {courses.map((course, index) => (
+              <ContentCard
+                key={course.id}
+                title={course.title}
+                meta={course.code}
+                description={course.description || undefined}
+                href={courseProgramPath(course.slug)}
+                hrefLabel="View Program"
+                style={{ animationDelay: `${index * 70}ms` }}
+              />
             ))}
           </div>
-        </div>
-      </section>
+        )}
+      </ContentSection>
 
-      <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
-        <div className="mx-auto max-w-4xl px-4">
-          <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold">
-            {formats.title}
-          </h2>
-          <p className="mt-6 text-base leading-7 text-caisbe-muted">
-            {formats.description}
-          </p>
-          <div className="mt-8">
-            <ButtonLink href={learningFormatsPath()} variant="secondary">
-              Explore Learning Formats
-            </ButtonLink>
-          </div>
+      <ContentSection
+        title="Seminars"
+        description="Professional seminars that complement certificate pathways and support continuing development."
+        wide
+      >
+        <div className="grid gap-6 md:grid-cols-2">
+          {seminars.map((seminar, index) => (
+            <ContentCard
+              key={seminar.title}
+              title={seminar.title}
+              meta="Seminar"
+              description={seminar.description}
+              href="/contact"
+              hrefLabel="Inquire"
+              style={{ animationDelay: `${index * 70}ms` }}
+            />
+          ))}
         </div>
-      </section>
+      </ContentSection>
+
+      <ContentSection title={formats.title} description={formats.description}>
+        <ButtonLink href={learningFormatsPath()} variant="secondary">
+          Explore Learning Formats
+        </ButtonLink>
+      </ContentSection>
     </>
   );
 }

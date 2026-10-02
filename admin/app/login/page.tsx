@@ -4,6 +4,9 @@ import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import Alert from "@/components/ui/Alert";
+import Button from "@/components/ui/Button";
+import FormField, { fieldClassName } from "@/components/ui/FormField";
 import { ApiError, clearToken } from "@/lib/auth";
 
 export default function AdminLoginPage() {
@@ -69,7 +72,7 @@ export default function AdminLoginPage() {
         </div>
       </div>
 
-      <div className="flex flex-col justify-center bg-[#f7f7f5] px-4 py-10 sm:px-10 lg:px-16">
+      <div className="flex flex-col justify-center bg-admin-canvas px-4 py-10 sm:px-10 lg:px-16">
         <div className="mx-auto w-full max-w-md">
           <Image
             src="/images/logo.png"
@@ -82,23 +85,19 @@ export default function AdminLoginPage() {
           <h1 className="mt-6 font-display text-2xl font-semibold text-caisbe-text-dark">Admin login</h1>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            <div>
-              <label htmlFor="admin-email" className="mb-1 block text-sm font-medium">
-                Email
-              </label>
+              <FormField label="Email address">
               <input
                 id="admin-email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 w-full rounded-md border border-ifma-border bg-white px-4 text-sm outline-none focus:border-caisbe-green"
+                  className={fieldClassName}
+                  autoComplete="email"
+                  placeholder="admin@caisbe.org"
               />
-            </div>
-            <div>
-              <label htmlFor="admin-password" className="mb-1 block text-sm font-medium">
-                Password
-              </label>
+              </FormField>
+              <FormField label="Password">
               <div className="relative">
                 <input
                   id="admin-password"
@@ -106,7 +105,8 @@ export default function AdminLoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 w-full rounded-md border border-ifma-border bg-white px-4 pr-12 text-sm outline-none focus:border-caisbe-red"
+                    className={`${fieldClassName} pr-12`}
+                    autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -130,15 +130,15 @@ export default function AdminLoginPage() {
                   )}
                 </button>
               </div>
-            </div>
-            {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex min-w-[180px] items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-8 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:border-caisbe-red-dark hover:bg-caisbe-red-dark disabled:opacity-60"
-            >
-              {submitting ? "Signing in…" : "Sign in"}
-            </button>
+              </FormField>
+              {error ? <Alert tone="error">{error}</Alert> : null}
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="min-w-[180px]"
+              >
+                {submitting ? "Signing in…" : "Sign in"}
+              </Button>
           </form>
         </div>
       </div>

@@ -1,4 +1,8 @@
 import ButtonLink from "@/components/ui/ButtonLink";
+import {
+  ContentSection,
+  PageHero,
+} from "@/components/pages/ContentPage";
 import { aboutContent } from "@/lib/data/about";
 
 export default function AboutPageContent() {
@@ -12,112 +16,136 @@ export default function AboutPageContent() {
     vision,
     whatWeDo,
     leadership,
+    advisoryCouncil,
     builtEnvironment,
   } = aboutContent;
 
   return (
     <>
-      <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
-        <div className="mx-auto max-w-4xl px-4">
-          <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
-            {eyebrow}
-          </p>
-          <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-caisbe-red">
-            {primaryTagline}
-          </p>
-          <h1 className="font-display text-caisbe-text-dark mt-3 text-3xl font-semibold md:text-4xl">
-            {title}
-          </h1>
-          <p className="mt-3 text-lg font-medium text-caisbe-text">
-            {programTagline}
-          </p>
-          <p className="mt-6 text-base leading-7 text-caisbe-muted">{intro}</p>
-        </div>
-      </section>
+      <PageHero eyebrow={eyebrow} title={title} lead={programTagline}>
+        <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-caisbe-red">
+          {primaryTagline}
+        </p>
+        <p className="mt-6 text-base leading-8 text-caisbe-text md:text-lg">
+          {intro}
+        </p>
+      </PageHero>
 
-      <section
+      <ContentSection
         id="mission"
-        className="scroll-mt-28 border-b border-ifma-border-light bg-white py-16 md:py-20"
+        title={mission.title}
+        className="!py-20 md:!py-24"
       >
-        <div className="mx-auto max-w-4xl px-4">
-          <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold">
-            {mission.title}
-          </h2>
-          <p className="mt-6 text-base leading-7 text-caisbe-muted">
-            {mission.body}
-          </p>
-        </div>
-      </section>
+        <p className="max-w-3xl text-base leading-8 text-caisbe-text md:text-lg">
+          {mission.body}
+        </p>
+      </ContentSection>
 
-      <section
+      <ContentSection
         id="vision"
-        className="scroll-mt-28 border-b border-ifma-border-light bg-white py-16 md:py-20"
+        title={vision.title}
+        className="!py-20 md:!py-24 bg-[#fafafa]"
       >
-        <div className="mx-auto max-w-4xl px-4">
-          <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold">
-            {vision.title}
-          </h2>
-          <p className="mt-6 text-base leading-7 text-caisbe-muted">
-            {vision.body}
-          </p>
-        </div>
-      </section>
+        <p className="max-w-3xl text-base leading-8 text-caisbe-text md:text-lg">
+          {vision.body}
+        </p>
+      </ContentSection>
 
-      <section
+      <ContentSection
         id="what-we-do"
-        className="scroll-mt-28 border-b border-ifma-border-light bg-white py-16 md:py-20"
+        title={whatWeDo.title}
+        className="!py-20 md:!py-24"
       >
-        <div className="mx-auto max-w-4xl px-4">
-          <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold">
-            {whatWeDo.title}
-          </h2>
-          <ul className="mt-8 grid gap-3 sm:grid-cols-2">
-            {whatWeDo.items.map((item) => (
-              <li
-                key={item}
-                className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-red"
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+        <ul className="grid gap-4 sm:grid-cols-2">
+          {whatWeDo.items.map((item) => (
+            <li
+              key={item}
+              className="shadow-brand-card rounded-lg border border-ifma-border bg-white px-5 py-4 text-sm font-semibold leading-6 text-caisbe-text-dark"
+            >
+              <span className="mr-2 inline-block h-2 w-2 rounded-full bg-caisbe-red align-middle" />
+              {item}
+            </li>
+          ))}
+        </ul>
+      </ContentSection>
 
-      <section
+      <ContentSection
         id="leadership"
-        className="scroll-mt-28 border-b border-ifma-border-light bg-white py-16 md:py-20"
+        title={leadership.title}
+        description={leadership.intro}
+        wide
+        className="!py-20 md:!py-24"
       >
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mx-auto max-w-4xl">
-            <h2 className="font-display text-caisbe-text-dark text-3xl font-semibold">
-              {leadership.title}
-            </h2>
-          </div>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {leadership.roles.map((role) => (
-              <article
-                key={role.title}
-                className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white p-6"
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          {leadership.people.map((person, index) => (
+            <article
+              key={person.email}
+              className="shadow-brand-card flex flex-col rounded-lg border border-ifma-border bg-white p-6 motion-safe:animate-page-fade-in"
+              style={{ animationDelay: `${index * 60}ms` }}
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-caisbe-red">
+                {person.role}
+              </p>
+              <h3 className="font-display mt-3 text-xl font-semibold text-caisbe-text-dark">
+                {person.name}
+              </h3>
+              <p className="mt-2 text-sm font-medium leading-6 text-caisbe-text">
+                {person.credentials}
+              </p>
+              <a
+                href={`mailto:${person.email}`}
+                className="mt-5 text-sm font-semibold text-caisbe-red transition-colors hover:text-caisbe-red-dark"
               >
-                <h3 className="text-lg font-semibold text-caisbe-text-dark">
-                  {role.title}
-                </h3>
-                <p className="mt-3 text-sm italic leading-6 text-caisbe-muted">
-                  {role.bio}
-                </p>
-              </article>
-            ))}
-          </div>
+                {person.email}
+              </a>
+            </article>
+          ))}
         </div>
-      </section>
+      </ContentSection>
 
-      <section className="border-b border-ifma-border-light bg-white py-16 md:py-20">
-        <div className="mx-auto max-w-4xl px-4 text-center">
-          <h2 className="font-display text-caisbe-text-dark text-2xl font-semibold">
+      <ContentSection
+        id="advisory-council"
+        title={advisoryCouncil.title}
+        description={advisoryCouncil.intro}
+        wide
+        className="!py-20 md:!py-24 bg-[#fafafa]"
+      >
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {advisoryCouncil.members.map((member, index) => (
+            <article
+              key={member.name}
+              className="shadow-brand-card flex flex-col items-center rounded-lg border border-ifma-border bg-white p-5 text-center motion-safe:animate-page-fade-in"
+              style={{ animationDelay: `${index * 60}ms` }}
+            >
+              <div
+                aria-hidden
+                className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-caisbe-red/30 bg-[linear-gradient(145deg,#fff,#f8f8f8)]"
+              >
+                <span className="font-display text-sm font-bold tracking-wide text-caisbe-red">
+                  {member.shortName}
+                </span>
+              </div>
+              <h3 className="font-display mt-4 text-base font-semibold leading-snug text-caisbe-text-dark">
+                {member.name}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-caisbe-text">
+                {member.description}
+              </p>
+            </article>
+          ))}
+        </div>
+        <p className="mt-8 text-sm leading-6 text-caisbe-muted">
+          Logo marks shown are placeholders. Official partner logos can replace
+          these when brand assets are provided.
+        </p>
+      </ContentSection>
+
+      <ContentSection className="!py-20 md:!py-24 text-center">
+        <div className="mx-auto max-w-2xl">
+          <h2 className="font-display text-caisbe-text-dark text-2xl font-semibold md:text-3xl">
             {builtEnvironment.title}
           </h2>
-          <p className="mt-4 text-base leading-7 text-caisbe-muted">
+          <p className="mt-4 text-base leading-8 text-caisbe-text">
             Learn how Facility Management shapes sustainable buildings and
             resilient communities across Africa and Canada.
           </p>
@@ -133,7 +161,7 @@ export default function AboutPageContent() {
             </ButtonLink>
           </div>
         </div>
-      </section>
+      </ContentSection>
     </>
   );
 }

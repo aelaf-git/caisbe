@@ -95,16 +95,29 @@ export function useAutosaveRegistry() {
   return ctx;
 }
 
-export function autosaveLabel(status: AutosaveStatus): string | null {
+export function autosaveLabel(
+  status: AutosaveStatus,
+  options?: { published?: boolean; hasUnpublishedChanges?: boolean },
+): string | null {
+  const published = Boolean(options?.published);
   switch (status) {
     case "pending":
     case "saving":
-      return "Saving draft…";
+      return published ? "Saving draft…" : "Saving draft…";
     case "saved":
+      if (published && options?.hasUnpublishedChanges) {
+        return "Draft saved — click Save changes to update the published course";
+      }
+      if (published) {
+        return "Published version is up to date";
+      }
       return "Draft saved";
     case "error":
       return "Autosave failed";
     default:
+      if (published && options?.hasUnpublishedChanges) {
+        return "Draft ready — click Save changes to update the published course";
+      }
       return null;
   }
 }

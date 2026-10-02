@@ -21,15 +21,17 @@ def _alembic_config() -> Config:
 
 
 def upgrade_to_head() -> None:
-    """Apply pending migrations, or stamp head when legacy create_all schema exists."""
+    """Apply pending migrations.
+
+    Databases created before Alembic (SQLAlchemy create_all) only have the original
+    LMS tables. Stamp that baseline, then run later revisions instead of jumping to head.
+    """
     config = _alembic_config()
     engine = create_engine(settings.database_url, pool_pre_ping=True)
 
     with engine.connect() as connection:
         current = MigrationContext.configure(connection).get_current_revision()
         if current is None and inspect(connection).has_table("users"):
-            # Database was created before Alembic (create_all). Mark baseline applied.
-            command.stamp(config, "head")
-            return
+            command.stamp(config, "001_initial_schema")
 
     command.upgrade(config, "head")

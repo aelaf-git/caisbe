@@ -1,33 +1,24 @@
-import ButtonLink from "@/components/ui/ButtonLink";
+import { PageHero } from "@/components/pages/ContentPage";
 import { siteName } from "@/lib/data/home";
 
 type UnderConstructionProps = {
   title: string;
+  backHref?: string;
+  backLabel?: string;
 };
 
-export default function UnderConstruction({ title }: UnderConstructionProps) {
+export default function UnderConstruction({
+  title,
+  backHref = "/",
+  backLabel = "Back to home",
+}: UnderConstructionProps) {
   return (
-    <section className="border-b border-ifma-border-light bg-white py-20 md:py-28">
-      <div className="mx-auto max-w-2xl px-4 text-center">
-        <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
-          Under Construction
-        </p>
-        <h1 className="font-display text-caisbe-text-dark mt-4 text-3xl font-semibold md:text-4xl">
-          {title}
-        </h1>
-        <p className="mt-6 text-base leading-7 text-caisbe-muted">
-          This page is currently being built. {siteName} is working on bringing
-          you this content soon. Thank you for your patience.
-        </p>
-        <div className="mt-10 flex flex-wrap justify-center gap-4">
-          <ButtonLink href="/" variant="primary">
-            Back to Home
-          </ButtonLink>
-          <ButtonLink href="/contact" variant="secondary">
-            Contact Us
-          </ButtonLink>
-        </div>
-      </div>
-    </section>
+    <PageHero
+      eyebrow="Under Construction"
+      title={title}
+      lead={`${siteName} is preparing this content. Please check back soon.`}
+      backHref={backHref}
+      backLabel={backLabel}
+    />
   );
 }

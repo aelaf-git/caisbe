@@ -72,7 +72,7 @@ export default function PortalLoginPage() {
         </div>
       </div>
 
-      <div className="flex flex-col justify-center bg-[#f7f7f5] px-4 py-10 sm:px-10 lg:px-16">
+      <div className="flex flex-col justify-center bg-admin-canvas px-4 py-10 sm:px-10 lg:px-16">
         <div className="mx-auto w-full max-w-md">
           <Image
             src="/images/logo.png"
@@ -96,7 +96,7 @@ export default function PortalLoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 w-full rounded-md border border-ifma-border bg-white px-4 text-sm outline-none focus:border-caisbe-red"
+                className="h-12 w-full rounded-md border border-ifma-border bg-admin-surface px-4 text-sm outline-none focus:border-caisbe-red"
               />
             </div>
             <div>
@@ -111,7 +111,7 @@ export default function PortalLoginPage() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 w-full rounded-md border border-ifma-border bg-white px-4 pr-12 text-sm outline-none focus:border-caisbe-red"
+                  className="h-12 w-full rounded-md border border-ifma-border bg-admin-surface px-4 pr-12 text-sm outline-none focus:border-caisbe-red"
                 />
                 <button
                   type="button"

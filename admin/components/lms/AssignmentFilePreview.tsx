@@ -38,14 +38,14 @@ export default function AssignmentFilePreview({ block }: { block: ContentBlock }
           href={block.url}
           target="_blank"
           rel="noreferrer"
-          className="text-sm font-semibold text-caisbe-green hover:underline"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-caisbe-red hover:underline"
         >
           Open PDF — {label}
         </a>
         <iframe
           title={label}
           src={block.url}
-          className="mt-2 h-56 w-full border border-ifma-border"
+          className="mt-3 h-64 w-full rounded-lg border border-ifma-border bg-admin-surface"
         />
       </div>
     );
@@ -56,7 +56,7 @@ export default function AssignmentFilePreview({ block }: { block: ContentBlock }
       href={block.url}
       target="_blank"
       rel="noreferrer"
-      className="text-sm font-semibold text-caisbe-green hover:underline"
+      className="inline-flex items-center gap-1 text-sm font-semibold text-caisbe-red hover:underline"
     >
       {kind === "word" ? "Download Word document" : "Download file"} — {label}
     </a>

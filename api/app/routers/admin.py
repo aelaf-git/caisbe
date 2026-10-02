@@ -3,31 +3,52 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm.attributes import flag_modified
+from starlette.datastructures import UploadFile
 
-from app.auth import require_admin
 from app.config import settings
 from app.db import get_db
-from app.html_sanitize import sanitize_html, strip_plain_text
+from app.security.auth import hash_password, require_admin, verify_password
+from app.security.html_sanitize import sanitize_html, strip_plain_text
 from app.models import (
     Certificate,
     CertificateTemplate,
     Chapter,
+    AssignmentSubmission,
     ContentBlock,
     Course,
     Enrollment,
     FinalExam,
+    IndustryEvent,
+    JobPosting,
     Lesson,
     MediaAsset,
+    MembershipCertificate,
+    NewsPost,
     NewsletterCampaign,
     NewsletterSubscriber,
+    QuizAttempt,
     SiteVisit,
     Quiz,
     QuizChoice,
     QuizQuestion,
     User,
+    MembershipApplication,
+    Order,
+    Payment,
+    Promotion,
+)
+from app.schemas.commerce import PaymentOut, PromotionIn, PromotionOut
+from app.schemas.admin_ops import (
+    AdminPasswordChange,
+    AdminReportsOut,
+    AppSettingsOut,
+    AppSettingsUpdate,
+    CourseReportRow,
 )
 from app.schemas.courses import (
     AdminEnrollmentCourseStatOut,
@@ -46,7 +67,10 @@ from app.schemas.courses import (
     CertificateTemplateUpdate,
     CertificateAdminOut,
     CourseCreate,
+    AssignmentReviewIn,
+    AssignmentSubmissionOut,
     CourseDetailAdminOut,
+    AdminCourseListOut,
     CourseOut,
     CourseUpdate,
     FinalExamOut,
@@ -70,15 +94,33 @@ from app.schemas.media import (
     NewsletterSendOut,
     NewsletterSubscriberOut,
 )
-from app.services.analytics import site_visit_stats
+from app.schemas.events import (
+    IndustryEventCreateIn,
+    IndustryEventOut,
+    IndustryEventUpdateIn,
+)
+from app.schemas.jobs import (
+    JobPostingCreateIn,
+    JobPostingOut,
+    JobPostingUpdateIn,
+)
+from app.schemas.news import (
+    NewsPostCreateIn,
+    NewsPostOut,
+    NewsPostUpdateIn,
+    slugify_title,
+)
+from app.services.analytics import display_city, display_country, site_visit_stats
 from app.services.email import EmailDeliveryError, load_upload_attachment, send_email
+from app.services.settings import default_pass_percent, get_settings_map, set_settings, hero_transition_ms
+from app.services.hero import ensure_default_hero_slides
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 TOPIC_BLOCK_TYPES = {"text", "video", "pdf", "document", "image", "epub", "subtopic", "link"}
 TOPIC_SECTION_TYPES = {"text", "subtopic"}
 TOPIC_MEDIA_TYPES = {"video", "pdf", "document", "image", "epub", "link"}
-CHAPTER_BLOCK_TYPES = {"quiz", "assignment"}
+CHAPTER_BLOCK_TYPES = {"quiz", "assignment", "reading"}
 CHAPTER_UPLOAD_TYPES = TOPIC_MEDIA_TYPES
 CHAPTER_ALLOWED_BLOCK_TYPES = CHAPTER_BLOCK_TYPES | CHAPTER_UPLOAD_TYPES
 
@@ -98,19 +140,100 @@ ALLOWED_UPLOAD_EXTENSIONS = {
     ".docx",
 }
 
+COURSE_DRAFT_META_KEYS = ("code", "title", "description", "slug", "cover_url", "pass_percent", "price_cents")
 
-def _validate_assignment_url(url: str | None) -> None:
+
+def _live_course_meta(course: Course) -> dict:
+    return {
+        "code": course.code,
+        "title": course.title,
+        "description": course.description,
+        "slug": course.slug,
+        "cover_url": course.cover_url,
+        "pass_percent": course.pass_percent,
+        "price_cents": course.price_cents,
+    }
+
+
+def _apply_course_draft_meta(course: Course) -> None:
+    if not course.draft_meta:
+        course.has_unpublished_changes = False
+        course.draft_meta = None
+        return
+    for key, value in course.draft_meta.items():
+        if key in COURSE_DRAFT_META_KEYS:
+            setattr(course, key, value)
+    course.draft_meta = None
+    course.has_unpublished_changes = False
+
+
+def _write_course_meta(course: Course, meta: dict) -> None:
+    """Write details into draft when published; otherwise update live columns."""
+    if not meta:
+        return
+    if course.status == "published":
+        draft = dict(course.draft_meta or _live_course_meta(course))
+        draft.update(meta)
+        course.draft_meta = draft
+        course.has_unpublished_changes = True
+        flag_modified(course, "draft_meta")
+        return
+    for key, value in meta.items():
+        setattr(course, key, value)
+    # Draft courses are the working copy — no separate unpublished buffer.
+    course.draft_meta = None
+    course.has_unpublished_changes = False
+
+
+
+def _reading_display_name(url: str) -> str:
+    path = unquote(url.split("?")[0].rstrip("/"))
+    name = path.split("/")[-1].strip()
+    if name:
+        stem = name.rsplit(".", 1)[0].strip() if "." in name else name
+        cleaned = (stem or name).replace("-", " ").replace("_", " ").strip()
+        if cleaned:
+            return cleaned
+    host = urlparse(url.strip()).netloc.removeprefix("www.")
+    return host or "Reading"
+
+
+def _validate_reading_url(url: str | None) -> None:
     if not url or not url.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Assignment requires an attached PDF or Word file.",
+            detail="Add a link or an uploaded document.",
         )
-    path = url.split("?")[0].lower()
-    if not path.endswith((".pdf", ".doc", ".docx")):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Assignments must be a PDF or Word (.doc, .docx) file.",
-        )
+    raw = url.strip()
+    lowered = raw.split("?")[0].lower()
+    if "/api/uploads/" in lowered and lowered.endswith((".pdf", ".doc", ".docx", ".epub")):
+        return
+    parsed = urlparse(raw)
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="A reading must be either a link or an uploaded PDF, Word, or EPUB file.",
+    )
+
+
+def _validate_assignment(url: str | None, body: str | None) -> None:
+    has_body = bool(body and body.strip())
+    has_url = bool(url and url.strip())
+    if has_url:
+        path = url.split("?")[0].lower()
+        if not path.endswith((".pdf", ".doc", ".docx")):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Assignments must be a PDF or Word (.doc, .docx) file.",
+            )
+        return
+    if has_body:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Add an uploaded document or written instructions.",
+    )
 
 
 def _validate_upload_url(url: str | None, *, field: str = "file") -> None:
@@ -356,7 +479,13 @@ def _load_course_admin(db: Session, course_id: int) -> Course:
 
 
 def _course_admin_out(course: Course) -> CourseDetailAdminOut:
-    return CourseDetailAdminOut.model_validate(course)
+    out = CourseDetailAdminOut.model_validate(course)
+    out.has_unpublished_changes = bool(course.has_unpublished_changes)
+    if course.has_unpublished_changes and course.draft_meta:
+        for key in COURSE_DRAFT_META_KEYS:
+            if key in course.draft_meta:
+                setattr(out, key, course.draft_meta[key])
+    return out
 
 
 # --- Dashboard & site activity ---
@@ -385,6 +514,7 @@ def admin_dashboard(
         enrollments_completed=completed,
         completion_rate=round(100 * completed / total) if total else 0,
         certificates=db.query(Certificate).count(),
+        membership_certificates=db.query(MembershipCertificate).count(),
         newsletter_subscribers=db.query(NewsletterSubscriber)
         .filter(NewsletterSubscriber.unsubscribed_at.is_(None))
         .count(),
@@ -399,29 +529,183 @@ def admin_dashboard(
     )
 
 
+def _choice(data: dict[str, str], key: str, allowed: set[str], default: str) -> str:
+    value = data.get(key, default)
+    return value if value in allowed else default
+
+
+def _settings_out(db: Session) -> AppSettingsOut:
+    data = get_settings_map(db)
+    return AppSettingsOut(
+        institute_name=data.get("institute_name", "CAISBE"),
+        default_pass_percent=default_pass_percent(db),
+        membership_cert_title=data.get("membership_cert_title", "Certificate of Membership"),
+        completion_cert_title=data.get("completion_cert_title", "Certificate of Completion"),
+        portal_public_url=settings.portal_public_url,
+        ui_theme=_choice(data, "ui_theme", {"light", "dark"}, "light"),
+        ui_font_size=_choice(data, "ui_font_size", {"sm", "md", "lg", "xl"}, "md"),
+        ui_font_body=_choice(
+            data,
+            "ui_font_body",
+            {"roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"},
+            "roboto",
+        ),
+        ui_font_display=_choice(
+            data,
+            "ui_font_display",
+            {"roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"},
+            "open-sans",
+        ),
+        hero_transition_ms=hero_transition_ms(db),
+    )
+
+
+@router.get("/settings", response_model=AppSettingsOut)
+def admin_get_settings(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AppSettingsOut:
+    return _settings_out(db)
+
+
+@router.put("/settings", response_model=AppSettingsOut)
+def admin_update_settings(
+    payload: AppSettingsUpdate,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AppSettingsOut:
+    updates: dict[str, str] = {}
+    if payload.institute_name is not None:
+        updates["institute_name"] = payload.institute_name.strip()
+    if payload.default_pass_percent is not None:
+        updates["default_pass_percent"] = str(payload.default_pass_percent)
+    if payload.membership_cert_title is not None:
+        updates["membership_cert_title"] = payload.membership_cert_title.strip()
+    if payload.completion_cert_title is not None:
+        updates["completion_cert_title"] = payload.completion_cert_title.strip()
+    if payload.ui_theme is not None:
+        updates["ui_theme"] = payload.ui_theme
+    if payload.ui_font_size is not None:
+        updates["ui_font_size"] = payload.ui_font_size
+    if payload.ui_font_body is not None:
+        updates["ui_font_body"] = payload.ui_font_body
+    if payload.ui_font_display is not None:
+        updates["ui_font_display"] = payload.ui_font_display
+    if payload.hero_transition_ms is not None:
+        updates["hero_transition_ms"] = str(payload.hero_transition_ms)
+    if updates:
+        set_settings(db, updates)
+        db.commit()
+    return _settings_out(db)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def admin_change_password(
+    payload: AdminPasswordChange,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    current_user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+
+
+@router.get("/reports", response_model=AdminReportsOut)
+def admin_reports(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminReportsOut:
+    enrollments = db.query(Enrollment).all()
+    completed = sum(1 for row in enrollments if row.status == "completed" or row.progress >= 100)
+    in_progress = sum(
+        1 for row in enrollments if not (row.status == "completed" or row.progress >= 100) and 1 <= row.progress <= 99
+    )
+    total = len(enrollments)
+    quiz_attempts = db.query(QuizAttempt).count()
+    quiz_passed = db.query(QuizAttempt).filter(QuizAttempt.passed.is_(True)).count()
+
+    courses = db.query(Course).order_by(Course.code.asc()).all()
+    course_rows: list[CourseReportRow] = []
+    for course in courses:
+        course_enrollments = [row for row in enrollments if row.course_id == course.id]
+        course_completed = sum(
+            1 for row in course_enrollments if row.status == "completed" or row.progress >= 100
+        )
+        course_total = len(course_enrollments)
+        certs = db.query(Certificate).filter(Certificate.course_id == course.id).count()
+        course_rows.append(
+            CourseReportRow(
+                course_id=course.id,
+                course_code=course.code,
+                course_title=course.title,
+                enrollments=course_total,
+                completed=course_completed,
+                completion_percent=round(100 * course_completed / course_total) if course_total else 0,
+                certificates_issued=certs,
+            )
+        )
+
+    return AdminReportsOut(
+        students=db.query(User).filter(User.role == "student").count(),
+        total_enrollments=total,
+        enrollments_completed=completed,
+        enrollments_in_progress=in_progress,
+        completion_rate=round(100 * completed / total) if total else 0,
+        membership_certificates=db.query(MembershipCertificate).count(),
+        completion_certificates=db.query(Certificate).count(),
+        quiz_attempts=quiz_attempts,
+        quiz_passed=quiz_passed,
+        courses=course_rows,
+    )
+
+
+# --- Site visits ---
+
+
 @router.get("/site-visits/stats", response_model=SiteVisitStatsOut)
 def admin_site_visit_stats(
+    days: int | None = Query(default=None, ge=1, le=365),
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> SiteVisitStatsOut:
-    return site_visit_stats(db)
+    return site_visit_stats(db, days=days)
 
 
 @router.get("/site-visits", response_model=list[SiteVisitOut])
 def admin_list_site_visits(
     path: str | None = Query(default=None, max_length=512),
     landing_only: bool = Query(default=False),
-    limit: int = Query(default=200, ge=1, le=500),
+    days: int | None = Query(default=None, ge=1, le=365),
+    country: str | None = Query(default=None, max_length=64),
+    limit: int = Query(default=200, ge=1, le=1000),
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[SiteVisitOut]:
     query = db.query(SiteVisit)
+    if days:
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        query = query.filter(SiteVisit.visited_at >= since)
     if landing_only:
         query = query.filter(SiteVisit.path == "/")
     elif path:
         query = query.filter(SiteVisit.path == path)
-    rows = query.order_by(SiteVisit.visited_at.desc()).limit(limit).all()
-    return [SiteVisitOut.model_validate(row) for row in rows]
+    rows = query.order_by(SiteVisit.visited_at.desc()).limit(5000).all()
+    selected = rows
+    if country:
+        wanted = country.strip().casefold()
+        selected = [
+            row
+            for row in rows
+            if display_country(row.country, row.timezone).casefold() == wanted
+        ]
+    payload: list[SiteVisitOut] = []
+    for row in selected[:limit]:
+        item = SiteVisitOut.model_validate(row)
+        item.location_country = display_country(row.country, row.timezone)
+        item.location_city = display_city(row.city, row.timezone)
+        payload.append(item)
+    return payload
 
 
 # --- Students ---
@@ -460,6 +744,15 @@ def admin_list_students(
             id=student.id,
             full_name=student.full_name,
             email=student.email,
+            phone=student.phone,
+            country=student.country,
+            city=student.city,
+            address=student.address,
+            organization=student.organization,
+            job_title=student.job_title,
+            membership_date=student.membership_date,
+            membership_type=student.membership_type,
+            membership_status=student.membership_status,
             enrollments=[
                 AdminStudentEnrollmentOut(
                     course_id=enrollment.course_id,
@@ -609,12 +902,13 @@ def admin_list_enrollments(
 # --- Courses ---
 
 
-@router.get("/courses", response_model=list[CourseOut])
+@router.get("/courses", response_model=list[AdminCourseListOut])
 def admin_list_courses(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> list[Course]:
-    return db.query(Course).order_by(Course.id.desc()).all()
+) -> list[AdminCourseListOut]:
+    rows = db.query(Course).order_by(Course.id.desc()).all()
+    return [AdminCourseListOut.model_validate(row) for row in rows]
 
 
 @router.post("/courses", response_model=CourseDetailAdminOut, status_code=status.HTTP_201_CREATED)
@@ -628,6 +922,13 @@ def admin_create_course(
     if db.query(Course).filter((Course.code == code) | (Course.slug == slug)).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code or slug already exists")
 
+    pass_percent = (
+        payload.pass_percent
+        if "pass_percent" in payload.model_fields_set
+        else default_pass_percent(db)
+    )
+    completion_title = get_settings_map(db).get("completion_cert_title", "Certificate of Completion")
+
     course = Course(
         code=code,
         title=strip_plain_text(payload.title.strip()) or "",
@@ -635,18 +936,19 @@ def admin_create_course(
         slug=slug,
         status="draft",
         cover_url=payload.cover_url,
-        pass_percent=payload.pass_percent,
+        pass_percent=pass_percent,
+        price_cents=payload.price_cents,
     )
     db.add(course)
     db.flush()
     db.add(
         CertificateTemplate(
             course_id=course.id,
-            title="Certificate of Completion",
+            title=completion_title,
             body="This certifies that {student_name} has successfully completed {course_title}.",
         )
     )
-    db.add(FinalExam(course_id=course.id, title="Final Exam", pass_percent=payload.pass_percent))
+    db.add(FinalExam(course_id=course.id, title="Final Exam", pass_percent=pass_percent))
     db.commit()
     return _course_admin_out(_load_course_admin(db, course.id))
 
@@ -672,7 +974,8 @@ def admin_update_course(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
     data = payload.model_dump(exclude_unset=True)
-    if "status" in data and data["status"] not in ("draft", "published"):
+    next_status = data.pop("status", None)
+    if next_status is not None and next_status not in ("draft", "published"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
     if "code" in data and data["code"]:
         data["code"] = data["code"].strip().upper()
@@ -680,14 +983,44 @@ def admin_update_course(
         data["slug"] = data["slug"].strip().lower()
     _apply_plain_text_fields(data, "title", "description")
 
-    if data.get("status") == "published":
+    meta = {key: data[key] for key in COURSE_DRAFT_META_KEYS if key in data}
+    _write_course_meta(course, meta)
+
+    if next_status == "published":
         loaded = _load_course_admin(db, course_id)
+        # Validate against working content (draft details are overlaid separately below).
         publish_errors = _publish_content_errors(loaded)
         if publish_errors:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=publish_errors[0])
+        _apply_course_draft_meta(course)
+        course.status = "published"
+    elif next_status == "draft":
+        # Keep any pending detail edits in draft_meta while unpublishing, or fold them in.
+        _apply_course_draft_meta(course)
+        course.status = "draft"
 
-    for key, value in data.items():
-        setattr(course, key, value)
+    db.commit()
+    return _course_admin_out(_load_course_admin(db, course_id))
+
+
+@router.post("/courses/{course_id}/save-changes", response_model=CourseDetailAdminOut)
+def admin_save_course_changes(
+    course_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> CourseDetailAdminOut:
+    """Promote draft detail edits onto the live (published) course fields."""
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if course is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    if course.status == "published":
+        _apply_course_draft_meta(course)
+    else:
+        # Draft courses already persist to live columns on autosave.
+        course.draft_meta = None
+        course.has_unpublished_changes = False
+
     db.commit()
     return _course_admin_out(_load_course_admin(db, course_id))
 
@@ -902,7 +1235,7 @@ def admin_create_chapter_block(
     if payload.block_type not in CHAPTER_ALLOWED_BLOCK_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Chapter blocks only support quiz, assignment, or media uploads",
+            detail="Chapter blocks only support quiz, assignment, reading, or media uploads",
         )
     if payload.block_type in CHAPTER_UPLOAD_TYPES and payload.parent_id is not None:
         raise HTTPException(
@@ -938,14 +1271,19 @@ def admin_create_chapter_block(
         quiz_id = quiz.id
 
     if payload.block_type == "assignment":
-        _validate_assignment_url(payload.url)
+        _validate_assignment(payload.url, payload.body)
+    title = strip_plain_text(payload.title)
+    if payload.block_type == "reading":
+        _validate_reading_url(payload.url)
+        if not title:
+            title = _reading_display_name(payload.url or "")
 
     block = ContentBlock(
         lesson_id=None,
         chapter_id=chapter_id,
         parent_id=None,
         block_type=payload.block_type,
-        title=strip_plain_text(payload.title),
+        title=title,
         body=sanitize_html(payload.body),
         url=payload.url,
         label=strip_plain_text(payload.label),
@@ -980,8 +1318,15 @@ def admin_update_block(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Block not found")
 
     data = payload.model_dump(exclude_unset=True)
-    if block.block_type == "assignment" and "url" in data:
-        _validate_assignment_url(data.get("url"))
+    if block.block_type == "assignment" and ("url" in data or "body" in data):
+        _validate_assignment(data.get("url", block.url), data.get("body", block.body))
+    if block.block_type == "reading" and ("url" in data or "title" in data):
+        if "url" in data:
+            _validate_reading_url(data.get("url"))
+        url = data.get("url", block.url) or ""
+        next_title = strip_plain_text(data["title"]) if "title" in data else block.title
+        if not (next_title or "").strip() and url:
+            data["title"] = _reading_display_name(url)
 
     quiz_questions = data.pop("quiz_questions", None)
     quiz_title = data.pop("quiz_title", None)
@@ -1088,6 +1433,8 @@ def admin_upsert_final_exam(
         exam.title = strip_plain_text(payload.title) or "Final Exam"
     if payload.pass_percent is not None:
         exam.pass_percent = payload.pass_percent
+    if "time_limit_minutes" in payload.model_fields_set:
+        exam.time_limit_minutes = payload.time_limit_minutes
     if payload.questions is not None:
         _replace_questions(db, payload.questions, final_exam_id=exam.id)
 
@@ -1249,9 +1596,13 @@ def admin_list_media(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[MediaAssetOut]:
+    category_key = category.strip().lower() if category else None
+    if category_key == "hero":
+        ensure_default_hero_slides(db)
+        db.commit()
     query = db.query(MediaAsset)
-    if category:
-        query = query.filter(MediaAsset.category == category.strip().lower())
+    if category_key:
+        query = query.filter(MediaAsset.category == category_key)
     rows = query.order_by(MediaAsset.sort_order.asc(), MediaAsset.created_at.desc()).all()
     return [MediaAssetOut.model_validate(row) for row in rows]
 
@@ -1432,3 +1783,644 @@ def admin_send_newsletter(
         recipient_count=sent_count,
         message=message,
     )
+
+
+def _payment_out(row: Payment) -> PaymentOut:
+    order = row.order
+    items = order.items if order and order.items else []
+    if not items:
+        course_title = ""
+    elif len(items) == 1:
+        course_title = items[0].title
+    else:
+        course_title = f"{items[0].title} +{len(items) - 1} more"
+    user = row.user
+    return PaymentOut(
+        id=row.id,
+        status=row.status,
+        provider=row.provider,
+        amount_cents=row.amount_cents,
+        created_at=row.created_at,
+        order_number=order.number if order else "",
+        student_name=user.full_name if user else "",
+        student_email=user.email if user else "",
+        course_title=course_title,
+        receipt_printed_at=row.receipt_printed_at,
+        reviewed_at=row.reviewed_at,
+    )
+
+
+@router.get("/payments", response_model=list[PaymentOut])
+def admin_list_payments(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[PaymentOut]:
+    rows = (
+        db.query(Payment)
+        .options(
+            joinedload(Payment.user),
+            joinedload(Payment.order).joinedload(Order.items),
+        )
+        .order_by(Payment.created_at.desc())
+        .limit(200)
+        .all()
+    )
+    return [_payment_out(row) for row in rows]
+
+
+@router.get("/payments/{payment_id}", response_model=PaymentOut)
+def admin_get_payment(
+    payment_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> PaymentOut:
+    row = (
+        db.query(Payment)
+        .options(joinedload(Payment.user), joinedload(Payment.order).joinedload(Order.items))
+        .filter(Payment.id == payment_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+    return _payment_out(row)
+
+
+@router.post("/payments/{payment_id}/print", response_model=PaymentOut)
+def admin_mark_receipt_printed(
+    payment_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> PaymentOut:
+    row = db.query(Payment).options(joinedload(Payment.user), joinedload(Payment.order).joinedload(Order.items)).filter(Payment.id == payment_id).first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+    row.receipt_printed_at = datetime.now(timezone.utc)
+    row.reviewed_at = row.reviewed_at or datetime.now(timezone.utc)
+    row.reviewed_by_id = admin.id
+    db.commit()
+    db.refresh(row)
+    row = (
+        db.query(Payment)
+        .options(joinedload(Payment.user), joinedload(Payment.order).joinedload(Order.items))
+        .filter(Payment.id == payment_id)
+        .one()
+    )
+    return _payment_out(row)
+
+
+@router.post("/payments/{payment_id}/refund", response_model=PaymentOut)
+def admin_refund_payment(
+    payment_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> PaymentOut:
+    from app.services.commerce import refund_payment
+
+    row = (
+        db.query(Payment)
+        .options(joinedload(Payment.user), joinedload(Payment.order).joinedload(Order.items), joinedload(Payment.order).joinedload(Order.invoices))
+        .filter(Payment.id == payment_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+    if row.status == "refunded":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already refunded")
+    try:
+        refund_payment(db, row, admin)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    row = (
+        db.query(Payment)
+        .options(joinedload(Payment.user), joinedload(Payment.order).joinedload(Order.items))
+        .filter(Payment.id == payment_id)
+        .one()
+    )
+    return _payment_out(row)
+
+
+@router.get("/promotions", response_model=list[PromotionOut])
+def admin_list_promotions(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[Promotion]:
+    return db.query(Promotion).order_by(Promotion.created_at.desc()).all()
+
+
+@router.post("/promotions", response_model=PromotionOut, status_code=status.HTTP_201_CREATED)
+def admin_create_promotion(
+    payload: PromotionIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Promotion:
+    code = payload.code.strip().upper()
+    if db.query(Promotion).filter(Promotion.code == code).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code already exists")
+    promo = Promotion(
+        code=code,
+        description=payload.description.strip(),
+        percent_off=payload.percent_off,
+        amount_off_cents=payload.amount_off_cents,
+        complimentary=payload.complimentary or (payload.percent_off or 0) >= 100,
+        max_redemptions=payload.max_redemptions,
+        expires_at=payload.expires_at,
+        course_id=payload.course_id,
+        active=payload.active,
+    )
+    db.add(promo)
+    db.commit()
+    db.refresh(promo)
+    return promo
+
+
+@router.patch("/promotions/{promotion_id}", response_model=PromotionOut)
+def admin_update_promotion(
+    promotion_id: int,
+    payload: PromotionIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Promotion:
+    promo = db.query(Promotion).filter(Promotion.id == promotion_id).first()
+    if promo is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Promotion not found")
+    code = payload.code.strip().upper()
+    clash = db.query(Promotion).filter(Promotion.code == code, Promotion.id != promotion_id).first()
+    if clash:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code already exists")
+    promo.code = code
+    promo.description = payload.description.strip()
+    promo.percent_off = payload.percent_off
+    promo.amount_off_cents = payload.amount_off_cents
+    promo.complimentary = payload.complimentary or (payload.percent_off or 0) >= 100
+    promo.max_redemptions = payload.max_redemptions
+    promo.expires_at = payload.expires_at
+    promo.course_id = payload.course_id
+    promo.active = payload.active
+    db.commit()
+    db.refresh(promo)
+    return promo
+
+
+@router.get("/students/{student_id}", response_model=AdminStudentOut)
+def admin_get_student(
+    student_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminStudentOut:
+    student = (
+        db.query(User)
+        .options(joinedload(User.enrollments).joinedload(Enrollment.course))
+        .filter(User.id == student_id, User.role == "student")
+        .first()
+    )
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    return AdminStudentOut(
+        id=student.id,
+        full_name=student.full_name,
+        email=student.email,
+        phone=student.phone,
+        country=student.country,
+        city=student.city,
+        address=student.address,
+        organization=student.organization,
+        job_title=student.job_title,
+        membership_date=student.membership_date,
+        membership_type=student.membership_type,
+        membership_status=student.membership_status,
+        enrollments=[
+            AdminStudentEnrollmentOut(
+                course_id=enrollment.course_id,
+                course_code=enrollment.course.code,
+                course_title=enrollment.course.title,
+                progress=enrollment.progress,
+                status=enrollment.status,
+                enrolled_at=enrollment.enrolled_at,
+            )
+            for enrollment in student.enrollments
+        ],
+    )
+
+
+@router.get("/students/{student_id}/assignment-submissions", response_model=list[AssignmentSubmissionOut])
+def admin_list_assignment_submissions(
+    student_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[AssignmentSubmissionOut]:
+    rows = (
+        db.query(AssignmentSubmission)
+        .options(joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course))
+        .filter(AssignmentSubmission.user_id == student_id)
+        .order_by(AssignmentSubmission.created_at.desc())
+        .all()
+    )
+    items: list[AssignmentSubmissionOut] = []
+    for row in rows:
+        block = row.block
+        chapter = block.chapter if block else None
+        course = chapter.course if chapter else None
+        items.append(
+            AssignmentSubmissionOut(
+                id=row.id,
+                content_block_id=row.content_block_id,
+                assignment_title=(block.title if block and block.title else "Assignment"),
+                course_code=course.code if course else "",
+                course_title=course.title if course else "",
+                body=row.body,
+                file_url=row.file_url,
+                file_name=row.file_name,
+                status=row.status,
+            )
+        )
+    return items
+
+
+@router.post("/assignment-submissions/{submission_id}/review", response_model=AssignmentSubmissionOut)
+def admin_review_assignment(
+    submission_id: int,
+    payload: AssignmentReviewIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AssignmentSubmissionOut:
+    row = (
+        db.query(AssignmentSubmission)
+        .options(joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course))
+        .filter(AssignmentSubmission.id == submission_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    row.status = payload.status
+    db.commit()
+    block = row.block
+    chapter = block.chapter if block else None
+    course = chapter.course if chapter else None
+    return AssignmentSubmissionOut(
+        id=row.id,
+        content_block_id=row.content_block_id,
+        assignment_title=(block.title if block and block.title else "Assignment"),
+        course_code=course.code if course else "",
+        course_title=course.title if course else "",
+        body=row.body,
+        file_url=row.file_url,
+        file_name=row.file_name,
+        status=row.status,
+    )
+
+
+@router.get("/membership-applications")
+def admin_list_membership_applications(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    rows = db.query(MembershipApplication).order_by(MembershipApplication.created_at.desc()).limit(200).all()
+    return [
+        {
+            "id": row.id,
+            "full_name": row.full_name,
+            "email": row.email,
+            "phone": row.phone,
+            "membership_type": row.membership_type,
+            "membership_status": row.membership_status,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row in rows
+    ]
+
+
+# --- Industry events calendar ---
+
+
+@router.get("/events", response_model=list[IndustryEventOut])
+def admin_list_events(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[IndustryEventOut]:
+    rows = (
+        db.query(IndustryEvent)
+        .order_by(IndustryEvent.starts_on.asc(), IndustryEvent.sort_order.asc())
+        .all()
+    )
+    return [IndustryEventOut.model_validate(row) for row in rows]
+
+
+@router.post("/events", response_model=IndustryEventOut, status_code=status.HTTP_201_CREATED)
+def admin_create_event(
+    payload: IndustryEventCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> IndustryEventOut:
+    if payload.report_file_url:
+        _validate_upload_url(payload.report_file_url, field="Report file")
+    event = IndustryEvent(
+        title=payload.title.strip(),
+        summary=(payload.summary or "").strip() or None,
+        location=(payload.location or "").strip() or None,
+        region=(payload.region or "").strip() or None,
+        event_type=(payload.event_type or "calendar").strip().lower() or "calendar",
+        starts_on=payload.starts_on,
+        ends_on=payload.ends_on,
+        source_name=(payload.source_name or "").strip() or None,
+        source_url=(payload.source_url or "").strip() or None,
+        report_file_url=payload.report_file_url,
+        cpd_hours=payload.cpd_hours,
+        published=payload.published,
+        featured=payload.featured,
+        sort_order=payload.sort_order,
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return IndustryEventOut.model_validate(event)
+
+
+@router.patch("/events/{event_id}", response_model=IndustryEventOut)
+def admin_update_event(
+    event_id: int,
+    payload: IndustryEventUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> IndustryEventOut:
+    event = db.query(IndustryEvent).filter(IndustryEvent.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "report_file_url" in data and data["report_file_url"]:
+        _validate_upload_url(data["report_file_url"], field="Report file")
+    for key, value in data.items():
+        if isinstance(value, str):
+            value = value.strip() or None if key != "title" and key != "event_type" else value.strip()
+            if key == "title" and not value:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title is required")
+            if key == "event_type" and value:
+                value = value.lower()
+        setattr(event, key, value)
+    db.commit()
+    db.refresh(event)
+    return IndustryEventOut.model_validate(event)
+
+
+@router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_event(
+    event_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    event = db.query(IndustryEvent).filter(IndustryEvent.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    db.delete(event)
+    db.commit()
+
+
+def _job_out(row: JobPosting, *, now: datetime | None = None) -> JobPostingOut:
+    current = now or datetime.now(timezone.utc)
+    expires = row.expires_on
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    payload = JobPostingOut.model_validate(row)
+    payload.is_expired = expires < current
+    return payload
+
+
+@router.get("/jobs", response_model=list[JobPostingOut])
+def admin_list_jobs(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[JobPostingOut]:
+    now = datetime.now(timezone.utc)
+    rows = (
+        db.query(JobPosting)
+        .order_by(JobPosting.posted_on.desc(), JobPosting.sort_order.asc())
+        .all()
+    )
+    return [_job_out(row, now=now) for row in rows]
+
+
+@router.post("/jobs", response_model=JobPostingOut, status_code=status.HTTP_201_CREATED)
+def admin_create_job(
+    payload: JobPostingCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> JobPostingOut:
+    if payload.expires_on < payload.posted_on:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Expiry date must be on or after the upload/post date.",
+        )
+    if payload.attachment_url:
+        _validate_upload_url(payload.attachment_url, field="Attachment")
+    row = JobPosting(
+        title=payload.title.strip(),
+        company=(payload.company or "").strip() or None,
+        location=(payload.location or "").strip() or None,
+        employment_type=(payload.employment_type or "full-time").strip().lower() or "full-time",
+        summary=(payload.summary or "").strip() or None,
+        description=(payload.description or "").strip() or None,
+        apply_url=(payload.apply_url or "").strip() or None,
+        attachment_url=payload.attachment_url,
+        source_label=(payload.source_label or "").strip() or None,
+        posted_on=payload.posted_on,
+        expires_on=payload.expires_on,
+        published=payload.published,
+        featured=payload.featured,
+        sort_order=payload.sort_order,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _job_out(row)
+
+
+@router.patch("/jobs/{job_id}", response_model=JobPostingOut)
+def admin_update_job(
+    job_id: int,
+    payload: JobPostingUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> JobPostingOut:
+    row = db.query(JobPosting).filter(JobPosting.id == job_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "attachment_url" in data and data["attachment_url"]:
+        _validate_upload_url(data["attachment_url"], field="Attachment")
+    for key, value in data.items():
+        if isinstance(value, str) and key in {
+            "title",
+            "company",
+            "location",
+            "employment_type",
+            "summary",
+            "description",
+            "apply_url",
+            "source_label",
+        }:
+            value = value.strip()
+            if key == "title" and not value:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title is required")
+            if key == "employment_type" and value:
+                value = value.lower()
+            if key != "title" and not value:
+                value = None
+        setattr(row, key, value)
+    if row.expires_on < row.posted_on:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Expiry date must be on or after the upload/post date.",
+        )
+    db.commit()
+    db.refresh(row)
+    return _job_out(row)
+
+
+@router.delete("/jobs/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_job(
+    job_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(JobPosting).filter(JobPosting.id == job_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    db.delete(row)
+    db.commit()
+
+
+def _unique_news_slug(db: Session, base: str, *, exclude_id: int | None = None) -> str:
+    candidate = slugify_title(base)
+    suffix = 2
+    while True:
+        query = db.query(NewsPost).filter(NewsPost.slug == candidate)
+        if exclude_id is not None:
+            query = query.filter(NewsPost.id != exclude_id)
+        if query.first() is None:
+            return candidate
+        candidate = f"{slugify_title(base)[:220]}-{suffix}"
+        suffix += 1
+
+
+def _news_out(row: NewsPost) -> NewsPostOut:
+    return NewsPostOut.model_validate(row)
+
+
+def _normalize_url_list(urls: list[str] | None) -> list[str]:
+    if not urls:
+        return []
+    cleaned: list[str] = []
+    for url in urls:
+        value = (url or "").strip()
+        if value:
+            cleaned.append(value)
+    return cleaned
+
+
+@router.get("/news", response_model=list[NewsPostOut])
+def admin_list_news(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[NewsPostOut]:
+    rows = (
+        db.query(NewsPost)
+        .order_by(NewsPost.posted_on.desc(), NewsPost.sort_order.asc())
+        .all()
+    )
+    return [_news_out(row) for row in rows]
+
+
+@router.post("/news", response_model=NewsPostOut, status_code=status.HTTP_201_CREATED)
+def admin_create_news(
+    payload: NewsPostCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> NewsPostOut:
+    if payload.cover_url:
+        _validate_upload_url(payload.cover_url, field="Cover image")
+    image_urls = _normalize_url_list(payload.image_urls)
+    video_urls = _normalize_url_list(payload.video_urls)
+    for url in image_urls:
+        _validate_upload_url(url, field="Image")
+    for url in video_urls:
+        _validate_upload_url(url, field="Video")
+    slug_base = (payload.slug or payload.title).strip()
+    row = NewsPost(
+        title=payload.title.strip(),
+        slug=_unique_news_slug(db, slug_base),
+        short_description=(payload.short_description or "").strip() or None,
+        long_description=(payload.long_description or "").strip() or None,
+        cover_url=payload.cover_url,
+        image_urls=image_urls or None,
+        video_urls=video_urls or None,
+        tag=(payload.tag or "").strip() or None,
+        posted_on=payload.posted_on,
+        published=payload.published,
+        featured=payload.featured,
+        sort_order=payload.sort_order,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _news_out(row)
+
+
+@router.patch("/news/{post_id}", response_model=NewsPostOut)
+def admin_update_news(
+    post_id: int,
+    payload: NewsPostUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> NewsPostOut:
+    row = db.query(NewsPost).filter(NewsPost.id == post_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "cover_url" in data and data["cover_url"]:
+        _validate_upload_url(data["cover_url"], field="Cover image")
+    if "image_urls" in data:
+        data["image_urls"] = _normalize_url_list(data["image_urls"])
+        for url in data["image_urls"]:
+            _validate_upload_url(url, field="Image")
+        data["image_urls"] = data["image_urls"] or None
+    if "video_urls" in data:
+        data["video_urls"] = _normalize_url_list(data["video_urls"])
+        for url in data["video_urls"]:
+            _validate_upload_url(url, field="Video")
+        data["video_urls"] = data["video_urls"] or None
+    if "slug" in data and data["slug"]:
+        data["slug"] = _unique_news_slug(db, data["slug"], exclude_id=post_id)
+    elif "title" in data and data["title"] and "slug" not in data:
+        # Keep existing slug when title changes unless slug was explicitly sent.
+        pass
+    for key, value in data.items():
+        if isinstance(value, str) and key in {
+            "title",
+            "short_description",
+            "long_description",
+            "tag",
+            "slug",
+        }:
+            value = value.strip()
+            if key == "title" and not value:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title is required")
+            if key != "title" and key != "slug" and not value:
+                value = None
+        setattr(row, key, value)
+    db.commit()
+    db.refresh(row)
+    return _news_out(row)
+
+
+@router.delete("/news/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_news(
+    post_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(NewsPost).filter(NewsPost.id == post_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
+    db.delete(row)
+    db.commit()

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import BuiltEnvironmentPageContent from "@/components/about/BuiltEnvironmentPageContent";
-import { PlaceholderSubpageContent } from "@/components/pages/PlaceholderPages";
+import TopicPageContent from "@/components/pages/TopicPageContent";
 import { aboutContent } from "@/lib/data/about";
 import { aboutPages, getAboutPage } from "@/lib/data/site-pages";
 
@@ -40,7 +40,7 @@ export default async function AboutSubpage({ params }: Props) {
   if (!page) notFound();
 
   return (
-    <PlaceholderSubpageContent
+    <TopicPageContent
       eyebrow="About CAISBE"
       page={page}
       indexHref="/about"

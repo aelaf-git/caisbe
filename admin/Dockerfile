@@ -20,4 +20,5 @@ ENV HOSTNAME=0.0.0.0 \
 
 EXPOSE 3000
 
-CMD ["npx", "next", "dev", "--hostname", "0.0.0.0", "--port", "3000"]
+# Webpack avoids a Turbopack next/font/google resolution bug in Next 16.2.
+CMD ["npx", "next", "dev", "--hostname", "0.0.0.0", "--port", "3000", "--webpack"]

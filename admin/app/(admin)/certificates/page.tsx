@@ -1,37 +1,50 @@
 import CertificatePreview from "@/components/certificates/CertificatePreview";
+import Card from "@/components/ui/Card";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function CertificatesPage() {
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-caisbe-text-dark">Certificates</h1>
-        <p className="mt-2 max-w-2xl text-sm text-caisbe-muted">
-          All courses share one standard certificate layout. Certificates are issued automatically when
-          a student completes every lesson (courses without a final exam) or passes the final exam.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Credentials"
+        title="Certificates"
+        description="Preview the credentials issued automatically for membership and successful course completion."
+      />
 
-      <section className="space-y-4 border border-ifma-border bg-white p-6">
-        <h2 className="text-lg font-semibold text-caisbe-text">Template preview</h2>
+      <Card className="space-y-5">
+        <div>
+        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Template previews</h2>
         <p className="text-sm text-caisbe-muted">
-          Sample data is shown below. On each issued certificate only the student name, course title,
-          issue date, and QR code change.
+          Sample data is shown below. Layouts share the CAISBE frame but use different titles and
+          fields so membership and completion stay distinct.
         </p>
+        </div>
         <CertificatePreview />
-      </section>
+      </Card>
 
-      <section className="space-y-4 border border-ifma-border bg-white p-6">
-        <h2 className="text-lg font-semibold text-caisbe-text">Dynamic fields</h2>
-        <ul className="list-inside list-disc space-y-1 text-sm text-caisbe-text">
-          <li>Student name</li>
-          <li>Course title</li>
-          <li>Issue date</li>
-          <li>Verification QR code (links to the public verify page)</li>
-        </ul>
-        <p className="text-sm text-caisbe-muted">
-          Issued by: <span className="font-medium text-caisbe-text">CAISBE</span>
-        </p>
-      </section>
+      <Card className="space-y-4">
+        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Dynamic fields</h2>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-lg bg-admin-surface-muted/60 p-4">
+            <h3 className="text-sm font-semibold text-caisbe-text">Membership</h3>
+            <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-caisbe-text">
+              <li>Student name</li>
+              <li>Membership number</li>
+              <li>Member since date</li>
+              <li>Verification QR code</li>
+            </ul>
+          </div>
+          <div className="rounded-lg bg-admin-surface-muted/60 p-4">
+            <h3 className="text-sm font-semibold text-caisbe-text">Course completion</h3>
+            <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-caisbe-text">
+              <li>Student name</li>
+              <li>Course title</li>
+              <li>Issue date</li>
+              <li>Verification QR code</li>
+            </ul>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

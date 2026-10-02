@@ -14,57 +14,28 @@ export const professionalDevelopmentContent = {
   certificatesTitle: "Certificate Programs",
   certificatesIntro:
     "Explore CAISBE certificate programs designed for facility management, property management, and built environment professionals.",
-  certificates: [
+  seminars: [
     {
-      slug: "fmc",
-      code: "FMC",
-      title: "Facilities Management Certificate (FMC)",
+      title: "Sustainable Facility Operations Seminar",
       description:
-        "This certificate provides foundational knowledge and practical skills for managing modern facilities. Participants learn how to oversee building operations, maintenance planning, space management, vendor coordination, and sustainability practices to ensure efficient, safe, and cost-effective facility performance.",
+        "A practice-focused seminar on energy, maintenance planning, and day-to-day sustainable operations for FM teams.",
     },
     {
-      slug: "pmc",
-      code: "PMC",
-      title: "Property Management Certificate (PMC)",
+      title: "Workplace Experience & Soft Services Seminar",
       description:
-        "This program equips learners with essential skills in property operations, leasing, tenant relations, rent management, maintenance coordination, and legal compliance. Ideal for those managing residential, commercial, or mixed-use properties in rapidly growing real estate markets.",
+        "Explore service quality, occupant experience, and soft-services coordination across commercial and institutional sites.",
     },
     {
-      slug: "chmc",
-      code: "CHMC",
-      title: "Condominium/Cooperative Housing Management Certificate (CHMC)",
+      title: "Africa–Canada Built Environment Leadership Seminar",
       description:
-        "This certificate focuses on the unique governance, financial management, maintenance, and community leadership skills needed to manage condominium and cooperative housing developments. It covers owner/tenant coordination, board relations, budgeting, and conflict resolution.",
+        "Cross-border dialogue on partnership models, capacity building, and professional standards in the built environment.",
     },
     {
-      slug: "hsc",
-      code: "HSC",
-      title: "Health & Safety Certificate for FM Professionals (HSC)",
+      title: "Health, Safety & Risk for Facility Leaders",
       description:
-        "Designed for facility and property management professionals, this certificate covers workplace safety standards, risk assessment, emergency preparedness, hazard control, and compliance with health and safety regulations. Graduates gain the skills to create safe and compliant building environments.",
+        "Seminar covering risk assessment, emergency readiness, and compliance essentials for facility and property managers.",
     },
-    {
-      slug: "ceebm",
-      code: "CEEBM",
-      title: "Certificate in Energy Efficiency & Building Energy Management (CEEBM)",
-      description:
-        "Participants learn practical strategies for reducing building energy consumption through audits, energy monitoring, HVAC optimization, lighting upgrades, and sustainable design principles. The program emphasizes cost-effective approaches suitable for developing and advanced markets.",
-    },
-    {
-      slug: "ripvc",
-      code: "RIPVC",
-      title: "Real Estate Investment & Property Valuation Certificate (RIPVC)",
-      description:
-        "This certificate introduces learners to investment analysis, valuation techniques, market assessment, and financial modeling for real estate assets. Participants gain skills in estimating property value, analyzing risk, and evaluating investment opportunities in emerging and mature property markets.",
-    },
-    {
-      slug: "sret",
-      code: "SRET",
-      title: "Certificate in Smart Real Estate Technologies",
-      description:
-        "A forward-looking program covering digital tools that are transforming real estate, including smart building systems, IoT sensors, building automation, AI-powered valuation tools, mobile property management platforms, and blockchain-based land registration solutions.",
-    },
-  ] satisfies CertificateProgram[],
+  ],
   formats: {
     slug: "learning-formats",
     title: "Learning Formats",
@@ -98,12 +69,6 @@ export const professionalDevelopmentContent = {
     ],
   },
 };
-
-export function getCertificateBySlug(slug: string) {
-  return professionalDevelopmentContent.certificates.find(
-    (certificate) => certificate.slug === slug,
-  );
-}
 
 export function getLearningFormatBySlug(slug: string) {
   return professionalDevelopmentContent.formats.items.find(

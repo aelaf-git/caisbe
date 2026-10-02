@@ -16,6 +16,8 @@ export type Course = {
   status?: string;
   cover_url?: string | null;
   pass_percent?: number;
+  price_cents?: number;
+  has_unpublished_changes?: boolean;
 };
 
 export type Enrollment = {
@@ -39,6 +41,15 @@ export type AdminStudent = {
   id: number;
   full_name: string;
   email: string;
+  phone?: string | null;
+  country?: string | null;
+  city?: string | null;
+  address?: string | null;
+  organization?: string | null;
+  job_title?: string | null;
+  membership_date?: string | null;
+  membership_type?: string | null;
+  membership_status?: string;
   enrollments: AdminStudentEnrollment[];
 };
 
@@ -87,10 +98,68 @@ export type MediaAsset = {
   created_at: string;
 };
 
+export type IndustryEvent = {
+  id: number;
+  title: string;
+  summary: string | null;
+  location: string | null;
+  region: string | null;
+  event_type: string;
+  starts_on: string;
+  ends_on: string | null;
+  source_name: string | null;
+  source_url: string | null;
+  report_file_url: string | null;
+  cpd_hours: number | null;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type JobPosting = {
+  id: number;
+  title: string;
+  company: string | null;
+  location: string | null;
+  employment_type: string;
+  summary: string | null;
+  description: string | null;
+  apply_url: string | null;
+  attachment_url: string | null;
+  source_label: string | null;
+  posted_on: string;
+  expires_on: string;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  is_expired: boolean;
+};
+
+export type NewsPost = {
+  id: number;
+  title: string;
+  slug: string;
+  short_description: string | null;
+  long_description: string | null;
+  cover_url: string | null;
+  image_urls: string[];
+  video_urls: string[];
+  tag: string | null;
+  posted_on: string;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type NewsletterSubscriber = {
   id: number;
   email: string;
-  full_name: string | null;
   source: string;
   subscribed_at: string;
   unsubscribed_at: string | null;
@@ -113,6 +182,7 @@ export type AdminDashboard = {
   enrollments_completed: number;
   completion_rate: number;
   certificates: number;
+  membership_certificates?: number;
   newsletter_subscribers: number;
   newsletters_sent: number;
   magazines_published: number;
@@ -127,12 +197,32 @@ export type SiteVisit = {
   path: string;
   ip_address: string;
   country: string | null;
+  location_country?: string;
+  location_city?: string;
   city: string | null;
   referrer: string | null;
   user_agent: string | null;
   language: string | null;
   timezone: string | null;
   visited_at: string;
+};
+
+export type SiteVisitDaily = {
+  date: string;
+  views: number;
+  unique: number;
+};
+
+export type SiteVisitCountryStat = {
+  country: string;
+  views: number;
+  unique?: number;
+};
+
+export type SiteVisitNamedStat = {
+  label: string;
+  views: number;
+  unique?: number;
 };
 
 export type SiteVisitStats = {
@@ -144,8 +234,15 @@ export type SiteVisitStats = {
   unique_today: number;
   views_last_7_days: number;
   unique_last_7_days: number;
+  previous_views: number | null;
+  previous_unique: number | null;
   top_paths: { path: string; views: number }[];
-  top_countries: { country: string; views: number }[];
+  top_countries: SiteVisitCountryStat[];
+  daily: SiteVisitDaily[];
+  countries: SiteVisitCountryStat[];
+  cities: SiteVisitNamedStat[];
+  referrers: SiteVisitNamedStat[];
+  browsers: SiteVisitNamedStat[];
 };
 
 export type TokenResponse = {
@@ -179,10 +276,10 @@ export class ApiError extends Error {
   }
 }
 
-async function parseError(response: Response): Promise<ApiError> {
-  let detail = `Request failed (${response.status})`;
+function parseErrorDetail(status: number, text: string): ApiError {
+  let detail = `Request failed (${status})`;
   try {
-    const data = (await response.json()) as { detail?: string | { msg?: string }[] };
+    const data = JSON.parse(text) as { detail?: string | { msg?: string }[] };
     if (typeof data.detail === "string") {
       detail = data.detail;
     } else if (Array.isArray(data.detail) && data.detail[0]?.msg) {
@@ -191,7 +288,16 @@ async function parseError(response: Response): Promise<ApiError> {
   } catch {
     // keep default
   }
-  return new ApiError(response.status, detail);
+  return new ApiError(status, detail);
+}
+
+async function parseError(response: Response): Promise<ApiError> {
+  try {
+    const text = await response.text();
+    return parseErrorDetail(response.status, text);
+  } catch {
+    return new ApiError(response.status, `Request failed (${response.status})`);
+  }
 }
 
 export async function apiFetch<T>(
@@ -234,37 +340,57 @@ export async function apiFetch<T>(
   }
 }
 
+export type ApiUploadOptions = {
+  onProgress?: (percent: number) => void;
+};
+
 export async function apiUpload(
   path: string,
   file: File,
+  options?: ApiUploadOptions,
 ): Promise<{ url: string; filename: string }> {
   const maxBytes = 500 * 1024 * 1024;
   if (file.size > maxBytes) {
     throw new ApiError(413, "File is too large. Maximum upload size is 500 MB.");
   }
 
-  const headers = new Headers();
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+  const url = apiBase ? `${apiBase}/api${path}` : `/api${path}`;
   const token = getToken();
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-
   const body = new FormData();
   body.append("file", file);
 
-  // Prefer direct API upload so large files are not buffered/truncated by Next.js.
-  const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
-  const url = apiBase ? `${apiBase}/api${path}` : `/api${path}`;
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers,
-    body,
+    if (token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    }
+
+    xhr.upload.onprogress = (event) => {
+      if (!options?.onProgress || !event.lengthComputable || event.total <= 0) return;
+      const percent = Math.min(100, Math.round((event.loaded / event.total) * 100));
+      options.onProgress(percent);
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        options?.onProgress?.(100);
+        try {
+          resolve(JSON.parse(xhr.responseText) as { url: string; filename: string });
+        } catch {
+          reject(new ApiError(xhr.status, "Invalid response from server."));
+        }
+        return;
+      }
+      reject(parseErrorDetail(xhr.status, xhr.responseText || ""));
+    };
+
+    xhr.onerror = () => {
+      reject(new ApiError(0, "Network error while uploading file."));
+    };
+
+    xhr.send(body);
   });
-
-  if (!response.ok) {
-    throw await parseError(response);
-  }
-
-  return response.json() as Promise<{ url: string; filename: string }>;
 }

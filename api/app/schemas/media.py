@@ -41,13 +41,11 @@ class MediaAssetUpdateIn(BaseModel):
 
 class NewsletterSubscribeIn(BaseModel):
     email: EmailStr
-    full_name: str | None = Field(default=None, max_length=120)
 
 
 class NewsletterSubscriberOut(BaseModel):
     id: int
     email: str
-    full_name: str | None = None
     source: str
     subscribed_at: datetime
     unsubscribed_at: datetime | None = None
@@ -71,6 +69,18 @@ class NewsletterSendOut(BaseModel):
     campaign_id: int
     recipient_count: int
     message: str
+
+
+class HeroSlideOut(BaseModel):
+    id: int | str
+    title: str
+    file_url: str
+    media_type: str  # "image" | "video"
+
+
+class HeroCarouselOut(BaseModel):
+    transition_ms: int
+    slides: list[HeroSlideOut]
 
 
 class NewsletterCampaignOut(BaseModel):

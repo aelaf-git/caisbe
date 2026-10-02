@@ -41,3 +41,31 @@ export function EditIconLink({ href, label, className = "" }: EditIconLinkProps)
     </Link>
   );
 }
+
+type EditIconButtonProps = {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  className?: string;
+};
+
+/** Accessible pencil/edit button for in-place edit flows. */
+export function EditIconButton({
+  label,
+  onClick,
+  disabled,
+  className = "",
+}: EditIconButtonProps) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-caisbe-muted transition-colors hover:bg-caisbe-green/10 hover:text-caisbe-green disabled:opacity-50 ${className}`}
+    >
+      <IconPencil />
+    </button>
+  );
+}

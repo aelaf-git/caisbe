@@ -1,8 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import HeroManager from "@/components/media/HeroManager";
 import MagazineManager from "@/components/media/MagazineManager";
 import NewsletterPanel from "@/components/media/NewsletterPanel";
+import Alert from "@/components/ui/Alert";
+import PageHeader from "@/components/ui/PageHeader";
+import Tabs from "@/components/ui/Tabs";
+import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
 import {
   apiFetch,
   ApiError,
@@ -11,26 +16,30 @@ import {
   type NewsletterSubscriber,
 } from "@/lib/auth";
 
-type Tab = "magazines" | "newsletter";
+type Tab = "hero" | "magazines" | "newsletter";
 
 export default function MediaPage() {
-  const [tab, setTab] = useState<Tab>("magazines");
+  const [tab, setTab] = useState<Tab>("hero");
+  const [heroAssets, setHeroAssets] = useState<MediaAsset[]>([]);
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
   const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [mediaData, subscriberData, campaignData] = await Promise.all([
+      const [heroData, mediaData, subscriberData, campaignData] = await Promise.all([
+        apiFetch<MediaAsset[]>("/admin/media?category=hero"),
         apiFetch<MediaAsset[]>("/admin/media?category=magazine"),
         apiFetch<NewsletterSubscriber[]>("/admin/newsletter/subscribers"),
         apiFetch<NewsletterCampaign[]>("/admin/newsletter/campaigns"),
       ]);
+      setHeroAssets(heroData);
       setAssets(mediaData);
       setSubscribers(subscriberData);
       setCampaigns(campaignData);
@@ -42,56 +51,53 @@ export default function MediaPage() {
   }, []);
 
   useEffect(() => {
+    // Initial data synchronization; subsequent refreshes reuse the same callback.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
-  function askConfirm(options: {
-    title: string;
-    description: string;
-    confirmLabel?: string;
-  }): Promise<boolean> {
-    return Promise.resolve(
-      window.confirm(`${options.title}\n\n${options.description}`),
-    );
-  }
-
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">Media library</h1>
-        <p className="mt-2 text-sm text-caisbe-muted">
-          Manage CAISBE magazine issues for the website and send newsletters to subscribers.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Content"
+        title="Media library"
+        description="Manage the homepage hero carousel, magazine issues, and newsletters."
+      />
 
-      <div className="flex flex-wrap gap-2 border-b border-ifma-border-light">
-        {(
-          [
-            ["magazines", "Magazines"],
-            ["newsletter", "Newsletter"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold uppercase tracking-wide ${
-              tab === id
-                ? "border-caisbe-green text-caisbe-green"
-                : "border-transparent text-caisbe-muted hover:text-caisbe-text"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        items={[
+          { id: "hero", label: "Hero", count: heroAssets.length },
+          { id: "magazines", label: "Magazines", count: assets.length },
+          { id: "newsletter", label: "Newsletter", count: subscribers.length },
+        ]}
+        value={tab}
+        onChange={(next) => {
+          setTab(next);
+          setError(null);
+          setSuccess(null);
+        }}
+        ariaLabel="Media sections"
+      />
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
-      {success ? (
-        <p className="text-sm text-caisbe-green">{success}</p>
-      ) : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      {success ? <Alert tone="success">{success}</Alert> : null}
 
-      {tab === "magazines" ? (
+      {tab === "hero" ? (
+        <HeroManager
+          assets={heroAssets}
+          loading={loading}
+          onRefresh={load}
+          onError={(message) => {
+            setSuccess(null);
+            setError(message);
+          }}
+          onSuccess={(message) => {
+            setError(null);
+            setSuccess(message);
+          }}
+          askConfirm={confirm}
+        />
+      ) : tab === "magazines" ? (
         <MagazineManager
           assets={assets}
           loading={loading}
@@ -104,7 +110,7 @@ export default function MediaPage() {
             setError(null);
             setSuccess(message);
           }}
-          askConfirm={askConfirm}
+          askConfirm={confirm}
         />
       ) : (
         <NewsletterPanel
@@ -122,6 +128,7 @@ export default function MediaPage() {
           }}
         />
       )}
+      {dialog}
     </div>
   );
 }

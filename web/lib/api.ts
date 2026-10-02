@@ -11,18 +11,112 @@ export type MediaAsset = {
   created_at: string;
 };
 
+export type IndustryEvent = {
+  id: number;
+  title: string;
+  summary: string | null;
+  location: string | null;
+  region: string | null;
+  event_type: string;
+  starts_on: string;
+  ends_on: string | null;
+  source_name: string | null;
+  source_url: string | null;
+  report_file_url: string | null;
+  cpd_hours: number | null;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type JobPosting = {
+  id: number;
+  title: string;
+  company: string | null;
+  location: string | null;
+  employment_type: string;
+  summary: string | null;
+  description: string | null;
+  apply_url: string | null;
+  attachment_url: string | null;
+  source_label: string | null;
+  posted_on: string;
+  expires_on: string;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  is_expired: boolean;
+};
+
+export type NewsPost = {
+  id: number;
+  title: string;
+  slug: string;
+  short_description: string | null;
+  long_description: string | null;
+  cover_url: string | null;
+  image_urls: string[];
+  video_urls: string[];
+  tag: string | null;
+  posted_on: string;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Course = {
+  id: number;
+  code: string;
+  title: string;
+  description: string;
+  slug: string;
+  status: string;
+  cover_url: string | null;
+  pass_percent: number;
+  price_cents: number;
+  currency: string;
+};
+
+export type HeroSlide = {
+  id: number | string;
+  title: string;
+  file_url: string;
+  media_type: "image" | "video" | string;
+};
+
+export type HeroCarousel = {
+  transition_ms: number;
+  slides: HeroSlide[];
+};
+
 const API_BASE = "/api";
+
+function apiBaseForFetch(): string {
+  if (typeof window === "undefined") {
+    return (
+      (process.env.API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "") + "/api"
+    );
+  }
+  return API_BASE;
+}
 
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${apiBaseForFetch()}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
       ...init?.headers,
     },
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -57,9 +151,60 @@ export async function fetchPublishedMagazines(options?: {
   return apiFetch<MediaAsset[]>(`/media?${params.toString()}`);
 }
 
+export async function fetchPublishedEvents(options?: {
+  featured?: boolean;
+  eventType?: string;
+}): Promise<IndustryEvent[]> {
+  const params = new URLSearchParams();
+  if (options?.featured) params.set("featured", "true");
+  if (options?.eventType) params.set("event_type", options.eventType);
+  const query = params.toString();
+  return apiFetch<IndustryEvent[]>(`/events${query ? `?${query}` : ""}`);
+}
+
+export async function fetchActiveJobs(options?: {
+  featured?: boolean;
+}): Promise<JobPosting[]> {
+  const params = new URLSearchParams();
+  if (options?.featured) params.set("featured", "true");
+  const query = params.toString();
+  return apiFetch<JobPosting[]>(`/jobs${query ? `?${query}` : ""}`);
+}
+
+export async function fetchPublishedNews(options?: {
+  featured?: boolean;
+}): Promise<NewsPost[]> {
+  const params = new URLSearchParams();
+  if (options?.featured) params.set("featured", "true");
+  const query = params.toString();
+  return apiFetch<NewsPost[]>(`/news${query ? `?${query}` : ""}`);
+}
+
+export async function fetchPublishedNewsBySlug(slug: string): Promise<NewsPost> {
+  return apiFetch<NewsPost>(`/news/${encodeURIComponent(slug)}`);
+}
+
+export async function fetchHeroCarousel(): Promise<HeroCarousel> {
+  return apiFetch<HeroCarousel>("/hero");
+}
+
+export async function fetchPublishedCourses(): Promise<Course[]> {
+  return apiFetch<Course[]>("/courses");
+}
+
+export function courseProgramPath(slug: string) {
+  return `/professional-development/${slug}`;
+}
+
+export function courseEnrollUrl(courseId: number) {
+  const portal = (
+    process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3002"
+  ).replace(/\/$/, "");
+  return `${portal}/courses/${courseId}/checkout`;
+}
+
 export async function subscribeNewsletter(payload: {
   email: string;
-  full_name?: string;
 }): Promise<{ message: string }> {
   return apiFetch<{ message: string }>("/newsletter/subscribe", {
     method: "POST",

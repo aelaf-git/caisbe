@@ -1,7 +1,10 @@
-import Link from "next/link";
-import { globalMission, offices } from "@/lib/data/home";
+import {
+  globalMission,
+  officeDirectionsUrl,
+  officeEmbedUrl,
+  offices,
+} from "@/lib/data/home";
 import ButtonLink from "@/components/ui/ButtonLink";
-import { linkPath } from "@/lib/routes";
 
 export default function OfficesSection() {
   return (
@@ -23,27 +26,39 @@ export default function OfficesSection() {
           {offices.map((office) => (
             <div
               key={office.region}
-              className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white p-6"
+              className="shadow-brand-card overflow-hidden rounded-lg border border-ifma-border-light bg-white"
             >
-              <h3 className="text-lg font-semibold text-caisbe-text-dark">
-                {office.region}
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-caisbe-muted">
-                {office.address}
-              </p>
-              <Link
-                href={linkPath(office.region, "Offices")}
-                className="mt-4 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red transition-colors hover:text-caisbe-red-dark"
-              >
-                Direction
-              </Link>
+              <div className="aspect-[16/10] w-full bg-admin-canvas">
+                <iframe
+                  title={`${office.region} office map`}
+                  src={officeEmbedUrl(office.mapQuery)}
+                  className="h-full w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-caisbe-text-dark">{office.region}</h3>
+                <p className="mt-3 whitespace-pre-line text-sm leading-6 text-caisbe-muted">
+                  {office.address}
+                </p>
+                <a
+                  href={officeDirectionsUrl(office.mapQuery)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red transition-colors hover:text-caisbe-red-dark"
+                >
+                  Direction
+                </a>
+              </div>
             </div>
           ))}
         </div>
 
         <p className="mt-8 text-center">
-          <ButtonLink href="/offices" variant="textGreen">
-            View our offices
+          <ButtonLink href="/contact" variant="textGreen">
+            Contact our offices
           </ButtonLink>
         </p>
       </div>

@@ -2,6 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
 import { apiFetch, apiUpload, ApiError } from "@/lib/auth";
 import type { Chapter, ContentBlock } from "@/lib/lms";
 
@@ -113,7 +115,7 @@ export default function ChapterUploads({
 
   return (
     <div
-      className="space-y-2 rounded-md border border-ifma-border bg-[#f7f7f4] p-4"
+      className="space-y-4 rounded-xl border border-ifma-border bg-admin-surface-muted/50 p-4 sm:p-5"
       onDragOver={(e) => {
         if (!Array.from(e.dataTransfer.types).includes("Files")) return;
         e.preventDefault();
@@ -128,7 +130,7 @@ export default function ChapterUploads({
       }}
     >
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+        <p className="text-sm font-semibold text-caisbe-text">
           Chapter uploads
         </p>
         <p className="mt-1 text-xs text-caisbe-muted">
@@ -139,12 +141,12 @@ export default function ChapterUploads({
       {media.length > 0 ? (
         <ul className="space-y-3">
           {media.map((item) => (
-            <li key={item.id} className="border border-ifma-border bg-white p-3">
+            <li key={item.id} className="rounded-lg border border-ifma-border bg-admin-surface p-3">
               <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-                <p className="min-w-0 text-sm">
-                  <span className="font-semibold uppercase text-caisbe-red">{item.block_type}</span>
-                  {item.title ? ` — ${item.title}` : null}
-                </p>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Badge tone="brand">{item.block_type}</Badge>
+                  <p className="truncate text-sm font-medium text-caisbe-text">{item.title || item.block_type}</p>
+                </div>
                 <DeleteIconButton
                   label={`Remove ${item.title || item.block_type}`}
                   onClick={() => void deleteMedia(item)}
@@ -253,17 +255,18 @@ function UploadDropzone({ onFiles }: { onFiles: (files: File[]) => void }) {
       className={`rounded-md border-2 border-dashed px-4 py-6 text-center transition-colors ${
         dragging
           ? "border-caisbe-green bg-caisbe-green/5"
-          : "border-ifma-border bg-white"
+          : "border-ifma-border bg-admin-surface"
       }`}
     >
       <p className="text-sm font-medium text-caisbe-text">Drag and drop files here, or</p>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={() => inputRef.current?.click()}
-        className="mt-2 border-2 border-caisbe-green px-4 py-2 text-sm font-semibold text-caisbe-green hover:bg-caisbe-green hover:text-white"
+        className="mt-3"
       >
         Browse
-      </button>
+      </Button>
       <p className="mt-3 text-xs text-caisbe-muted">Allowed: videos, images, PDF, EPUB, Word</p>
       <input
         ref={inputRef}

@@ -64,3 +64,11 @@ export function sanitizeContentBody(body: string): string {
   }
   return sanitizeHtml(`<p>${trimmed}</p>`);
 }
+
+/** Course player copy: keep lesson text, drop outbound links and images that were not uploaded. */
+export function sanitizeCoursePresentation(body: string): string {
+  let html = sanitizeContentBody(body);
+  html = html.replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, "$1");
+  html = html.replace(/<img\b[^>]*\bsrc=["'](?![^"']*\/api\/uploads\/)[^"']*["'][^>]*>/gi, "");
+  return html;
+}

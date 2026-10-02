@@ -2,10 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { apiFetch, ApiError, type AdminDashboard } from "@/lib/auth";
+import Badge from "@/components/ui/Badge";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
+import PageHeader from "@/components/ui/PageHeader";
+import { PageSkeleton } from "@/components/ui/Skeleton";
+import { buttonStyles } from "@/components/ui/Button";
+import Alert from "@/components/ui/Alert";
+import { apiFetch, ApiError, type AdminDashboard, type Course } from "@/lib/auth";
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<AdminDashboard | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,7 +22,12 @@ export default function AdminDashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        setData(await apiFetch<AdminDashboard>("/admin/dashboard"));
+        const [dashboard, courseList] = await Promise.all([
+          apiFetch<AdminDashboard>("/admin/dashboard"),
+          apiFetch<Course[]>("/admin/courses"),
+        ]);
+        setData(dashboard);
+        setCourses(courseList);
       } catch (err) {
         setError(err instanceof ApiError ? err.detail : "Unable to load dashboard.");
       } finally {
@@ -24,101 +37,142 @@ export default function AdminDashboardPage() {
     void load();
   }, []);
 
-  const value = (n: number | undefined) => (loading ? "—" : (n ?? 0));
+  const value = (n: number | undefined, suffix = "") => `${n ?? 0}${suffix}`;
+
+  if (loading) {
+    return <PageSkeleton />;
+  }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">Dashboard</h1>
-          <p className="mt-2 text-sm text-caisbe-muted">
-            A snapshot of LMS activity, publishing, and landing-page visits.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
+    <div className="space-y-7">
+      <PageHeader
+        eyebrow="Overview"
+        title="Welcome back"
+        description="Monitor learning activity, keep courses moving, and manage your publishing workflow."
+        actions={
+          <>
           <Link
             href="/site-activity"
-            className="inline-flex items-center justify-center border-2 border-ifma-border bg-white px-5 py-3 text-sm font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-green hover:text-caisbe-green"
+              className={buttonStyles({ variant: "secondary" })}
           >
             Site activity
           </Link>
           <Link
             href="/courses/new"
-            className="inline-flex items-center justify-center border-2 border-caisbe-green bg-caisbe-green px-5 py-3 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-green-mid"
+              className={buttonStyles()}
           >
+              <span aria-hidden className="text-lg">+</span>
             Create course
           </Link>
+          </>
+        }
+      />
+
+      {error ? <Alert tone="error">{error}</Alert> : null}
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: "Active students", value: data?.students, note: "Learner accounts", href: "/students" },
+          { label: "Enrollments", value: data?.total_enrollments, note: `${data?.enrollments_in_progress ?? 0} in progress`, href: "/enrollments" },
+          { label: "Published courses", value: data?.courses_published, note: `${data?.courses_draft ?? 0} drafts`, href: "/courses" },
+          { label: "Completion rate", value: data?.completion_rate, suffix: "%", note: `${data?.enrollments_completed ?? 0} completed`, href: "/reports" },
+        ].map((item) => (
+          <Link key={item.label} href={item.href} className="group">
+            <Card className="h-full transition-colors group-hover:border-caisbe-red">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-caisbe-muted">{item.label}</p>
+                <span className="h-2 w-2 rounded-full bg-caisbe-red/70" />
+              </div>
+              <p className="mt-4 font-display text-3xl font-semibold tracking-tight text-caisbe-text-dark">
+                {value(item.value, item.suffix)}
+              </p>
+              <p className="mt-1 text-xs text-caisbe-muted">{item.note}</p>
+            </Card>
+          </Link>
+        ))}
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.7fr)]">
+        <Card padding="none" className="overflow-hidden">
+          <div className="flex items-center justify-between gap-3 border-b border-ifma-border px-5 py-4 md:px-6">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Course workspace</h2>
+              <p className="mt-1 text-xs text-caisbe-muted">Continue building and publishing your programs.</p>
+            </div>
+            <Link href="/courses" className="text-sm font-semibold text-caisbe-red hover:underline">
+              View all
+            </Link>
+          </div>
+          {courses.length === 0 ? (
+            <div className="p-6">
+              <EmptyState
+                title="Create your first course"
+                description="Set up course details, chapters, assessments, and certificates in one workspace."
+                action={<Link href="/courses/new" className={buttonStyles()}>Create course</Link>}
+              />
+            </div>
+          ) : (
+            <ul className="divide-y divide-ifma-border-light">
+              {courses.slice(0, 6).map((course) => {
+                const published = (course.status ?? "draft") === "published";
+                return (
+                  <li key={course.id}>
+                    <Link
+                      href={`/courses/${course.id}`}
+                      className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-ifma-border-light/60 md:px-6"
+                    >
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-caisbe-red/10 text-xs font-bold text-caisbe-red">
+                        {course.code.slice(0, 4)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-caisbe-text group-hover:text-caisbe-red">{course.title}</p>
+                        <p className="mt-1 text-xs text-caisbe-muted">Course code: {course.code}</p>
+                      </div>
+                      <Badge tone={published ? "success" : "warning"}>{published ? "Published" : "Draft"}</Badge>
+                      <span aria-hidden className="text-lg text-caisbe-muted">›</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        <div className="space-y-6">
+          <Card>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Learning progress</h2>
+            <p className="mt-1 text-xs text-caisbe-muted">Enrollment outcomes across all courses.</p>
+            <div className="mt-6 flex items-end justify-between gap-4">
+              <span className="font-display text-4xl font-semibold text-caisbe-text-dark">{value(data?.completion_rate, "%")}</span>
+              <span className="text-xs font-medium text-caisbe-muted">completion rate</span>
+            </div>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-admin-surface-muted">
+              <div className="h-full rounded-full bg-caisbe-red" style={{ width: `${Math.min(100, data?.completion_rate ?? 0)}%` }} />
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3 border-t border-ifma-border-light pt-5">
+              <div><p className="text-xl font-semibold text-caisbe-text-dark">{value(data?.enrollments_in_progress)}</p><p className="text-xs text-caisbe-muted">In progress</p></div>
+              <div><p className="text-xl font-semibold text-caisbe-text-dark">{value(data?.enrollments_completed)}</p><p className="text-xs text-caisbe-muted">Completed</p></div>
+            </div>
+          </Card>
+
+          <Card>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Publishing snapshot</h2>
+            <div className="mt-4 space-y-3 text-sm">
+              {[
+                ["Magazine issues", data?.magazines_published],
+                ["Newsletter subscribers", data?.newsletter_subscribers],
+                ["Newsletters sent", data?.newsletters_sent],
+                ["Site views today", data?.site_views_today],
+              ].map(([label, count]) => (
+                <div key={String(label)} className="flex items-center justify-between gap-4">
+                  <span className="text-caisbe-muted">{label}</span>
+                  <span className="font-semibold tabular-nums text-caisbe-text">{count ?? 0}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
       </div>
-
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-caisbe-muted">
-          Landing page
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Landing visits", value: data?.landing_views, href: "/site-activity" },
-            { label: "Unique landing visitors", value: data?.landing_unique_visitors, href: "/site-activity" },
-            { label: "Site views today", value: data?.site_views_today, href: "/site-activity" },
-            { label: "Unique visitors today", value: data?.site_unique_today, href: "/site-activity" },
-          ].map((item) => (
-            <Link key={item.label} href={item.href} className="border border-ifma-border bg-white p-5 hover:border-caisbe-green">
-              <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">{item.label}</p>
-              <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">
-                {value(item.value)}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-caisbe-muted">
-          Learning activity
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Students", value: data?.students, href: "/students" },
-            { label: "Enrollments", value: data?.total_enrollments, href: "/enrollments" },
-            { label: "In progress", value: data?.enrollments_in_progress, href: "/enrollments" },
-            { label: "Completed", value: data?.enrollments_completed, href: "/enrollments" },
-          ].map((item) => (
-            <Link key={item.label} href={item.href} className="border border-ifma-border bg-white p-5 hover:border-caisbe-green">
-              <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">{item.label}</p>
-              <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">
-                {value(item.value)}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-caisbe-muted">
-          Content & outreach
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Published courses", value: data?.courses_published, href: "/courses" },
-            { label: "Draft courses", value: data?.courses_draft, href: "/courses" },
-            { label: "Certificates issued", value: data?.certificates, href: "/enrollments" },
-            { label: "Completion rate", value: data?.completion_rate, suffix: "%", href: "/enrollments" },
-            { label: "Magazine issues", value: data?.magazines_published, href: "/media" },
-            { label: "Newsletter subscribers", value: data?.newsletter_subscribers, href: "/media" },
-            { label: "Newsletters sent", value: data?.newsletters_sent, href: "/media" },
-            { label: "Total courses", value: data?.courses_total, href: "/courses" },
-          ].map((item) => (
-            <Link key={item.label} href={item.href} className="border border-ifma-border bg-white p-5 hover:border-caisbe-green">
-              <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">{item.label}</p>
-              <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">
-                {loading ? "—" : `${item.value ?? 0}${item.suffix ?? ""}`}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
