@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type RefObject } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
@@ -9,7 +9,9 @@ import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import ProgressBar from "@/components/ui/ProgressBar";
+import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, apiUpload, ApiError, type JobPosting } from "@/lib/auth";
 
 const ATTACH_ACCEPT =
@@ -81,7 +83,28 @@ export default function JobsManager({
 
   const isEditing = editingId !== null;
 
+  const formValues = useMemo(
+    () => ({
+      title: title.trim(),
+      company: company.trim(),
+      location: location.trim(),
+      employment_type: employmentType,
+      summary: summary.trim(),
+      description: description.trim(),
+      apply_url: applyUrl.trim(),
+      attachment_url: attachmentUrl,
+      posted_on: postedOn,
+      expires_on: expiresOn,
+      published,
+      featured,
+    }),
+    [title, company, location, employmentType, summary, description, applyUrl, attachmentUrl, postedOn, expiresOn, published, featured],
+  );
+  const { dirty, resetBaseline } = useDirtyForm(formValues);
+
   function clearForm() {
+    const posted = todayInput();
+    const expires = defaultExpiryInput();
     setEditingId(null);
     setTitle("");
     setCompany("");
@@ -91,12 +114,26 @@ export default function JobsManager({
     setDescription("");
     setApplyUrl("");
     setAttachmentUrl(null);
-    setPostedOn(todayInput());
-    setExpiresOn(defaultExpiryInput());
+    setPostedOn(posted);
+    setExpiresOn(expires);
     setPublished(true);
     setFeatured(false);
     setUploadProgress(0);
     resetFileInput(fileInputRef);
+    resetBaseline({
+      title: "",
+      company: "",
+      location: "",
+      employment_type: "full-time",
+      summary: "",
+      description: "",
+      apply_url: "",
+      attachment_url: null,
+      posted_on: posted,
+      expires_on: expires,
+      published: true,
+      featured: false,
+    });
   }
 
   function startEdit(job: JobPosting) {
@@ -114,6 +151,20 @@ export default function JobsManager({
     setPublished(job.published);
     setFeatured(job.featured);
     resetFileInput(fileInputRef);
+    resetBaseline({
+      title: job.title.trim(),
+      company: (job.company ?? "").trim(),
+      location: (job.location ?? "").trim(),
+      employment_type: job.employment_type || "full-time",
+      summary: (job.summary ?? "").trim(),
+      description: (job.description ?? "").trim(),
+      apply_url: (job.apply_url ?? "").trim(),
+      attachment_url: job.attachment_url,
+      posted_on: toInputDate(job.posted_on),
+      expires_on: toInputDate(job.expires_on),
+      published: job.published,
+      featured: job.featured,
+    });
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -135,6 +186,7 @@ export default function JobsManager({
   }
 
   async function save() {
+    if (!dirty) return;
     if (!title.trim() || !postedOn || !expiresOn) {
       onError("Title, upload date, and expiry date are required.");
       return;
@@ -350,9 +402,13 @@ export default function JobsManager({
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Button onClick={() => void save()} disabled={saving || uploading}>
-              {saving ? "Saving…" : isEditing ? "Update job" : "Create job"}
-            </Button>
+            <SaveButton
+              dirty={dirty}
+              saving={saving}
+              disabled={uploading}
+              idleLabel={isEditing ? "Update job" : "Create job"}
+              onClick={() => void save()}
+            />
             {isEditing ? (
               <Button variant="secondary" onClick={clearForm} disabled={saving}>
                 Cancel edit

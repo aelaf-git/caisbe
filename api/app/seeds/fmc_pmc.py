@@ -21,10 +21,6 @@ from app.models import (
 )
 
 # Minimal valid files so portal/admin links work on the API upload disk.
-_PNG_1X1 = bytes.fromhex(
-    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
-    "0000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082"
-)
 _MIN_PDF = (
     b"%PDF-1.1\n"
     b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
@@ -37,7 +33,7 @@ _MIN_PDF = (
     b"trailer<</Size 5/Root 1 0 R>>\nstartxref\n0\n%%EOF\n"
 )
 
-COVER_NAME = "seed-fmc-pmc-cover.png"
+_COVERS_DIR = Path(__file__).resolve().parent / "covers"
 ASSIGNMENT_NAME = "seed-fmc-pmc-assignment.pdf"
 READING_NAME = "seed-fmc-pmc-reading.pdf"
 
@@ -51,12 +47,33 @@ def _write_placeholder(name: str, content: bytes) -> str:
     return f"/api/uploads/{name}"
 
 
-def _ensure_files() -> dict[str, str]:
-    return {
-        "cover": _write_placeholder(COVER_NAME, _PNG_1X1),
+def _install_cover(code: str) -> str:
+    """Copy bundled course cover into the uploads directory; return public URL."""
+    name = f"seed-cover-{code.lower()}.jpg"
+    source = _COVERS_DIR / name
+    root = Path(settings.upload_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    dest = root / name
+    if source.is_file():
+        data = source.read_bytes()
+        if not dest.exists() or dest.read_bytes() != data:
+            dest.write_bytes(data)
+    elif not dest.exists():
+        raise FileNotFoundError(f"Missing seed cover asset: {source}")
+    return f"/api/uploads/{name}"
+
+
+def _ensure_files(codes: list[str] | None = None) -> dict[str, str]:
+    files: dict[str, str] = {
         "assignment": _write_placeholder(ASSIGNMENT_NAME, _MIN_PDF),
         "reading": _write_placeholder(READING_NAME, _MIN_PDF),
     }
+    for code in codes or []:
+        files[f"cover_{code.upper()}"] = _install_cover(code)
+    # Default cover key used by lesson media blocks when a specific one is set later.
+    if codes:
+        files["cover"] = files[f"cover_{codes[0].upper()}"]
+    return files
 
 
 def _add_choices(db: Session, question_id: int, choices: list[dict]) -> None:
@@ -226,13 +243,16 @@ def _add_topic(
 
 
 def _build_course(db: Session, spec: dict, files: dict[str, str]) -> Course:
+    code = spec["code"].upper()
+    cover_url = files.get(f"cover_{code}") or files.get("cover") or _install_cover(code)
+    course_files = {**files, "cover": cover_url}
     course = Course(
-        code=spec["code"],
+        code=code,
         title=spec["title"],
         description=spec["description"],
         slug=spec["slug"],
         status="published",
-        cover_url=files["cover"],
+        cover_url=cover_url,
         pass_percent=spec["pass_percent"],
     )
     db.add(course)
@@ -268,7 +288,7 @@ def _build_course(db: Session, spec: dict, files: dict[str, str]) -> Course:
                 chapter,
                 topic,
                 topic_index,
-                files,
+                course_files,
                 with_extras=chapter_index == 0 and topic_index == 0,
                 link_url=spec["program_url"],
             )
@@ -2091,6 +2111,10 @@ SPECS = [FMC_SPEC, PMC_SPEC, CHMC_SPEC, HSC_SPEC, CEEBM_SPEC, RIPVC_SPEC, SRET_S
 def ensure_course(db: Session, spec: dict, files: dict[str, str]) -> Course | None:
     existing = db.query(Course).filter(Course.code == spec["code"]).first()
     if existing is not None:
+        cover_url = files.get(f"cover_{spec['code'].upper()}") or _install_cover(spec["code"])
+        if existing.cover_url != cover_url:
+            existing.cover_url = cover_url
+            db.commit()
         return None
     course = _build_course(db, spec, files)
     db.commit()
@@ -2099,7 +2123,8 @@ def ensure_course(db: Session, spec: dict, files: dict[str, str]) -> Course | No
 
 
 def seed_fmc_pmc(db: Session) -> list[str]:
-    files = _ensure_files()
+    codes = [spec["code"] for spec in SPECS]
+    files = _ensure_files(codes)
     created: list[str] = []
     for spec in SPECS:
         course = ensure_course(db, spec, files)
@@ -2115,7 +2140,7 @@ def run() -> None:
     try:
         created = seed_fmc_pmc(db)
         if not created:
-            print("Landing-page certificate courses already exist.")
+            print("Landing-page certificate courses already exist (covers refreshed).")
             return
         print(f"Created courses: {', '.join(created)}")
     finally:

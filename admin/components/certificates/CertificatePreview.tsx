@@ -37,7 +37,7 @@ export default function CertificatePreview({
             </h3>
           ) : null}
           <div className="overflow-x-auto rounded-xl bg-admin-surface-muted/60 p-3 sm:p-5">
-            <div className="min-w-[620px]">
+            <div className="inline-block min-w-[900px]">
               <CertificateDocument
                 studentName={SAMPLE_STUDENT}
                 courseTitle={courseTitle}
@@ -57,7 +57,7 @@ export default function CertificatePreview({
             </h3>
           ) : null}
           <div className="overflow-x-auto rounded-xl bg-admin-surface-muted/60 p-3 sm:p-5">
-            <div className="min-w-[620px]">
+            <div className="inline-block min-w-[900px]">
               <MembershipCertificateDocument
                 studentName={SAMPLE_STUDENT}
                 membershipNumber={SAMPLE_MEMBERSHIP_NUMBER}

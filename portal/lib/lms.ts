@@ -66,6 +66,8 @@ export type FinalExam = {
   title: string;
   pass_percent: number;
   time_limit_minutes: number | null;
+  questions_to_appear?: number | null;
+  question_bank_size?: number;
   questions: QuizQuestion[];
 };
 
@@ -82,6 +84,7 @@ export type ExamSessionState = {
   latest_score: number | null;
   latest_passed: boolean | null;
   order: ExamOrder | null;
+  questions?: QuizQuestion[];
 };
 
 export type CertificateTemplate = {
@@ -145,9 +148,13 @@ export type MembershipCertificate = {
   id: number;
   certificate_code: string;
   membership_number: string;
+  membership_type?: string | null;
+  membership_type_label?: string | null;
   issued_at: string;
+  expires_at?: string | null;
   student_name: string;
   title: string;
+  body?: string | null;
   verify_url?: string | null;
   issued_by?: string;
 };
@@ -160,6 +167,7 @@ export type CertificateVerify = {
   course_title: string | null;
   membership_number?: string | null;
   issued_at: string;
+  expires_at?: string | null;
   issued_by?: string;
   verify_url?: string | null;
 };

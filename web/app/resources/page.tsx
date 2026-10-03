@@ -4,13 +4,13 @@ import {
   ContentSection,
   SubsectionIndex,
 } from "@/components/pages/ContentPage";
-import { advocacyContent, membersCornerContent } from "@/lib/data/resources";
+import { advocacyContent, mediaContent } from "@/lib/data/resources";
 import { resourcesPages } from "@/lib/data/site-pages";
 
 export const metadata: Metadata = {
   title: "Resources | CAISBE",
   description:
-    "Explore CAISBE resources including careers, advocacy, knowledge tools, and Members Corner.",
+    "Explore CAISBE resources including careers, advocacy, knowledge tools, and media.",
 };
 
 const featuredResources = [
@@ -27,9 +27,9 @@ const featuredResources = [
     href: `/resources/${advocacyContent.slug}`,
   },
   {
-    title: membersCornerContent.title,
-    description: membersCornerContent.description,
-    href: "/resources/members-corner",
+    title: mediaContent.title,
+    description: mediaContent.description,
+    href: "/resources/media",
   },
 ];
 
@@ -49,7 +49,6 @@ export default function ResourcesPage() {
             <ContentCard
               key={item.slug}
               title={item.title}
-              meta={item.slug === "fm-resources" ? "Coming soon" : undefined}
               description={item.description}
               href={`/resources/${item.slug}`}
               style={{ animationDelay: `${index * 50}ms` }}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
@@ -9,7 +9,9 @@ import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName } from "@/components/ui/FormField";
 import ProgressBar from "@/components/ui/ProgressBar";
+import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, apiUpload, ApiError, type MediaAsset } from "@/lib/auth";
 
 const HERO_ACCEPT =
@@ -98,6 +100,16 @@ export default function HeroManager({
   const publishedCount = sorted.filter((a) => a.published).length;
   const transitionDirty = settingsLoaded && transitionSeconds !== savedTransitionSeconds;
 
+  const formValues = useMemo(
+    () => ({
+      title: title.trim(),
+      file_url: fileUrl,
+      sort_order: sortOrder,
+    }),
+    [title, fileUrl, sortOrder],
+  );
+  const { dirty, resetBaseline } = useDirtyForm(formValues);
+
   useEffect(() => {
     let cancelled = false;
     async function loadSettings() {
@@ -120,13 +132,15 @@ export default function HeroManager({
   }, []);
 
   function clearForm() {
+    const nextOrder = sorted.length > 0 ? Math.max(...sorted.map((a) => a.sort_order)) + 1 : 0;
     setEditingId(null);
     setTitle("");
     setFileUrl(null);
-    setSortOrder(sorted.length > 0 ? Math.max(...sorted.map((a) => a.sort_order)) + 1 : 0);
+    setSortOrder(nextOrder);
     setFileProgress(0);
     setFormError(null);
     resetFileInput(fileInputRef);
+    resetBaseline({ title: "", file_url: null, sort_order: nextOrder });
   }
 
   function openAddForm() {
@@ -151,6 +165,11 @@ export default function HeroManager({
     setFileProgress(0);
     setFormError(null);
     resetFileInput(fileInputRef);
+    resetBaseline({
+      title: asset.title.trim(),
+      file_url: asset.file_url,
+      sort_order: asset.sort_order,
+    });
     setShowForm(true);
     requestAnimationFrame(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -195,6 +214,7 @@ export default function HeroManager({
   }
 
   async function submitSlide() {
+    if (!dirty) return;
     if (!fileUrl) {
       setFormError("Choose an image or video before publishing.");
       return;
@@ -322,16 +342,15 @@ export default function HeroManager({
             />
             <span className="text-caisbe-muted">sec</span>
           </label>
-          {transitionDirty ? (
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!settingsLoaded || transitionSaving}
-              onClick={() => void saveTransition()}
-            >
-              {transitionSaving ? "Saving…" : "Save"}
-            </Button>
-          ) : null}
+          <SaveButton
+            type="button"
+            variant="secondary"
+            dirty={transitionDirty}
+            saving={transitionSaving}
+            disabled={!settingsLoaded}
+            idleLabel="Save"
+            onClick={() => void saveTransition()}
+          />
           <Button type="button" disabled={uploading || saving} onClick={openAddForm}>
             Add slide
           </Button>
@@ -457,15 +476,13 @@ export default function HeroManager({
                 />
               </FormField>
               <div className="flex flex-wrap gap-3 pt-1">
-                <Button disabled={uploading || saving} onClick={() => void submitSlide()}>
-                  {uploading
-                    ? "Uploading…"
-                    : saving
-                      ? "Saving…"
-                      : isEditing
-                        ? "Save changes"
-                        : "Publish slide"}
-                </Button>
+                <SaveButton
+                  dirty={dirty}
+                  saving={saving}
+                  disabled={uploading}
+                  idleLabel={uploading ? "Uploading…" : isEditing ? "Save changes" : "Publish slide"}
+                  onClick={() => void submitSlide()}
+                />
                 <Button type="button" variant="secondary" disabled={uploading || saving} onClick={closeForm}>
                   Cancel
                 </Button>

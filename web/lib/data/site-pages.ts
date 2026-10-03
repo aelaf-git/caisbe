@@ -38,62 +38,6 @@ function topic(
 
 export const resourcesPages: TopicPage[] = [
   topic(
-    "fm-resources",
-    "FM Resources",
-    "Curated facility management resources, guides, and professional tools for the CAISBE community.",
-    "A dedicated library of facility management resources is being prepared for members and partners.",
-    [
-      {
-        title: "Coming soon",
-        body: "This section will host FM practice resources in one place. Content is under construction—thank you for your patience.",
-      },
-    ],
-    { label: "Contact Us", href: "/contact" },
-  ),
-  topic(
-    "knowledge-library",
-    "Knowledge Library",
-    "Access articles, guides, and professional resources for facility and property management practice.",
-    "A curated collection of articles, guides, and practice notes for facility and property professionals.",
-    [
-      {
-        title: "What you will find",
-        items: [
-          "Practice briefs on operations, workplace, and sustainability",
-          "Event summaries and expert perspectives",
-          "Member-oriented tools and reading lists",
-        ],
-      },
-      {
-        title: "Request access",
-        body: "Many library materials are shared with members and program participants. Contact us to request a reading list or chapter resource pack.",
-      },
-    ],
-    { label: "Contact the Library", href: "/contact" },
-  ),
-  topic(
-    "buyers-guide",
-    "Buyer's Guide",
-    "Explore products, services, and solutions for facility and property management professionals.",
-    "A starting point for discovering products and services used by facility and property teams.",
-    [
-      {
-        title: "Solution areas",
-        items: [
-          "Building systems and maintenance technology",
-          "Cleaning, soft services, and workplace amenities",
-          "Energy, sustainability, and smart-building tools",
-          "Training, consulting, and professional services",
-        ],
-      },
-      {
-        title: "Working with CAISBE",
-        body: "Providers serving FM markets in Africa and Canada can learn more about institute programs, events, and partnership channels.",
-      },
-    ],
-    { label: "Contact Us", href: "/contact" },
-  ),
-  topic(
     "esg-facility-management",
     "ESG + Facility Management",
     "Understand how ESG principles intersect with facility management and sustainable operations.",

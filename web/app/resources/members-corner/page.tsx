@@ -1,12 +1,6 @@
-import type { Metadata } from "next";
-import { MembersCornerIndexContent } from "@/components/resources/MembersCornerContent";
-import { membersCornerContent } from "@/lib/data/resources";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Members Corner | CAISBE",
-  description: membersCornerContent.description,
-};
-
-export default function MembersCornerPage() {
-  return <MembersCornerIndexContent />;
+/** Legacy Members Corner URL → Media */
+export default function MembersCornerRedirectPage() {
+  redirect("/resources/media");
 }

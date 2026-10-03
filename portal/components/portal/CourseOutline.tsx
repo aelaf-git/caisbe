@@ -103,7 +103,6 @@ export default function CourseOutline({
   selection: NavSelection | null;
   onSelect: (next: NavSelection) => void;
 }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [openChapters, setOpenChapters] = useState<number[]>(() => {
     const first = course.chapters[0]?.id;
     return first != null ? [first] : [];
@@ -180,7 +179,6 @@ export default function CourseOutline({
                       onClick={() => {
                         if (locked) return;
                         onSelect({ kind: "topic", topicId: topic.id });
-                        setMobileOpen(false);
                       }}
                     />
                   </li>
@@ -195,7 +193,6 @@ export default function CourseOutline({
                       label="Chapter readings"
                       onClick={() => {
                         onSelect({ kind: "chapter-readings", chapterId: chapter.id });
-                        setMobileOpen(false);
                       }}
                     />
                   </li>
@@ -213,7 +210,6 @@ export default function CourseOutline({
                         onClick={() => {
                           if (!extrasOpen) return;
                           onSelect({ kind: "chapter-block", blockId: block.id });
-                          setMobileOpen(false);
                         }}
                       />
                     </li>
@@ -233,7 +229,6 @@ export default function CourseOutline({
           onClick={() => {
             if (!examUnlocked(course)) return;
             onSelect({ kind: "exam" });
-            setMobileOpen(false);
           }}
         />
       ) : null}
@@ -241,24 +236,11 @@ export default function CourseOutline({
   );
 
   return (
-    <>
-      <div className="lg:hidden">
-        <button
-          type="button"
-          onClick={() => setMobileOpen((open) => !open)}
-          className="flex w-full items-center justify-between border border-ifma-border bg-admin-surface px-4 py-3 text-sm font-semibold text-caisbe-text"
-        >
-          Course content
-          <span aria-hidden>{mobileOpen ? "▴" : "▾"}</span>
-        </button>
-        {mobileOpen ? <div className="border border-t-0 border-ifma-border bg-admin-surface p-2">{list}</div> : null}
-      </div>
-      <aside className="sticky top-4 hidden max-h-[calc(100vh-6rem)] overflow-y-auto border border-ifma-border bg-admin-surface p-3 lg:block">
-        <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-          Course content
-        </p>
-        {list}
-      </aside>
-    </>
+    <div>
+      <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+        Course content
+      </p>
+      {list}
+    </div>
   );
 }

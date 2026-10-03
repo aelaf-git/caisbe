@@ -9,6 +9,35 @@ import { apiFetch, ApiError, type Enrollment } from "@/lib/auth";
 import { formatDate, membershipTypeLabel } from "@/lib/commerce";
 import type { Certificate } from "@/lib/lms";
 
+function UnreadNotificationsBanner() {
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    void apiFetch<{ unread_count: number }>("/me/notifications")
+      .then((data) => {
+        if (active) setUnread(data.unread_count);
+      })
+      .catch(() => {
+        if (active) setUnread(0);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (unread <= 0) return null;
+
+  return (
+    <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-text">
+      You have {unread} unread notification{unread === 1 ? "" : "s"}.{" "}
+      <Link href="/notifications" className="font-semibold text-caisbe-red hover:underline">
+        View notifications
+      </Link>
+    </div>
+  );
+}
+
 const TABS = [
   { id: "current", label: "Current" },
   { id: "completed", label: "Completed" },
@@ -76,7 +105,7 @@ export default function StudentDashboardPage() {
         actions={
           <Link
             href="/courses"
-            className="inline-flex h-11 items-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-5 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red-dark"
+            className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
           >
             Browse courses
           </Link>
@@ -84,8 +113,12 @@ export default function StudentDashboardPage() {
       />
 
       {error ? (
-        <div className="border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">{error}</div>
+        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+          {error}
+        </div>
       ) : null}
+
+      <UnreadNotificationsBanner />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[

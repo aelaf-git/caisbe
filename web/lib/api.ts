@@ -90,6 +90,15 @@ export type HeroSlide = {
   media_type: "image" | "video" | string;
 };
 
+export type Testimonial = {
+  id: number;
+  quote: string;
+  name: string;
+  role: string;
+  published: boolean;
+  sort_order: number;
+};
+
 export type HeroCarousel = {
   transition_ms: number;
   slides: HeroSlide[];
@@ -171,6 +180,10 @@ export async function fetchActiveJobs(options?: {
   return apiFetch<JobPosting[]>(`/jobs${query ? `?${query}` : ""}`);
 }
 
+export async function fetchPublishedTestimonials(): Promise<Testimonial[]> {
+  return apiFetch<Testimonial[]>("/testimonials");
+}
+
 export async function fetchPublishedNews(options?: {
   featured?: boolean;
 }): Promise<NewsPost[]> {
@@ -201,6 +214,22 @@ export function courseEnrollUrl(courseId: number) {
     process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3002"
   ).replace(/\/$/, "");
   return `${portal}/courses/${courseId}/checkout`;
+}
+
+export function portalUrl(path = "") {
+  const portal = (
+    process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3002"
+  ).replace(/\/$/, "");
+  const suffix = path.startsWith("/") ? path : path ? `/${path}` : "";
+  return `${portal}${suffix}`;
+}
+
+export function portalMembershipRegisterUrl() {
+  return portalUrl("/register?next=/membership");
+}
+
+export function portalMembershipLoginUrl() {
+  return portalUrl("/login?next=/membership");
 }
 
 export async function subscribeNewsletter(payload: {

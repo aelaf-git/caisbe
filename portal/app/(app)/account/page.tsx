@@ -1,11 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import AppearancePanel from "@/components/appearance/AppearancePanel";
 import ProfileForm, { profileFromUser } from "@/components/portal/ProfileForm";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/ui/PageHeader";
+import SaveButton from "@/components/ui/SaveButton";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, ApiError } from "@/lib/auth";
 import {
   formatDate,
@@ -15,11 +17,23 @@ import {
   type SavedCard,
   type SecurityQuestion,
 } from "@/lib/commerce";
+import PasswordCriteriaList from "@/components/ui/PasswordCriteriaList";
+import { MIN_PASSWORD_LENGTH, passwordStrengthError } from "@/lib/password";
 
 const SEC_DEFAULT = [
   { question: "What city were you born in?", answer: "" },
   { question: "What is your mother's maiden name?", answer: "" },
 ];
+
+const EMPTY_CARD = {
+  brand: "visa",
+  last4: "",
+  exp_month: "12",
+  exp_year: String(new Date().getFullYear() + 2),
+  first_name: "",
+  last_name: "",
+  cvv: "",
+};
 
 export default function ManageProfilePage() {
   const { user, refreshUser } = useAuth();
@@ -35,15 +49,31 @@ export default function ManageProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
-  const [cardForm, setCardForm] = useState({
-    brand: "visa",
-    last4: "",
-    exp_month: "12",
-    exp_year: String(new Date().getFullYear() + 2),
-    first_name: "",
-    last_name: "",
-    cvv: "",
-  });
+  const [cardForm, setCardForm] = useState(EMPTY_CARD);
+  const [questionsSaving, setQuestionsSaving] = useState(false);
+  const [cardSaving, setCardSaving] = useState(false);
+
+  const questionValues = useMemo(
+    () => questions.map((item) => ({ question: item.question.trim(), answer: item.answer.trim() })),
+    [questions],
+  );
+  const { dirty: questionsDirty, markSaved: markQuestionsSaved, resetBaseline: resetQuestionsBaseline } =
+    useDirtyForm(questionValues);
+
+  const cardValues = useMemo(
+    () => ({
+      brand: cardForm.brand,
+      last4: cardForm.last4.trim(),
+      exp_month: cardForm.exp_month.trim(),
+      exp_year: cardForm.exp_year.trim(),
+      first_name: cardForm.first_name.trim(),
+      last_name: cardForm.last_name.trim(),
+      cvv: cardForm.cvv.trim(),
+    }),
+    [cardForm],
+  );
+  const { dirty: cardDirty, markSaved: markCardSaved, resetBaseline: resetCardBaseline } =
+    useDirtyForm(cardValues);
 
   useEffect(() => {
     let active = true;
@@ -61,8 +91,23 @@ export default function ManageProfilePage() {
         setCards(cardData);
         setSavedQuestions(questionData);
         if (questionData.length >= 2) {
-          setQuestions(questionData.slice(0, 2).map((item) => ({ question: item.question, answer: "" })));
+          const next = questionData.slice(0, 2).map((item) => ({ question: item.question, answer: "" }));
+          setQuestions(next);
+          resetQuestionsBaseline(next.map((item) => ({ question: item.question.trim(), answer: "" })));
+        } else {
+          resetQuestionsBaseline(
+            SEC_DEFAULT.map((item) => ({ question: item.question.trim(), answer: item.answer.trim() })),
+          );
         }
+        resetCardBaseline({
+          brand: EMPTY_CARD.brand,
+          last4: "",
+          exp_month: EMPTY_CARD.exp_month.trim(),
+          exp_year: EMPTY_CARD.exp_year.trim(),
+          first_name: "",
+          last_name: "",
+          cvv: "",
+        });
       } catch (err) {
         if (active) setError(err instanceof ApiError ? err.detail : "Unable to load account.");
       }
@@ -71,14 +116,15 @@ export default function ManageProfilePage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [resetQuestionsBaseline, resetCardBaseline]);
 
   async function handlePassword(event: FormEvent) {
     event.preventDefault();
     setPasswordError(null);
     setPasswordMessage(null);
-    if (newPassword !== confirmPassword) {
-      setPasswordError("New passwords do not match.");
+    const strengthError = passwordStrengthError(newPassword, confirmPassword);
+    if (strengthError) {
+      setPasswordError(strengthError);
       return;
     }
     setPasswordBusy(true);
@@ -100,21 +146,34 @@ export default function ManageProfilePage() {
 
   async function saveQuestions(event: FormEvent) {
     event.preventDefault();
+    if (!questionsDirty) return;
     setError(null);
+    setQuestionsSaving(true);
     try {
       const data = await apiFetch<SecurityQuestion[]>("/auth/me/security-questions", {
         method: "PUT",
         body: JSON.stringify({ questions }),
       });
       setSavedQuestions(data);
+      const next = data.slice(0, 2).map((item) => ({ question: item.question, answer: "" }));
+      if (next.length >= 2) {
+        setQuestions(next);
+        markQuestionsSaved(next.map((item) => ({ question: item.question.trim(), answer: "" })));
+      } else {
+        markQuestionsSaved(questionValues);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Unable to save security questions.");
+    } finally {
+      setQuestionsSaving(false);
     }
   }
 
   async function saveCard(event: FormEvent) {
     event.preventDefault();
+    if (!cardDirty) return;
     setError(null);
+    setCardSaving(true);
     try {
       const { cvv: _cvv, ...payload } = cardForm;
       const card = await apiFetch<SavedCard>("/me/cards", {
@@ -130,8 +189,19 @@ export default function ManageProfilePage() {
       });
       setCards((current) => [card, ...current]);
       setCardForm((current) => ({ ...current, last4: "", cvv: "" }));
+      markCardSaved({
+        brand: cardForm.brand,
+        last4: "",
+        exp_month: cardForm.exp_month.trim(),
+        exp_year: cardForm.exp_year.trim(),
+        first_name: cardForm.first_name.trim(),
+        last_name: cardForm.last_name.trim(),
+        cvv: "",
+      });
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Unable to save card.");
+    } finally {
+      setCardSaving(false);
     }
   }
 
@@ -164,9 +234,40 @@ export default function ManageProfilePage() {
         {passwordError ? <p className="mt-2 text-sm text-caisbe-red">{passwordError}</p> : null}
         {passwordMessage ? <p className="mt-2 text-sm text-caisbe-text">{passwordMessage}</p> : null}
         <form onSubmit={(e) => void handlePassword(e)} className="mt-4 max-w-md space-y-4">
-          <label className="block text-sm">Current password<input type="password" className={inputClass} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required /></label>
-          <label className="block text-sm">New password<input type="password" minLength={8} className={inputClass} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required /></label>
-          <label className="block text-sm">Confirm new password<input type="password" minLength={8} className={inputClass} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required /></label>
+          <label className="block text-sm">
+            Current password
+            <input type="password" className={inputClass} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+          </label>
+          <label className="block text-sm">
+            New password
+            <input
+              type="password"
+              minLength={MIN_PASSWORD_LENGTH}
+              maxLength={128}
+              className={inputClass}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+            />
+          </label>
+          <PasswordCriteriaList password={newPassword} />
+          <label className="block text-sm">
+            Confirm new password
+            <input
+              type="password"
+              minLength={MIN_PASSWORD_LENGTH}
+              maxLength={128}
+              className={inputClass}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </label>
+          <PasswordCriteriaList
+            password={newPassword}
+            confirmPassword={confirmPassword}
+            mode="match"
+          />
           <button type="submit" disabled={passwordBusy} className="h-11 rounded-md border-2 border-caisbe-red bg-caisbe-red px-5 text-sm font-semibold uppercase tracking-wide text-white disabled:opacity-60">
             {passwordBusy ? "Updating…" : "Change password"}
           </button>
@@ -229,7 +330,13 @@ export default function ManageProfilePage() {
               <label className="block text-sm">Answer<input className={inputClass} value={item.answer} onChange={(e) => setQuestions((current) => current.map((row, i) => i === index ? { ...row, answer: e.target.value } : row))} required /></label>
             </div>
           ))}
-          <button type="submit" className="h-11 rounded-md border-2 border-ifma-border px-5 text-sm font-semibold uppercase tracking-wide text-caisbe-text">Save questions</button>
+          <SaveButton
+            type="submit"
+            dirty={questionsDirty}
+            saving={questionsSaving}
+            idleLabel="Save questions"
+            className="border-ifma-border bg-white text-caisbe-text hover:bg-admin-surface-muted"
+          />
         </form>
       </Card>
 
@@ -258,7 +365,7 @@ export default function ManageProfilePage() {
           <label className="block text-sm">First name<input className={inputClass} value={cardForm.first_name} onChange={(e) => setCardForm({ ...cardForm, first_name: e.target.value })} required /></label>
           <label className="block text-sm">Last name<input className={inputClass} value={cardForm.last_name} onChange={(e) => setCardForm({ ...cardForm, last_name: e.target.value })} required /></label>
           <div className="md:col-span-2">
-            <button type="submit" className="h-11 rounded-md border-2 border-caisbe-red bg-caisbe-red px-5 text-sm font-semibold uppercase tracking-wide text-white">Save card</button>
+            <SaveButton type="submit" dirty={cardDirty} saving={cardSaving} idleLabel="Save card" />
           </div>
         </form>
       </Card>

@@ -1,20 +1,28 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import PortalSidebar from "@/components/layout/PortalSidebar";
 
+function isImmersiveCoursePath(pathname: string | null) {
+  // /courses/123 only — not the catalog or checkout
+  return Boolean(pathname && /^\/courses\/\d+$/.test(pathname));
+}
+
 export default function PortalShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const immersive = isImmersiveCoursePath(pathname);
 
   useEffect(() => {
     if (!loading && (!user || user.role === "admin")) {
-      router.replace("/login");
+      const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
+      router.replace(`/login${next}`);
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, pathname]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -25,10 +33,22 @@ export default function PortalShell({ children }: { children: React.ReactNode })
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   if (loading || !user || user.role === "admin") {
     return (
       <div className="flex flex-1 items-center justify-center px-4 py-16 text-sm text-caisbe-muted">
         Loading portal…
+      </div>
+    );
+  }
+
+  if (immersive) {
+    return (
+      <div className="flex min-h-dvh flex-1 flex-col bg-admin-canvas">
+        <main className="min-h-0 min-w-0 flex-1">{children}</main>
       </div>
     );
   }
@@ -53,18 +73,18 @@ export default function PortalShell({ children }: { children: React.ReactNode })
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-ifma-border bg-admin-surface px-4 py-3 print:hidden md:hidden">
+        <header className="sticky top-0 z-20 flex items-center gap-3 bg-admin-surface px-4 py-3 shadow-hopewell-nav print:hidden md:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-ifma-border text-caisbe-text"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-caisbe-red text-caisbe-red"
             aria-label="Open navigation"
           >
             <span className="sr-only">Menu</span>
             <span aria-hidden className="flex flex-col gap-1.5">
-              <span className="block h-0.5 w-5 bg-caisbe-text" />
-              <span className="block h-0.5 w-5 bg-caisbe-text" />
-              <span className="block h-0.5 w-5 bg-caisbe-text" />
+              <span className="block h-0.5 w-5 bg-current" />
+              <span className="block h-0.5 w-5 bg-current" />
+              <span className="block h-0.5 w-5 bg-current" />
             </span>
           </button>
           <p className="text-sm font-bold uppercase tracking-[0.12em] text-caisbe-red">CAISBE Student</p>

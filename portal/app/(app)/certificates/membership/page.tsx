@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import DownloadCertificateButton from "@/components/certificates/DownloadCertificateButton";
 import MembershipCertificateDocument from "@/components/certificates/MembershipCertificateDocument";
 import BackButton from "@/components/ui/BackButton";
+import { certificatePdfFileName } from "@/lib/certificatePdf";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { MembershipCertificate } from "@/lib/lms";
 
@@ -22,11 +24,12 @@ export default function MembershipCertificatePage() {
   const { user, loading } = useAuth();
   const [cert, setCert] = useState<MembershipCertificate | null>(null);
   const [locked, setLocked] = useState(false);
+  const [lockedMessage, setLockedMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace("/login");
+      router.replace("/login?next=/certificates/membership");
     }
   }, [loading, user, router]);
 
@@ -39,6 +42,7 @@ export default function MembershipCertificatePage() {
         if (active) {
           setCert(data);
           setLocked(false);
+          setLockedMessage(null);
           setError(null);
         }
       } catch (err) {
@@ -46,6 +50,7 @@ export default function MembershipCertificatePage() {
         if (err instanceof ApiError && err.status === 403) {
           setLocked(true);
           setCert(null);
+          setLockedMessage(err.detail);
           setError(null);
           return;
         }
@@ -73,13 +78,14 @@ export default function MembershipCertificatePage() {
             Membership certificate locked
           </h1>
           <p className="mt-2 text-sm text-caisbe-muted">
-            Complete at least one course to unlock your membership certificate.
+            {lockedMessage ||
+              "Complete payment to unlock this membership certificate. Student certificates are available free from Membership."}
           </p>
           <Link
-            href="/courses"
+            href="/membership"
             className="mt-4 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:text-caisbe-red-dark"
           >
-            Go to courses
+            Go to Membership
           </Link>
         </div>
       </div>
@@ -110,21 +116,19 @@ export default function MembershipCertificatePage() {
           studentName={cert.student_name}
           membershipNumber={cert.membership_number}
           issuedAt={cert.issued_at}
+          validUntil={cert.expires_at}
           verifyUrl={verifyUrl}
           certificateCode={cert.certificate_code}
           issuedBy={cert.issued_by}
           title={cert.title}
+          body={cert.body ?? undefined}
         />
       </div>
 
-      <div className="mt-6 text-center print:hidden">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark"
-        >
-          Print / Save PDF
-        </button>
+      <div className="mt-6 flex justify-center print:hidden">
+        <DownloadCertificateButton
+          fileName={certificatePdfFileName(["CAISBE", cert.membership_number, "membership"])}
+        />
       </div>
     </section>
   );

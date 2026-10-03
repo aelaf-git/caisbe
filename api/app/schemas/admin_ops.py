@@ -4,7 +4,16 @@ from pydantic import BaseModel, Field
 
 ThemeChoice = Literal["light", "dark"]
 FontSizeChoice = Literal["sm", "md", "lg", "xl"]
-FontChoice = Literal["roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"]
+FontChoice = Literal[
+    "nunito",
+    "poppins",
+    "roboto",
+    "open-sans",
+    "inter",
+    "source-sans",
+    "merriweather",
+    "source-serif",
+]
 
 
 class AppSettingsOut(BaseModel):

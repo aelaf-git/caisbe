@@ -21,6 +21,17 @@ from app.models import (
     User,
 )
 from app.schemas.auth import MEMBERSHIP_TYPES
+from app.services.membership import (
+    activate_membership,
+    get_membership_certificate_type,
+    get_pending_membership_application,
+    is_student_membership,
+    mark_pending_membership_applications_active,
+    revert_membership_to_student,
+)
+
+MANUAL_UNLOCK_MARKER = "MANUAL_UNLOCK"
+STALE_PENDING_HOURS = 24
 
 ACTIVE_ENROLLMENT = {"enrolled", "completed"}
 STRIPE_PROMO_MESSAGE = "Have a discount code? Enter it on the Stripe payment page."
@@ -34,8 +45,6 @@ def profile_is_complete(user: User) -> bool:
         user.phone,
         user.country,
         user.city,
-        user.address,
-        user.membership_type,
     ]
     return all(value and str(value).strip() for value in required)
 
@@ -44,7 +53,7 @@ def require_complete_profile(user: User) -> None:
     if not profile_is_complete(user):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Complete your student profile before checkout.",
+            detail="Complete your name, phone, country, and city before checkout.",
         )
 
 
@@ -290,13 +299,73 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
         if promo:
             promo.redemption_count = (promo.redemption_count or 0) + 1
     user = order.user or db.query(User).filter(User.id == order.user_id).one()
-    if user.membership_status != "inactive":
+    has_membership_item = any(item.membership_type for item in order.items)
+    if not has_membership_item and user.membership_status != "inactive":
         user.membership_status = "active"
         if not user.membership_date:
             user.membership_date = now
     for item in order.items:
+        if item.membership_type:
+            renew = (item.membership_kind or "").strip().lower() == "renewal"
+            activate_membership(db, user, item.membership_type, renew=renew)
+            mark_pending_membership_applications_active(db, user, item.membership_type)
+            continue
+        if item.course_id is None:
+            continue
         course = item.course or db.query(Course).filter(Course.id == item.course_id).one()
         _ensure_enrollment(db, user, course, "enrolled")
+
+
+def _cancel_stale_pending_course_checkouts(db: Session, user: User, course_ids: list[int]) -> None:
+    """Clear stuck pending_payment enrollments/orders so checkout can be retried.
+
+    With same-request manual fulfill, any leftover pending_payment is orphaned — revoke it.
+    Also cancel unpaid pending orders for these courses older than STALE_PENDING_HOURS.
+    """
+    if not course_ids:
+        return
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=STALE_PENDING_HOURS)
+    pending_enrollments = (
+        db.query(Enrollment)
+        .filter(
+            Enrollment.user_id == user.id,
+            Enrollment.course_id.in_(course_ids),
+            Enrollment.status == "pending_payment",
+        )
+        .all()
+    )
+    for enrollment in pending_enrollments:
+        enrollment.status = "revoked"
+    pending_orders = (
+        db.query(Order)
+        .options(joinedload(Order.items), joinedload(Order.payments), joinedload(Order.invoices))
+        .filter(Order.user_id == user.id, Order.status == "pending")
+        .all()
+    )
+    for order in pending_orders:
+        if not any(item.course_id in course_ids for item in order.items):
+            continue
+        created = order.created_at
+        if created and created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        # Always cancel when we just revoked matching pending enrollments; also age-gate empty leftovers.
+        if created is not None and created > cutoff and not pending_enrollments:
+            continue
+        order.status = "cancelled"
+        for payment in order.payments:
+            if payment.status == "pending":
+                payment.status = "cancelled"
+        for invoice in order.invoices:
+            if invoice.status == "open":
+                invoice.status = "cancelled"
+    db.flush()
+
+
+def mark_manual_unlock(order: Order, payment: Payment | None) -> None:
+    if payment is not None:
+        payment.provider = "manual"
+    if not order.promo_code:
+        order.promo_code = MANUAL_UNLOCK_MARKER
 
 
 def create_checkout_order(
@@ -304,9 +373,11 @@ def create_checkout_order(
     user: User,
     courses: list[Course],
 ) -> tuple[Order, list[Enrollment], bool]:
-    require_complete_profile(user)
     if not courses:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Select at least one course.")
+
+    course_ids = [course.id for course in courses]
+    _cancel_stale_pending_course_checkouts(db, user, course_ids)
 
     for course in courses:
         if active_enrollment(db, user.id, course.id):
@@ -326,7 +397,7 @@ def create_checkout_order(
         if pending:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Payment already started for {course.title}. Open Complete payment for that course, or wait and try again.",
+                detail=f"Payment already started for {course.title}. Try again shortly, or contact CAISBE support.",
             )
 
     subtotal, discount, total, complimentary, currency = quote_courses(courses)
@@ -464,9 +535,135 @@ def fulfill_stripe_session(
         .one()
     )
     fulfill_order(db, order, amount_paid_cents=amount_total)
-    clear_cart(db, order.user_id, [item.course_id for item in order.items])
+    course_ids = [item.course_id for item in order.items if item.course_id is not None]
+    if course_ids:
+        clear_cart(db, order.user_id, course_ids)
     db.commit()
     return order
+
+
+def create_membership_checkout_order(
+    db: Session,
+    user: User,
+    membership_type: str,
+    *,
+    kind: str = "application",
+) -> tuple[Order, bool]:
+    # Membership applications already capture contact fields; do not require the full course profile.
+    if not all(
+        value and str(value).strip()
+        for value in (user.full_name, user.email, user.phone, user.country, user.city)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complete your name, phone, country, and city before membership checkout.",
+        )
+    normalized = normalize_membership_type(membership_type)
+    if not normalized or normalized not in MEMBERSHIP_TYPES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid membership type.")
+    if is_student_membership(normalized):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Student membership is free and does not require payment.",
+        )
+    kind_value = (kind or "application").strip().lower()
+    if kind_value not in {"application", "renewal"}:
+        kind_value = "application"
+
+    pending = get_pending_membership_application(db, user)
+    if pending is None or (pending.membership_type or "").strip().lower() != normalized:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Submit a membership application for this type before payment.",
+        )
+    details = (pending.details or "").lower()
+    pending_kind = "renewal" if "renewal" in details.split("\n", 1)[0] else "application"
+    if pending_kind != kind_value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Membership payment does not match your pending application.",
+        )
+
+    cert_type = get_membership_certificate_type(db, normalized)
+    if cert_type is None or not cert_type.active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This membership type is not available for purchase.",
+        )
+    price = max(0, int(cert_type.price_cents or 0))
+    currency = (cert_type.currency or "cad").lower()
+    label = cert_type.label or normalized.replace("-", " ").title()
+    title = f"{label} ({'renewal' if kind_value == 'renewal' else 'membership'})"
+
+    order = Order(
+        number=_next_number(db, Order, "ORD"),
+        user_id=user.id,
+        status="pending",
+        subtotal_cents=price,
+        discount_cents=0,
+        total_cents=price,
+        amount_paid_cents=0,
+        currency=currency,
+        promotion_id=None,
+        promo_code=None,
+    )
+    db.add(order)
+    db.flush()
+    db.add(
+        OrderItem(
+            order_id=order.id,
+            course_id=None,
+            membership_type=normalized,
+            membership_kind=kind_value,
+            title=title,
+            unit_price_cents=price,
+            quantity=1,
+        )
+    )
+    now = datetime.now(timezone.utc)
+    invoice = Invoice(
+        number=_next_number(db, Invoice, "INV"),
+        order_id=order.id,
+        user_id=user.id,
+        bill_date=now,
+        period_start=now,
+        period_end=now + timedelta(days=365),
+        amount_cents=price,
+        amount_paid_cents=0,
+        balance_cents=price,
+        status="open",
+    )
+    db.add(invoice)
+    db.flush()
+    payment = Payment(
+        order_id=order.id,
+        invoice_id=invoice.id,
+        user_id=user.id,
+        provider="stripe" if price > 0 else "complimentary",
+        amount_cents=price,
+        status="pending",
+    )
+    db.add(payment)
+    db.flush()
+    if price == 0:
+        payment.provider = "complimentary"
+        fulfill_order(db, order)
+        db.commit()
+        order = (
+            db.query(Order)
+            .options(
+                joinedload(Order.items),
+                joinedload(Order.invoices),
+                joinedload(Order.payments),
+                joinedload(Order.user),
+            )
+            .filter(Order.id == order.id)
+            .one()
+        )
+        return order, True
+    db.flush()
+    db.refresh(order)
+    return order, False
 
 
 def refund_payment(db: Session, payment: Payment, admin: User) -> None:
@@ -486,7 +683,13 @@ def refund_payment(db: Session, payment: Payment, admin: User) -> None:
         invoice.balance_cents = invoice.amount_cents
         invoice.status = "refunded"
     user = order.user
+    membership_refunded = False
     for item in order.items:
+        if item.membership_type:
+            membership_refunded = True
+            continue
+        if item.course_id is None:
+            continue
         enrollment = (
             db.query(Enrollment)
             .filter(Enrollment.user_id == user.id, Enrollment.course_id == item.course_id)
@@ -494,3 +697,5 @@ def refund_payment(db: Session, payment: Payment, admin: User) -> None:
         )
         if enrollment and enrollment.status != "completed":
             enrollment.status = "revoked"
+    if membership_refunded:
+        revert_membership_to_student(db, user)

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import SaveButton from "@/components/ui/SaveButton";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import {
   DEFAULT_APPEARANCE,
   FONT_OPTIONS,
@@ -42,10 +44,14 @@ function OptionButton({
 export default function AppearancePanel() {
   const [appearance, setAppearance] = useState<Appearance>(DEFAULT_APPEARANCE);
   const [saved, setSaved] = useState(false);
+  const formValues = useMemo(() => appearance, [appearance]);
+  const { dirty, markSaved, resetBaseline } = useDirtyForm(formValues);
 
   useEffect(() => {
-    setAppearance(readStoredAppearance() ?? DEFAULT_APPEARANCE);
-  }, []);
+    const loaded = readStoredAppearance() ?? DEFAULT_APPEARANCE;
+    setAppearance(loaded);
+    resetBaseline(loaded);
+  }, [resetBaseline]);
 
   function update(patch: Partial<Appearance>) {
     const next = appearanceFromUnknown({ ...appearance, ...patch });
@@ -56,8 +62,10 @@ export default function AppearancePanel() {
   }
 
   function save() {
+    if (!dirty) return;
     writeStoredAppearance(appearance);
     applyAppearance(appearance);
+    markSaved(appearance);
     setSaved(true);
   }
 
@@ -131,13 +139,11 @@ export default function AppearancePanel() {
       </fieldset>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
+        <SaveButton
+          dirty={dirty}
+          idleLabel="Save appearance"
           onClick={save}
-          className="inline-flex h-11 items-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-5 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red-dark"
-        >
-          Save appearance
-        </button>
+        />
         {saved ? <p className="text-sm text-admin-success">Saved for this browser.</p> : null}
       </div>
     </div>

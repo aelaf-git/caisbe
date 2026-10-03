@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Open_Sans, Roboto } from "next/font/google";
+import { Nunito_Sans, Open_Sans, Poppins, Roboto } from "next/font/google";
 import VisitTracker from "@/components/analytics/VisitTracker";
 import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
@@ -13,6 +13,18 @@ const roboto = Roboto({
 
 const openSans = Open_Sans({
   variable: "--font-open-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+});
+
+const nunito = Nunito_Sans({
+  variable: "--font-nunito",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
@@ -35,7 +47,7 @@ export default function RootLayout({
   return (
     <html
   lang="en"
-  className={`${roboto.variable} ${openSans.variable} h-full`}
+  className={`${roboto.variable} ${openSans.variable} ${poppins.variable} ${nunito.variable} h-full`}
   suppressHydrationWarning
 >
   <body
@@ -44,7 +56,7 @@ export default function RootLayout({
   >
     <VisitTracker />
     <Header />
-    <main className="flex-1 bg-white">{children}</main>
+    <main className="font-hopewell flex-1 bg-[#f8fafc]">{children}</main>
     <Footer />
   </body>
 </html>

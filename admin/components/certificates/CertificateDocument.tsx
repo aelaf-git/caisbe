@@ -2,6 +2,10 @@
 
 import { Cinzel, Great_Vibes } from "next/font/google";
 import { QRCodeSVG } from "qrcode.react";
+import {
+  CERTIFICATE_HEIGHT_PX,
+  CERTIFICATE_WIDTH_PX,
+} from "@/components/certificates/MembershipCertificateDocument";
 
 const cinzel = Cinzel({
   subsets: ["latin"],
@@ -31,7 +35,9 @@ function formatIssueDate(iso: string): string {
 function CornerTopLeft() {
   return (
     <svg
-      className="pointer-events-none absolute left-0 top-0 h-[28%] w-[22%] min-h-[80px] min-w-[100px]"
+      className="pointer-events-none absolute left-0 top-0"
+      width={198}
+      height={178}
       viewBox="0 0 200 160"
       fill="none"
       aria-hidden
@@ -45,7 +51,9 @@ function CornerTopLeft() {
 function CornerBottomRight() {
   return (
     <svg
-      className="pointer-events-none absolute bottom-0 right-0 h-[20%] w-[14%] min-h-[56px] min-w-[64px]"
+      className="pointer-events-none absolute bottom-0 right-0"
+      width={126}
+      height={127}
       viewBox="0 0 200 160"
       fill="none"
       aria-hidden
@@ -80,6 +88,8 @@ export default function CertificateDocument({
               .certificate-document {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+                width: ${CERTIFICATE_WIDTH_PX}px !important;
+                height: ${CERTIFICATE_HEIGHT_PX}px !important;
               }
             }
           `,
@@ -87,52 +97,85 @@ export default function CertificateDocument({
       />
 
       <article
-        className={`certificate-document relative mx-auto aspect-[297/210] w-full max-w-[900px] overflow-hidden bg-white shadow-brand-card print:max-w-none print:shadow-none ${cinzel.variable} ${greatVibes.variable}`}
+        className={`certificate-document relative mx-auto overflow-hidden bg-white shadow-brand-card print:shadow-none ${cinzel.variable} ${greatVibes.variable}`}
+        style={{
+          width: CERTIFICATE_WIDTH_PX,
+          height: CERTIFICATE_HEIGHT_PX,
+          minWidth: CERTIFICATE_WIDTH_PX,
+          minHeight: CERTIFICATE_HEIGHT_PX,
+        }}
       >
-        <div className="absolute inset-3 border-2 border-[#c9a227] print:inset-2" />
+        <div className="absolute inset-[12px] border-2 border-[#c9a227]" />
         <CornerTopLeft />
         <CornerBottomRight />
 
-        <div className="relative flex h-full flex-col px-[8%] py-[7%] text-center">
-          <header className="shrink-0 pt-[1%]">
+        <div
+          className="relative flex h-full flex-col text-center"
+          style={{ padding: "44px 72px 36px" }}
+        >
+          <header className="shrink-0">
             <img
               src="/images/logo.png"
               alt="CAISBE"
               width={2172}
               height={724}
-              className="mx-auto mb-2 h-[clamp(1.75rem,5vw,2.75rem)] w-auto object-contain"
+              className="mx-auto mb-2 object-contain"
+              style={{ height: 44, width: "auto" }}
             />
-            <h1 className="font-[family-name:var(--font-cinzel)] text-[clamp(1.75rem,4.5vw,2.75rem)] font-bold uppercase tracking-[0.08em] text-[#c9a227]">
+            <h1
+              className="font-[family-name:var(--font-cinzel)] font-bold uppercase text-[#c9a227]"
+              style={{ fontSize: 44, letterSpacing: "0.08em", lineHeight: 1.1 }}
+            >
               Certificate
             </h1>
-            <p className="mt-1 font-[family-name:var(--font-cinzel)] text-[clamp(0.75rem,2vw,1rem)] font-normal uppercase tracking-[0.35em] text-[#7b1e3a]">
+            <p
+              className="mt-1 font-[family-name:var(--font-cinzel)] font-normal uppercase text-[#7b1e3a]"
+              style={{ fontSize: 16, letterSpacing: "0.35em", lineHeight: 1.2 }}
+            >
               Of Completion
             </p>
           </header>
 
-          <div className="mt-[4%] shrink-0">
-            <p className="text-[clamp(0.65rem,1.6vw,0.85rem)] text-[#5c5348]">
+          <div className="shrink-0" style={{ marginTop: 28 }}>
+            <p className="text-[#5c5348]" style={{ fontSize: 14, lineHeight: 1.4 }}>
               This certificate is proudly presented to
             </p>
-            <p className="mx-auto mt-2 max-w-[85%] font-[family-name:var(--font-great-vibes)] text-[clamp(2rem,6vw,3.25rem)] leading-tight text-[#7b1e3a]">
+            <p
+              className="mx-auto font-[family-name:var(--font-great-vibes)] leading-tight text-[#7b1e3a]"
+              style={{ marginTop: 8, maxWidth: 640, fontSize: 52 }}
+            >
               {studentName}
             </p>
-            <div className="mx-auto mt-2 h-px w-[min(55%,320px)] bg-[#7b1e3a]" />
+            <div className="mx-auto bg-[#7b1e3a]" style={{ marginTop: 8, height: 1, width: 280 }} />
           </div>
 
-          <p className="mx-auto mt-[4%] max-w-[78%] shrink-0 text-balance text-[clamp(0.65rem,1.5vw,0.82rem)] leading-relaxed text-[#5c5348]">
+          <p
+            className="mx-auto shrink-0 text-balance leading-relaxed text-[#5c5348]"
+            style={{ marginTop: 24, maxWidth: 620, fontSize: 14 }}
+          >
             in recognition of your dedication and successful completion of{" "}
             <span className="font-semibold text-[#3d3832]">{courseTitle}</span>, issued on{" "}
             <span className="font-semibold text-[#3d3832]">{issuedLabel}</span>.
           </p>
 
-          <footer className="relative z-10 mt-auto grid shrink-0 grid-cols-[minmax(0,1fr)_7.5rem_minmax(0,1fr)] items-end gap-x-6 pb-[3%] pt-[4%]">
+          <footer
+            className="relative z-10 mt-auto grid shrink-0 items-end"
+            style={{
+              gridTemplateColumns: "1fr 120px 1fr",
+              columnGap: 24,
+              paddingTop: 20,
+              paddingBottom: 4,
+            }}
+          >
             <div className="col-start-1 row-start-1 justify-self-center px-2 text-center">
-              <p className="mb-1 text-[clamp(0.7rem,1.4vw,0.85rem)] font-medium text-[#3d3832]">
+              <p className="mb-1 font-medium text-[#3d3832]" style={{ fontSize: 14 }}>
                 {issuedLabel}
               </p>
-              <div className="mx-auto h-px w-28 bg-[#c9a227]" />
-              <p className="mt-1.5 text-[clamp(0.6rem,1.2vw,0.75rem)] font-bold uppercase tracking-wide text-[#7b1e3a]">
+              <div className="mx-auto bg-[#c9a227]" style={{ height: 1, width: 112 }} />
+              <p
+                className="mt-1.5 font-bold uppercase tracking-wide text-[#7b1e3a]"
+                style={{ fontSize: 12 }}
+              >
                 Issue Date
               </p>
             </div>
@@ -144,15 +187,23 @@ export default function CertificateDocument({
             </div>
 
             <div className="col-start-3 row-start-1 justify-self-center px-2 text-center">
-              <p className="mb-1 text-[clamp(0.7rem,1.4vw,0.85rem)] font-medium text-[#3d3832]">{issuedBy}</p>
-              <div className="mx-auto h-px w-28 bg-[#c9a227]" />
-              <p className="mt-1.5 text-[clamp(0.6rem,1.2vw,0.75rem)] font-bold uppercase tracking-wide text-[#7b1e3a]">
+              <p className="mb-1 font-medium text-[#3d3832]" style={{ fontSize: 14 }}>
+                {issuedBy}
+              </p>
+              <div className="mx-auto bg-[#c9a227]" style={{ height: 1, width: 112 }} />
+              <p
+                className="mt-1.5 font-bold uppercase tracking-wide text-[#7b1e3a]"
+                style={{ fontSize: 12 }}
+              >
                 Issued By
               </p>
             </div>
 
             {certificateCode ? (
-              <p className="col-start-2 row-start-2 mt-1 w-full break-all text-center font-mono text-[8px] leading-tight text-[#5c5348]">
+              <p
+                className="col-start-2 row-start-2 mt-1 w-full break-all text-center font-mono leading-tight text-[#5c5348]"
+                style={{ fontSize: 8 }}
+              >
                 {certificateCode}
               </p>
             ) : null}

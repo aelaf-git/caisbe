@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.security.html_sanitize import sanitize_html
 from app.models import (
     CertificateTemplate,
@@ -13,6 +16,23 @@ from app.models import (
     FinalExam,
     Lesson,
 )
+
+_COVERS_DIR = Path(__file__).resolve().parent / "covers"
+
+
+def _install_cover(code: str) -> str:
+    name = f"seed-cover-{code.lower()}.jpg"
+    source = _COVERS_DIR / name
+    root = Path(settings.upload_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    dest = root / name
+    if source.is_file():
+        data = source.read_bytes()
+        if not dest.exists() or dest.read_bytes() != data:
+            dest.write_bytes(data)
+    elif not dest.exists():
+        raise FileNotFoundError(f"Missing seed cover asset: {source}")
+    return f"/api/uploads/{name}"
 
 COURSE_SPECS: list[dict] = [
     {
@@ -175,8 +195,12 @@ def _add_chapters(db: Session, course: Course, chapters: list[dict]) -> None:
 
 def ensure_course(db: Session, spec: dict) -> Course | None:
     code = spec["code"].upper()
+    cover_url = _install_cover(code)
     existing = db.query(Course).filter(Course.code == code).first()
     if existing is not None:
+        if existing.cover_url != cover_url:
+            existing.cover_url = cover_url
+            db.commit()
         return None
 
     course = Course(
@@ -185,6 +209,7 @@ def ensure_course(db: Session, spec: dict) -> Course | None:
         description=spec["description"],
         slug=spec["slug"],
         status="draft",
+        cover_url=cover_url,
         pass_percent=spec.get("pass_percent", 70),
     )
     db.add(course)

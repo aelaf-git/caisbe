@@ -1,6 +1,8 @@
 export const APPEARANCE_STORAGE_KEY = "caisbe-admin-appearance";
 
 export const FONT_OPTIONS = [
+  { id: "nunito", label: "Nunito Sans", variable: "--font-nunito" },
+  { id: "poppins", label: "Poppins", variable: "--font-poppins" },
   { id: "roboto", label: "Roboto", variable: "--font-roboto" },
   { id: "open-sans", label: "Open Sans", variable: "--font-open-sans" },
   { id: "inter", label: "Inter", variable: "--font-inter" },
@@ -35,8 +37,8 @@ export type Appearance = {
 export const DEFAULT_APPEARANCE: Appearance = {
   theme: "light",
   fontSize: "md",
-  fontBody: "roboto",
-  fontDisplay: "open-sans",
+  fontBody: "nunito",
+  fontDisplay: "poppins",
 };
 
 const FONT_SIZE_PX: Record<FontSizeId, string> = {

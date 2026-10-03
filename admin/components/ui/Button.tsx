@@ -13,18 +13,21 @@ export function buttonStyles({
   className?: string;
 } = {}) {
   const variants: Record<ButtonVariant, string> = {
-    primary: "border-2 border-caisbe-red bg-caisbe-red text-white hover:border-caisbe-red-dark hover:bg-caisbe-red-dark focus-visible:ring-caisbe-red/25",
+    primary:
+      "border-2 border-caisbe-red bg-caisbe-red text-white hover:border-caisbe-red-dark hover:bg-caisbe-red-dark focus-visible:ring-caisbe-red/25",
     secondary:
-      "border-2 border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red focus-visible:ring-caisbe-red/15",
-    ghost: "text-caisbe-muted hover:bg-ifma-border-light hover:text-caisbe-text focus-visible:ring-ifma-border",
-    danger: "border-2 border-caisbe-red bg-caisbe-red text-white hover:border-caisbe-red-dark hover:bg-caisbe-red-dark focus-visible:ring-caisbe-red/25",
+      "border-2 border-caisbe-red bg-white text-caisbe-red hover:bg-caisbe-red hover:text-white focus-visible:ring-caisbe-red/15",
+    ghost:
+      "text-caisbe-muted hover:bg-[#f1f5f9] hover:text-caisbe-text focus-visible:ring-ifma-border",
+    danger:
+      "border-2 border-caisbe-red bg-caisbe-red text-white hover:border-caisbe-red-dark hover:bg-caisbe-red-dark focus-visible:ring-caisbe-red/25",
   };
   const sizes: Record<ButtonSize, string> = {
-    sm: "h-9 gap-2 rounded-md px-3 text-xs",
-    md: "h-11 gap-2 rounded-md px-5 text-sm",
+    sm: "h-9 gap-2 rounded-full px-4 text-xs",
+    md: "h-11 gap-2 rounded-full px-6 text-sm",
   };
 
-  return `inline-flex items-center justify-center font-semibold uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-50 ${sizes[size]} ${variants[variant]} ${className}`;
+  return `inline-flex items-center justify-center font-bold transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-50 ${sizes[size]} ${variants[variant]} ${className}`;
 }
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {

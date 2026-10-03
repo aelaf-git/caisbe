@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import ButtonLink from "@/components/ui/ButtonLink";
 import {
   ContentCard,
@@ -8,13 +7,12 @@ import {
   PageHero,
   SubsectionIndex,
 } from "@/components/pages/ContentPage";
-import MembershipRegistrationForm from "@/components/membership/MembershipRegistrationForm";
-import MembershipRenewalForm from "@/components/membership/MembershipRenewalForm";
 import {
   membershipIndexItems,
   membershipPages,
   type MembershipSlug,
 } from "@/lib/data/membership";
+import { portalMembershipLoginUrl, portalMembershipRegisterUrl } from "@/lib/api";
 
 export function MembershipIndexContent() {
   return (
@@ -27,83 +25,44 @@ export function MembershipIndexContent() {
   );
 }
 
-function MemberPathCard({
-  title,
-  description,
-  selected,
-  onSelect,
-}: {
-  title: string;
-  description: string;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`rounded-lg border-2 p-6 text-left transition-colors ${
-        selected
-          ? "border-caisbe-red bg-caisbe-red/5 shadow-brand-card"
-          : "border-ifma-border bg-white hover:border-caisbe-red"
-      }`}
-    >
-      <span
-        className={`inline-flex h-12 w-12 items-center justify-center rounded-md text-lg font-bold ${
-          selected
-            ? "bg-caisbe-red text-white"
-            : "bg-[#fafafa] text-caisbe-red"
-        }`}
-      >
-        {title.startsWith("New") ? "N" : "E"}
-      </span>
-      <h3 className="mt-4 font-display text-xl font-semibold text-caisbe-text-dark">
-        {title}
-      </h3>
-      <p className="mt-2 text-sm leading-6 text-caisbe-muted">{description}</p>
-    </button>
-  );
-}
-
 export function BecomeAMemberContent({
-  initialPath = null,
+  eyebrow = "Membership",
+  title,
+  lead,
 }: {
   initialPath?: "new" | "existing" | null;
+  eyebrow?: string;
+  title?: string;
+  lead?: string;
 }) {
   const page = membershipPages["become-a-member"];
-  const [path, setPath] = useState<"new" | "existing" | null>(initialPath);
+  const registerHref = portalMembershipRegisterUrl();
+  const loginHref = portalMembershipLoginUrl();
 
   return (
     <>
       <PageHero
-        eyebrow="Membership"
-        title={page.title}
-        lead={page.description}
+        eyebrow={eyebrow}
+        title={title ?? page.title}
+        lead={lead ?? page.description}
       />
       <ContentSection wide>
-        <div className="grid gap-6 md:grid-cols-2">
-          <MemberPathCard
-            title="New Member"
-            description="Register for CAISBE membership. Fill the form online or download it, complete it, and upload."
-            selected={path === "new"}
-            onSelect={() => setPath("new")}
-          />
-          <MemberPathCard
-            title="Existing Member"
-            description="Renew your membership online, or download the renewal form, complete it, and upload."
-            selected={path === "existing"}
-            onSelect={() => setPath("existing")}
-          />
-        </div>
-
-        <div className="mt-10">
-          {path === "new" ? <MembershipRegistrationForm /> : null}
-          {path === "existing" ? <MembershipRenewalForm /> : null}
-          {path == null ? (
-            <p className="text-center text-sm text-caisbe-muted">
-              Choose New Member or Existing Member to continue.
-            </p>
-          ) : null}
+        <div className="mx-auto max-w-2xl rounded-[20px] bg-white p-8 text-center shadow-hopewell">
+          <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
+            Login or create your student account
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-caisbe-muted">
+            New accounts are student members immediately, with a downloadable membership
+            certificate in the portal. Log in if you already have an account to renew or upgrade.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <ButtonLink href={registerHref} variant="primary">
+              Create account
+            </ButtonLink>
+            <ButtonLink href={loginHref} variant="secondary">
+              Login
+            </ButtonLink>
+          </div>
         </div>
       </ContentSection>
     </>
@@ -120,7 +79,7 @@ export function MembershipSubpageContent({ slug }: { slug: MembershipSlug }) {
         lead={page.paragraphs[0]}
         actions={
           <>
-            <ButtonLink href="/membership/become-a-member" variant="primary">
+            <ButtonLink href={portalMembershipRegisterUrl()} variant="primary">
               Join Now
             </ButtonLink>
             <ButtonLink href="/membership/types" variant="secondary">
@@ -144,35 +103,11 @@ export function MembershipSubpageContent({ slug }: { slug: MembershipSlug }) {
   if (slug === "join") {
     const page = membershipPages.join;
     return (
-      <>
-        <PageHero
-          eyebrow={page.eyebrow}
-          title={page.title}
-          lead={page.paragraphs[0]}
-          actions={
-            <>
-              <ButtonLink href="/membership/become-a-member" variant="primary">
-                Become a Member
-              </ButtonLink>
-              <ButtonLink href="/membership/types" variant="secondary">
-                Membership Types
-              </ButtonLink>
-            </>
-          }
-        >
-          {page.paragraphs.slice(1).map((paragraph) => (
-            <p
-              key={paragraph.slice(0, 40)}
-              className="mt-6 text-base leading-7 text-caisbe-muted"
-            >
-              {paragraph}
-            </p>
-          ))}
-        </PageHero>
-        <ContentSection>
-          <MembershipRegistrationForm title="Join CAISBE" />
-        </ContentSection>
-      </>
+      <BecomeAMemberContent
+        eyebrow={page.eyebrow}
+        title={page.title}
+        lead={page.description}
+      />
     );
   }
 
@@ -193,7 +128,7 @@ export function MembershipSubpageContent({ slug }: { slug: MembershipSlug }) {
             ))}
           </div>
           <div className="mt-10">
-            <ButtonLink href="/membership/become-a-member" variant="primary">
+            <ButtonLink href={portalMembershipRegisterUrl()} variant="primary">
               Become a Member
             </ButtonLink>
           </div>

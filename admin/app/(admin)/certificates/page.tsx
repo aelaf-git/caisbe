@@ -1,49 +1,82 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
 import CertificatePreview from "@/components/certificates/CertificatePreview";
+import MembershipCertificateTypesManager from "@/components/certificates/MembershipCertificateTypesManager";
+import Alert from "@/components/ui/Alert";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/ui/PageHeader";
+import { apiFetch, ApiError, type MembershipCertificateType } from "@/lib/auth";
 
 export default function CertificatesPage() {
+  const [items, setItems] = useState<MembershipCertificateType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setItems(await apiFetch<MembershipCertificateType[]>("/admin/membership-certificate-types"));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Unable to load membership certificates.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
+
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Credentials"
         title="Certificates"
-        description="Preview the credentials issued automatically for membership and successful course completion."
+        description="Each membership type has its own certificate. Set the title, wording, and price here."
       />
+
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      {success ? <Alert tone="success">{success}</Alert> : null}
+
+      <Card className="space-y-4">
+        <div>
+          <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">
+            Membership certificates by type
+          </h2>
+          <p className="mt-1 text-sm text-caisbe-muted">
+            Student, Professional, Corporate, Senior / Fellow, and Institutional each have a
+            dedicated certificate and price.
+          </p>
+        </div>
+        <MembershipCertificateTypesManager
+          items={items}
+          loading={loading}
+          onRefresh={load}
+          onError={(message) => {
+            setSuccess(null);
+            setError(message);
+          }}
+          onSuccess={(message) => {
+            setError(null);
+            setSuccess(message);
+          }}
+        />
+      </Card>
 
       <Card className="space-y-5">
         <div>
-        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Template previews</h2>
-        <p className="text-sm text-caisbe-muted">
-          Sample data is shown below. Layouts share the CAISBE frame but use different titles and
-          fields so membership and completion stay distinct.
-        </p>
+          <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">
+            Course completion preview
+          </h2>
+          <p className="text-sm text-caisbe-muted">
+            Course certificates stay separate from membership credentials.
+          </p>
         </div>
-        <CertificatePreview />
-      </Card>
-
-      <Card className="space-y-4">
-        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Dynamic fields</h2>
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-lg bg-admin-surface-muted/60 p-4">
-            <h3 className="text-sm font-semibold text-caisbe-text">Membership</h3>
-            <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-caisbe-text">
-              <li>Student name</li>
-              <li>Membership number</li>
-              <li>Member since date</li>
-              <li>Verification QR code</li>
-            </ul>
-          </div>
-          <div className="rounded-lg bg-admin-surface-muted/60 p-4">
-            <h3 className="text-sm font-semibold text-caisbe-text">Course completion</h3>
-            <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-caisbe-text">
-              <li>Student name</li>
-              <li>Course title</li>
-              <li>Issue date</li>
-              <li>Verification QR code</li>
-            </ul>
-          </div>
-        </div>
+        <CertificatePreview kind="completion" />
       </Card>
     </div>
   );

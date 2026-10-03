@@ -4,7 +4,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import CertificateDocument from "@/components/certificates/CertificateDocument";
+import DownloadCertificateButton from "@/components/certificates/DownloadCertificateButton";
 import BackButton from "@/components/ui/BackButton";
+import { certificatePdfFileName } from "@/lib/certificatePdf";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { Certificate } from "@/lib/lms";
 
@@ -82,14 +84,10 @@ export default function CertificatePage() {
         />
       </div>
 
-      <div className="mt-6 text-center print:hidden">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark"
-        >
-          Print / Save PDF
-        </button>
+      <div className="mt-6 flex justify-center print:hidden">
+        <DownloadCertificateButton
+          fileName={certificatePdfFileName(["CAISBE", cert.certificate_code, cert.course.title])}
+        />
       </div>
     </section>
   );

@@ -10,11 +10,11 @@ export default function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-48 flex-col items-center justify-center border border-dashed border-ifma-border bg-admin-surface px-6 py-10 text-center">
-      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-admin-surface text-caisbe-red shadow-sm">
+    <div className="flex min-h-48 flex-col items-center justify-center rounded-[20px] bg-admin-surface px-6 py-10 text-center shadow-hopewell">
+      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-caisbe-red/10 text-caisbe-red">
         <span aria-hidden className="text-xl">+</span>
       </div>
-      <h3 className="mt-4 font-display text-lg font-semibold text-caisbe-text-dark">{title}</h3>
+      <h3 className="font-hopewell-display mt-4 text-lg font-bold text-caisbe-text-dark">{title}</h3>
       <p className="mt-2 max-w-md text-sm leading-6 text-caisbe-muted">{description}</p>
       {action ? <div className="mt-5">{action}</div> : null}
     </div>

@@ -16,12 +16,12 @@ export const membershipPages = {
   join: {
     slug: "join",
     title: "Join CAISBE",
-    eyebrow: "Join / Register",
+    eyebrow: "Join / Register / Renew",
     description:
-      "Become part of a growing community of facility management professionals, students, and organizations.",
+      "Become part of a growing community of facility management professionals, students, and organizations—or renew your existing membership.",
     paragraphs: [
-      "Become part of a growing community of facility management professionals, students, and organizations dedicated to advancing excellence in the built environment in Africa and beyond. Whether you are beginning your career, expanding your professional network, or representing an organization, our membership provides access to training, industry insights, and networking opportunities.",
-      "Register today and take the next step in your professional journey with the Facility Management Association.",
+      "Become part of a growing community of facility management professionals, students, and organizations dedicated to advancing excellence in the built environment in Africa and beyond. Whether you are beginning your career, expanding your professional network, renewing your membership, or representing an organization, our membership provides access to training, industry insights, and networking opportunities.",
+      "Register or renew today and take the next step in your professional journey with the Facility Management Association.",
     ],
   },
   types: {
@@ -79,7 +79,7 @@ export const membershipIndexItems = [
     href: "/membership/overview",
   },
   {
-    title: "Join / Register",
+    title: "Join / Register / Renew",
     description: membershipPages.join.description,
     href: "/membership/join",
   },
@@ -87,11 +87,6 @@ export const membershipIndexItems = [
     title: membershipPages.types.title,
     description: membershipPages.types.description,
     href: "/membership/types",
-  },
-  {
-    title: membershipPages["become-a-member"].title,
-    description: membershipPages["become-a-member"].description,
-    href: "/membership/become-a-member",
   },
 ];
 

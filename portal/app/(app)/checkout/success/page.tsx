@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
 import { formatMoney, type OrderRow } from "@/lib/commerce";
 
@@ -30,7 +31,11 @@ function SuccessInner() {
           if (active) setOrder(data);
         }
       } catch (err) {
-        if (active) setError(err instanceof ApiError ? err.detail : "Payment is still processing. Check My orders shortly.");
+        if (active) {
+          setError(
+            err instanceof ApiError ? err.detail : "Payment is still processing. Check My orders shortly.",
+          );
+        }
       }
     }
     void load();
@@ -39,47 +44,69 @@ function SuccessInner() {
     };
   }, [orderNumber, sessionId]);
 
+  const isMembership = Boolean(order?.items?.some((item) => item.membership_type));
   const itemCount = order?.items?.length ?? 0;
-  const headline =
-    itemCount > 1 ? `You are enrolled in ${itemCount} courses` : "You are enrolled";
+  const headline = isMembership
+    ? "Membership payment complete"
+    : itemCount > 1
+      ? `You are enrolled in ${itemCount} courses`
+      : "Purchase complete";
+  const body = isMembership
+    ? "Your membership certificate is ready to download from Membership."
+    : "Course access is unlocked. Open My courses to start learning.";
 
   return (
-    <div className="mx-auto max-w-xl space-y-4 border border-ifma-border bg-admin-surface p-8 text-center">
-      <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">{headline}</h1>
-      <p className="text-sm text-caisbe-muted">
-        Payment succeeded and course access is unlocked. Admin can still print a receipt from the back office.
-      </p>
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
-      {order ? (
-        <div className="space-y-2 text-sm text-caisbe-text">
-          <p>
-            Order {order.number} · {formatMoney(order.total_cents, order.currency)} · {order.status}
-          </p>
-          {order.items && order.items.length > 0 ? (
-            <ul className="space-y-1 text-left">
-              {order.items.map((item) => (
-                <li key={item.course_id} className="border border-ifma-border-light px-3 py-2">
-                  {item.title}
-                </li>
-              ))}
-            </ul>
-          ) : null}
+    <div className="space-y-8">
+      <PageHeader eyebrow="Checkout" title={headline} description={body} />
+
+      {error ? (
+        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+          {error}
         </div>
       ) : null}
-      <div className="flex flex-wrap justify-center gap-3 pt-2">
-        <Link
-          href="/courses"
-          className="inline-flex h-11 items-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-5 text-sm font-semibold uppercase tracking-wide text-white"
-        >
-          Go to my courses
-        </Link>
-        <Link
-          href="/account"
-          className="inline-flex h-11 items-center rounded-md border-2 border-ifma-border px-5 text-sm font-semibold uppercase tracking-wide text-caisbe-text"
-        >
-          View invoices
-        </Link>
-      </div>
+
+      <section className="rounded-[20px] bg-white p-6 shadow-hopewell">
+        {order ? (
+          <div className="space-y-4">
+            <p className="text-sm text-caisbe-muted">
+              Order {order.number} · {formatMoney(order.total_cents, order.currency)} ·{" "}
+              <span className="capitalize">{order.status}</span>
+            </p>
+            {order.items && order.items.length > 0 ? (
+              <ul className="divide-y divide-ifma-border-light rounded-md border border-ifma-border-light">
+                {order.items.map((item, index) => (
+                  <li
+                    key={`${item.course_id ?? item.membership_type ?? "item"}-${index}`}
+                    className="px-4 py-3 text-sm text-caisbe-text"
+                  >
+                    {item.title}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-caisbe-muted">Loading order…</p>
+        )}
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          {isMembership ? (
+            <Link
+              href="/membership"
+              className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+            >
+              View membership
+            </Link>
+          ) : (
+            <Link
+              href="/courses"
+              className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+            >
+              Go to my courses
+            </Link>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

@@ -19,6 +19,7 @@ from app.models import (
     CertificateTemplate,
     Chapter,
     AssignmentSubmission,
+    ContactMessage,
     ContentBlock,
     Course,
     Enrollment,
@@ -28,7 +29,9 @@ from app.models import (
     Lesson,
     MediaAsset,
     MembershipCertificate,
+    MembershipCertificateType,
     NewsPost,
+    Testimonial,
     NewsletterCampaign,
     NewsletterSubscriber,
     QuizAttempt,
@@ -103,6 +106,21 @@ from app.schemas.jobs import (
     JobPostingCreateIn,
     JobPostingOut,
     JobPostingUpdateIn,
+)
+from app.schemas.testimonials import (
+    TestimonialCreateIn,
+    TestimonialOut,
+    TestimonialUpdateIn,
+)
+from app.schemas.contact import (
+    CONTACT_STATUSES,
+    ContactMessageOut,
+    ContactMessageReplyIn,
+    ContactMessageStatusIn,
+)
+from app.schemas.membership_certificates import (
+    MembershipCertificateTypeOut,
+    MembershipCertificateTypeUpdateIn,
 )
 from app.schemas.news import (
     NewsPostCreateIn,
@@ -399,6 +417,14 @@ def _publish_content_errors(course: Course) -> list[str]:
     for chapter in course.chapters:
         if not _chapter_has_required_content(chapter):
             errors.append(f"{chapter.title} needs Content (at least one topic with text or media) before publishing.")
+    exam = course.final_exam
+    if exam is not None and exam.questions_to_appear is not None:
+        bank = len(exam.questions or [])
+        if bank < exam.questions_to_appear:
+            errors.append(
+                f"Final exam needs at least {exam.questions_to_appear} questions in the bank "
+                f"(currently {bank}) before publishing."
+            )
     return errors
 
 
@@ -519,6 +545,9 @@ def admin_dashboard(
         .filter(NewsletterSubscriber.unsubscribed_at.is_(None))
         .count(),
         newsletters_sent=db.query(NewsletterCampaign).count(),
+        contact_messages_open=db.query(ContactMessage)
+        .filter(ContactMessage.status.in_(("new", "read")))
+        .count(),
         magazines_published=db.query(MediaAsset)
         .filter(MediaAsset.category == "magazine", MediaAsset.published.is_(True))
         .count(),
@@ -547,14 +576,32 @@ def _settings_out(db: Session) -> AppSettingsOut:
         ui_font_body=_choice(
             data,
             "ui_font_body",
-            {"roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"},
-            "roboto",
+            {
+                "nunito",
+                "poppins",
+                "roboto",
+                "open-sans",
+                "inter",
+                "source-sans",
+                "merriweather",
+                "source-serif",
+            },
+            "nunito",
         ),
         ui_font_display=_choice(
             data,
             "ui_font_display",
-            {"roboto", "open-sans", "inter", "source-sans", "merriweather", "source-serif"},
-            "open-sans",
+            {
+                "nunito",
+                "poppins",
+                "roboto",
+                "open-sans",
+                "inter",
+                "source-sans",
+                "merriweather",
+                "source-serif",
+            },
+            "poppins",
         ),
         hero_transition_ms=hero_transition_ms(db),
     )
@@ -986,6 +1033,7 @@ def admin_update_course(
     meta = {key: data[key] for key in COURSE_DRAFT_META_KEYS if key in data}
     _write_course_meta(course, meta)
 
+    was_published = course.status == "published"
     if next_status == "published":
         loaded = _load_course_admin(db, course_id)
         # Validate against working content (draft details are overlaid separately below).
@@ -998,6 +1046,21 @@ def admin_update_course(
         # Keep any pending detail edits in draft_meta while unpublishing, or fold them in.
         _apply_course_draft_meta(course)
         course.status = "draft"
+
+    newly_published = not was_published and course.status == "published"
+    if newly_published:
+        from app.services.notifications import notify_all_students
+
+        notify_all_students(
+            db,
+            title="New course available",
+            body=(
+                f'"{course.title}" ({course.code}) is now available. '
+                "Open My courses to view details and enroll."
+            ),
+            kind="course_added",
+            link="/courses",
+        )
 
     db.commit()
     return _course_admin_out(_load_course_admin(db, course_id))
@@ -1031,11 +1094,48 @@ def admin_delete_course(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> None:
+    from app.models import CartItem, OrderItem
+    from app.services.notifications import notify_users
+
     course = db.query(Course).filter(Course.id == course_id).first()
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    title = course.title
+    code = course.code
+    affected_user_ids = {
+        row[0]
+        for row in db.query(Enrollment.user_id).filter(Enrollment.course_id == course_id).all()
+    }
+    affected_user_ids.update(
+        row[0]
+        for row in db.query(CartItem.user_id).filter(CartItem.course_id == course_id).all()
+    )
+
+    db.query(OrderItem).filter(OrderItem.course_id == course_id).update(
+        {OrderItem.course_id: None},
+        synchronize_session=False,
+    )
+    db.query(CartItem).filter(CartItem.course_id == course_id).delete(synchronize_session=False)
+    db.query(Certificate).filter(Certificate.course_id == course_id).delete(synchronize_session=False)
+    db.query(Enrollment).filter(Enrollment.course_id == course_id).delete(synchronize_session=False)
+
+    if affected_user_ids:
+        notify_users(
+            db,
+            affected_user_ids,
+            title="Course removed",
+            body=(
+                f'"{title}" ({code}) is no longer available. '
+                "It has been removed from your courses and cart. Contact CAISBE if you need help."
+            ),
+            kind="course_removed",
+            link="/courses",
+        )
+
     db.delete(course)
     db.commit()
+
 
 
 # --- Chapters ---
@@ -1437,6 +1537,21 @@ def admin_upsert_final_exam(
         exam.time_limit_minutes = payload.time_limit_minutes
     if payload.questions is not None:
         _replace_questions(db, payload.questions, final_exam_id=exam.id)
+
+    if "questions_to_appear" in payload.model_fields_set:
+        appear = payload.questions_to_appear
+        if appear is not None:
+            bank_size = (
+                len(payload.questions)
+                if payload.questions is not None
+                else db.query(QuizQuestion).filter(QuizQuestion.final_exam_id == exam.id).count()
+            )
+            if appear > bank_size:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Questions to appear ({appear}) cannot exceed the bank size ({bank_size}).",
+                )
+        exam.questions_to_appear = appear
 
     db.commit()
     exam = (
@@ -2004,60 +2119,11 @@ def admin_get_student(
     )
 
 
-@router.get("/students/{student_id}/assignment-submissions", response_model=list[AssignmentSubmissionOut])
-def admin_list_assignment_submissions(
-    student_id: int,
-    _: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-) -> list[AssignmentSubmissionOut]:
-    rows = (
-        db.query(AssignmentSubmission)
-        .options(joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course))
-        .filter(AssignmentSubmission.user_id == student_id)
-        .order_by(AssignmentSubmission.created_at.desc())
-        .all()
-    )
-    items: list[AssignmentSubmissionOut] = []
-    for row in rows:
-        block = row.block
-        chapter = block.chapter if block else None
-        course = chapter.course if chapter else None
-        items.append(
-            AssignmentSubmissionOut(
-                id=row.id,
-                content_block_id=row.content_block_id,
-                assignment_title=(block.title if block and block.title else "Assignment"),
-                course_code=course.code if course else "",
-                course_title=course.title if course else "",
-                body=row.body,
-                file_url=row.file_url,
-                file_name=row.file_name,
-                status=row.status,
-            )
-        )
-    return items
-
-
-@router.post("/assignment-submissions/{submission_id}/review", response_model=AssignmentSubmissionOut)
-def admin_review_assignment(
-    submission_id: int,
-    payload: AssignmentReviewIn,
-    _: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-) -> AssignmentSubmissionOut:
-    row = (
-        db.query(AssignmentSubmission)
-        .options(joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course))
-        .filter(AssignmentSubmission.id == submission_id)
-        .first()
-    )
-    if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
-    row.status = payload.status
-    db.commit()
+def _assignment_submission_out(row: AssignmentSubmission) -> AssignmentSubmissionOut:
     block = row.block
     chapter = block.chapter if block else None
     course = chapter.course if chapter else None
+    student = row.user
     return AssignmentSubmissionOut(
         id=row.id,
         content_block_id=row.content_block_id,
@@ -2068,7 +2134,77 @@ def admin_review_assignment(
         file_url=row.file_url,
         file_name=row.file_name,
         status=row.status,
+        user_id=row.user_id,
+        student_name=student.full_name if student else None,
+        student_email=student.email if student else None,
+        submitted_at=row.created_at,
     )
+
+
+def _assignment_submission_query(db: Session):
+    return db.query(AssignmentSubmission).options(
+        joinedload(AssignmentSubmission.user),
+        joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course),
+    )
+
+
+@router.get("/assignment-submissions", response_model=list[AssignmentSubmissionOut])
+def admin_list_all_assignment_submissions(
+    status_filter: str | None = Query(default=None, alias="status"),
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[AssignmentSubmissionOut]:
+    query = _assignment_submission_query(db)
+    if status_filter:
+        allowed = {"under_review", "passed", "failed"}
+        if status_filter not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Status must be under_review, passed, or failed.",
+            )
+        query = query.filter(AssignmentSubmission.status == status_filter)
+    rows = query.order_by(AssignmentSubmission.created_at.desc()).limit(500).all()
+    return [_assignment_submission_out(row) for row in rows]
+
+
+@router.get("/students/{student_id}/assignment-submissions", response_model=list[AssignmentSubmissionOut])
+def admin_list_assignment_submissions(
+    student_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[AssignmentSubmissionOut]:
+    rows = (
+        _assignment_submission_query(db)
+        .filter(AssignmentSubmission.user_id == student_id)
+        .order_by(AssignmentSubmission.created_at.desc())
+        .all()
+    )
+    return [_assignment_submission_out(row) for row in rows]
+
+
+@router.post("/assignment-submissions/{submission_id}/review", response_model=AssignmentSubmissionOut)
+def admin_review_assignment(
+    submission_id: int,
+    payload: AssignmentReviewIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AssignmentSubmissionOut:
+    row = (
+        _assignment_submission_query(db)
+        .filter(AssignmentSubmission.id == submission_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    row.status = payload.status
+    db.commit()
+    db.refresh(row)
+    row = (
+        _assignment_submission_query(db)
+        .filter(AssignmentSubmission.id == submission_id)
+        .one()
+    )
+    return _assignment_submission_out(row)
 
 
 @router.get("/membership-applications")
@@ -2084,6 +2220,10 @@ def admin_list_membership_applications(
             "email": row.email,
             "phone": row.phone,
             "membership_type": row.membership_type,
+            "organization": row.organization,
+            "city": row.city,
+            "country": row.country,
+            "details": row.details,
             "membership_status": row.membership_status,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         }
@@ -2424,3 +2564,239 @@ def admin_delete_news(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
     db.delete(row)
     db.commit()
+
+
+@router.get("/testimonials", response_model=list[TestimonialOut])
+def admin_list_testimonials(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[TestimonialOut]:
+    rows = (
+        db.query(Testimonial)
+        .order_by(Testimonial.sort_order.asc(), Testimonial.id.asc())
+        .all()
+    )
+    return [TestimonialOut.model_validate(row) for row in rows]
+
+
+@router.post("/testimonials", response_model=TestimonialOut, status_code=status.HTTP_201_CREATED)
+def admin_create_testimonial(
+    payload: TestimonialCreateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> TestimonialOut:
+    row = Testimonial(
+        quote=payload.quote.strip(),
+        name=payload.name.strip(),
+        role=payload.role.strip(),
+        published=payload.published,
+        sort_order=payload.sort_order,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return TestimonialOut.model_validate(row)
+
+
+@router.patch("/testimonials/{testimonial_id}", response_model=TestimonialOut)
+def admin_update_testimonial(
+    testimonial_id: int,
+    payload: TestimonialUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> TestimonialOut:
+    row = db.query(Testimonial).filter(Testimonial.id == testimonial_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Testimonial not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Quote, name, and role are required.",
+                )
+        setattr(row, key, value)
+    db.commit()
+    db.refresh(row)
+    return TestimonialOut.model_validate(row)
+
+
+@router.delete("/testimonials/{testimonial_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_testimonial(
+    testimonial_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(Testimonial).filter(Testimonial.id == testimonial_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Testimonial not found")
+    db.delete(row)
+    db.commit()
+
+
+@router.get("/contact-messages", response_model=list[ContactMessageOut])
+def admin_list_contact_messages(
+    status_filter: str | None = Query(default=None, alias="status"),
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[ContactMessageOut]:
+    query = db.query(ContactMessage)
+    if status_filter:
+        wanted = status_filter.strip().lower()
+        if wanted not in CONTACT_STATUSES:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status filter.")
+        query = query.filter(ContactMessage.status == wanted)
+    rows = query.order_by(ContactMessage.created_at.desc(), ContactMessage.id.desc()).limit(500).all()
+    return [ContactMessageOut.model_validate(row) for row in rows]
+
+
+@router.get("/contact-messages/{message_id}", response_model=ContactMessageOut)
+def admin_get_contact_message(
+    message_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> ContactMessageOut:
+    row = db.query(ContactMessage).filter(ContactMessage.id == message_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact message not found")
+    if row.status == "new":
+        row.status = "read"
+        db.commit()
+        db.refresh(row)
+    return ContactMessageOut.model_validate(row)
+
+
+@router.patch("/contact-messages/{message_id}", response_model=ContactMessageOut)
+def admin_update_contact_message_status(
+    message_id: int,
+    payload: ContactMessageStatusIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> ContactMessageOut:
+    row = db.query(ContactMessage).filter(ContactMessage.id == message_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact message not found")
+    next_status = payload.status.strip().lower()
+    if next_status not in CONTACT_STATUSES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status.")
+    row.status = next_status
+    db.commit()
+    db.refresh(row)
+    return ContactMessageOut.model_validate(row)
+
+
+@router.post("/contact-messages/{message_id}/reply", response_model=ContactMessageOut)
+def admin_reply_contact_message(
+    message_id: int,
+    payload: ContactMessageReplyIn,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> ContactMessageOut:
+    row = db.query(ContactMessage).filter(ContactMessage.id == message_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact message not found")
+
+    body = payload.body.strip()
+    subject = payload.subject.strip() or "Re: Your message to CAISBE"
+    full_name = f"{row.first_name} {row.last_name}".strip()
+    html_body = (
+        f"<p>Hello {full_name},</p>"
+        f"<p>{body.replace(chr(10), '<br>')}</p>"
+        "<p>— CAISBE Education</p>"
+        "<hr>"
+        "<p><small>In reply to your message:</small></p>"
+        f"<blockquote>{row.comments.replace(chr(10), '<br>')}</blockquote>"
+    )
+    try:
+        send_email(to=row.email, subject=subject, html_body=html_body)
+    except EmailDeliveryError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+    row.admin_reply = body
+    row.replied_at = datetime.now(timezone.utc)
+    row.replied_by_admin_id = admin.id
+    row.status = "replied"
+    db.commit()
+    db.refresh(row)
+    return ContactMessageOut.model_validate(row)
+
+
+@router.delete("/contact-messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_contact_message(
+    message_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(ContactMessage).filter(ContactMessage.id == message_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact message not found")
+    db.delete(row)
+    db.commit()
+
+
+@router.get("/membership-certificate-types", response_model=list[MembershipCertificateTypeOut])
+def admin_list_membership_certificate_types(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[MembershipCertificateTypeOut]:
+    rows = (
+        db.query(MembershipCertificateType)
+        .order_by(MembershipCertificateType.sort_order.asc(), MembershipCertificateType.id.asc())
+        .all()
+    )
+    return [MembershipCertificateTypeOut.model_validate(row) for row in rows]
+
+
+@router.patch(
+    "/membership-certificate-types/{type_id}",
+    response_model=MembershipCertificateTypeOut,
+)
+def admin_update_membership_certificate_type(
+    type_id: int,
+    payload: MembershipCertificateTypeUpdateIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> MembershipCertificateTypeOut:
+    row = db.query(MembershipCertificateType).filter(MembershipCertificateType.id == type_id).first()
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Membership certificate type not found",
+        )
+    data = payload.model_dump(exclude_unset=True)
+    if "currency" in data and data["currency"] is not None:
+        currency = data["currency"].strip().lower()
+        if currency not in {"cad", "usd"}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Currency must be CAD or USD.",
+            )
+        data["currency"] = currency
+
+    is_student = row.membership_type == "student"
+    if is_student:
+        # Student membership is always free and lifetime.
+        data["price_cents"] = 0
+        data["validity_months"] = None
+    elif "validity_months" in data:
+        months = data["validity_months"]
+        if months is None or months < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Non-student memberships require a validity period of at least 1 month.",
+            )
+
+    for key, value in data.items():
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Label, title, and body cannot be empty.",
+                )
+        setattr(row, key, value)
+    db.commit()
+    db.refresh(row)
+    return MembershipCertificateTypeOut.model_validate(row)
