@@ -1,5 +1,6 @@
 # Staging Blueprint for CAISBE-DEV (dev branch).
 # Names and public URLs match the live Render services (suffix -090a).
+# Every resource here is Free: services spin down when idle, and there is no disk.
 #
 # After you push this file to `dev`:
 #   Blueprint CAISBE-DEV → Manual sync
@@ -7,7 +8,7 @@
 
 databases:
   - name: caisbe-staging-db-090a
-    plan: basic-256mb
+    plan: free
     databaseName: caisbe_staging
     user: caisbe_staging
 
@@ -15,15 +16,11 @@ services:
   - type: web
     name: caisbe-staging-api-090a
     runtime: docker
-    plan: 0.5c-512mb
+    plan: free
     region: oregon
     dockerfilePath: ./api/Dockerfile.prod
     dockerContext: ./api
     healthCheckPath: /api/health
-    disk:
-      name: caisbe-staging-uploads
-      mountPath: /var/data/uploads
-      sizeGB: 5
     envVars:
       - key: APP_ENV
         value: production

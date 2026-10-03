@@ -5,8 +5,8 @@
 # After first deploy, confirm the four *.onrender.com URLs match the env vars below
 # (Render may append a suffix if a name is taken — update CORS + NEXT_PUBLIC_* if so).
 #
-# Cost note: API is pinned to 0.5c-512mb ($7/mo, 0.5 CPU, 512 MB) and needs a disk.
-# Postgres is paid (basic-256mb). Frontends stay Free and spin down when idle.
+# Cost note: every production web service is 0.5c-512mb ($7/mo, 0.5 CPU, 512 MB).
+# The API also needs a persistent disk. Postgres stays on basic-256mb.
 
 databases:
   - name: caisbe-db
@@ -81,7 +81,7 @@ services:
   - type: web
     name: caisbe-web
     runtime: docker
-    plan: free
+    plan: 0.5c-512mb
     region: oregon
     dockerfilePath: ./web/Dockerfile.prod
     dockerContext: .
@@ -100,7 +100,7 @@ services:
   - type: web
     name: caisbe-admin
     runtime: docker
-    plan: free
+    plan: 0.5c-512mb
     region: oregon
     dockerfilePath: ./admin/Dockerfile.prod
     dockerContext: .
@@ -121,7 +121,7 @@ services:
   - type: web
     name: caisbe-portal
     runtime: docker
-    plan: free
+    plan: 0.5c-512mb
     region: oregon
     dockerfilePath: ./portal/Dockerfile.prod
     dockerContext: .
