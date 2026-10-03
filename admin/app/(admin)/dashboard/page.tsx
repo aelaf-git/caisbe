@@ -162,6 +162,7 @@ export default function AdminDashboardPage() {
                 ["Magazine issues", data?.magazines_published],
                 ["Newsletter subscribers", data?.newsletter_subscribers],
                 ["Newsletters sent", data?.newsletters_sent],
+                ["Open contact messages", data?.contact_messages_open],
                 ["Site views today", data?.site_views_today],
               ].map(([label, count]) => (
                 <div key={String(label)} className="flex items-center justify-between gap-4">

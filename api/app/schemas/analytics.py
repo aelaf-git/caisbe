@@ -84,6 +84,7 @@ class AdminDashboardOut(BaseModel):
     membership_certificates: int = 0
     newsletter_subscribers: int
     newsletters_sent: int
+    contact_messages_open: int = 0
     magazines_published: int
     site_views_today: int
     site_unique_today: int

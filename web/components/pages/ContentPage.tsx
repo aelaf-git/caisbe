@@ -9,6 +9,7 @@ type PageHeroProps = {
   actions?: React.ReactNode;
   backHref?: string;
   backLabel?: string;
+  className?: string;
 };
 
 export function PageHero({
@@ -19,23 +20,20 @@ export function PageHero({
   actions,
   backHref,
   backLabel = "Go back",
+  className = "",
 }: PageHeroProps) {
   return (
-    <section className="relative overflow-hidden border-b border-ifma-border-light bg-[linear-gradient(135deg,#ffffff_0%,#fafafa_45%,#fff5f6_100%)] py-16 md:py-20">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(ellipse_at_top_right,rgba(196,32,50,0.08),transparent_55%)]"
-      />
+    <section className={`relative overflow-hidden bg-[#f8fafc] py-16 md:py-24 ${className}`}>
       <div className="relative mx-auto max-w-7xl px-4 motion-safe:animate-page-fade-in">
         {backHref ? (
           <div className="mb-8">
             <BackButton href={backHref} label={backLabel} />
           </div>
         ) : null}
-        <p className="text-caisbe-red text-sm font-semibold uppercase tracking-[0.25em]">
+        <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark">
           {eyebrow}
         </p>
-        <h1 className="font-display text-caisbe-text-dark mt-3 max-w-3xl text-3xl font-semibold md:text-4xl">
+        <h1 className="font-hopewell-display mt-4 max-w-3xl text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
           {title}
         </h1>
         {lead ? (
@@ -74,11 +72,11 @@ export function ContentSection({
   return (
     <section
       id={id}
-      className={`scroll-mt-28 border-b border-ifma-border-light bg-white py-16 md:py-20 ${className}`}
+      className={`scroll-mt-28 bg-transparent py-16 md:py-24 ${className}`}
     >
       <div className="mx-auto max-w-7xl px-4">
         {title ? (
-          <h2 className="font-display text-caisbe-text-dark max-w-3xl text-2xl font-semibold md:text-3xl">
+          <h2 className="font-hopewell-display max-w-3xl text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
             {title}
           </h2>
         ) : null}
@@ -119,15 +117,15 @@ export function ContentCard({
   return (
     <article
       style={style}
-      className={`shadow-brand-card flex flex-col rounded-lg border border-ifma-border-light bg-white p-6 transition-colors hover:border-caisbe-red/40 motion-safe:animate-page-fade-in ${className}`}
+      className={`flex flex-col rounded-[20px] bg-white p-6 shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in ${className}`}
     >
       {meta ? (
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
+        <p className="text-xs font-semibold uppercase tracking-wider text-caisbe-red">
           {meta}
         </p>
       ) : null}
       <h3
-        className={`text-xl font-semibold text-caisbe-text-dark ${meta ? "mt-2" : ""}`}
+        className={`font-hopewell-display text-xl font-bold text-caisbe-text-dark ${meta ? "mt-2" : ""}`}
       >
         {title}
       </h3>

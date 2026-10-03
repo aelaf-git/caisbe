@@ -19,7 +19,7 @@ export default function Alert({
   };
 
   return (
-    <div role={tone === "error" ? "alert" : "status"} className={`rounded-lg border px-4 py-3 text-sm ${tones[tone]}`}>
+    <div role={tone === "error" ? "alert" : "status"} className={`rounded-[20px] border px-4 py-3 text-sm ${tones[tone]}`}>
       {title ? <p className="font-semibold">{title}</p> : null}
       <div className={title ? "mt-1 leading-5" : "leading-5"}>{children}</div>
     </div>

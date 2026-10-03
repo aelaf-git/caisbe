@@ -81,7 +81,8 @@ export type CheckoutResult = {
 };
 
 export type OrderItemRow = {
-  course_id: number;
+  course_id?: number | null;
+  membership_type?: string | null;
   title: string;
   unit_price_cents: number;
   quantity: number;

@@ -83,8 +83,14 @@ class CheckoutOut(BaseModel):
     status: str
 
 
+class MembershipCheckoutIn(BaseModel):
+    membership_type: str = Field(min_length=2, max_length=40)
+    kind: str | None = Field(default="application", max_length=20)
+
+
 class OrderItemOut(BaseModel):
-    course_id: int
+    course_id: int | None = None
+    membership_type: str | None = None
     title: str
     unit_price_cents: int
     quantity: int = 1

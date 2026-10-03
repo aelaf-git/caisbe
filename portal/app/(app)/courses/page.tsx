@@ -82,11 +82,11 @@ export default function StudentCoursesPage() {
       <PageHeader
         eyebrow="Learning"
         title="My courses"
-        description="Add courses to your cart and pay together, or buy a single course now."
+        description="Add courses to your cart and buy them together, or buy a single course now."
         actions={
           <Link
             href="/cart"
-            className="inline-flex h-11 items-center rounded-md border-2 border-ifma-border px-5 text-sm font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+            className="inline-flex h-11 items-center rounded-full border-2 border-ifma-border px-5 text-sm font-bold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
           >
             View cart
           </Link>
@@ -94,7 +94,9 @@ export default function StudentCoursesPage() {
       />
 
       {error ? (
-        <div className="border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">{error}</div>
+        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+          {error}
+        </div>
       ) : null}
       {message ? (
         <p className="text-sm text-caisbe-text">
@@ -106,11 +108,9 @@ export default function StudentCoursesPage() {
       ) : null}
 
       {pendingEnrollments.length > 0 ? (
-        <section className="border border-ifma-border bg-admin-surface">
-          <div className="border-b border-ifma-border-light px-6 py-4">
-            <h2 className="text-lg font-semibold text-caisbe-text">Awaiting payment</h2>
-          </div>
-          <div className="divide-y divide-ifma-border-light">
+        <section className="space-y-4">
+          <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Awaiting payment</h2>
+          <div className="space-y-4">
             {pendingEnrollments.map((enrollment) => (
               <CourseCard
                 key={enrollment.id}
@@ -122,18 +122,18 @@ export default function StudentCoursesPage() {
         </section>
       ) : null}
 
-      <section className="border border-ifma-border bg-admin-surface">
-        <div className="border-b border-ifma-border-light px-6 py-4">
-          <h2 className="text-lg font-semibold text-caisbe-text">Enrolled</h2>
-        </div>
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Enrolled</h2>
         {loading ? (
-          <p className="p-6 text-sm text-caisbe-muted">Loading enrollments…</p>
+          <p className="border border-ifma-border bg-admin-surface px-5 py-6 text-sm text-caisbe-muted shadow-brand-card">
+            Loading enrollments…
+          </p>
         ) : openEnrollments.length === 0 ? (
-          <p className="p-6 text-sm text-caisbe-muted">
-            You do not have access to a course yet. Choose a program below and complete checkout.
+          <p className="border border-ifma-border bg-admin-surface px-5 py-6 text-sm text-caisbe-muted shadow-brand-card">
+            You do not have access to a course yet. Choose a program below and buy to unlock it.
           </p>
         ) : (
-          <div className="divide-y divide-ifma-border-light">
+          <div className="space-y-4">
             {openEnrollments.map((enrollment) => {
               const completed = Boolean(enrollment.certificate_code);
               return (
@@ -153,20 +153,20 @@ export default function StudentCoursesPage() {
         )}
       </section>
 
-      <section className="border border-ifma-border bg-admin-surface">
-        <div className="border-b border-ifma-border-light px-6 py-4">
-          <h2 className="text-lg font-semibold text-caisbe-text">Available courses</h2>
-        </div>
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Available courses</h2>
         {loading ? (
-          <p className="p-6 text-sm text-caisbe-muted">Loading courses…</p>
+          <p className="border border-ifma-border bg-admin-surface px-5 py-6 text-sm text-caisbe-muted shadow-brand-card">
+            Loading courses…
+          </p>
         ) : availableCourses.length === 0 ? (
-          <p className="p-6 text-sm text-caisbe-muted">
+          <p className="border border-ifma-border bg-admin-surface px-5 py-6 text-sm text-caisbe-muted shadow-brand-card">
             {courses.length === 0
               ? "No published courses yet. Check back after new programs are uploaded."
               : "You already have access to every available course."}
           </p>
         ) : (
-          <div className="divide-y divide-ifma-border-light">
+          <div className="space-y-4">
             {availableCourses.map((course) => {
               const inCart = cartIds.has(course.id);
               return (

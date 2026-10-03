@@ -54,7 +54,7 @@ function ThinEventsPage({
           {page.highlights.map((item) => (
             <li
               key={item}
-              className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-text"
+              className="rounded-[20px] bg-white px-4 py-3 text-sm font-medium text-caisbe-text shadow-hopewell"
             >
               {item}
             </li>
@@ -179,7 +179,7 @@ export function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
             {page.categories.map((category) => (
               <li
                 key={category}
-                className="shadow-brand-card rounded-lg border border-ifma-border-light bg-white px-4 py-3 text-sm font-medium text-caisbe-red"
+                className="rounded-[20px] bg-white px-4 py-3 text-sm font-medium text-caisbe-red shadow-hopewell"
               >
                 {category}
               </li>

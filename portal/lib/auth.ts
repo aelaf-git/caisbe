@@ -17,6 +17,11 @@ export type AuthUser = {
   membership_status?: string;
   profile_completed?: boolean;
   role: "student" | "admin" | string;
+  pending_membership_type?: string | null;
+  pending_membership_kind?: string | null;
+  pending_membership_price_cents?: number | null;
+  pending_membership_currency?: string | null;
+  pending_membership_label?: string | null;
 };
 
 export type RegisterPayload = {
@@ -26,6 +31,13 @@ export type RegisterPayload = {
   country: string;
   city: string;
   password: string;
+  given_name?: string | null;
+  family_name?: string | null;
+  address?: string | null;
+  organization?: string | null;
+  job_title?: string | null;
+  membership_type?: string | null;
+  details?: string | null;
 };
 
 export type Course = {
@@ -102,7 +114,7 @@ export async function apiFetch<T>(
   init?: RequestInit & { auth?: boolean },
 ): Promise<T> {
   const headers = new Headers(init?.headers);
-  if (!headers.has("Content-Type") && init?.body) {
+  if (!headers.has("Content-Type") && init?.body && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 

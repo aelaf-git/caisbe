@@ -11,11 +11,11 @@ type SecondaryAction =
   | { onClick: () => void; label: string; busy?: boolean };
 
 const primaryClass =
-  "inline-flex h-11 w-full items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-4 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red-dark disabled:opacity-60";
+  "inline-flex h-11 w-full items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-4 text-sm font-semibold uppercase text-white transition hover:bg-caisbe-red-dark disabled:opacity-60";
 const completeClass =
-  "inline-flex h-11 w-full items-center justify-center rounded-md border-2 border-admin-success bg-admin-success-soft px-4 text-sm font-semibold uppercase tracking-wide text-admin-success hover:bg-admin-success hover:text-white disabled:opacity-60";
+  "inline-flex h-11 w-full items-center justify-center rounded-md border-2 border-admin-success bg-admin-success-soft px-4 text-sm font-semibold uppercase text-admin-success transition hover:bg-admin-success hover:text-white disabled:opacity-60";
 const secondaryClass =
-  "inline-flex h-11 w-full items-center justify-center rounded-md border-2 border-ifma-border px-4 text-sm font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red disabled:opacity-60";
+  "inline-flex h-11 w-full items-center justify-center rounded-md border-2 border-caisbe-red bg-admin-surface px-4 text-sm font-semibold uppercase text-caisbe-red transition hover:bg-caisbe-red hover:text-white disabled:opacity-60";
 
 function ActionControl({
   action,
@@ -52,23 +52,42 @@ export default function CourseCard({
   footer?: React.ReactNode;
 }) {
   return (
-    <article className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center">
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">{course.code}</p>
-        <h3 className="mt-1 font-display text-lg font-semibold text-caisbe-text-dark">{course.title}</h3>
+    <article className="flex flex-col gap-5 border border-ifma-border bg-admin-surface p-5 shadow-brand-card md:flex-row md:items-center md:p-6">
+      <span className="relative h-36 w-full shrink-0 overflow-hidden rounded-md border border-ifma-border bg-[#fafaf8] sm:h-28 sm:w-44 md:h-24 md:w-40">
+        {course.cover_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={course.cover_url}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase tracking-wide text-caisbe-red">
+            {course.code.slice(0, 4)}
+          </span>
+        )}
+      </span>
+
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">{course.code}</p>
+          {progress != null ? (
+            <span className="inline-flex items-center rounded-md border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+              {progress}% complete
+            </span>
+          ) : null}
+        </div>
+        <h3 className="font-display text-xl font-semibold text-caisbe-text-dark">{course.title}</h3>
         {course.description ? (
-          <p className="mt-1 line-clamp-2 text-sm text-caisbe-muted">{course.description}</p>
+          <p className="line-clamp-2 text-sm leading-6 text-caisbe-muted">{course.description}</p>
+        ) : null}
+        {progress != null ? (
+          <div className="max-w-sm pt-1">
+            <ProgressBar value={progress} />
+          </div>
         ) : null}
       </div>
-      {progress != null ? (
-        <div className="w-full shrink-0 space-y-1.5 md:w-48">
-          <div className="flex items-center justify-between text-xs text-caisbe-muted">
-            <span>Progress</span>
-            <span className="font-semibold tabular-nums text-caisbe-text">{progress}%</span>
-          </div>
-          <ProgressBar value={progress} />
-        </div>
-      ) : null}
+
       <div className="flex w-full shrink-0 flex-col gap-2 sm:max-w-xs md:w-52">
         <ActionControl action={action} className={action.tone === "complete" ? completeClass : primaryClass} />
         {secondaryAction ? <ActionControl action={secondaryAction} className={secondaryClass} /> : null}

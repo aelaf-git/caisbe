@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from app.security.passwords import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, validate_password_strength
 
 MEMBERSHIP_TYPES = (
     "student",
@@ -10,7 +12,7 @@ MEMBERSHIP_TYPES = (
     "institutional",
 )
 
-MEMBERSHIP_STATUSES = ("pending", "active", "inactive")
+MEMBERSHIP_STATUSES = ("pending", "pending_payment", "active", "inactive")
 
 
 class UserCreate(BaseModel):
@@ -19,7 +21,22 @@ class UserCreate(BaseModel):
     phone: str = Field(min_length=5, max_length=40)
     country: str = Field(min_length=2, max_length=100)
     city: str = Field(min_length=2, max_length=100)
-    password: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
+    given_name: str | None = Field(default=None, max_length=80)
+    family_name: str | None = Field(default=None, max_length=80)
+    address: str | None = Field(default=None, max_length=255)
+    organization: str | None = Field(default=None, max_length=160)
+    job_title: str | None = Field(default=None, max_length=120)
+    membership_type: str | None = Field(default=None, max_length=40)
+    details: str | None = Field(default=None, max_length=8000)
+
+    @field_validator("password")
+    @classmethod
+    def strong_password(cls, value: str) -> str:
+        try:
+            return validate_password_strength(value)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 class UserLogin(BaseModel):
@@ -44,6 +61,11 @@ class UserOut(BaseModel):
     membership_status: str = "pending"
     profile_completed: bool = False
     role: str = "student"
+    pending_membership_type: str | None = None
+    pending_membership_kind: str | None = None
+    pending_membership_price_cents: int | None = None
+    pending_membership_currency: str | None = None
+    pending_membership_label: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -62,8 +84,16 @@ class ProfileUpdate(BaseModel):
 
 
 class PasswordChangeIn(BaseModel):
-    current_password: str = Field(min_length=1, max_length=128)
-    new_password: str = Field(min_length=8, max_length=128)
+    current_password: str = Field(min_length=1, max_length=MAX_PASSWORD_LENGTH)
+    new_password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
+
+    @field_validator("new_password")
+    @classmethod
+    def strong_new_password(cls, value: str) -> str:
+        try:
+            return validate_password_strength(value)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 class SecurityQuestionIn(BaseModel):
@@ -116,6 +146,8 @@ class MembershipApplicationIn(BaseModel):
     organization: str | None = Field(default=None, max_length=160)
     job_title: str | None = Field(default=None, max_length=120)
     membership_type: str = Field(min_length=2, max_length=40)
+    details: str | None = Field(default=None, max_length=8000)
+    kind: str | None = Field(default=None, max_length=20)
 
 
 class MembershipApplicationOut(BaseModel):

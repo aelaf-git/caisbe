@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type RefObject } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
@@ -9,7 +9,9 @@ import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import ProgressBar from "@/components/ui/ProgressBar";
+import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, apiUpload, ApiError, type IndustryEvent } from "@/lib/auth";
 
 const REPORT_ACCEPT =
@@ -110,6 +112,40 @@ export default function EventsManager({
 
   const isEditing = editingId !== null;
 
+  const formValues = useMemo(
+    () => ({
+      title: title.trim(),
+      summary: summary.trim(),
+      location: location.trim(),
+      region: region.trim(),
+      event_type: normalizeEventType(eventType),
+      starts_on: startsOn,
+      ends_on: endsOn,
+      source_name: sourceName.trim(),
+      source_url: sourceUrl.trim(),
+      report_file_url: reportFileUrl,
+      cpd_hours: cpdHours.trim(),
+      published,
+      featured,
+    }),
+    [
+      title,
+      summary,
+      location,
+      region,
+      eventType,
+      startsOn,
+      endsOn,
+      sourceName,
+      sourceUrl,
+      reportFileUrl,
+      cpdHours,
+      published,
+      featured,
+    ],
+  );
+  const { dirty, resetBaseline } = useDirtyForm(formValues);
+
   function clearForm() {
     setEditingId(null);
     setTitle("");
@@ -127,6 +163,21 @@ export default function EventsManager({
     setFeatured(false);
     setUploadProgress(0);
     resetFileInput(reportInputRef);
+    resetBaseline({
+      title: "",
+      summary: "",
+      location: "",
+      region: "",
+      event_type: "calendar",
+      starts_on: "",
+      ends_on: "",
+      source_name: "",
+      source_url: "",
+      report_file_url: null,
+      cpd_hours: "",
+      published: true,
+      featured: false,
+    });
   }
 
   function startEdit(event: IndustryEvent) {
@@ -146,6 +197,21 @@ export default function EventsManager({
     setFeatured(event.featured);
     setUploadProgress(0);
     resetFileInput(reportInputRef);
+    resetBaseline({
+      title: event.title.trim(),
+      summary: (event.summary ?? "").trim(),
+      location: (event.location ?? "").trim(),
+      region: (event.region ?? "").trim(),
+      event_type: normalizeEventType(event.event_type),
+      starts_on: toInputDate(event.starts_on),
+      ends_on: toInputDate(event.ends_on),
+      source_name: (event.source_name ?? "").trim(),
+      source_url: (event.source_url ?? "").trim(),
+      report_file_url: event.report_file_url,
+      cpd_hours: event.cpd_hours != null ? String(event.cpd_hours) : "",
+      published: event.published,
+      featured: event.featured,
+    });
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -168,6 +234,7 @@ export default function EventsManager({
   }
 
   async function save() {
+    if (!dirty) return;
     if (!title.trim() || !startsOn) {
       onError("Title and start date are required.");
       return;
@@ -410,9 +477,13 @@ export default function EventsManager({
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Button onClick={() => void save()} disabled={saving || uploading}>
-            {saving ? "Saving…" : isEditing ? "Update event" : "Create event"}
-          </Button>
+          <SaveButton
+            dirty={dirty}
+            saving={saving}
+            disabled={uploading}
+            idleLabel={isEditing ? "Update event" : "Create event"}
+            onClick={() => void save()}
+          />
           {isEditing ? (
             <Button variant="secondary" onClick={clearForm} disabled={saving}>
               Cancel edit

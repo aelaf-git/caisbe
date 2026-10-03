@@ -13,6 +13,7 @@ from app.schemas.commerce import (
     CheckoutIn,
     CheckoutOut,
     InvoiceOut,
+    MembershipCheckoutIn,
     OrderItemOut,
     OrderOut,
     PromoPreviewIn,
@@ -20,15 +21,19 @@ from app.schemas.commerce import (
 )
 from app.schemas.auth import SavedCardCreate, SavedCardOut
 from app.security.auth import get_current_user
+from app.security.limiter import limiter
 from app.services.commerce import (
     STRIPE_PROMO_MESSAGE,
     add_to_cart,
     cart_courses_for_user,
     clear_cart,
     create_checkout_order,
+    create_membership_checkout_order,
     create_stripe_session,
+    fulfill_order,
     fulfill_stripe_session,
     load_published_courses,
+    mark_manual_unlock,
     quote_courses,
 )
 
@@ -40,6 +45,8 @@ def _order_out(order: Order) -> OrderOut:
         name = "Course enrollment"
     elif len(order.items) == 1:
         name = order.items[0].title
+    elif any(item.membership_type for item in order.items):
+        name = f"{len(order.items)} membership items"
     else:
         name = f"{len(order.items)} courses"
     return OrderOut(
@@ -56,6 +63,7 @@ def _order_out(order: Order) -> OrderOut:
         items=[
             OrderItemOut(
                 course_id=item.course_id,
+                membership_type=item.membership_type,
                 title=item.title,
                 unit_price_cents=item.unit_price_cents,
                 quantity=item.quantity,
@@ -203,50 +211,47 @@ def preview_checkout(
 
 
 @router.post("/me/checkout", response_model=CheckoutOut)
+@limiter.limit("20/minute")
 def start_checkout(
+    request: Request,
     payload: CheckoutIn,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> CheckoutOut:
-    from_cart = payload.from_cart
+    from app.models import Enrollment
+
     courses = _resolve_checkout_courses(db, current_user, payload)
     order, enrollments, complimentary = create_checkout_order(db, current_user, courses)
-    checkout_url = None
-    if complimentary:
+    enrollment_ids = [row.id for row in enrollments]
+    # Course Stripe Checkout is not wired yet. Confirming purchase activates enrollments immediately.
+    if not complimentary:
+        order = (
+            db.query(Order)
+            .options(
+                joinedload(Order.items),
+                joinedload(Order.invoices),
+                joinedload(Order.payments),
+                joinedload(Order.user),
+            )
+            .filter(Order.id == order.id)
+            .one()
+        )
+        payment = order.payments[0] if order.payments else None
+        mark_manual_unlock(order, payment)
+        fulfill_order(db, order)
         clear_cart(db, current_user.id, [course.id for course in courses])
         db.commit()
+        order = db.query(Order).options(joinedload(Order.items)).filter(Order.id == order.id).one()
+        enrollments = (
+            db.query(Enrollment)
+            .options(joinedload(Enrollment.course))
+            .filter(Enrollment.id.in_(enrollment_ids))
+            .all()
+        )
+        enrollment_ids = [row.id for row in enrollments]
     else:
-        portal = settings.portal_public_url.rstrip("/")
-        if from_cart:
-            cancel_url = f"{portal}/cart?cancelled=1"
-        elif len(courses) == 1:
-            cancel_url = f"{portal}/courses/{courses[0].id}/checkout?cancelled=1"
-        else:
-            cancel_url = f"{portal}/cart?cancelled=1"
-        try:
-            # Ensure relationships are available for Stripe line items / email
-            order = (
-                db.query(Order)
-                .options(
-                    joinedload(Order.items),
-                    joinedload(Order.payments),
-                    joinedload(Order.user),
-                )
-                .filter(Order.id == order.id)
-                .one()
-            )
-            session_id, checkout_url = create_stripe_session(order, cancel_url=cancel_url)
-            payment = order.payments[0] if order.payments else None
-            if payment:
-                payment.stripe_session_id = session_id
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise
-    enrollment_ids = [row.id for row in enrollments]
-    if not complimentary:
-        # Reload after commit for response fields
-        order = db.query(Order).filter(Order.id == order.id).one()
+        clear_cart(db, current_user.id, [course.id for course in courses])
+        db.commit()
     return CheckoutOut(
         order_id=order.id,
         order_number=order.number,
@@ -254,8 +259,62 @@ def start_checkout(
         enrollment_ids=enrollment_ids,
         total_cents=order.total_cents,
         currency=order.currency,
-        complimentary=complimentary,
-        checkout_url=checkout_url,
+        complimentary=False,
+        checkout_url=None,
+        publishable_key=settings.stripe_publishable_key or None,
+        status=order.status,
+    )
+
+
+@router.post("/me/membership/checkout", response_model=CheckoutOut)
+@limiter.limit("20/minute")
+def start_membership_checkout(
+    request: Request,
+    payload: MembershipCheckoutIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> CheckoutOut:
+    if current_user.role == "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins cannot purchase membership.")
+    order, complimentary = create_membership_checkout_order(
+        db,
+        current_user,
+        payload.membership_type,
+        kind=payload.kind or "application",
+    )
+    # Membership Stripe Checkout is not wired yet. Confirming payment here activates
+    # the selected type and issues the membership certificate immediately.
+    if not complimentary:
+        order = (
+            db.query(Order)
+            .options(
+                joinedload(Order.items),
+                joinedload(Order.invoices),
+                joinedload(Order.payments),
+                joinedload(Order.user),
+            )
+            .filter(Order.id == order.id)
+            .one()
+        )
+        payment = order.payments[0] if order.payments else None
+        mark_manual_unlock(order, payment)
+        fulfill_order(db, order)
+        db.commit()
+        order = (
+            db.query(Order)
+            .options(joinedload(Order.items), joinedload(Order.payments))
+            .filter(Order.id == order.id)
+            .one()
+        )
+    return CheckoutOut(
+        order_id=order.id,
+        order_number=order.number,
+        enrollment_id=None,
+        enrollment_ids=[],
+        total_cents=order.total_cents,
+        currency=order.currency,
+        complimentary=False,
+        checkout_url=None,
         publishable_key=settings.stripe_publishable_key or None,
         status=order.status,
     )

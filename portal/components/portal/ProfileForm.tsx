@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import SaveButton from "@/components/ui/SaveButton";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, ApiError, type AuthUser } from "@/lib/auth";
 import { MEMBERSHIP_TYPES } from "@/lib/commerce";
 
@@ -48,6 +50,13 @@ export default function ProfileForm({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const formValues = useMemo(() => form, [form]);
+  const { dirty, markSaved, resetBaseline } = useDirtyForm(formValues);
+
+  useEffect(() => {
+    setForm(initial);
+    resetBaseline(initial);
+  }, [initial, resetBaseline]);
 
   function update<K extends keyof ProfileFields>(key: K, value: ProfileFields[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -55,6 +64,7 @@ export default function ProfileForm({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (!dirty) return;
     setSaving(true);
     setError(null);
     setMessage(null);
@@ -63,6 +73,9 @@ export default function ProfileForm({
         method: "PATCH",
         body: JSON.stringify(form),
       });
+      const next = profileFromUser(user);
+      setForm(next);
+      markSaved(next);
       setMessage("Profile saved.");
       onSaved?.(user);
     } catch (err) {
@@ -128,13 +141,7 @@ export default function ProfileForm({
         </select>
       </label>
       <div className="md:col-span-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="inline-flex h-11 items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-5 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red-dark disabled:opacity-60"
-        >
-          {saving ? "Saving…" : submitLabel}
-        </button>
+        <SaveButton type="submit" dirty={dirty} saving={saving} idleLabel={submitLabel} />
       </div>
     </form>
   );

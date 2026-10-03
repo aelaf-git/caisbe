@@ -14,13 +14,14 @@ function formatDate(iso: string) {
 }
 
 export default function JobBoardList({
-  title = "Open roles",
+  title,
   limit,
 }: {
   title?: string;
   limit?: number;
 }) {
   const [jobs, setJobs] = useState<JobPosting[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +30,10 @@ export default function JobBoardList({
     async function load() {
       try {
         const data = await fetchActiveJobs();
-        if (!cancelled) setJobs(limit ? data.slice(0, limit) : data);
+        if (!cancelled) {
+          setTotal(data.length);
+          setJobs(limit ? data.slice(0, limit) : data);
+        }
       } catch {
         if (!cancelled) setError("Unable to load job listings right now.");
       } finally {
@@ -43,12 +47,7 @@ export default function JobBoardList({
   }, [limit]);
 
   return (
-    <ContentSection
-      id="job-board"
-      title={title}
-      description="Active postings with a future expiry date. Listings are removed automatically when their expiry date passes."
-      wide
-    >
+    <ContentSection id="job-board" title={title} wide>
       {loading ? (
         <p className="text-sm text-caisbe-muted">Loading jobs…</p>
       ) : null}
@@ -59,13 +58,6 @@ export default function JobBoardList({
             No open roles right now. Check back soon for new postings from
             CAISBE.
           </p>
-          {limit ? (
-            <div className="mt-6 flex flex-wrap justify-center gap-4">
-              <ButtonLink href="/careers/jobs" variant="secondary">
-                View Job Board
-              </ButtonLink>
-            </div>
-          ) : null}
         </div>
       ) : null}
       {!loading && jobs.length > 0 ? (
@@ -124,7 +116,7 @@ export default function JobBoardList({
               </ContentCard>
             ))}
           </div>
-          {limit ? (
+          {limit && total > jobs.length ? (
             <div className="mt-8">
               <ButtonLink href="/careers/jobs" variant="primary">
                 View All Jobs

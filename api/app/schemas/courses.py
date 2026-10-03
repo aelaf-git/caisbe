@@ -344,6 +344,7 @@ class FinalExamUpdate(BaseModel):
     title: str | None = None
     pass_percent: int | None = Field(default=None, ge=0, le=100)
     time_limit_minutes: int | None = Field(default=None, ge=1, le=480)
+    questions_to_appear: int | None = Field(default=None, ge=1)
     questions: list[QuizQuestionIn] | None = None
 
 
@@ -352,6 +353,7 @@ class FinalExamOut(BaseModel):
     title: str
     pass_percent: int
     time_limit_minutes: int | None = None
+    questions_to_appear: int | None = None
     questions: list[QuizQuestionOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
@@ -362,6 +364,9 @@ class FinalExamStudentOut(BaseModel):
     title: str
     pass_percent: int
     time_limit_minutes: int | None = None
+    questions_to_appear: int | None = None
+    question_bank_size: int = 0
+    # Full bank is withheld; live prompts arrive on ExamSessionOut when the attempt starts.
     questions: list[QuizQuestionStudentOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
@@ -380,6 +385,7 @@ class ExamSessionOut(BaseModel):
     latest_score: int | None = None
     latest_passed: bool | None = None
     order: ExamOrderOut | None = None
+    questions: list[QuizQuestionStudentOut] = Field(default_factory=list)
 
 
 class CertificateTemplateUpdate(BaseModel):
@@ -433,6 +439,10 @@ class AssignmentSubmissionOut(BaseModel):
     file_url: str | None = None
     file_name: str | None = None
     status: str
+    user_id: int | None = None
+    student_name: str | None = None
+    student_email: str | None = None
+    submitted_at: datetime | None = None
 
 
 class AssignmentReviewIn(BaseModel):
@@ -477,9 +487,13 @@ class MembershipCertificateOut(BaseModel):
     id: int
     certificate_code: str
     membership_number: str
+    membership_type: str | None = None
+    membership_type_label: str | None = None
     issued_at: datetime
+    expires_at: datetime | None = None
     student_name: str
     title: str
+    body: str | None = None
     verify_url: str | None = None
     issued_by: str = "CAISBE"
 
@@ -494,6 +508,7 @@ class CertificateVerifyOut(BaseModel):
     course_title: str | None = None
     membership_number: str | None = None
     issued_at: datetime
+    expires_at: datetime | None = None
     issued_by: str = "CAISBE"
     verify_url: str
 
