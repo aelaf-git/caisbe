@@ -35,6 +35,7 @@ from app.schemas.news import NewsPostOut
 from app.schemas.testimonials import TestimonialOut
 from app.services.analytics import record_site_visit
 from app.services.commerce import apply_profile_fields, normalize_membership_type
+from app.services.membership import is_student_membership
 from app.services.hero import ensure_default_hero_slides
 from app.services.settings import hero_transition_ms
 
@@ -256,10 +257,15 @@ def apply_membership(
     payload: MembershipApplicationIn,
     db: Session = Depends(get_db),
 ) -> MembershipApplicationOut:
-    membership_type = normalize_membership_type(payload.membership_type)
+    membership_type = normalize_membership_type(payload.membership_type) or "student"
     email = payload.email.lower().strip()
     user = db.query(User).filter(User.email == email, User.role == "student").first()
     now = datetime.now(timezone.utc)
+    # Never elevate live membership from the public form. Paid types wait for portal checkout.
+    if user and not is_student_membership(membership_type):
+        app_status = "pending_payment"
+    else:
+        app_status = "pending"
     application = MembershipApplication(
         user_id=user.id if user else None,
         full_name=payload.full_name.strip(),
@@ -271,8 +277,8 @@ def apply_membership(
         organization=(payload.organization or "").strip() or None,
         job_title=((payload.job_title or "").strip() or None),
         details=((payload.details or "").strip() or None),
-        membership_type=membership_type or "student",
-        membership_status="pending",
+        membership_type=membership_type,
+        membership_status=app_status,
         membership_date=now,
     )
     db.add(application)
@@ -287,11 +293,8 @@ def apply_membership(
                 "address": payload.address,
                 "organization": payload.organization,
                 "job_title": (payload.job_title or "")[:120] or None,
-                "membership_type": membership_type,
             },
         )
-        if user.membership_status == "pending":
-            user.membership_status = "pending"
     db.commit()
     db.refresh(application)
     return MembershipApplicationOut.model_validate(application)

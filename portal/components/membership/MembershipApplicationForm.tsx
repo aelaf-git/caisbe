@@ -14,9 +14,14 @@ import {
   type BaseMembershipId,
   type MembershipCertificateTypePublic,
 } from "@/lib/membershipApplication";
+import PasswordCriteriaList from "@/components/ui/PasswordCriteriaList";
+import { MIN_PASSWORD_LENGTH, passwordStrengthError } from "@/lib/password";
 
 const inputClass =
   "mt-1 h-11 w-full rounded-md border border-ifma-border bg-white px-3 text-sm outline-none focus:border-caisbe-red";
+
+const SUPPORTING_ACCEPT =
+  ".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp";
 
 type Mode = "online" | "upload";
 type Kind = "application" | "renewal";
@@ -37,20 +42,52 @@ function checkedLabels(
   return options.filter((option) => flags[option.id]).map((option) => option.label);
 }
 
+function RequiredMark() {
+  return (
+    <span className="ml-0.5 text-caisbe-red" aria-hidden>
+      *
+    </span>
+  );
+}
+
+function PasswordVisibilityIcon({ visible }: { visible: boolean }) {
+  if (visible) {
+    return (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+        <path d="M1 1l22 22" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 function Field({
   label,
   hint,
+  required = false,
   className = "",
   children,
 }: {
   label: string;
   hint?: string;
+  required?: boolean;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <label className={`block text-sm font-semibold text-caisbe-text-dark ${className}`}>
-      {label}
+      <span>
+        {label}
+        {required ? <RequiredMark /> : null}
+      </span>
       {hint ? (
         <span className="mt-1 block text-xs font-normal leading-5 text-caisbe-muted">{hint}</span>
       ) : null}
@@ -59,12 +96,13 @@ function Field({
   );
 }
 
-function SectionBar({ title }: { title: string }) {
+function SectionBar({ title, required = false }: { title: string; required?: boolean }) {
   return (
     <div className="mt-8 flex items-center gap-3 md:col-span-2">
       <span className="h-3 w-3 shrink-0 rounded-full border-2 border-caisbe-red bg-white" />
       <h3 className="font-hopewell-display text-sm font-bold uppercase tracking-wide text-caisbe-red">
         {title}
+        {required ? <RequiredMark /> : null}
       </h3>
       <span className="h-0.5 flex-1 bg-caisbe-red" />
     </div>
@@ -76,6 +114,10 @@ function splitName(fullName?: string | null) {
   if (parts.length === 0 || !parts[0]) return { first: "", last: "" };
   if (parts.length === 1) return { first: parts[0], last: "" };
   return { first: parts[0], last: parts.slice(1).join(" ") };
+}
+
+function isOrganizationMembership(api: string | undefined) {
+  return api === "institutional" || api === "corporate";
 }
 
 export default function MembershipApplicationForm({
@@ -120,9 +162,12 @@ export default function MembershipApplicationForm({
     emptyFlags(additionalIds),
   );
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [supportingDocument, setSupportingDocument] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -138,7 +183,21 @@ export default function MembershipApplicationForm({
   const printHref = siteUrl(isRenewal ? "/membership/forms/renewal" : "/membership/forms/application");
 
   const labeledBaseOptions = useMemo(() => withBaseMembershipLabels(certPrices), [certPrices]);
-
+  const selectedBase = useMemo(
+    () => labeledBaseOptions.filter((option) => base[option.id]),
+    [labeledBaseOptions, base],
+  );
+  const selectedType =
+    selectedBase.find((option) => option.api !== "student")?.api || selectedBase[0]?.api;
+  const orgMembership = isOrganizationMembership(selectedType);
+  const personalMembership = Boolean(selectedType) && !orgMembership;
+  const supportingRequired = orgMembership && (mode === "online" || isRegister);
+  const supportingLabel = orgMembership
+    ? "Licence or certification"
+    : "Educational qualifications or certifications";
+  const supportingHint = orgMembership
+    ? "Attach your organisation licence or certification (PDF, Word, or image)."
+    : "Optionally attach educational qualifications or professional certifications (PDF, Word, or image).";
   useEffect(() => {
     let active = true;
     apiFetch<MembershipCertificateTypePublic[]>("/membership/certificate-types", { auth: false })
@@ -153,6 +212,10 @@ export default function MembershipApplicationForm({
     };
   }, []);
 
+  useEffect(() => {
+    setSupportingDocument(null);
+  }, [selectedType]);
+
   function toggle<T extends string>(
     current: FlagMap<T>,
     setCurrent: (next: FlagMap<T>) => void,
@@ -161,9 +224,21 @@ export default function MembershipApplicationForm({
     setCurrent({ ...current, [id]: !current[id] });
   }
 
+  function selectBase(id: BaseMembershipId) {
+    const flags = emptyFlags(baseIds);
+    flags[id] = true;
+    setBase(flags);
+  }
+
+  async function uploadSupportingDocument(doc: File, label: string) {
+    const body = new FormData();
+    body.append("file", doc);
+    body.append("label", label);
+    await apiFetch("/me/membership/supporting-document", { method: "POST", body });
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const selectedBase = labeledBaseOptions.filter((option) => base[option.id]);
     if (mode === "upload") {
       if (!file) {
         setError("Please upload your completed membership form.");
@@ -203,14 +278,20 @@ export default function MembershipApplicationForm({
       setError("Please agree to the CAISBE bylaws and code of ethics.");
       return;
     }
-    if (isRegister && password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (isRegister) {
+      const passwordError = passwordStrengthError(password, confirmPassword);
+      if (passwordError) {
+        setError(passwordError);
+        return;
+      }
+    }
+    if (supportingRequired && !supportingDocument) {
+      setError("Please attach your licence or certification.");
       return;
     }
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
     const phone = mobile.trim() || businessPhone.trim();
-    const selectedType = selectedBase.find((option) => option.api !== "student")?.api || selectedBase[0].api;
     const baseLabels = checkedLabels(labeledBaseOptions, base);
     const chapterLabels = checkedLabels(chapterMembershipOptions, chapter);
     const additionalLabels = checkedLabels(additionalMembershipOptions, additional);
@@ -228,11 +309,14 @@ export default function MembershipApplicationForm({
       additionalLabels.length ? `Additional options: ${additionalLabels.join(", ")}` : null,
       "Agreed to CAISBE bylaws and code of ethics.",
     ].filter(Boolean);
+    const details = lines.join("\n").slice(0, 8000);
 
     setBusy(true);
     setError(null);
     setMessage(null);
     try {
+      const selectedIsStudent = (selectedType || "student") === "student";
+
       if (isRegister) {
         await register({
           full_name: fullName,
@@ -247,32 +331,42 @@ export default function MembershipApplicationForm({
           organization: organization.trim().slice(0, 160) || null,
           job_title: position.trim().slice(0, 120) || null,
           membership_type: selectedType,
-          details: lines.join("\n").slice(0, 8000),
+          details,
         });
+        if (supportingDocument) {
+          await uploadSupportingDocument(supportingDocument, supportingLabel);
+        }
         onRegistered?.();
         return;
       }
-      await apiFetch("/me/membership/apply", {
-        method: "POST",
-        body: JSON.stringify({
-          full_name: fullName,
-          email,
-          phone,
-          country,
-          city,
-          address: address.trim() || null,
-          organization: organization.trim().slice(0, 160) || null,
-          job_title: position.trim().slice(0, 120) || null,
-          membership_type: selectedType,
-          details: lines.join("\n").slice(0, 8000),
-          kind,
-        }),
-      });
+
+      const body = new FormData();
+      body.append("full_name", fullName);
+      body.append("email", email);
+      body.append("phone", phone);
+      body.append("country", country);
+      body.append("city", city);
+      if (address.trim()) body.append("address", address.trim());
+      if (organization.trim()) body.append("organization", organization.trim().slice(0, 160));
+      if (position.trim()) body.append("job_title", position.trim().slice(0, 120));
+      body.append("membership_type", selectedType || "student");
+      body.append("details", details);
+      body.append("kind", kind);
+      if (supportingDocument) {
+        body.append("supporting_document", supportingDocument);
+        body.append("supporting_document_label", supportingLabel);
+      }
+      await apiFetch("/me/membership/apply", { method: "POST", body });
       setMessage(
-        isRenewal
-          ? "Renewal received. Your membership certificate validity has been refreshed."
-          : "Membership updated. Your certificate now matches the selected type.",
+        selectedIsStudent
+          ? isRenewal
+            ? "Renewal received. Your student membership certificate is ready."
+            : "Student membership is active. Your certificate is ready to download."
+          : isRenewal
+            ? "Renewal application received. Confirm payment below to extend your certificate."
+            : "Application received. Confirm payment below to activate this membership and update your certificate.",
       );
+      setSupportingDocument(null);
       onSuccess?.();
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : err instanceof Error ? err.message : "Unable to submit.");
@@ -295,6 +389,9 @@ export default function MembershipApplicationForm({
         <a href={`mailto:${membershipApplicationCopy.email}`} className="font-semibold text-caisbe-red">
           Email: {membershipApplicationCopy.email}
         </a>
+      </p>
+      <p className="mt-3 text-xs text-caisbe-muted">
+        Fields marked with <span className="font-semibold text-caisbe-red">*</span> are required.
       </p>
 
       {isRegister ? null : (
@@ -352,7 +449,10 @@ export default function MembershipApplicationForm({
             </a>
           </div>
           <label className="mt-4 block font-semibold text-caisbe-text-dark">
-            Upload completed form (PDF or Word)
+            <span>
+              Upload completed form (PDF or Word)
+              <RequiredMark />
+            </span>
             <input
               type="file"
               accept=".pdf,.doc,.docx,application/pdf"
@@ -378,10 +478,10 @@ export default function MembershipApplicationForm({
             />
           </Field>
         ) : null}
-        <Field label="First Name">
+        <Field label="First Name" required>
           <input className={inputClass} required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
         </Field>
-        <Field label="Last Name">
+        <Field label="Last Name" required>
           <input className={inputClass} required value={lastName} onChange={(e) => setLastName(e.target.value)} />
         </Field>
         <Field label="Designation">
@@ -393,11 +493,17 @@ export default function MembershipApplicationForm({
         <Field
           label="Company/Organization"
           hint={membershipApplicationCopy.organizationHint}
+          required={orgMembership}
           className="md:col-span-2"
         >
-          <input className={inputClass} value={organization} onChange={(e) => setOrganization(e.target.value)} />
+          <input
+            className={inputClass}
+            required={orgMembership}
+            value={organization}
+            onChange={(e) => setOrganization(e.target.value)}
+          />
         </Field>
-        <Field label="Email">
+        <Field label="Email" required>
           <input
             type="email"
             className={inputClass}
@@ -407,36 +513,75 @@ export default function MembershipApplicationForm({
             readOnly={!isRegister && Boolean(user?.email)}
           />
         </Field>
-        <Field label="Mobile/Phone Number">
+        <Field label="Mobile/Phone Number" required>
           <input className={inputClass} required value={mobile} onChange={(e) => setMobile(e.target.value)} />
         </Field>
         {isRegister ? (
-          <Field label="Password" hint="At least 8 characters." className="md:col-span-2">
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                className={`${inputClass} pr-12`}
-                required
-                minLength={8}
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((open) => !open)}
-                className="absolute inset-y-0 right-0 top-1 inline-flex h-11 w-12 items-center justify-center text-caisbe-muted hover:text-caisbe-red"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-          </Field>
+          <>
+            <Field
+              label="Password"
+              hint={`Use at least ${MIN_PASSWORD_LENGTH} characters with upper and lower case letters, a number, and a special character.`}
+              required
+              className="md:col-span-2"
+            >
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className={`${inputClass} pr-12`}
+                  required
+                  minLength={MIN_PASSWORD_LENGTH}
+                  maxLength={128}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((open) => !open)}
+                  className="absolute inset-y-0 right-0 top-1 inline-flex h-11 w-12 items-center justify-center text-caisbe-muted transition-colors hover:text-caisbe-red"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  <PasswordVisibilityIcon visible={showPassword} />
+                </button>
+              </div>
+            </Field>
+            <PasswordCriteriaList password={password} className="md:col-span-2" />
+            <Field label="Confirm password" required className="md:col-span-2">
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  className={`${inputClass} pr-12`}
+                  required
+                  minLength={MIN_PASSWORD_LENGTH}
+                  maxLength={128}
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((open) => !open)}
+                  className="absolute inset-y-0 right-0 top-1 inline-flex h-11 w-12 items-center justify-center text-caisbe-muted transition-colors hover:text-caisbe-red"
+                  aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                  aria-pressed={showConfirmPassword}
+                >
+                  <PasswordVisibilityIcon visible={showConfirmPassword} />
+                </button>
+              </div>
+            </Field>
+            <PasswordCriteriaList
+              password={password}
+              confirmPassword={confirmPassword}
+              mode="match"
+              className="md:col-span-2"
+            />
+          </>
         ) : null}
         <Field label="Address">
           <input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} />
         </Field>
-        <Field label="City">
+        <Field label="City" required>
           <input className={inputClass} required value={city} onChange={(e) => setCity(e.target.value)} />
         </Field>
         <Field label="State/Province">
@@ -453,30 +598,98 @@ export default function MembershipApplicationForm({
         <Field label="Zip/Mail Code">
           <input className={inputClass} value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
         </Field>
-        <Field label="Country">
+        <Field label="Country" required>
           <input className={inputClass} required value={country} onChange={(e) => setCountry(e.target.value)} />
         </Field>
-        <Field label="Business Phone">
+        <Field label="Business Phone" className="md:col-span-2">
           <input className={inputClass} value={businessPhone} onChange={(e) => setBusinessPhone(e.target.value)} />
         </Field>
 
-        <SectionBar title="Base membership" />
+        <SectionBar title="Base membership" required />
         <fieldset className="md:col-span-2">
-          <legend className="sr-only">Base membership</legend>
-          <div className="flex flex-wrap gap-x-5 gap-y-3">
-            {labeledBaseOptions.map((option) => (
-              <label key={option.id} className="inline-flex items-center gap-2 text-sm text-caisbe-text">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-caisbe-red"
-                  checked={base[option.id]}
-                  onChange={() => toggle(base, setBase, option.id)}
-                />
-                {option.label}
-              </label>
-            ))}
+          <legend className="sr-only">Base membership (required)</legend>
+          <p className="mb-3 text-xs leading-5 text-caisbe-muted">
+            Prices follow the current CAISBE membership catalog. Student is free; other types are paid after
+            {isRegister ? " you create your account" : " you submit this application"}.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {labeledBaseOptions.map((option) => {
+              const selected = base[option.id];
+              return (
+                <label
+                  key={option.id}
+                  className={`flex cursor-pointer items-center justify-between gap-3 rounded-md border px-3 py-3 text-sm transition ${
+                    selected
+                      ? "border-caisbe-red bg-caisbe-red/5 text-caisbe-text-dark"
+                      : "border-ifma-border bg-white text-caisbe-text hover:border-caisbe-red"
+                  }`}
+                >
+                  <span className="inline-flex min-w-0 items-center gap-2">
+                    <input
+                      type="radio"
+                      name="base-membership"
+                      className="h-4 w-4 accent-caisbe-red"
+                      checked={selected}
+                      onChange={() => selectBase(option.id)}
+                      required={selectedBase.length === 0}
+                    />
+                    <span className="font-medium">{option.name}</span>
+                  </span>
+                  <span
+                    className={`shrink-0 text-xs font-bold uppercase tracking-wide ${
+                      option.priceCents === 0 ? "text-caisbe-muted" : "text-caisbe-red"
+                    }`}
+                  >
+                    {option.priceLabel}
+                  </span>
+                </label>
+              );
+            })}
           </div>
+          {selectedBase[0] ? (
+            <p className="mt-3 rounded-md bg-[#f8fafc] px-3 py-2 text-sm text-caisbe-text">
+              Selected: <span className="font-semibold">{selectedBase[0].name}</span>
+              {" · "}
+              <span className="font-semibold text-caisbe-red">{selectedBase[0].priceLabel}</span>
+              {selectedBase[0].api !== "student" ? (
+                <span className="mt-1 block text-xs text-caisbe-muted">
+                  {isRegister
+                    ? "You get a free student certificate on signup. This paid type unlocks after you confirm payment on Membership."
+                    : "Confirm payment on this page to activate this membership certificate."}
+                </span>
+              ) : (
+                <span className="mt-1 block text-xs text-caisbe-muted">
+                  Student membership includes a free lifetime certificate.
+                </span>
+              )}
+            </p>
+          ) : null}
         </fieldset>
+
+        {personalMembership || orgMembership ? (
+          <>
+            <SectionBar title="Supporting documents" required={supportingRequired} />
+            <Field
+              label={supportingLabel}
+              hint={supportingHint}
+              required={supportingRequired}
+              className="md:col-span-2"
+            >
+              <input
+                type="file"
+                accept={SUPPORTING_ACCEPT}
+                required={supportingRequired}
+                className="mt-2 block w-full text-sm font-normal text-caisbe-text file:mr-3 file:rounded-full file:border-0 file:bg-caisbe-red file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                onChange={(e) => setSupportingDocument(e.target.files?.[0] ?? null)}
+              />
+              {supportingDocument ? (
+                <span className="mt-2 block text-xs font-normal text-caisbe-muted">
+                  Selected: {supportingDocument.name}
+                </span>
+              ) : null}
+            </Field>
+          </>
+        ) : null}
 
         <p className="text-sm font-semibold text-caisbe-text-dark md:col-span-2">Chapter Membership</p>
         <Field label="Name of Chapter (if any)" className="md:col-span-2">
@@ -520,8 +733,15 @@ export default function MembershipApplicationForm({
           className="mt-1 h-4 w-4 accent-caisbe-red"
           checked={agreed}
           onChange={(e) => setAgreed(e.target.checked)}
+          required
         />
-        <span>{membershipApplicationCopy.agreement}</span>
+        <span>
+          <span className="font-semibold">
+            Agreement
+            <RequiredMark />
+          </span>
+          <span className="mt-1 block">{membershipApplicationCopy.agreement}</span>
+        </span>
       </label>
       ) : null}
 

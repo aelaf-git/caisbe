@@ -32,15 +32,47 @@ def student_has_completed_course(db: Session, user_id: int) -> bool:
 
 
 def membership_is_accessible(db: Session, user: User) -> bool:
-    """Any issued membership certificate is accessible; students always qualify."""
-    if is_student_membership(user.membership_type) or user.membership_type:
+    """Student certs are always available; paid types require active status."""
+    if is_student_membership(user.membership_type) or not user.membership_type:
         return True
-    existing = (
-        db.query(MembershipCertificate.id)
-        .filter(MembershipCertificate.user_id == user.id)
+    if (user.membership_status or "").strip().lower() == "active":
+        return True
+    return False
+
+
+def get_pending_membership_application(
+    db: Session,
+    user: User,
+) -> MembershipApplication | None:
+    return (
+        db.query(MembershipApplication)
+        .filter(
+            MembershipApplication.user_id == user.id,
+            MembershipApplication.membership_status == "pending_payment",
+        )
+        .order_by(MembershipApplication.id.desc())
         .first()
     )
-    return existing is not None or student_has_completed_course(db, user.id)
+
+
+def mark_pending_membership_applications_active(
+    db: Session,
+    user: User,
+    membership_type: str,
+) -> None:
+    rows = (
+        db.query(MembershipApplication)
+        .filter(
+            MembershipApplication.user_id == user.id,
+            MembershipApplication.membership_type == membership_type,
+            MembershipApplication.membership_status == "pending_payment",
+        )
+        .all()
+    )
+    now = datetime.now(timezone.utc)
+    for row in rows:
+        row.membership_status = "active"
+        row.membership_date = now
 
 
 def get_membership_certificate_type(
@@ -120,14 +152,14 @@ def issue_membership_certificate(
         return existing
 
     membership_number = f"CAISBE-M-{user.id:06d}"
-    certificate_code = f"CAISBE-MEM-{secrets.token_hex(4).upper()}"
+    certificate_code = f"CAISBE-MEM-{secrets.token_hex(8).upper()}"
     while (
         db.query(MembershipCertificate)
         .filter(MembershipCertificate.certificate_code == certificate_code)
         .first()
         is not None
     ):
-        certificate_code = f"CAISBE-MEM-{secrets.token_hex(4).upper()}"
+        certificate_code = f"CAISBE-MEM-{secrets.token_hex(8).upper()}"
 
     row = MembershipCertificate(
         user_id=user.id,
@@ -156,6 +188,16 @@ def activate_membership(
     if user.membership_date is None:
         user.membership_date = now
     return issue_membership_certificate(db, user, renew=renew)
+
+
+def revert_membership_to_student(db: Session, user: User) -> MembershipCertificate:
+    """After a membership refund, drop paid access back to free student membership."""
+    now = datetime.now(timezone.utc)
+    user.membership_type = "student"
+    user.membership_status = "active"
+    if user.membership_date is None:
+        user.membership_date = now
+    return issue_membership_certificate(db, user, renew=True)
 
 
 def record_membership_application(

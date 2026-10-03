@@ -79,13 +79,13 @@ export default function MembershipCertificatePage() {
           </h1>
           <p className="mt-2 text-sm text-caisbe-muted">
             {lockedMessage ||
-              "Your membership certificate is not available yet. Open Membership to view your student certificate or complete an upgrade."}
+              "Complete payment to unlock this membership certificate. Student certificates are available free from Membership."}
           </p>
           <Link
-            href="/courses"
+            href="/membership"
             className="mt-4 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:text-caisbe-red-dark"
           >
-            Go to courses
+            Go to Membership
           </Link>
         </div>
       </div>

@@ -61,12 +61,30 @@ export function baseMembershipLabel(
 
 export function withBaseMembershipLabels(
   prices: MembershipCertificateTypePublic[] | null | undefined,
-): { id: BaseMembershipId; api: string; label: string }[] {
-  return baseMembershipOptions.map((option) => ({
-    id: option.id,
-    api: option.api,
-    label: baseMembershipLabel(option, prices),
-  }));
+): {
+  id: BaseMembershipId;
+  api: string;
+  label: string;
+  name: string;
+  priceLabel: string;
+  priceCents: number | null;
+  currency: string;
+}[] {
+  return baseMembershipOptions.map((option) => {
+    const match = prices?.find((row) => row.membership_type === option.api);
+    const priceCents = match ? match.price_cents : null;
+    const currency = match?.currency || "cad";
+    return {
+      id: option.id,
+      api: option.api,
+      name: option.name,
+      label: baseMembershipLabel(option, prices),
+      priceLabel:
+        priceCents == null ? "—" : formatMembershipPrice(priceCents, currency),
+      priceCents,
+      currency,
+    };
+  });
 }
 
 export function siteUrl(path = "") {

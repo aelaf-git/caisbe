@@ -17,6 +17,8 @@ import {
   type SavedCard,
   type SecurityQuestion,
 } from "@/lib/commerce";
+import PasswordCriteriaList from "@/components/ui/PasswordCriteriaList";
+import { MIN_PASSWORD_LENGTH, passwordStrengthError } from "@/lib/password";
 
 const SEC_DEFAULT = [
   { question: "What city were you born in?", answer: "" },
@@ -120,8 +122,9 @@ export default function ManageProfilePage() {
     event.preventDefault();
     setPasswordError(null);
     setPasswordMessage(null);
-    if (newPassword !== confirmPassword) {
-      setPasswordError("New passwords do not match.");
+    const strengthError = passwordStrengthError(newPassword, confirmPassword);
+    if (strengthError) {
+      setPasswordError(strengthError);
       return;
     }
     setPasswordBusy(true);
@@ -231,9 +234,40 @@ export default function ManageProfilePage() {
         {passwordError ? <p className="mt-2 text-sm text-caisbe-red">{passwordError}</p> : null}
         {passwordMessage ? <p className="mt-2 text-sm text-caisbe-text">{passwordMessage}</p> : null}
         <form onSubmit={(e) => void handlePassword(e)} className="mt-4 max-w-md space-y-4">
-          <label className="block text-sm">Current password<input type="password" className={inputClass} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required /></label>
-          <label className="block text-sm">New password<input type="password" minLength={8} className={inputClass} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required /></label>
-          <label className="block text-sm">Confirm new password<input type="password" minLength={8} className={inputClass} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required /></label>
+          <label className="block text-sm">
+            Current password
+            <input type="password" className={inputClass} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+          </label>
+          <label className="block text-sm">
+            New password
+            <input
+              type="password"
+              minLength={MIN_PASSWORD_LENGTH}
+              maxLength={128}
+              className={inputClass}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+            />
+          </label>
+          <PasswordCriteriaList password={newPassword} />
+          <label className="block text-sm">
+            Confirm new password
+            <input
+              type="password"
+              minLength={MIN_PASSWORD_LENGTH}
+              maxLength={128}
+              className={inputClass}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </label>
+          <PasswordCriteriaList
+            password={newPassword}
+            confirmPassword={confirmPassword}
+            mode="match"
+          />
           <button type="submit" disabled={passwordBusy} className="h-11 rounded-md border-2 border-caisbe-red bg-caisbe-red px-5 text-sm font-semibold uppercase tracking-wide text-white disabled:opacity-60">
             {passwordBusy ? "Updating…" : "Change password"}
           </button>

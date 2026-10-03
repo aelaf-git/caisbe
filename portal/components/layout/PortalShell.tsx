@@ -5,11 +5,17 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import PortalSidebar from "@/components/layout/PortalSidebar";
 
+function isImmersiveCoursePath(pathname: string | null) {
+  // /courses/123 only — not the catalog or checkout
+  return Boolean(pathname && /^\/courses\/\d+$/.test(pathname));
+}
+
 export default function PortalShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const immersive = isImmersiveCoursePath(pathname);
 
   useEffect(() => {
     if (!loading && (!user || user.role === "admin")) {
@@ -27,10 +33,22 @@ export default function PortalShell({ children }: { children: React.ReactNode })
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   if (loading || !user || user.role === "admin") {
     return (
       <div className="flex flex-1 items-center justify-center px-4 py-16 text-sm text-caisbe-muted">
         Loading portal…
+      </div>
+    );
+  }
+
+  if (immersive) {
+    return (
+      <div className="flex min-h-dvh flex-1 flex-col bg-admin-canvas">
+        <main className="min-h-0 min-w-0 flex-1">{children}</main>
       </div>
     );
   }

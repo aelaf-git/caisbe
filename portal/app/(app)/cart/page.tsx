@@ -4,14 +4,9 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import ProfileForm, { profileFromUser } from "@/components/portal/ProfileForm";
+import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
-import {
-  STRIPE_PROMO_HINT,
-  formatMoney,
-  type Cart,
-  type CheckoutResult,
-} from "@/lib/commerce";
+import { formatMoney, type Cart, type CheckoutResult } from "@/lib/commerce";
 
 export default function CartPage() {
   return (
@@ -24,7 +19,7 @@ export default function CartPage() {
 function CartInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, refreshUser } = useAuth();
+  const { refreshUser } = useAuth();
   const [cart, setCart] = useState<Cart | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -38,10 +33,9 @@ function CartInner() {
 
   useEffect(() => {
     let active = true;
-    void loadCart()
-      .catch((err) => {
-        if (active) setError(err instanceof ApiError ? err.detail : "Unable to load cart.");
-      });
+    void loadCart().catch((err) => {
+      if (active) setError(err instanceof ApiError ? err.detail : "Unable to load cart.");
+    });
     return () => {
       active = false;
     };
@@ -60,7 +54,7 @@ function CartInner() {
     }
   }
 
-  async function pay() {
+  async function buy() {
     setBusy(true);
     setError(null);
     try {
@@ -68,13 +62,10 @@ function CartInner() {
         method: "POST",
         body: JSON.stringify({ from_cart: true }),
       });
-      if (result.checkout_url) {
-        window.location.href = result.checkout_url;
-        return;
-      }
+      await refreshUser();
       router.push(`/checkout/success?order=${result.order_number}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to start checkout.");
+      setError(err instanceof ApiError ? err.detail : "Unable to complete purchase.");
       try {
         await loadCart();
       } catch {
@@ -86,41 +77,68 @@ function CartInner() {
   }
 
   const items = cart?.items ?? [];
-  const complimentary = (cart?.subtotal_cents ?? 0) === 0;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-caisbe-text-dark">Cart</h1>
-        <p className="mt-2 text-sm text-caisbe-muted">
-          Add courses from My courses, then pay once with Stripe. Discount codes are entered on the Stripe page.
-        </p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Learning"
+        title="Cart"
+        description="Review your courses, then buy once to unlock everything in the cart."
+        actions={
+          <Link
+            href="/courses"
+            className="inline-flex h-11 items-center rounded-full border-2 border-ifma-border px-5 text-sm font-bold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+          >
+            Browse courses
+          </Link>
+        }
+      />
 
       {cancelled ? (
-        <p className="text-sm text-caisbe-red">Checkout was cancelled. Your cart is unchanged — try again when ready.</p>
+        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+          Checkout was cancelled. Your cart is unchanged — try again when ready.
+        </div>
       ) : null}
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+      {error ? (
+        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+          {error}
+        </div>
+      ) : null}
 
       {!cart ? (
         <p className="text-sm text-caisbe-muted">Loading cart…</p>
       ) : items.length === 0 ? (
-        <section className="border border-ifma-border bg-admin-surface p-6">
+        <section className="rounded-[20px] bg-white p-6 shadow-hopewell">
           <p className="text-sm text-caisbe-muted">Your cart is empty.</p>
-          <Link href="/courses" className="mt-3 inline-flex text-sm font-semibold text-caisbe-red hover:underline">
+          <Link
+            href="/courses"
+            className="mt-4 inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+          >
             Browse courses
           </Link>
         </section>
       ) : (
         <>
-          <section className="border border-ifma-border bg-admin-surface">
+          <section className="rounded-[20px] bg-white shadow-hopewell">
+            <div className="border-b border-ifma-border-light px-6 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+                {items.length} course{items.length === 1 ? "" : "s"}
+              </p>
+              <h2 className="mt-1 font-display text-xl font-semibold text-caisbe-text-dark">
+                Order summary
+              </h2>
+            </div>
             <ul className="divide-y divide-ifma-border-light">
               {items.map((item) => (
                 <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">{item.course_code}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">
+                      {item.course_code}
+                    </p>
                     <p className="font-medium text-caisbe-text">{item.course_title}</p>
-                    <p className="mt-1 text-sm text-caisbe-muted">{formatMoney(item.price_cents, item.currency)}</p>
+                    <p className="mt-1 text-sm text-caisbe-muted">
+                      {formatMoney(item.price_cents, item.currency)}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -133,41 +151,39 @@ function CartInner() {
                 </li>
               ))}
             </ul>
-            <div className="flex items-center justify-between border-t border-ifma-border-light px-6 py-4 text-sm font-semibold">
-              <span>Subtotal</span>
-              <span>{formatMoney(cart.subtotal_cents, cart.currency)}</span>
+            <div className="flex items-center justify-between border-t border-ifma-border-light px-6 py-4">
+              <span className="text-sm font-semibold text-caisbe-text-dark">Subtotal</span>
+              <span className="text-lg font-semibold text-caisbe-text-dark">
+                {formatMoney(cart.subtotal_cents, cart.currency)}
+              </span>
             </div>
           </section>
 
-          {!user?.profile_completed ? (
-            <section className="border border-ifma-border bg-admin-surface p-6">
-              <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Student profile</h2>
-              <p className="mt-1 mb-4 text-sm text-caisbe-muted">Required before payment.</p>
-              <ProfileForm
-                initial={profileFromUser(user)}
-                submitLabel="Save and continue"
-                onSaved={() => void refreshUser()}
-              />
-            </section>
-          ) : (
-            <>
-              {!complimentary ? (
-                <p className="text-sm text-caisbe-muted">{STRIPE_PROMO_HINT}</p>
-              ) : null}
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void pay()}
-                className="inline-flex h-12 items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red-dark disabled:opacity-60"
-              >
-                {busy
-                  ? "Processing…"
-                  : complimentary
-                    ? "Confirm complimentary enrollment"
-                    : `Pay with card · ${formatMoney(cart.subtotal_cents, cart.currency)}`}
-              </button>
-            </>
-          )}
+          <section className="rounded-[20px] border-2 border-caisbe-red/30 bg-white p-6 shadow-hopewell">
+            <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+              Payment
+            </p>
+            <h2 className="mt-1 font-display text-2xl font-semibold text-caisbe-text-dark">
+              Buy cart courses
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-caisbe-muted">
+              Confirm to purchase every course in this cart. Access unlocks immediately after you buy.
+            </p>
+            <p className="mt-4 text-lg font-semibold text-caisbe-text-dark">
+              {formatMoney(cart.subtotal_cents, cart.currency)}
+            </p>
+            <p className="mt-1 text-xs text-caisbe-muted">
+              Card checkout via Stripe will be added next. For now, buy to enroll in all cart courses.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void buy()}
+              className="mt-5 inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            >
+              {busy ? "Buying…" : `Buy now · ${formatMoney(cart.subtotal_cents, cart.currency)}`}
+            </button>
+          </section>
         </>
       )}
     </div>

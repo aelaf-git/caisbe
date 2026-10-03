@@ -540,13 +540,15 @@ class OrderItem(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
-    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="RESTRICT"))
+    course_id: Mapped[int | None] = mapped_column(ForeignKey("courses.id", ondelete="RESTRICT"), nullable=True)
+    membership_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    membership_kind: Mapped[str | None] = mapped_column(String(20), nullable=True)
     title: Mapped[str] = mapped_column(String(255))
     unit_price_cents: Mapped[int] = mapped_column(Integer)
     quantity: Mapped[int] = mapped_column(Integer, default=1)
 
     order: Mapped[Order] = relationship(back_populates="items")
-    course: Mapped[Course] = relationship()
+    course: Mapped[Course | None] = relationship()
 
 
 class Invoice(Base):

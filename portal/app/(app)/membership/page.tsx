@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import DownloadCertificateButton from "@/components/certificates/DownloadCertificateButton";
 import MembershipCertificateDocument from "@/components/certificates/MembershipCertificateDocument";
@@ -9,7 +10,7 @@ import MembershipApplicationForm from "@/components/membership/MembershipApplica
 import { certificatePdfFileName } from "@/lib/certificatePdf";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
-import { membershipTypeLabel } from "@/lib/commerce";
+import { formatMoney, membershipTypeLabel, type CheckoutResult } from "@/lib/commerce";
 import type { MembershipCertificate } from "@/lib/lms";
 
 function MemberPathCard({
@@ -46,13 +47,23 @@ function MemberPathCard({
   );
 }
 
-export default function PortalMembershipPage() {
+function MembershipPageInner() {
   const { user, refreshUser } = useAuth();
+  const searchParams = useSearchParams();
   const [cert, setCert] = useState<MembershipCertificate | null>(null);
   const [lockedMessage, setLockedMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [path, setPath] = useState<"new" | "existing" | null>(null);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+
+  const pendingType = user?.pending_membership_type;
+  const pendingLabel =
+    user?.pending_membership_label || membershipTypeLabel(pendingType || undefined);
+  const pendingPrice = user?.pending_membership_price_cents;
+  const pendingCurrency = user?.pending_membership_currency || "cad";
+  const pendingKind = user?.pending_membership_kind || "application";
 
   async function loadCertificate() {
     setLoading(true);
@@ -75,7 +86,13 @@ export default function PortalMembershipPage() {
 
   useEffect(() => {
     void loadCertificate();
-  }, [user?.id, user?.membership_type]);
+  }, [user?.id, user?.membership_type, user?.membership_status, pendingType]);
+
+  useEffect(() => {
+    if (searchParams.get("cancelled") === "1") {
+      setPayError("Payment was cancelled. You can try again when ready.");
+    }
+  }, [searchParams]);
 
   const verifyUrl = useMemo(() => {
     if (!cert) return "";
@@ -85,12 +102,34 @@ export default function PortalMembershipPage() {
     return cert.verify_url || "";
   }, [cert]);
 
+  async function startMembershipPayment() {
+    if (!pendingType) return;
+    setPaying(true);
+    setPayError(null);
+    try {
+      await apiFetch<CheckoutResult>("/me/membership/checkout", {
+        method: "POST",
+        body: JSON.stringify({
+          membership_type: pendingType,
+          kind: pendingKind,
+        }),
+      });
+      await refreshUser();
+      await loadCertificate();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      setPayError(err instanceof ApiError ? err.detail : "Unable to complete membership payment.");
+    } finally {
+      setPaying(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Membership"
         title="Your membership"
-        description="You are a CAISBE student member by default. View and print your certificate, or use the forms below to upgrade or renew."
+        description="Student membership includes a free certificate. Paid membership types show their catalog price and unlock after you confirm payment below."
       />
 
       {error ? (
@@ -108,7 +147,12 @@ export default function PortalMembershipPage() {
         {loading ? (
           <p className="mt-4 text-sm text-caisbe-muted">Loading certificate…</p>
         ) : lockedMessage ? (
-          <p className="mt-4 text-sm text-caisbe-red">{lockedMessage}</p>
+          <div className="mt-4 space-y-2">
+            <p className="text-sm text-caisbe-red">{lockedMessage}</p>
+            <p className="text-sm text-caisbe-muted">
+              Complete payment below to unlock your paid membership certificate.
+            </p>
+          </div>
         ) : cert ? (
           <div className="mt-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -155,15 +199,15 @@ export default function PortalMembershipPage() {
         </h2>
         <div className="grid gap-6 md:grid-cols-2">
           <MemberPathCard
-            title="Become a new membership type"
-            description="Use the membership application to upgrade from student to another CAISBE membership type."
+            title="Upgrade Membership"
+            description="Apply for another membership type, then confirm payment to unlock its certificate."
             selected={path === "new"}
             onSelect={() => setPath("new")}
             mark="1"
           />
           <MemberPathCard
             title="Renew membership"
-            description="Renew your current membership so the certificate validity period is extended."
+            description="Renew a paid membership, then confirm payment to extend the certificate."
             selected={path === "existing"}
             onSelect={() => setPath("existing")}
             mark="2"
@@ -175,8 +219,13 @@ export default function PortalMembershipPage() {
             variant="account"
             user={user}
             onSuccess={() => {
-              void refreshUser();
-              void loadCertificate();
+              void refreshUser().then(() => {
+                void loadCertificate();
+                document.getElementById("membership-payment")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              });
             }}
           />
         ) : null}
@@ -186,12 +235,71 @@ export default function PortalMembershipPage() {
             variant="account"
             user={user}
             onSuccess={() => {
-              void refreshUser();
-              void loadCertificate();
+              void refreshUser().then(() => {
+                void loadCertificate();
+                document.getElementById("membership-payment")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              });
             }}
           />
         ) : null}
       </section>
+
+      {pendingType ? (
+        <section
+          id="membership-payment"
+          className="rounded-[20px] border-2 border-caisbe-red/30 bg-white p-6 shadow-hopewell"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+            Payment required
+          </p>
+          <h2 className="mt-1 font-display text-2xl font-semibold text-caisbe-text-dark">
+            {pendingKind === "renewal" ? "Renew" : "Activate"} {pendingLabel}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-caisbe-muted">
+            Confirm payment for this membership type. Your certificate updates as soon as payment is
+            confirmed.
+          </p>
+          <p className="mt-4 text-lg font-semibold text-caisbe-text-dark">
+            {typeof pendingPrice === "number"
+              ? formatMoney(pendingPrice, pendingCurrency)
+              : "Price unavailable"}
+          </p>
+          {typeof pendingPrice === "number" && pendingPrice > 0 ? (
+            <p className="mt-1 text-xs text-caisbe-muted">
+              Card checkout via Stripe will be added next. For now, confirm to activate this paid
+              membership and issue its certificate.
+            </p>
+          ) : null}
+          {payError ? <p className="mt-3 text-sm text-caisbe-red">{payError}</p> : null}
+          <button
+            type="button"
+            disabled={paying || typeof pendingPrice !== "number"}
+            onClick={() => void startMembershipPayment()}
+            className="mt-5 inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+          >
+            {paying
+              ? "Confirming…"
+              : typeof pendingPrice === "number"
+                ? `Confirm payment · ${formatMoney(pendingPrice, pendingCurrency)}`
+                : "Confirm payment"}
+          </button>
+        </section>
+      ) : null}
     </div>
+  );
+}
+
+export default function PortalMembershipPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="px-4 py-16 text-center text-sm text-caisbe-muted">Loading membership…</div>
+      }
+    >
+      <MembershipPageInner />
+    </Suspense>
   );
 }

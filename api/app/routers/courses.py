@@ -15,6 +15,7 @@ from app.config import settings
 from app.db import get_db
 from app.security.auth import get_current_user
 from app.security.html_sanitize import sanitize_html, strip_plain_text
+from app.security.limiter import limiter
 from app.models import (
     Certificate,
     CertificateTemplate,
@@ -28,6 +29,7 @@ from app.models import (
     AssignmentSubmission,
     BlockCompletion,
     LessonProgress,
+    MembershipApplication,
     MembershipCertificate,
     Quiz,
     QuizAttempt,
@@ -187,15 +189,33 @@ def _recompute_progress(db: Session, user: User, course: Course, enrollment: Enr
     enrollment.progress = int(round(100 * completed / total))
 
 
+def _course_topics_complete(db: Session, user: User, course: Course) -> bool:
+    done = _completed_lesson_ids(db, user, course)
+    for chapter in course.chapters:
+        for topic in chapter.lessons:
+            if topic.id not in done:
+                return False
+    return True
+
+
+def course_completion_requirements_met(db: Session, user: User, course: Course) -> bool:
+    """Certificate eligibility: all lessons done, plus final exam pass when configured."""
+    if not _course_topics_complete(db, user, course):
+        return False
+    if course.final_exam is not None and not _user_passed_final_exam(db, user, course):
+        return False
+    return True
+
+
 def _apply_progress(db: Session, user: User, course_id: int) -> Enrollment:
     course = db.query(Course).filter(Course.id == course_id, Course.status == "published").first()
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
     enrollment = require_active_enrollment(db, user, course_id)
     _recompute_progress(db, user, course, enrollment)
-    if enrollment.progress >= 100 and enrollment.status != "completed":
+    if enrollment.status != "completed":
         course = _load_published_course(db, course_id)
-        if course.final_exam is None or _user_passed_final_exam(db, user, course):
+        if course_completion_requirements_met(db, user, course):
             _finalize_course_completion(db, user, course, enrollment)
     return enrollment
 
@@ -296,7 +316,14 @@ def _issue_certificate(db: Session, user: User, course: Course) -> str:
     )
     if existing:
         return existing.certificate_code
-    certificate_code = f"CAISBE-{course.code}-{secrets.token_hex(4).upper()}"
+    certificate_code = f"CAISBE-{course.code}-{secrets.token_hex(8).upper()}"
+    while (
+        db.query(Certificate)
+        .filter(Certificate.certificate_code == certificate_code)
+        .first()
+        is not None
+    ):
+        certificate_code = f"CAISBE-{course.code}-{secrets.token_hex(8).upper()}"
     db.add(
         Certificate(
             user_id=user.id,
@@ -330,8 +357,15 @@ def _finalize_course_completion(
     course: Course,
     enrollment: Enrollment,
 ) -> str:
+    if not course_completion_requirements_met(db, user, course):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complete every topic"
+            + (" and pass the final exam" if course.final_exam is not None else "")
+            + " before earning a certificate.",
+        )
     enrollment.status = "completed"
-    enrollment.progress = 100
+    _recompute_progress(db, user, course, enrollment)
     certificate_code = _issue_certificate(db, user, course)
     issue_membership_certificate(db, user)
     return certificate_code
@@ -538,14 +572,11 @@ def _require_prior_topics_complete(db: Session, user: User, lesson: Lesson) -> N
 
 
 def _require_course_topics_complete(db: Session, user: User, course: Course) -> None:
-    done = _completed_lesson_ids(db, user, course)
-    for chapter in course.chapters:
-        for topic in chapter.lessons:
-            if topic.id not in done:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Complete every topic before the final exam.",
-                )
+    if not _course_topics_complete(db, user, course):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complete every topic before the final exam.",
+        )
 
 
 @router.post("/me/lessons/{lesson_id}/complete", status_code=status.HTTP_200_OK)
@@ -584,17 +615,11 @@ def complete_lesson(
     _recompute_progress(db, current_user, course, enrollment)
 
     certificate_code: str | None = None
-    if enrollment.progress >= 100:
-        if course.final_exam is None:
-            if enrollment.status != "completed":
-                certificate_code = _finalize_course_completion(db, current_user, course, enrollment)
-            else:
-                certificate_code = _issue_certificate(db, current_user, course)
-        elif _user_passed_final_exam(db, current_user, course):
-            if enrollment.status != "completed":
-                certificate_code = _finalize_course_completion(db, current_user, course, enrollment)
-            else:
-                certificate_code = _issue_certificate(db, current_user, course)
+    if course_completion_requirements_met(db, current_user, course):
+        if enrollment.status != "completed":
+            certificate_code = _finalize_course_completion(db, current_user, course, enrollment)
+        else:
+            certificate_code = _issue_certificate(db, current_user, course)
 
     db.commit()
     return {
@@ -997,7 +1022,9 @@ def start_final_exam(
 
 
 @router.post("/me/courses/{course_id}/final-exam/submit", response_model=QuizAttemptOut)
+@limiter.limit("20/minute")
 def submit_final_exam(
+    request: Request,
     course_id: int,
     payload: QuizSubmitIn,
     current_user: User = Depends(get_current_user),
@@ -1038,6 +1065,7 @@ def submit_final_exam(
     certificate_code = None
     if passed:
         enrollment = require_active_enrollment(db, current_user, course_id)
+        db.flush()
         certificate_code = _finalize_course_completion(db, current_user, course, enrollment)
 
     db.commit()
@@ -1073,20 +1101,121 @@ def get_my_membership_certificate(
 ) -> MembershipCertificateOut:
     if current_user.role == "admin":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membership certificate not found")
+    from app.services.membership import is_student_membership, membership_is_accessible
+
+    if not is_student_membership(current_user.membership_type) and not membership_is_accessible(
+        db, current_user
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Complete payment to unlock your membership certificate.",
+        )
     row = issue_membership_certificate(db, current_user)
     db.commit()
     db.refresh(row)
     return _membership_to_out(row, current_user.full_name, db)
 
 
+_MEMBERSHIP_DOC_SUFFIXES = {".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png", ".webp"}
+_MEMBERSHIP_FORM_SUFFIXES = {".pdf", ".doc", ".docx"}
+
+
+async def _save_membership_upload(
+    uploaded: UploadFile,
+    *,
+    allowed_suffixes: set[str],
+    max_bytes: int = 20 * 1024 * 1024,
+    invalid_detail: str = "Upload a PDF, Word, or image file.",
+) -> tuple[str, str]:
+    suffix = Path(uploaded.filename or "").suffix.lower()
+    if suffix not in allowed_suffixes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=invalid_detail,
+        )
+    upload_root = Path(settings.upload_dir)
+    upload_root.mkdir(parents=True, exist_ok=True)
+    safe_name = f"{uuid.uuid4().hex}{suffix}"
+    dest = upload_root / safe_name
+    written = 0
+    try:
+        with dest.open("wb") as out:
+            while True:
+                chunk = await uploaded.read(1024 * 1024)
+                if not chunk:
+                    break
+                written += len(chunk)
+                if written > max_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail="File is too large. Maximum size is 20 MB.",
+                    )
+                out.write(chunk)
+    except HTTPException:
+        dest.unlink(missing_ok=True)
+        raise
+    except Exception:
+        dest.unlink(missing_ok=True)
+        raise
+    if written == 0:
+        dest.unlink(missing_ok=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
+    original_name = Path(uploaded.filename or safe_name).name
+    return f"/api/uploads/{safe_name}", original_name
+
+
+def _append_supporting_document_details(
+    details: str | None,
+    *,
+    label: str,
+    original_name: str,
+    file_url: str,
+) -> str:
+    block = f"{label}: {original_name}\nFile: {file_url}"
+    base = (details or "").strip()
+    return f"{base}\n{block}".strip() if base else block
+
+
 @router.post("/me/membership/apply", response_model=MembershipApplicationOut, status_code=status.HTTP_201_CREATED)
-def apply_my_membership(
-    payload: MembershipApplicationIn,
+async def apply_my_membership(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> MembershipApplicationOut:
     if current_user.role == "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins cannot apply for membership.")
+
+    content_type = (request.headers.get("content-type") or "").lower()
+    supporting_note: str | None = None
+    if "multipart/form-data" in content_type:
+        form = await request.form(max_part_size=20 * 1024 * 1024)
+        payload = MembershipApplicationIn(
+            full_name=str(form.get("full_name") or ""),
+            email=str(form.get("email") or current_user.email),
+            phone=str(form.get("phone") or ""),
+            country=str(form.get("country") or ""),
+            city=str(form.get("city") or ""),
+            address=(str(form.get("address") or "").strip() or None),
+            organization=(str(form.get("organization") or "").strip() or None),
+            job_title=(str(form.get("job_title") or "").strip() or None),
+            membership_type=str(form.get("membership_type") or "student"),
+            details=(str(form.get("details") or "").strip() or None),
+            kind=(str(form.get("kind") or "").strip() or None),
+        )
+        uploaded = form.get("supporting_document")
+        if isinstance(uploaded, UploadFile) and (uploaded.filename or "").strip():
+            label = (
+                str(form.get("supporting_document_label") or "Supporting document").strip()
+                or "Supporting document"
+            )
+            file_url, original_name = await _save_membership_upload(
+                uploaded,
+                allowed_suffixes=_MEMBERSHIP_DOC_SUFFIXES,
+            )
+            supporting_note = f"{label}: {original_name}\nFile: {file_url}"
+    else:
+        payload = MembershipApplicationIn.model_validate(await request.json())
+
     membership_type = normalize_membership_type(payload.membership_type) or "student"
     apply_profile_fields(
         current_user,
@@ -1101,14 +1230,69 @@ def apply_my_membership(
         },
     )
     renew = (payload.kind or "").strip().lower() == "renewal"
-    activate_membership(db, current_user, membership_type, renew=renew)
+    details = (payload.details or "").strip() or None
+    if supporting_note:
+        details = f"{details}\n{supporting_note}".strip() if details else supporting_note
+    from app.services.membership import is_student_membership
+
+    if is_student_membership(membership_type):
+        activate_membership(db, current_user, membership_type, renew=renew)
+        status_value = "active"
+    else:
+        # Keep current active membership (usually student) until Stripe payment.
+        status_value = "pending_payment"
     application = record_membership_application(
         db,
         current_user,
         membership_type=membership_type,
-        details=payload.details,
-        status_value="active",
+        details=details,
+        status_value=status_value,
     )
+    db.commit()
+    db.refresh(application)
+    return MembershipApplicationOut.model_validate(application)
+
+
+@router.post("/me/membership/supporting-document", response_model=MembershipApplicationOut, status_code=status.HTTP_201_CREATED)
+async def upload_membership_supporting_document(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MembershipApplicationOut:
+    """Attach a supporting document to the member's latest membership application."""
+    if current_user.role == "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins cannot apply for membership.")
+    form = await request.form(max_part_size=20 * 1024 * 1024)
+    uploaded = form.get("file") or form.get("supporting_document")
+    if not isinstance(uploaded, UploadFile) or not (uploaded.filename or "").strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose a supporting document to upload.")
+    label = str(form.get("label") or form.get("supporting_document_label") or "Supporting document").strip()
+    file_url, original_name = await _save_membership_upload(
+        uploaded,
+        allowed_suffixes=_MEMBERSHIP_DOC_SUFFIXES,
+    )
+    application = (
+        db.query(MembershipApplication)
+        .filter(MembershipApplication.user_id == current_user.id)
+        .order_by(MembershipApplication.id.desc())
+        .first()
+    )
+    note = f"{label}: {original_name}\nFile: {file_url}"
+    if application is None:
+        application = record_membership_application(
+            db,
+            current_user,
+            membership_type=current_user.membership_type or "student",
+            details=note,
+            status_value=current_user.membership_status or "active",
+        )
+    else:
+        application.details = _append_supporting_document_details(
+            application.details,
+            label=label,
+            original_name=original_name,
+            file_url=file_url,
+        )
     db.commit()
     db.refresh(application)
     return MembershipApplicationOut.model_validate(application)
@@ -1126,50 +1310,29 @@ async def apply_my_membership_file(
     uploaded = form.get("file")
     if not isinstance(uploaded, UploadFile):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose a completed form to upload.")
-    suffix = Path(uploaded.filename or "").suffix.lower()
-    if suffix not in {".pdf", ".doc", ".docx"}:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Upload a PDF or Word file.")
-    upload_root = Path(settings.upload_dir)
-    upload_root.mkdir(parents=True, exist_ok=True)
-    safe_name = f"{uuid.uuid4().hex}{suffix}"
-    dest = upload_root / safe_name
-    written = 0
-    try:
-        with dest.open("wb") as out:
-            while True:
-                chunk = await uploaded.read(1024 * 1024)
-                if not chunk:
-                    break
-                written += len(chunk)
-                if written > 20 * 1024 * 1024:
-                    raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail="File is too large. Maximum size is 20 MB.",
-                    )
-                out.write(chunk)
-    except HTTPException:
-        dest.unlink(missing_ok=True)
-        raise
-    except Exception:
-        dest.unlink(missing_ok=True)
-        raise
-    if written == 0:
-        dest.unlink(missing_ok=True)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
+    file_url, original_name = await _save_membership_upload(
+        uploaded,
+        allowed_suffixes=_MEMBERSHIP_FORM_SUFFIXES,
+        invalid_detail="Upload a PDF or Word file.",
+    )
 
     kind = str(form.get("kind") or "application").strip().lower()
     kind_label = "Renewal" if kind == "renewal" else "New membership"
-    original_name = Path(uploaded.filename or safe_name).name
-    file_url = f"/api/uploads/{safe_name}"
     details = f"{kind_label}\nUploaded form: {original_name}\nFile: {file_url}"
     membership_type = current_user.membership_type or "student"
-    activate_membership(db, current_user, membership_type, renew=kind == "renewal")
+    from app.services.membership import is_student_membership
+
+    if is_student_membership(membership_type):
+        activate_membership(db, current_user, membership_type, renew=kind == "renewal")
+        status_value = "active"
+    else:
+        status_value = "pending_payment"
     application = record_membership_application(
         db,
         current_user,
         membership_type=membership_type,
         details=details,
-        status_value="active",
+        status_value=status_value,
     )
     db.commit()
     db.refresh(application)
@@ -1195,7 +1358,9 @@ def get_certificate(
 
 
 @router.get("/certificates/verify/{certificate_code}", response_model=CertificateVerifyOut)
+@limiter.limit("60/minute")
 def verify_certificate(
+    request: Request,
     certificate_code: str,
     db: Session = Depends(get_db),
 ) -> CertificateVerifyOut:
@@ -1207,8 +1372,14 @@ def verify_certificate(
         .first()
     )
     if row is not None:
+        enrollment = (
+            db.query(Enrollment)
+            .filter(Enrollment.user_id == row.user_id, Enrollment.course_id == row.course_id)
+            .first()
+        )
+        valid = enrollment is not None and enrollment.status == "completed"
         return CertificateVerifyOut(
-            valid=True,
+            valid=valid,
             kind="completion",
             certificate_code=row.certificate_code,
             student_name=row.user.full_name,
@@ -1228,8 +1399,18 @@ def verify_certificate(
     if membership is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certificate not found")
 
+    from app.services.membership import is_student_membership, membership_is_accessible
+
+    user = membership.user
+    accessible = membership_is_accessible(db, user)
+    if not is_student_membership(membership.membership_type):
+        type_matches = (user.membership_type or "") == (membership.membership_type or "")
+        valid = accessible and type_matches and not membership_is_expired(membership)
+    else:
+        valid = accessible and not membership_is_expired(membership)
+
     return CertificateVerifyOut(
-        valid=not membership_is_expired(membership),
+        valid=valid,
         kind="membership",
         certificate_code=membership.certificate_code,
         student_name=membership.user.full_name,

@@ -76,7 +76,7 @@ export default function StudentDashboardPage() {
         actions={
           <Link
             href="/courses"
-            className="inline-flex h-11 items-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-5 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red-dark"
+            className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
           >
             Browse courses
           </Link>

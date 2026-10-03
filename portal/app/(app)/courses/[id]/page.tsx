@@ -48,6 +48,7 @@ export default function CoursePlayerPage() {
   const [selection, setSelection] = useState<NavSelection | null>(null);
   const [busy, setBusy] = useState(false);
   const [quizPassed, setQuizPassed] = useState(false);
+  const [outlineOpen, setOutlineOpen] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -191,66 +192,103 @@ export default function CoursePlayerPage() {
   }
 
   return (
-    <section className="space-y-5">
-      <div className="sticky top-0 z-10 bg-admin-canvas pb-1">
+    <section className="flex min-h-dvh flex-col bg-admin-canvas">
+      <div className="sticky top-0 z-20">
         <CoursePlayerHeader
           code={course.code}
           title={course.title}
           progress={course.progress ?? 0}
           certificateCode={course.certificate_code}
+          outlineOpen={outlineOpen}
+          onToggleOutline={() => setOutlineOpen((open) => !open)}
         />
       </div>
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+      {error ? (
+        <p className="border-b border-caisbe-red/20 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red md:px-6">
+          {error}
+        </p>
+      ) : null}
 
-      <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <CourseOutline course={course} selection={selection} onSelect={setSelection} />
-        <LessonStage
-          course={course}
-          courseId={courseId}
-          selection={selection}
-          activeTopic={activeTopic}
-          activeTopicOutline={activeTopicOutline}
-          activeChapterBlock={activeChapterBlock}
-          chapterMedia={chapterMedia}
-          busy={busy}
-          onMarkComplete={() => void markComplete()}
-          onReload={load}
-          onQuizResult={(result: QuizAttempt | null) => {
-            setQuizPassed(result != null);
-            if (result) void load();
-          }}
-          hasPrev={playlistIndex > 0}
-          hasNext={
-            activeChapterBlock?.block_type === "quiz"
-              ? quizPassed &&
-                ((assignmentAfterQuiz != null && selectionUnlocked(course, assignmentAfterQuiz)) ||
-                  (assignmentAfterQuiz == null &&
-                    playlistIndex >= 0 &&
+      <div className="relative flex min-h-0 flex-1">
+        <aside
+          className={`absolute inset-y-0 left-0 z-10 w-[min(20rem,88vw)] overflow-y-auto border-r border-ifma-border-light bg-white p-4 shadow-hopewell transition-transform duration-200 lg:static lg:w-[300px] lg:translate-x-0 lg:shadow-none ${
+            outlineOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          }`}
+        >
+          <CourseOutline
+            course={course}
+            selection={selection}
+            onSelect={(next) => {
+              setSelection(next);
+              setOutlineOpen(false);
+            }}
+          />
+        </aside>
+
+        {outlineOpen ? (
+          <button
+            type="button"
+            aria-label="Close outline"
+            className="absolute inset-0 z-[5] bg-caisbe-text/25 lg:hidden"
+            onClick={() => setOutlineOpen(false)}
+          />
+        ) : null}
+
+        <div className="min-w-0 flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-6">
+          <div className="mx-auto w-full max-w-4xl">
+            <LessonStage
+              course={course}
+              courseId={courseId}
+              selection={selection}
+              activeTopic={activeTopic}
+              activeTopicOutline={activeTopicOutline}
+              activeChapterBlock={activeChapterBlock}
+              chapterMedia={chapterMedia}
+              busy={busy}
+              onMarkComplete={() => void markComplete()}
+              onReload={load}
+              onQuizResult={(result: QuizAttempt | null) => {
+                setQuizPassed(result != null);
+                if (result) void load();
+              }}
+              hasPrev={playlistIndex > 0}
+              hasNext={
+                activeChapterBlock?.block_type === "quiz"
+                  ? quizPassed &&
+                    ((assignmentAfterQuiz != null && selectionUnlocked(course, assignmentAfterQuiz)) ||
+                      (assignmentAfterQuiz == null &&
+                        playlistIndex >= 0 &&
+                        playlistIndex < playlist.length - 1 &&
+                        selectionUnlocked(course, playlist[playlistIndex + 1])))
+                  : playlistIndex >= 0 &&
                     playlistIndex < playlist.length - 1 &&
-                    selectionUnlocked(course, playlist[playlistIndex + 1])))
-              : playlistIndex >= 0 &&
-                playlistIndex < playlist.length - 1 &&
-                selectionUnlocked(course, playlist[playlistIndex + 1])
-          }
-          onPrev={() => {
-            setQuizPassed(false);
-            if (playlistIndex > 0) setSelection(playlist[playlistIndex - 1]);
-          }}
-          onNext={() => {
-            if (activeChapterBlock?.block_type === "quiz") {
-              if (quizPassed && assignmentAfterQuiz && selectionUnlocked(course, assignmentAfterQuiz)) {
-                setSelection(assignmentAfterQuiz);
-                return;
+                    selectionUnlocked(course, playlist[playlistIndex + 1])
               }
-              const next = playlist[playlistIndex + 1];
-              if (quizPassed && next && selectionUnlocked(course, next)) setSelection(next);
-              return;
-            }
-            const next = playlist[playlistIndex + 1];
-            if (next && selectionUnlocked(course, next)) setSelection(next);
-          }}
-        />
+              onPrev={() => {
+                setQuizPassed(false);
+                if (playlistIndex > 0) setSelection(playlist[playlistIndex - 1]);
+              }}
+              onNext={() => {
+                if (activeChapterBlock?.block_type === "quiz") {
+                  if (
+                    quizPassed &&
+                    assignmentAfterQuiz &&
+                    selectionUnlocked(course, assignmentAfterQuiz)
+                  ) {
+                    setSelection(assignmentAfterQuiz);
+                    return;
+                  }
+                  const next = playlist[playlistIndex + 1];
+                  if (quizPassed && next && selectionUnlocked(course, next)) setSelection(next);
+                  return;
+                }
+                const next = playlist[playlistIndex + 1];
+                if (next && selectionUnlocked(course, next)) setSelection(next);
+              }}
+            />
+          </div>
+        </div>
       </div>
     </section>
   );

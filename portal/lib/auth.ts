@@ -17,6 +17,11 @@ export type AuthUser = {
   membership_status?: string;
   profile_completed?: boolean;
   role: "student" | "admin" | string;
+  pending_membership_type?: string | null;
+  pending_membership_kind?: string | null;
+  pending_membership_price_cents?: number | null;
+  pending_membership_currency?: string | null;
+  pending_membership_label?: string | null;
 };
 
 export type RegisterPayload = {
