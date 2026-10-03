@@ -5,7 +5,7 @@ export default function SustainabilitySection() {
     <section className="bg-[#f8fafc] py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4">
         <div className="flex max-w-2xl flex-col gap-3 motion-safe:animate-page-fade-in">
-          <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark">
+          <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">
             Practice
           </p>
           <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
@@ -26,7 +26,7 @@ export default function SustainabilitySection() {
               <h3 className="font-hopewell-display text-lg font-bold text-caisbe-text-dark">
                 {item.title}
               </h3>
-              <p className="mt-2 text-sm leading-6 text-caisbe-muted">
+              <p className="mt-2 text-base leading-7 text-caisbe-muted">
                 {item.description}
               </p>
             </article>

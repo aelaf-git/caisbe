@@ -53,7 +53,7 @@ export default function NewsletterSignup({
         <label className={compact ? "min-w-0 flex-1 space-y-2" : "block space-y-2"}>
           {!compact ? (
             <span
-              className={`text-sm font-semibold ${isDark ? "text-white" : "text-ifma-navy"}`}
+              className={`text-base font-semibold ${isDark ? "text-white" : "text-ifma-navy"}`}
             >
               Email
             </span>
@@ -71,7 +71,7 @@ export default function NewsletterSignup({
             title="Enter a valid email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`h-11 w-full rounded-md border bg-white px-3 text-sm outline-none focus:border-caisbe-red ${
+            className={`h-11 w-full rounded-md border bg-white px-3 text-base outline-none focus:border-caisbe-red ${
               isDark ? "border-white/25" : "border-ifma-border-light"
             }`}
             placeholder="name@example.com"
@@ -82,8 +82,8 @@ export default function NewsletterSignup({
           disabled={status === "loading"}
           className={
             compact
-              ? "inline-flex h-11 shrink-0 items-center justify-center border-2 border-caisbe-red bg-caisbe-red px-6 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red/90 disabled:opacity-60"
-              : "inline-flex w-full items-center justify-center border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red/90 disabled:opacity-60"
+              ? "inline-flex h-11 shrink-0 items-center justify-center border-2 border-caisbe-red bg-caisbe-red px-6 text-base font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red/90 disabled:opacity-60"
+              : "inline-flex w-full items-center justify-center border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-base font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red/90 disabled:opacity-60"
           }
         >
           {status === "loading" ? "Subscribing…" : "Subscribe"}
@@ -91,7 +91,7 @@ export default function NewsletterSignup({
       </form>
       {message ? (
         <p
-          className={`mt-3 text-sm ${
+          className={`mt-3 text-base ${
             status === "error"
               ? "text-caisbe-red"
               : isDark

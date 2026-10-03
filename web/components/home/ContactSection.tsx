@@ -21,27 +21,27 @@ function ContactDetails() {
         {contactContent.detailsHeading}
       </h3>
       <div>
-        <p className="text-sm font-semibold text-caisbe-text-dark">{contactContent.addressLabel}</p>
-        <p className="mt-1 whitespace-pre-line text-sm leading-6 text-caisbe-muted">
+        <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.addressLabel}</p>
+        <p className="mt-1 whitespace-pre-line text-base leading-7 text-caisbe-muted">
           {contactContent.address}
         </p>
       </div>
       <div>
-        <p className="text-sm font-semibold text-caisbe-text-dark">{contactContent.phoneLabel}</p>
-        <p className="mt-1 text-sm leading-6 text-caisbe-muted">{contactContent.phone}</p>
+        <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.phoneLabel}</p>
+        <p className="mt-1 text-base leading-7 text-caisbe-muted">{contactContent.phone}</p>
       </div>
       <div>
-        <p className="text-sm font-semibold text-caisbe-text-dark">{contactContent.emailLabel}</p>
+        <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.emailLabel}</p>
         <a
           href={`mailto:${contactContent.email}`}
-          className="mt-1 inline-block text-sm leading-6 text-caisbe-red transition-colors hover:text-caisbe-red-dark"
+          className="mt-1 inline-block text-base leading-7 text-caisbe-red transition-colors hover:text-caisbe-red-dark"
         >
           {contactContent.email}
         </a>
       </div>
       <div>
-        <p className="text-sm font-semibold text-caisbe-text-dark">{contactContent.hoursLabel}</p>
-        <p className="mt-1 text-sm leading-6 text-caisbe-muted">{contactContent.hours}</p>
+        <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.hoursLabel}</p>
+        <p className="mt-1 text-base leading-7 text-caisbe-muted">{contactContent.hours}</p>
       </div>
     </div>
   );
@@ -58,7 +58,7 @@ export default function ContactSection({
       <section className="bg-white py-16 md:py-24">
         <div className="mx-auto grid max-w-7xl items-start gap-10 px-4 lg:grid-cols-[0.85fr_1.15fr]">
           <div className="motion-safe:animate-page-fade-in">
-            <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark">
+            <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">
               {eyebrow}
             </p>
             <h2 className="font-hopewell-display mt-4 text-3xl font-extrabold leading-tight tracking-tight text-caisbe-text-dark md:text-4xl">
@@ -110,14 +110,14 @@ export default function ContactSection({
                 </div>
                 <div className="p-5 text-center">
                   <p className="font-semibold text-caisbe-red">{office.region}</p>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-6 text-caisbe-muted">
+                  <p className="mt-2 whitespace-pre-line text-base leading-7 text-caisbe-muted">
                     {office.address}
                   </p>
                   <a
                     href={officeDirectionsUrl(office.mapQuery)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red transition-colors hover:text-caisbe-red-dark"
+                    className="mt-3 inline-flex text-base font-semibold uppercase tracking-wide text-caisbe-red transition-colors hover:text-caisbe-red-dark"
                   >
                     Direction
                   </a>

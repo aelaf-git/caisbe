@@ -84,13 +84,13 @@ export const offices = [
   },
   {
     region: "United States",
-    address: "2367 Speers Road, Brampton",
-    mapQuery: "2367 Speers Road, Brampton, ON, Canada",
+    address: "191 Peachtree Street NE,\nAtlanta, GA 30303, USA",
+    mapQuery: "191 Peachtree Street NE, Atlanta, GA 30303, USA",
   },
   {
     region: "Africa",
-    address: "Africa Union, Mexico road, Addis Ababa",
-    mapQuery: "African Union Headquarters, Mexico Road, Addis Ababa, Ethiopia",
+    address: "African Union, Mexico Road,\nRosvelt Street, Addis Ababa",
+    mapQuery: "African Union, Mexico Road, Rosvelt Street, Addis Ababa, Ethiopia",
   },
 ];
 

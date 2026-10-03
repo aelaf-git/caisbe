@@ -8,7 +8,7 @@ export default async function Header() {
   return (
     <header className="font-hopewell sticky top-0 z-50 overflow-visible bg-white shadow-hopewell-nav">
       <div className="border-b border-ifma-border-light bg-white">
-        <div className="mx-auto flex h-11 max-w-7xl items-center justify-between gap-4 px-4 text-sm">
+        <div className="mx-auto flex h-12 max-w-7xl items-center justify-between gap-4 px-4 text-base">
           <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
             {utilityLinks.map((link) => (
               <NavTextLink

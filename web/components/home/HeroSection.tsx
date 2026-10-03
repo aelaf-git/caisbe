@@ -88,7 +88,7 @@ export default function HeroSection() {
           <h1 className="font-hopewell-display text-4xl font-extrabold leading-[1.08] tracking-tight text-caisbe-text-dark md:text-5xl">
             {siteFullName}
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-8 text-caisbe-muted">
+          <p className="mt-5 max-w-xl text-xl leading-8 text-caisbe-muted">
             {heroIntro}
           </p>
           <div className="mt-8">

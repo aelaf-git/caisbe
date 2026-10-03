@@ -15,7 +15,7 @@ services:
   - type: web
     name: caisbe-staging-api-090a
     runtime: docker
-    plan: starter
+    plan: 0.5c-512mb
     region: oregon
     dockerfilePath: ./api/Dockerfile.prod
     dockerContext: ./api

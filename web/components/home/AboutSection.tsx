@@ -17,7 +17,7 @@ export default function AboutSection() {
         </div>
 
         <div>
-          <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark">
+          <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">
             {aboutContent.eyebrow}
           </p>
           <h2 className="font-hopewell-display mt-4 text-3xl font-extrabold leading-tight tracking-tight text-caisbe-text-dark md:text-4xl">
@@ -36,7 +36,7 @@ export default function AboutSection() {
                   <h3 className="font-hopewell-display text-base font-bold text-caisbe-text-dark">
                     {item.title}
                   </h3>
-                  <p className="mt-1 text-sm leading-6 text-caisbe-muted">
+                  <p className="mt-1 text-base leading-7 text-caisbe-muted">
                     {item.description.split(". ")[0].replace(/\.$/, "")}.
                   </p>
                 </div>

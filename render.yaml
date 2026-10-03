@@ -5,8 +5,8 @@
 # After first deploy, confirm the four *.onrender.com URLs match the env vars below
 # (Render may append a suffix if a name is taken — update CORS + NEXT_PUBLIC_* if so).
 #
-# Cost note: API needs a persistent disk (Starter+). Postgres is paid (basic-256mb).
-# Frontends can use Free (spin down when idle) or Starter for always-on.
+# Cost note: API is pinned to 0.5c-512mb ($7/mo, 0.5 CPU, 512 MB) and needs a disk.
+# Postgres is paid (basic-256mb). Frontends stay Free and spin down when idle.
 
 databases:
   - name: caisbe-db
@@ -19,7 +19,7 @@ services:
   - type: web
     name: caisbe-api
     runtime: docker
-    plan: starter
+    plan: 0.5c-512mb
     region: oregon
     dockerfilePath: ./api/Dockerfile.prod
     dockerContext: ./api

@@ -31,7 +31,7 @@ export default async function MagazineSection() {
         </div>
 
         {issues.length === 0 ? (
-          <p className="text-sm text-caisbe-muted">
+          <p className="text-base text-caisbe-muted">
             New magazine issues will appear here once published by the CAISBE team.
           </p>
         ) : (
@@ -50,7 +50,7 @@ export default async function MagazineSection() {
                   />
                 ) : (
                   <div className="flex aspect-video items-center justify-center bg-[#f7f9fa]">
-                    <span className="text-sm font-semibold text-caisbe-red">
+                    <span className="text-base font-semibold text-caisbe-red">
                       Magazine
                     </span>
                   </div>
@@ -60,7 +60,7 @@ export default async function MagazineSection() {
                     {issue.title}
                   </h3>
                   {issue.description ? (
-                    <p className="mt-2 line-clamp-3 flex-1 text-sm leading-6 text-caisbe-muted">
+                    <p className="mt-2 line-clamp-3 flex-1 text-base leading-7 text-caisbe-muted">
                       {issue.description}
                     </p>
                   ) : (
@@ -70,7 +70,7 @@ export default async function MagazineSection() {
                     href={issue.file_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 text-sm font-bold text-caisbe-red hover:underline"
+                    className="mt-4 text-base font-bold text-caisbe-red hover:underline"
                   >
                     Read issue
                   </a>
