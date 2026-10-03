@@ -58,35 +58,60 @@ def _s3_client():
 
     return boto3.client(
         "s3",
-        endpoint_url=settings.s3_endpoint.strip(),
+        endpoint_url=settings.s3_endpoint.strip().rstrip("/"),
         aws_access_key_id=settings.s3_access_key.strip(),
         aws_secret_access_key=settings.s3_secret_key.strip(),
         region_name=(settings.s3_region or "auto").strip() or "auto",
-        config=Config(signature_version="s3v4"),
+        config=Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "path"},
+            retries={"max_attempts": 3, "mode": "standard"},
+        ),
     )
 
 
+def _raise_storage_error(exc: Exception) -> None:
+    message = str(exc).strip() or exc.__class__.__name__
+    # Keep response short; full detail is in API logs.
+    if len(message) > 240:
+        message = message[:240] + "…"
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=f"Object storage upload failed: {message}",
+    ) from exc
+
+
 def _put_fileobj(fileobj: BinaryIO, key: str, content_type: str | None) -> None:
-    client = _s3_client()
-    extra: dict[str, str] = {}
-    if content_type:
-        extra["ContentType"] = content_type
-    if extra:
-        client.upload_fileobj(fileobj, settings.s3_bucket.strip(), key, ExtraArgs=extra)
-    else:
-        client.upload_fileobj(fileobj, settings.s3_bucket.strip(), key)
+    try:
+        client = _s3_client()
+        extra: dict[str, str] = {}
+        if content_type:
+            extra["ContentType"] = content_type
+        if extra:
+            client.upload_fileobj(fileobj, settings.s3_bucket.strip(), key, ExtraArgs=extra)
+        else:
+            client.upload_fileobj(fileobj, settings.s3_bucket.strip(), key)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _raise_storage_error(exc)
 
 
 def _put_bytes(data: bytes, key: str, content_type: str | None) -> None:
-    client = _s3_client()
-    kwargs: dict = {
-        "Bucket": settings.s3_bucket.strip(),
-        "Key": key,
-        "Body": data,
-    }
-    if content_type:
-        kwargs["ContentType"] = content_type
-    client.put_object(**kwargs)
+    try:
+        client = _s3_client()
+        kwargs: dict = {
+            "Bucket": settings.s3_bucket.strip(),
+            "Key": key,
+            "Body": data,
+        }
+        if content_type:
+            kwargs["ContentType"] = content_type
+        client.put_object(**kwargs)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _raise_storage_error(exc)
 
 
 def save_bytes(data: bytes, *, suffix: str, content_type: str | None = None) -> str:
