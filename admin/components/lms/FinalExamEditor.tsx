@@ -12,6 +12,7 @@ export type ExamDraft = {
   title: string;
   pass_percent: number;
   time_limit_minutes: number | null;
+  questions_to_appear: number | null;
   questions: QuizQuestion[];
 };
 
@@ -42,7 +43,19 @@ export default function FinalExamEditor({
   onChange,
   onError,
 }: FinalExamEditorProps) {
-  const validationError = useMemo(() => validateQuestions(exam.questions), [exam.questions]);
+  const appearError = useMemo(() => {
+    const appear = exam.questions_to_appear;
+    if (appear == null) return null;
+    if (appear < 1) return "Questions to appear must be at least 1.";
+    if (appear > exam.questions.length) {
+      return `Questions to appear (${appear}) cannot exceed the bank size (${exam.questions.length}).`;
+    }
+    return null;
+  }, [exam.questions.length, exam.questions_to_appear]);
+
+  const validationError = useMemo(() => {
+    return validateQuestions(exam.questions) ?? appearError;
+  }, [appearError, exam.questions]);
 
   const autosave = useAutosave({
     id: `course-${courseId}-exam`,
@@ -50,7 +63,11 @@ export default function FinalExamEditor({
     baselineKey,
     enabled: true,
     save: async (next) => {
-      const invalid = validateQuestions(next.questions);
+      const invalid =
+        validateQuestions(next.questions) ??
+        (next.questions_to_appear != null && next.questions_to_appear > next.questions.length
+          ? `Questions to appear (${next.questions_to_appear}) cannot exceed the bank size (${next.questions.length}).`
+          : null);
       if (invalid) {
         throw new Error(invalid);
       }
@@ -61,6 +78,7 @@ export default function FinalExamEditor({
             title: next.title,
             pass_percent: next.pass_percent,
             time_limit_minutes: next.time_limit_minutes,
+            questions_to_appear: next.questions_to_appear,
             questions: serializeQuestions(next.questions),
           }),
         });
@@ -131,6 +149,44 @@ export default function FinalExamEditor({
           className={fieldClassName}
         />
       </FormField>
+      <FormField
+        label="Questions to appear"
+        hint="How many questions each student sees per attempt. Leave blank to show the full bank. Each attempt draws a random subset with shuffled question and choice order."
+      >
+        <input
+          type="number"
+          min={1}
+          max={Math.max(1, exam.questions.length)}
+          placeholder="All questions"
+          value={exam.questions_to_appear ?? ""}
+          onChange={(event) => {
+            const raw = event.target.value.trim();
+            if (!raw) {
+              onChange({ ...exam, questions_to_appear: null });
+              return;
+            }
+            const next = Number(raw);
+            if (!Number.isFinite(next)) return;
+            onChange({
+              ...exam,
+              questions_to_appear: Math.max(1, Math.trunc(next)),
+            });
+          }}
+          onBlur={() => void autosave.flush()}
+          className={fieldClassName}
+        />
+      </FormField>
+      <p className="text-sm text-caisbe-muted">
+        Bank: <span className="font-semibold text-caisbe-text">{exam.questions.length}</span>
+        {" · "}
+        Appearing:{" "}
+        <span className="font-semibold text-caisbe-text">
+          {exam.questions_to_appear ?? exam.questions.length}
+        </span>
+        {exam.questions_to_appear != null && exam.questions_to_appear < exam.questions.length
+          ? " (random subset each attempt)"
+          : null}
+      </p>
       <QuizQuestionEditor
         questions={exam.questions}
         onChange={(questions) => onChange({ ...exam, questions })}

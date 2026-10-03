@@ -43,10 +43,37 @@ export default function CoursePlayerHeader({
           <button
             type="button"
             onClick={onToggleOutline}
-            className="inline-flex h-10 items-center rounded-full border-2 border-ifma-border px-4 text-sm font-bold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red lg:hidden"
+            className="inline-flex h-10 items-center gap-2 rounded-full border-2 border-ifma-border px-4 text-sm font-bold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
             aria-expanded={outlineOpen}
+            aria-controls="course-outline-panel"
+            title={outlineOpen ? "Hide course content" : "Show course content"}
           >
-            {outlineOpen ? "Hide outline" : "Outline"}
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              {outlineOpen ? (
+                <>
+                  <path d="M4 6h10" />
+                  <path d="M4 12h10" />
+                  <path d="M4 18h10" />
+                  <path d="M19 8l-4 4 4 4" />
+                </>
+              ) : (
+                <>
+                  <path d="M4 6h16" />
+                  <path d="M4 12h16" />
+                  <path d="M4 18h16" />
+                </>
+              )}
+            </svg>
+            <span className="hidden sm:inline">{outlineOpen ? "Hide outline" : "Outline"}</span>
           </button>
         ) : null}
 

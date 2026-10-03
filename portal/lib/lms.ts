@@ -66,6 +66,8 @@ export type FinalExam = {
   title: string;
   pass_percent: number;
   time_limit_minutes: number | null;
+  questions_to_appear?: number | null;
+  question_bank_size?: number;
   questions: QuizQuestion[];
 };
 
@@ -82,6 +84,7 @@ export type ExamSessionState = {
   latest_score: number | null;
   latest_passed: boolean | null;
   order: ExamOrder | null;
+  questions?: QuizQuestion[];
 };
 
 export type CertificateTemplate = {

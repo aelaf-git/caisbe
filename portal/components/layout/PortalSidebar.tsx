@@ -31,7 +31,10 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "Account",
-    items: [{ href: "/account", label: "Manage profile", icon: "user", match: "prefix" }],
+    items: [
+      { href: "/notifications", label: "Notifications", icon: "bell", match: "prefix" },
+      { href: "/account", label: "Manage profile", icon: "user", match: "prefix" },
+    ],
   },
 ];
 
@@ -82,6 +85,12 @@ function NavIcon({ name }: { name: string }) {
         <circle cx="12" cy="7" r="4" />
       </>
     ),
+    bell: (
+      <>
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+      </>
+    ),
   };
   return (
     <svg
@@ -109,6 +118,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
   const pathname = usePathname();
   const router = useRouter();
   const [cartCount, setCartCount] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -118,6 +128,13 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
       })
       .catch(() => {
         if (active) setCartCount(0);
+      });
+    void apiFetch<{ unread_count: number }>("/me/notifications")
+      .then((data) => {
+        if (active) setUnreadNotifications(data.unread_count);
+      })
+      .catch(() => {
+        if (active) setUnreadNotifications(0);
       });
     return () => {
       active = false;
@@ -169,6 +186,11 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
                     {item.href === "/cart" && cartCount > 0 ? (
                       <span className="rounded-full bg-caisbe-red px-2 py-0.5 text-xs font-semibold text-white">
                         {cartCount}
+                      </span>
+                    ) : null}
+                    {item.href === "/notifications" && unreadNotifications > 0 ? (
+                      <span className="rounded-full bg-caisbe-red px-2 py-0.5 text-xs font-semibold text-white">
+                        {unreadNotifications}
                       </span>
                     ) : null}
                   </Link>

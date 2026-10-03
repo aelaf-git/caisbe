@@ -11,7 +11,7 @@ import PassMarkControl from "@/components/lms/PassMarkControl";
 import { emptyQuestion } from "@/components/lms/QuizQuestionEditor";
 import Alert from "@/components/ui/Alert";
 import BackButton from "@/components/ui/BackButton";
-import Button, { buttonStyles } from "@/components/ui/Button";
+import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
@@ -87,6 +87,7 @@ function AdminCourseEditorInner() {
     title: "Final Exam",
     pass_percent: 70,
     time_limit_minutes: null,
+    questions_to_appear: null,
     questions: [emptyQuestion()],
   });
 
@@ -114,6 +115,7 @@ function AdminCourseEditorInner() {
       title: data.final_exam?.title ?? "Final Exam",
       pass_percent: data.final_exam?.pass_percent ?? data.pass_percent,
       time_limit_minutes: data.final_exam?.time_limit_minutes ?? null,
+      questions_to_appear: data.final_exam?.questions_to_appear ?? null,
       questions: data.final_exam?.questions?.length
         ? data.final_exam.questions.map((q) => ({
             prompt: q.prompt,
@@ -313,14 +315,6 @@ function AdminCourseEditorInner() {
         meta={<SaveStatus status={overallStatus} label={draftLabel} />}
         actions={
           <>
-            <a
-              href={`${process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3002"}/courses/${courseId}`}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonStyles({ variant: "secondary" })}
-            >
-              Preview as learner
-            </a>
             <SaveButton
               variant={needsPublishUpdate ? "primary" : "secondary"}
               dirty={saveDirty}

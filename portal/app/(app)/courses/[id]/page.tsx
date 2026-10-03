@@ -48,7 +48,7 @@ export default function CoursePlayerPage() {
   const [selection, setSelection] = useState<NavSelection | null>(null);
   const [busy, setBusy] = useState(false);
   const [quizPassed, setQuizPassed] = useState(false);
-  const [outlineOpen, setOutlineOpen] = useState(false);
+  const [outlineOpen, setOutlineOpen] = useState(true);
 
   const load = useCallback(async () => {
     setError(null);
@@ -91,6 +91,15 @@ export default function CoursePlayerPage() {
   useEffect(() => {
     setQuizPassed(false);
   }, [selection]);
+
+  useEffect(() => {
+    if (!outlineOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOutlineOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [outlineOpen]);
 
   const topics = useMemo(() => {
     if (!course) return [] as Lesson[];
@@ -212,18 +221,25 @@ export default function CoursePlayerPage() {
 
       <div className="relative flex min-h-0 flex-1">
         <aside
-          className={`absolute inset-y-0 left-0 z-10 w-[min(20rem,88vw)] overflow-y-auto border-r border-ifma-border-light bg-white p-4 shadow-hopewell transition-transform duration-200 lg:static lg:w-[300px] lg:translate-x-0 lg:shadow-none ${
-            outlineOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          id="course-outline-panel"
+          className={`z-10 overflow-hidden border-ifma-border-light bg-white transition-[width,transform,opacity] duration-200 ease-out ${
+            outlineOpen
+              ? "absolute inset-y-0 left-0 w-[min(20rem,88vw)] translate-x-0 border-r p-4 opacity-100 shadow-hopewell lg:static lg:w-[300px] lg:shrink-0 lg:shadow-none"
+              : "pointer-events-none absolute inset-y-0 left-0 w-0 -translate-x-full border-0 p-0 opacity-0 lg:static lg:w-0 lg:translate-x-0"
           }`}
         >
-          <CourseOutline
-            course={course}
-            selection={selection}
-            onSelect={(next) => {
-              setSelection(next);
-              setOutlineOpen(false);
-            }}
-          />
+          <div className={`h-full overflow-y-auto ${outlineOpen ? "" : "invisible"}`}>
+            <CourseOutline
+              course={course}
+              selection={selection}
+              onSelect={(next) => {
+                setSelection(next);
+                if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+                  setOutlineOpen(false);
+                }
+              }}
+            />
+          </div>
         </aside>
 
         {outlineOpen ? (
@@ -236,7 +252,7 @@ export default function CoursePlayerPage() {
         ) : null}
 
         <div className="min-w-0 flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-6">
-          <div className="mx-auto w-full max-w-4xl">
+          <div className={`mx-auto w-full transition-[max-width] duration-200 ${outlineOpen ? "max-w-4xl" : "max-w-5xl"}`}>
             <LessonStage
               course={course}
               courseId={courseId}

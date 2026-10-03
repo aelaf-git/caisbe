@@ -417,6 +417,14 @@ def _publish_content_errors(course: Course) -> list[str]:
     for chapter in course.chapters:
         if not _chapter_has_required_content(chapter):
             errors.append(f"{chapter.title} needs Content (at least one topic with text or media) before publishing.")
+    exam = course.final_exam
+    if exam is not None and exam.questions_to_appear is not None:
+        bank = len(exam.questions or [])
+        if bank < exam.questions_to_appear:
+            errors.append(
+                f"Final exam needs at least {exam.questions_to_appear} questions in the bank "
+                f"(currently {bank}) before publishing."
+            )
     return errors
 
 
@@ -1025,6 +1033,7 @@ def admin_update_course(
     meta = {key: data[key] for key in COURSE_DRAFT_META_KEYS if key in data}
     _write_course_meta(course, meta)
 
+    was_published = course.status == "published"
     if next_status == "published":
         loaded = _load_course_admin(db, course_id)
         # Validate against working content (draft details are overlaid separately below).
@@ -1037,6 +1046,21 @@ def admin_update_course(
         # Keep any pending detail edits in draft_meta while unpublishing, or fold them in.
         _apply_course_draft_meta(course)
         course.status = "draft"
+
+    newly_published = not was_published and course.status == "published"
+    if newly_published:
+        from app.services.notifications import notify_all_students
+
+        notify_all_students(
+            db,
+            title="New course available",
+            body=(
+                f'"{course.title}" ({course.code}) is now available. '
+                "Open My courses to view details and enroll."
+            ),
+            kind="course_added",
+            link="/courses",
+        )
 
     db.commit()
     return _course_admin_out(_load_course_admin(db, course_id))
@@ -1070,11 +1094,48 @@ def admin_delete_course(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> None:
+    from app.models import CartItem, OrderItem
+    from app.services.notifications import notify_users
+
     course = db.query(Course).filter(Course.id == course_id).first()
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    title = course.title
+    code = course.code
+    affected_user_ids = {
+        row[0]
+        for row in db.query(Enrollment.user_id).filter(Enrollment.course_id == course_id).all()
+    }
+    affected_user_ids.update(
+        row[0]
+        for row in db.query(CartItem.user_id).filter(CartItem.course_id == course_id).all()
+    )
+
+    db.query(OrderItem).filter(OrderItem.course_id == course_id).update(
+        {OrderItem.course_id: None},
+        synchronize_session=False,
+    )
+    db.query(CartItem).filter(CartItem.course_id == course_id).delete(synchronize_session=False)
+    db.query(Certificate).filter(Certificate.course_id == course_id).delete(synchronize_session=False)
+    db.query(Enrollment).filter(Enrollment.course_id == course_id).delete(synchronize_session=False)
+
+    if affected_user_ids:
+        notify_users(
+            db,
+            affected_user_ids,
+            title="Course removed",
+            body=(
+                f'"{title}" ({code}) is no longer available. '
+                "It has been removed from your courses and cart. Contact CAISBE if you need help."
+            ),
+            kind="course_removed",
+            link="/courses",
+        )
+
     db.delete(course)
     db.commit()
+
 
 
 # --- Chapters ---
@@ -1476,6 +1537,21 @@ def admin_upsert_final_exam(
         exam.time_limit_minutes = payload.time_limit_minutes
     if payload.questions is not None:
         _replace_questions(db, payload.questions, final_exam_id=exam.id)
+
+    if "questions_to_appear" in payload.model_fields_set:
+        appear = payload.questions_to_appear
+        if appear is not None:
+            bank_size = (
+                len(payload.questions)
+                if payload.questions is not None
+                else db.query(QuizQuestion).filter(QuizQuestion.final_exam_id == exam.id).count()
+            )
+            if appear > bank_size:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Questions to appear ({appear}) cannot exceed the bank size ({bank_size}).",
+                )
+        exam.questions_to_appear = appear
 
     db.commit()
     exam = (
@@ -2043,60 +2119,11 @@ def admin_get_student(
     )
 
 
-@router.get("/students/{student_id}/assignment-submissions", response_model=list[AssignmentSubmissionOut])
-def admin_list_assignment_submissions(
-    student_id: int,
-    _: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-) -> list[AssignmentSubmissionOut]:
-    rows = (
-        db.query(AssignmentSubmission)
-        .options(joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course))
-        .filter(AssignmentSubmission.user_id == student_id)
-        .order_by(AssignmentSubmission.created_at.desc())
-        .all()
-    )
-    items: list[AssignmentSubmissionOut] = []
-    for row in rows:
-        block = row.block
-        chapter = block.chapter if block else None
-        course = chapter.course if chapter else None
-        items.append(
-            AssignmentSubmissionOut(
-                id=row.id,
-                content_block_id=row.content_block_id,
-                assignment_title=(block.title if block and block.title else "Assignment"),
-                course_code=course.code if course else "",
-                course_title=course.title if course else "",
-                body=row.body,
-                file_url=row.file_url,
-                file_name=row.file_name,
-                status=row.status,
-            )
-        )
-    return items
-
-
-@router.post("/assignment-submissions/{submission_id}/review", response_model=AssignmentSubmissionOut)
-def admin_review_assignment(
-    submission_id: int,
-    payload: AssignmentReviewIn,
-    _: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-) -> AssignmentSubmissionOut:
-    row = (
-        db.query(AssignmentSubmission)
-        .options(joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course))
-        .filter(AssignmentSubmission.id == submission_id)
-        .first()
-    )
-    if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
-    row.status = payload.status
-    db.commit()
+def _assignment_submission_out(row: AssignmentSubmission) -> AssignmentSubmissionOut:
     block = row.block
     chapter = block.chapter if block else None
     course = chapter.course if chapter else None
+    student = row.user
     return AssignmentSubmissionOut(
         id=row.id,
         content_block_id=row.content_block_id,
@@ -2107,7 +2134,77 @@ def admin_review_assignment(
         file_url=row.file_url,
         file_name=row.file_name,
         status=row.status,
+        user_id=row.user_id,
+        student_name=student.full_name if student else None,
+        student_email=student.email if student else None,
+        submitted_at=row.created_at,
     )
+
+
+def _assignment_submission_query(db: Session):
+    return db.query(AssignmentSubmission).options(
+        joinedload(AssignmentSubmission.user),
+        joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course),
+    )
+
+
+@router.get("/assignment-submissions", response_model=list[AssignmentSubmissionOut])
+def admin_list_all_assignment_submissions(
+    status_filter: str | None = Query(default=None, alias="status"),
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[AssignmentSubmissionOut]:
+    query = _assignment_submission_query(db)
+    if status_filter:
+        allowed = {"under_review", "passed", "failed"}
+        if status_filter not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Status must be under_review, passed, or failed.",
+            )
+        query = query.filter(AssignmentSubmission.status == status_filter)
+    rows = query.order_by(AssignmentSubmission.created_at.desc()).limit(500).all()
+    return [_assignment_submission_out(row) for row in rows]
+
+
+@router.get("/students/{student_id}/assignment-submissions", response_model=list[AssignmentSubmissionOut])
+def admin_list_assignment_submissions(
+    student_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[AssignmentSubmissionOut]:
+    rows = (
+        _assignment_submission_query(db)
+        .filter(AssignmentSubmission.user_id == student_id)
+        .order_by(AssignmentSubmission.created_at.desc())
+        .all()
+    )
+    return [_assignment_submission_out(row) for row in rows]
+
+
+@router.post("/assignment-submissions/{submission_id}/review", response_model=AssignmentSubmissionOut)
+def admin_review_assignment(
+    submission_id: int,
+    payload: AssignmentReviewIn,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AssignmentSubmissionOut:
+    row = (
+        _assignment_submission_query(db)
+        .filter(AssignmentSubmission.id == submission_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    row.status = payload.status
+    db.commit()
+    db.refresh(row)
+    row = (
+        _assignment_submission_query(db)
+        .filter(AssignmentSubmission.id == submission_id)
+        .one()
+    )
+    return _assignment_submission_out(row)
 
 
 @router.get("/membership-applications")

@@ -50,6 +50,7 @@ from app.schemas.courses import (
     MembershipCertificateOut,
     QuizAnswerReview,
     QuizAttemptOut,
+    QuizQuestionStudentOut,
     QuizSubmitIn,
 )
 from app.services.membership import (
@@ -475,6 +476,10 @@ def get_course_detail(
     detail.certificate_code = cert.certificate_code if cert else None
     detail.exam_passed = exam_passed
     detail.exam_score = exam_score
+    if detail.final_exam is not None and course.final_exam is not None:
+        detail.final_exam.question_bank_size = len(course.final_exam.questions)
+        # Withhold the bank until an attempt starts (session returns the subset).
+        detail.final_exam.questions = []
 
     _, quiz_ids, assignment_ids = _course_progress_units(db, course_id)
     done_quizzes = set()
@@ -886,12 +891,24 @@ def _remaining_seconds(exam: FinalExam, session: ExamSession, now: datetime) -> 
     return max(0, int((deadline - now).total_seconds()))
 
 
+def _appear_count(exam: FinalExam) -> int:
+    bank = len(exam.questions)
+    if bank == 0:
+        return 0
+    configured = exam.questions_to_appear
+    if configured is None or configured <= 0:
+        return bank
+    return min(int(configured), bank)
+
+
 def _new_exam_order(exam: FinalExam) -> dict[str, list[int] | dict[str, list[int]]]:
-    questions = list(exam.questions)
-    random.shuffle(questions)
+    bank = list(exam.questions)
+    count = _appear_count(exam)
+    selected = random.sample(bank, count) if count < len(bank) else bank[:]
+    random.shuffle(selected)
     question_ids: list[int] = []
     choices: dict[str, list[int]] = {}
-    for question in questions:
+    for question in selected:
         question_ids.append(question.id)
         choice_ids = [choice.id for choice in question.choices]
         random.shuffle(choice_ids)
@@ -921,6 +938,32 @@ def _ensure_exam_order(db: Session, session: ExamSession, exam: FinalExam) -> No
         return
     session.order_json = json.dumps(_new_exam_order(exam))
     db.flush()
+
+
+def _questions_for_order(exam: FinalExam, order: ExamOrderOut | None) -> list[QuizQuestion]:
+    """Return exam questions in session order (subset only — never append bank leftovers)."""
+    by_id = {question.id: question for question in exam.questions}
+    if order is None:
+        return list(exam.questions)
+    return [by_id[qid] for qid in order.questions if qid in by_id]
+
+
+def _student_questions_for_order(exam: FinalExam, order: ExamOrderOut | None) -> list[QuizQuestionStudentOut]:
+    selected = _questions_for_order(exam, order)
+    if order is None:
+        return [QuizQuestionStudentOut.model_validate(question) for question in selected]
+
+    out: list[QuizQuestionStudentOut] = []
+    for question in selected:
+        choice_ids = order.choices.get(str(question.id))
+        base = QuizQuestionStudentOut.model_validate(question)
+        if not choice_ids:
+            out.append(base)
+            continue
+        by_id = {choice.id: choice for choice in base.choices}
+        ordered_choices = [by_id[cid] for cid in choice_ids if cid in by_id]
+        out.append(base.model_copy(update={"choices": ordered_choices}))
+    return out
 
 
 def _latest_exam_attempt(db: Session, user: User, exam: FinalExam) -> QuizAttempt | None:
@@ -961,6 +1004,7 @@ def _exam_session_state(db: Session, user: User, exam: FinalExam, now: datetime)
         _ensure_exam_order(db, session, exam)
     latest = _latest_exam_attempt(db, user, exam)
     in_progress = session is not None
+    order = _exam_order(session) if in_progress else None
     return ExamSessionOut(
         in_progress=in_progress,
         started_at=session.started_at if session else None,
@@ -968,7 +1012,8 @@ def _exam_session_state(db: Session, user: User, exam: FinalExam, now: datetime)
         time_limit_minutes=exam.time_limit_minutes,
         latest_score=None if in_progress or latest is None else latest.score,
         latest_passed=None if in_progress or latest is None else latest.passed,
-        order=_exam_order(session) if in_progress else None,
+        order=order,
+        questions=_student_questions_for_order(exam, order) if in_progress else [],
     )
 
 
@@ -1048,9 +1093,15 @@ def submit_final_exam(
         passed = False
         answers_json = "{}"
     else:
-        score, _, _ = _score_answers(exam.questions, payload.answers)
+        order = _exam_order(session)
+        selected = _questions_for_order(exam, order)
+        if not selected:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Exam session has no questions.")
+        allowed_ids = {str(question.id) for question in selected}
+        answers = {key: value for key, value in payload.answers.items() if key in allowed_ids}
+        score, _, _ = _score_answers(selected, answers)
         passed = score >= exam.pass_percent
-        answers_json = json.dumps(payload.answers)
+        answers_json = json.dumps(answers)
 
     attempt = QuizAttempt(
         user_id=current_user.id,
@@ -1092,6 +1143,49 @@ def list_my_certificates(
         .all()
     )
     return [_certificate_to_out(row, current_user.full_name, db) for row in rows]
+
+
+@router.get("/me/notifications")
+def list_my_notifications(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.schemas.notifications import NotificationListOut, NotificationOut
+    from app.services.notifications import list_user_notifications, unread_notification_count
+
+    items = list_user_notifications(db, current_user)
+    return NotificationListOut(
+        unread_count=unread_notification_count(db, current_user),
+        items=[NotificationOut.model_validate(row) for row in items],
+    ).model_dump()
+
+
+@router.post("/me/notifications/{notification_id}/read")
+def mark_my_notification_read(
+    notification_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.schemas.notifications import NotificationOut
+    from app.services.notifications import mark_notification_read
+
+    row = mark_notification_read(db, current_user, notification_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
+    db.commit()
+    return NotificationOut.model_validate(row).model_dump()
+
+
+@router.post("/me/notifications/read-all")
+def mark_all_my_notifications_read(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    from app.services.notifications import mark_all_notifications_read
+
+    count = mark_all_notifications_read(db, current_user)
+    db.commit()
+    return {"marked": count}
 
 
 @router.get("/me/membership-certificate", response_model=MembershipCertificateOut)

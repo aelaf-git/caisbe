@@ -159,13 +159,18 @@ export default function QuizQuestionEditor({
         </div>
       ))}
 
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => onChange([...questions, emptyQuestion()])}
-      >
-        + Add question
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onChange([...questions, emptyQuestion()])}
+        >
+          + Add question
+        </Button>
+        <p className="text-xs font-medium text-caisbe-muted">
+          Bank size: {questions.length}
+        </p>
+      </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
     </div>

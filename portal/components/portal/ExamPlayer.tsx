@@ -7,32 +7,31 @@ import type { ExamOrder, ExamSessionState, FinalExam, QuizAttempt, QuizQuestion 
 type Phase =
   | { kind: "loading" }
   | { kind: "intro" }
-  | { kind: "live"; startedAt: string; deadlineMs: number | null; order: ExamOrder | null }
+  | {
+      kind: "live";
+      startedAt: string;
+      deadlineMs: number | null;
+      order: ExamOrder | null;
+      questions: QuizQuestion[];
+    }
   | { kind: "result"; score: number; passed: boolean; certificateCode: string | null };
 
-function orderedQuestions(exam: FinalExam, order: ExamOrder | null): QuizQuestion[] {
-  if (!order) return exam.questions;
-  const questionsById = new Map(exam.questions.map((question) => [Number(question.id), question]));
-  const ordered = order.questions
+function orderedQuestions(questions: QuizQuestion[], order: ExamOrder | null): QuizQuestion[] {
+  if (!order) return questions;
+  const questionsById = new Map(questions.map((question) => [Number(question.id), question]));
+  // Only session-selected questions — never append bank leftovers.
+  return order.questions
     .map((id) => questionsById.get(id))
-    .filter((question): question is QuizQuestion => question != null);
-  const seen = new Set(ordered.map((question) => Number(question.id)));
-  for (const question of exam.questions) {
-    if (!seen.has(Number(question.id))) ordered.push(question);
-  }
-  return ordered.map((question) => {
-    const choiceIds = order.choices[String(question.id)];
-    if (!choiceIds) return question;
-    const choicesById = new Map(question.choices.map((choice) => [Number(choice.id), choice]));
-    const choices = choiceIds
-      .map((id) => choicesById.get(id))
-      .filter((choice): choice is QuizQuestion["choices"][number] => choice != null);
-    const seenChoices = new Set(choices.map((choice) => Number(choice.id)));
-    for (const choice of question.choices) {
-      if (!seenChoices.has(Number(choice.id))) choices.push(choice);
-    }
-    return { ...question, choices };
-  });
+    .filter((question): question is QuizQuestion => question != null)
+    .map((question) => {
+      const choiceIds = order.choices[String(question.id)];
+      if (!choiceIds) return question;
+      const choicesById = new Map(question.choices.map((choice) => [Number(choice.id), choice]));
+      const choices = choiceIds
+        .map((id) => choicesById.get(id))
+        .filter((choice): choice is QuizQuestion["choices"][number] => choice != null);
+      return { ...question, choices };
+    });
 }
 
 function answerKey(examId: number, startedAt: string) {
@@ -87,7 +86,16 @@ export default function ExamPlayer({
   answersRef.current = answers;
   phaseRef.current = phase;
 
-  function enterLive(startedAt: string, remainingSeconds: number | null, order: ExamOrder | null) {
+  const bankSize = exam.question_bank_size ?? exam.questions.length;
+  const appearCount = exam.questions_to_appear ?? bankSize;
+  const showBankHint = bankSize > 0 && appearCount < bankSize;
+
+  function enterLive(
+    startedAt: string,
+    remainingSeconds: number | null,
+    order: ExamOrder | null,
+    sessionQuestions: QuizQuestion[],
+  ) {
     autoSubmitted.current = false;
     submitLock.current = false;
     setAnswers(readStoredAnswers(exam.id, startedAt));
@@ -96,12 +104,16 @@ export default function ExamPlayer({
       startedAt,
       deadlineMs: remainingSeconds == null ? null : Date.now() + remainingSeconds * 1000,
       order,
+      questions: sessionQuestions,
     });
   }
 
   function applySession(state: ExamSessionState, certificateCode: string | null) {
     if (state.in_progress && state.started_at) {
-      enterLive(state.started_at, state.remaining_seconds, state.order);
+      const sessionQuestions = state.questions?.length
+        ? state.questions
+        : orderedQuestions(exam.questions, state.order);
+      enterLive(state.started_at, state.remaining_seconds, state.order, sessionQuestions);
       return;
     }
     if (state.latest_score != null) {
@@ -167,7 +179,8 @@ export default function ExamPlayer({
     const current = phaseRef.current;
     if (submitLock.current || current.kind !== "live") return;
     const selected = answersRef.current;
-    const unanswered = exam.questions.some((question) => selected[String(question.id)] == null);
+    const live = current.questions;
+    const unanswered = live.some((question) => selected[String(question.id)] == null);
     if (unanswered && !force) {
       setError("Answer every question before submitting.");
       return;
@@ -209,10 +222,15 @@ export default function ExamPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, phase.kind]);
 
-  const liveQuestions = phase.kind === "live" ? orderedQuestions(exam, phase.order) : exam.questions;
-  const answeredCount = exam.questions.filter((question) => answers[String(question.id)] != null).length;
+  const liveQuestions =
+    phase.kind === "live" ? orderedQuestions(phase.questions, phase.order) : [];
+  const answeredCount =
+    phase.kind === "live"
+      ? liveQuestions.filter((question) => answers[String(question.id)] != null).length
+      : 0;
   const limitLabel = exam.time_limit_minutes != null ? formatLimit(exam.time_limit_minutes) : null;
   const timeUp = remaining === 0;
+  const canStart = bankSize > 0;
 
   return (
     <div className="space-y-6">
@@ -231,8 +249,8 @@ export default function ExamPlayer({
             }`}
           >
             {remaining != null
-              ? `${formatClock(remaining)} · ${answeredCount} of ${exam.questions.length}`
-              : `${answeredCount} of ${exam.questions.length} answered`}
+              ? `${formatClock(remaining)} · ${answeredCount} of ${liveQuestions.length}`
+              : `${answeredCount} of ${liveQuestions.length} answered`}
           </span>
         ) : null}
       </div>
@@ -246,10 +264,15 @@ export default function ExamPlayer({
               ? `You have ${limitLabel}. The timer starts when you begin, and the exam is submitted when time runs out.`
               : "This exam is not timed."}{" "}
             Score at least {exam.pass_percent}% to pass. A lower score can be taken again. Correct answers are not shown.
+            {showBankHint
+              ? ` You will get ${appearCount} questions (from a bank of ${bankSize}), in random order with shuffled choices.`
+              : bankSize > 0
+                ? ` You will get ${appearCount} question${appearCount === 1 ? "" : "s"}, in random order with shuffled choices.`
+                : ""}
           </p>
           <button
             type="button"
-            disabled={submitting || exam.questions.length === 0}
+            disabled={submitting || !canStart}
             onClick={() => void begin()}
             className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
           >
@@ -305,7 +328,7 @@ export default function ExamPlayer({
           ))}
           <button
             type="button"
-            disabled={submitting || exam.questions.length === 0}
+            disabled={submitting || liveQuestions.length === 0}
             onClick={() => void submit(timeUp)}
             className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
           >

@@ -48,6 +48,10 @@ class User(Base):
         uselist=False,
     )
     orders: Mapped[list["Order"]] = relationship(back_populates="user")
+    notifications: Mapped[list["Notification"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     invoices: Mapped[list["Invoice"]] = relationship(back_populates="user")
     payments: Mapped[list["Payment"]] = relationship(
         back_populates="user",
@@ -78,7 +82,10 @@ class Course(Base):
     draft_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     has_unpublished_changes: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    enrollments: Mapped[list["Enrollment"]] = relationship(back_populates="course")
+    enrollments: Mapped[list["Enrollment"]] = relationship(
+        back_populates="course",
+        cascade="all, delete-orphan",
+    )
     chapters: Mapped[list["Chapter"]] = relationship(
         back_populates="course",
         cascade="all, delete-orphan",
@@ -94,7 +101,10 @@ class Course(Base):
         cascade="all, delete-orphan",
         uselist=False,
     )
-    certificates: Mapped[list["Certificate"]] = relationship(back_populates="course")
+    certificates: Mapped[list["Certificate"]] = relationship(
+        back_populates="course",
+        cascade="all, delete-orphan",
+    )
 
 
 class Enrollment(Base):
@@ -103,7 +113,7 @@ class Enrollment(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), index=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
     status: Mapped[str] = mapped_column(String(32), default="enrolled")
     progress: Mapped[int] = mapped_column(Integer, default=0)
     enrolled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -224,6 +234,8 @@ class FinalExam(Base):
     title: Mapped[str] = mapped_column(String(255), default="Final Exam")
     pass_percent: Mapped[int] = mapped_column(Integer, default=70)
     time_limit_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # NULL = show the full bank; otherwise sample this many questions per attempt.
+    questions_to_appear: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     course: Mapped[Course] = relationship(back_populates="final_exam")
     questions: Mapped[list["QuizQuestion"]] = relationship(
@@ -540,7 +552,7 @@ class OrderItem(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
-    course_id: Mapped[int | None] = mapped_column(ForeignKey("courses.id", ondelete="RESTRICT"), nullable=True)
+    course_id: Mapped[int | None] = mapped_column(ForeignKey("courses.id", ondelete="SET NULL"), nullable=True)
     membership_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
     membership_kind: Mapped[str | None] = mapped_column(String(20), nullable=True)
     title: Mapped[str] = mapped_column(String(255))
@@ -735,6 +747,23 @@ class ContactMessage(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class Notification(Base):
+    """In-app student notifications (course removals, admin messages, etc.)."""
+
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    body: Mapped[str] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(String(40), default="info")
+    link: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="notifications")
 
 
 class JobPosting(Base):
