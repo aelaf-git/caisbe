@@ -45,7 +45,10 @@ export default function BlockView({
   }
 
   if (block.block_type === "video" && block.url) {
-    const isFile = block.url.startsWith("/api/uploads/") || block.url.endsWith(".mp4");
+    const isFile =
+      block.url.startsWith("/api/uploads/") ||
+      /\/uploads\/[a-f0-9]{32}\./i.test(block.url) ||
+      block.url.endsWith(".mp4");
     return (
       <div className="space-y-2">
         {block.title ? <h3 className="text-lg font-semibold text-caisbe-text">{block.title}</h3> : null}

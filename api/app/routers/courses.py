@@ -723,33 +723,31 @@ async def student_upload(
     request: Request,
     current_user: User = Depends(get_current_user),
 ) -> UploadOut:
+    from app.services.storage import save_upload
+
     if current_user.role == "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Use the admin upload.")
     form = await request.form(max_part_size=25 * 1024 * 1024)
     uploaded = form.get("file")
     if not isinstance(uploaded, UploadFile):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing file upload")
-    suffix = Path(uploaded.filename or "file").suffix.lower()
-    if suffix not in {".pdf", ".doc", ".docx"}:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Upload a PDF or Word file.")
-    upload_root = Path(settings.upload_dir)
-    upload_root.mkdir(parents=True, exist_ok=True)
-    safe_name = f"{uuid.uuid4().hex}{suffix}"
-    dest = upload_root / safe_name
-    data = await uploaded.read()
-    if not data:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty")
-    if len(data) > 25 * 1024 * 1024:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File is too large.")
-    dest.write_bytes(data)
-    return UploadOut(url=f"/api/uploads/{safe_name}", filename=(uploaded.filename or safe_name)[:120])
+    url, filename = await save_upload(
+        uploaded,
+        allowed_suffixes={".pdf", ".doc", ".docx"},
+        max_bytes=25 * 1024 * 1024,
+        invalid_detail="Upload a PDF or Word file.",
+        too_large_detail="File is too large.",
+    )
+    return UploadOut(url=url, filename=filename)
 
 
 def _assignment_file_ok(url: str | None) -> bool:
+    from app.services.storage import is_managed_upload_url
+
     if not url or not url.strip():
         return False
     path = url.strip().split("?")[0].lower()
-    return "/api/uploads/" in path and path.endswith((".pdf", ".doc", ".docx"))
+    return is_managed_upload_url(url) and path.endswith((".pdf", ".doc", ".docx"))
 
 
 @router.post("/me/blocks/{block_id}/submit")
@@ -1221,41 +1219,18 @@ async def _save_membership_upload(
     max_bytes: int = 20 * 1024 * 1024,
     invalid_detail: str = "Upload a PDF, Word, or image file.",
 ) -> tuple[str, str]:
-    suffix = Path(uploaded.filename or "").suffix.lower()
-    if suffix not in allowed_suffixes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=invalid_detail,
-        )
-    upload_root = Path(settings.upload_dir)
-    upload_root.mkdir(parents=True, exist_ok=True)
-    safe_name = f"{uuid.uuid4().hex}{suffix}"
-    dest = upload_root / safe_name
-    written = 0
-    try:
-        with dest.open("wb") as out:
-            while True:
-                chunk = await uploaded.read(1024 * 1024)
-                if not chunk:
-                    break
-                written += len(chunk)
-                if written > max_bytes:
-                    raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail="File is too large. Maximum size is 20 MB.",
-                    )
-                out.write(chunk)
-    except HTTPException:
-        dest.unlink(missing_ok=True)
-        raise
-    except Exception:
-        dest.unlink(missing_ok=True)
-        raise
-    if written == 0:
-        dest.unlink(missing_ok=True)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
-    original_name = Path(uploaded.filename or safe_name).name
-    return f"/api/uploads/{safe_name}", original_name
+    from app.services.storage import save_upload
+
+    url, display = await save_upload(
+        uploaded,
+        allowed_suffixes=allowed_suffixes,
+        max_bytes=max_bytes,
+        invalid_detail=invalid_detail,
+        empty_detail="Uploaded file is empty.",
+        too_large_detail="File is too large. Maximum size is 20 MB.",
+    )
+    original_name = Path(uploaded.filename or display).name
+    return url, original_name
 
 
 def _append_supporting_document_details(

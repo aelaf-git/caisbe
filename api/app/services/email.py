@@ -92,15 +92,16 @@ def _html_to_plain(html: str) -> str:
 
 
 def load_upload_attachment(file_url: str, filename: str) -> EmailAttachment:
+    from app.services.storage import is_managed_upload_url, read_managed_bytes
+
     raw = (file_url or "").strip()
-    prefix = "/api/uploads/"
-    if not raw.startswith(prefix):
+    if not is_managed_upload_url(raw):
         raise EmailDeliveryError("Attachments must be uploaded files from the media library.")
-    stored_name = Path(raw[len(prefix) :]).name
-    if not stored_name or stored_name in {".", ".."}:
-        raise EmailDeliveryError("Invalid attachment path.")
-    dest = Path(settings.upload_dir) / stored_name
-    if not dest.is_file():
-        raise EmailDeliveryError(f"Attachment not found: {filename}")
-    safe_name = Path(filename).name or stored_name
-    return EmailAttachment(filename=safe_name, content=dest.read_bytes())
+    try:
+        content = read_managed_bytes(raw)
+    except FileNotFoundError as exc:
+        raise EmailDeliveryError(f"Attachment not found: {filename}") from exc
+    except Exception as exc:
+        raise EmailDeliveryError(f"Unable to load attachment: {filename}") from exc
+    safe_name = Path(filename).name or Path(raw.split("?")[0]).name or "attachment"
+    return EmailAttachment(filename=safe_name, content=content)

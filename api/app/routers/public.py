@@ -9,7 +9,6 @@ from starlette.datastructures import UploadFile
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db import get_db
 from app.security.limiter import limiter
 from app.models import (
@@ -310,49 +309,25 @@ async def apply_membership_file(
     request: Request,
     db: Session = Depends(get_db),
 ) -> MembershipApplicationOut:
+    from app.services.storage import save_upload
+
     form = await request.form(max_part_size=MAX_FORM_UPLOAD_BYTES)
     uploaded = form.get("file")
     if not isinstance(uploaded, UploadFile):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose a completed form to upload.")
-    suffix = Path(uploaded.filename or "").suffix.lower()
-    if suffix not in FORM_UPLOAD_EXTENSIONS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Upload a PDF or Word file.",
-        )
-    upload_root = Path(settings.upload_dir)
-    upload_root.mkdir(parents=True, exist_ok=True)
-    safe_name = f"{uuid.uuid4().hex}{suffix}"
-    dest = upload_root / safe_name
-    written = 0
-    try:
-        with dest.open("wb") as out:
-            while True:
-                chunk = await uploaded.read(1024 * 1024)
-                if not chunk:
-                    break
-                written += len(chunk)
-                if written > MAX_FORM_UPLOAD_BYTES:
-                    raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail="File is too large. Maximum size is 20 MB.",
-                    )
-                out.write(chunk)
-    except HTTPException:
-        dest.unlink(missing_ok=True)
-        raise
-    except Exception:
-        dest.unlink(missing_ok=True)
-        raise
-    if written == 0:
-        dest.unlink(missing_ok=True)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
+    file_url, display = await save_upload(
+        uploaded,
+        allowed_suffixes=FORM_UPLOAD_EXTENSIONS,
+        max_bytes=MAX_FORM_UPLOAD_BYTES,
+        invalid_detail="Upload a PDF or Word file.",
+        empty_detail="Uploaded file is empty.",
+        too_large_detail="File is too large. Maximum size is 20 MB.",
+    )
 
-    original_name = Path(uploaded.filename or safe_name).name
+    original_name = Path(uploaded.filename or display).name
     display_name = original_name[:120] if len(original_name) >= 2 else "Uploaded form"
     kind = str(form.get("kind") or "application").strip().lower()
     kind_label = "Renewal" if kind == "renewal" else "New membership"
-    file_url = f"/api/uploads/{safe_name}"
     application = MembershipApplication(
         full_name=display_name,
         email=f"upload-{uuid.uuid4().hex[:12]}@example.com",

@@ -191,7 +191,6 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       chapterName.trim() ? `Chapter: ${chapterName.trim()}` : null,
       chapterLabels.length ? `Chapter membership: ${chapterLabels.join(", ")}` : null,
       additionalLabels.length ? `Additional options: ${additionalLabels.join(", ")}` : null,
-      mode === "upload" && file ? `Form upload: ${file.name}` : null,
       "Agreed to CAISBE bylaws and code of ethics.",
     ].filter(Boolean);
 
@@ -217,9 +216,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       setMessage(
         isRenewal
           ? "Renewal request received. Our team will confirm your membership renewal."
-          : mode === "upload"
-            ? "Your completed form was received. Our team will review your membership application."
-            : "Application received. Our team will review your membership registration.",
+          : "Application received. Our team will review your membership registration.",
       );
       setFile(null);
     } catch (err) {

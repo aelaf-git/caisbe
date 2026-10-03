@@ -2,7 +2,10 @@ import type { Chapter, ContentBlock } from "@/lib/lms";
 
 export function isAdminUpload(url: string | null | undefined): boolean {
   if (!url) return false;
-  return url.split("?")[0].includes("/api/uploads/");
+  const path = url.split("?")[0];
+  if (path.includes("/api/uploads/")) return true;
+  // Object-storage keys: .../uploads/<32-hex>.<ext>
+  return /\/uploads\/[a-f0-9]{32}\.[a-z0-9]+$/i.test(path);
 }
 
 export function isLegacyChapterReading(block: ContentBlock): boolean {

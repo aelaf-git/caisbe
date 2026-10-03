@@ -169,7 +169,13 @@ function readingKind(url: string | null): "pdf" | "doc" | "epub" | "link" | "fil
   if (path.endsWith(".pdf")) return "pdf";
   if (path.endsWith(".doc") || path.endsWith(".docx")) return "doc";
   if (path.endsWith(".epub")) return "epub";
-  if (/^https?:\/\//i.test(raw) && !path.includes("/api/uploads/")) return "link";
+  if (
+    /^https?:\/\//i.test(raw) &&
+    !path.includes("/api/uploads/") &&
+    !/\/uploads\/[a-f0-9]{32}\./i.test(path)
+  ) {
+    return "link";
+  }
   return "file";
 }
 

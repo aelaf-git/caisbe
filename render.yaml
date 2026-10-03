@@ -33,6 +33,19 @@ services:
         value: production
       - key: UPLOAD_DIR
         value: /var/data/uploads
+      # Cloudflare R2 (or other S3-compatible). Set in the Render dashboard after creating the bucket.
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: S3_PUBLIC_BASE_URL
+        sync: false
+      - key: S3_REGION
+        value: auto
       - key: DATABASE_URL
         fromDatabase:
           name: caisbe-db

@@ -547,7 +547,9 @@ function ReadingsPanel({
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-caisbe-text">{block.title || "Reading"}</p>
                 <p className="truncate text-xs text-caisbe-muted">
-                  {block.url?.includes("/api/uploads/") ? block.label || "Uploaded file" : block.url || "Link"}
+                  {block.url && (/\/api\/uploads\//.test(block.url) || /\/uploads\/[a-f0-9]{32}\./i.test(block.url))
+                    ? block.label || "Uploaded file"
+                    : block.url || "Link"}
                 </p>
               </div>
               <DeleteIconButton

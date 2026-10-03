@@ -36,6 +36,15 @@ class Settings(BaseSettings):
     admin_password: str = "adminpass123"
     admin_full_name: str = "CAISBE Admin"
     upload_dir: str = "./uploads"
+    # S3-compatible object storage (Cloudflare R2, AWS S3, etc.).
+    # When all of endpoint/bucket/keys/public_base_url are set, uploads go there.
+    # Otherwise files stay on local/Render disk under UPLOAD_DIR.
+    s3_endpoint: str = ""
+    s3_bucket: str = ""
+    s3_access_key: str = ""
+    s3_secret_key: str = ""
+    s3_public_base_url: str = ""
+    s3_region: str = "auto"
     portal_public_url: str = "http://localhost:3002"
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
