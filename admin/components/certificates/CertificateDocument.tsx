@@ -1,23 +1,10 @@
 "use client";
 
-import { Cinzel, Great_Vibes } from "next/font/google";
 import { QRCodeSVG } from "qrcode.react";
 import {
   CERTIFICATE_HEIGHT_PX,
   CERTIFICATE_WIDTH_PX,
 } from "@/components/certificates/MembershipCertificateDocument";
-
-const cinzel = Cinzel({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-cinzel",
-});
-
-const greatVibes = Great_Vibes({
-  subsets: ["latin"],
-  weight: ["400"],
-  variable: "--font-great-vibes",
-});
 
 export type CertificateDocumentProps = {
   studentName: string;
@@ -97,7 +84,7 @@ export default function CertificateDocument({
       />
 
       <article
-        className={`certificate-document relative mx-auto overflow-hidden bg-white shadow-brand-card print:shadow-none ${cinzel.variable} ${greatVibes.variable}`}
+        className="certificate-document relative mx-auto overflow-hidden bg-white shadow-brand-card print:shadow-none"
         style={{
           width: CERTIFICATE_WIDTH_PX,
           height: CERTIFICATE_HEIGHT_PX,

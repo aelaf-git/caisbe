@@ -1,20 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Cinzel, Great_Vibes } from "next/font/google";
 import { QRCodeSVG } from "qrcode.react";
-
-const cinzel = Cinzel({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-cinzel",
-});
-
-const greatVibes = Great_Vibes({
-  subsets: ["latin"],
-  weight: ["400"],
-  variable: "--font-great-vibes",
-});
 
 /** Fixed A4 landscape design size — do not fluid-scale internal layout. */
 export const CERTIFICATE_WIDTH_PX = 900;
@@ -156,7 +143,7 @@ export default function MembershipCertificateDocument({
       />
 
       <article
-        className={`certificate-document relative mx-auto overflow-hidden bg-white shadow-brand-card print:shadow-none ${cinzel.variable} ${greatVibes.variable}`}
+        className="certificate-document relative mx-auto overflow-hidden bg-white shadow-brand-card print:shadow-none"
         style={{
           width: CERTIFICATE_WIDTH_PX,
           height: CERTIFICATE_HEIGHT_PX,

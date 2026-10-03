@@ -1,33 +1,9 @@
 import type { Metadata } from "next";
-import { Nunito_Sans, Open_Sans, Poppins, Roboto } from "next/font/google";
 import VisitTracker from "@/components/analytics/VisitTracker";
 import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
+import { siteFontClassName } from "@/lib/fonts";
 import "./globals.css";
-
-const roboto = Roboto({
-  variable: "--font-roboto",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const openSans = Open_Sans({
-  variable: "--font-open-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const poppins = Poppins({
-  variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-});
-
-const nunito = Nunito_Sans({
-  variable: "--font-nunito",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
 
 export const metadata: Metadata = {
   title: "CAISBE - Canada Africa Institute for the Sustainable Built Environment",
@@ -45,20 +21,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-  lang="en"
-  className={`${roboto.variable} ${openSans.variable} ${poppins.variable} ${nunito.variable} h-full`}
-  suppressHydrationWarning
->
-  <body
-    className="flex min-h-full flex-col bg-background font-sans text-foreground antialiased"
-    suppressHydrationWarning
-  >
-    <VisitTracker />
-    <Header />
-    <main className="font-hopewell flex-1 bg-[#f8fafc]">{children}</main>
-    <Footer />
-  </body>
-</html>
+    <html lang="en" className={`${siteFontClassName} h-full`} suppressHydrationWarning>
+      <body
+        className="flex min-h-full flex-col bg-background font-sans text-foreground antialiased"
+        suppressHydrationWarning
+      >
+        <VisitTracker />
+        <Header />
+        <main className="font-hopewell flex-1 bg-[#f8fafc]">{children}</main>
+        <Footer />
+      </body>
+    </html>
   );
 }
