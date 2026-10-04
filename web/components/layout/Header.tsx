@@ -10,12 +10,12 @@ export default async function Header() {
       {/* Desktop-only utility row — moves into the hamburger drawer below lg */}
       <div className="hidden border-b border-ifma-border-light bg-white lg:block">
         <div className="mx-auto flex h-12 max-w-7xl items-center justify-between gap-4 px-4 text-base">
-          <div className="flex min-w-0 items-center gap-x-4 overflow-x-auto">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
             {utilityLinks.map((link) => (
               <NavTextLink
                 key={link.href}
                 href={link.href}
-                className="shrink-0 leading-none text-caisbe-text"
+                className="leading-none text-caisbe-text"
               >
                 {link.label}
               </NavTextLink>

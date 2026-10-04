@@ -1,6 +1,6 @@
 export const partnersContent = {
   eyebrow: "Partnerships",
-  title: "Partners",
+  title: "Become a Partner",
   lead:
     "Canada Africa Institute for the Sustainable Built Environment (CAISBE) is the future voice and source of information on commercial, industrial and medical real estate buildings in Africa.",
   paragraphs: [
@@ -12,8 +12,8 @@ export const partnersContent = {
   thankYouLead:
     "We are grateful to the organizations that support CAISBE’s mission across Africa and Canada.",
   contactEmail: "info@caisbe.org",
-  ctaLabel: "Contact us about partnerships",
-  seoTitle: "Partners | CAISBE",
+  ctaLabel: "Become a Partner",
+  seoTitle: "Become a Partner | CAISBE",
   metaDescription:
     "Partner with CAISBE for brand recognition, thought leadership, and Canada–Africa real estate connections.",
 };

@@ -163,10 +163,7 @@ const rawNavigation: readonly RawNavSection[] = [
       {
         title: "Partnerships",
         href: "/partners",
-        links: [
-          { label: "Partners", href: "/partners" },
-          { label: "Contact Us", href: "/contact" },
-        ],
+        links: [{ label: "Become a Partner", href: "/partners" }],
       },
     ],
   },
