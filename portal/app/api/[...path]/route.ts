@@ -32,7 +32,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     upstream = await fetch(target, init);
   } catch {
     return NextResponse.json(
-      { detail: "Unable to reach the API. Check API_URL on the web service." },
+      { detail: "Unable to reach the API. Check API_URL on the portal service." },
       { status: 502 },
     );
   }

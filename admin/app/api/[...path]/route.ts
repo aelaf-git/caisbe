@@ -23,6 +23,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     cache: "no-store",
   };
   if (method !== "GET" && method !== "HEAD") {
+    // Stream the body so large uploads (and multipart hero images) do not buffer in Next.
     init.body = request.body;
     init.duplex = "half";
   }
@@ -32,7 +33,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     upstream = await fetch(target, init);
   } catch {
     return NextResponse.json(
-      { detail: "Unable to reach the API. Check API_URL on the web service." },
+      { detail: "Unable to reach the API. Check API_URL on the admin service." },
       { status: 502 },
     );
   }
