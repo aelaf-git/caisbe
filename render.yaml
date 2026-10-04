@@ -8,9 +8,9 @@
 #   portal.caisbe.org           → caisbe-portal
 #   api.caisbe.org              → caisbe-api
 #
-# Server-side API_URL must use the Render hostname (caisbe-api.onrender.com), not
-# api.caisbe.org. Calling the Cloudflare custom domain from another Render service
-# returns Error 1000 ("DNS points to prohibited IP") and breaks login/proxy.
+# Server-side API_URL must use the Render private network (http://caisbe-api:10000),
+# not api.caisbe.org or caisbe-api.onrender.com. Those public hostnames go through
+# Cloudflare and return Error 1000 (dns_loop) when called from another Render service.
 #
 # Cost note: every production web service is 0.5c-512mb ($7/mo, 0.5 CPU, 512 MB).
 # The API also needs a persistent disk. Postgres stays on basic-256mb.
@@ -102,7 +102,7 @@ services:
       - caisbe.org
     envVars:
       - key: API_URL
-        value: https://caisbe-api.onrender.com
+        value: http://caisbe-api:10000
       - key: NEXT_PUBLIC_SITE_URL
         value: https://caisbe.org
       - key: NEXT_PUBLIC_ADMIN_URL
@@ -123,7 +123,7 @@ services:
       - admin.caisbe.org
     envVars:
       - key: API_URL
-        value: https://caisbe-api.onrender.com
+        value: http://caisbe-api:10000
       - key: NEXT_PUBLIC_API_URL
         value: https://api.caisbe.org
       - key: NEXT_PUBLIC_SITE_URL
@@ -146,7 +146,7 @@ services:
       - portal.caisbe.org
     envVars:
       - key: API_URL
-        value: https://caisbe-api.onrender.com
+        value: http://caisbe-api:10000
       - key: NEXT_PUBLIC_SITE_URL
         value: https://caisbe.org
       - key: NEXT_PUBLIC_ADMIN_URL

@@ -4,14 +4,22 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const RENDER_API_PUBLIC = "https://caisbe-api.onrender.com";
-/** Render private network address (same account/region). */
-const RENDER_API_PRIVATE = "http://caisbe-api:10000";
+/**
+ * Render private network (bypasses Cloudflare).
+ * Port 10000 always routes to the web service's primary HTTP server.
+ * Also try 8000 in case PORT is pinned there.
+ */
+const RENDER_API_PRIVATE_CANDIDATES = [
+  "http://caisbe-api:10000",
+  "http://caisbe-api:8000",
+] as const;
 
 function configuredApiBase(): string {
   // Bracket access keeps this a runtime env read (Next can inline process.env.API_URL at build).
   let raw = (process.env["API_URL"] || "http://127.0.0.1:8000").trim().replace(/\/$/, "");
-  if (/api\.caisbe\.org/i.test(raw)) {
-    raw = RENDER_API_PUBLIC;
+  // Public Cloudflare / onrender hostnames fail with Error 1000 from Render → Render.
+  if (/api\.caisbe\.org/i.test(raw) || /caisbe-api\.onrender\.com/i.test(raw)) {
+    raw = RENDER_API_PRIVATE_CANDIDATES[0];
   }
   if (!/^https?:\/\//i.test(raw)) {
     return "http://127.0.0.1:8000";
@@ -21,7 +29,7 @@ function configuredApiBase(): string {
 
 function candidateBases(): string[] {
   const configured = configuredApiBase();
-  const bases = [RENDER_API_PRIVATE, RENDER_API_PUBLIC, configured];
+  const bases = [...RENDER_API_PRIVATE_CANDIDATES, configured, RENDER_API_PUBLIC];
   return [...new Set(bases)];
 }
 
