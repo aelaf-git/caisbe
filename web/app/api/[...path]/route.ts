@@ -3,12 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const RENDER_API = "https://caisbe-api.onrender.com";
+
 function apiBase(): string {
-  // Use || so empty string from a bad Docker ARG does not produce relative fetch URLs.
-  let raw = (process.env.API_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "");
-  // Server-side calls to the Cloudflare custom domain fail with Error 1000 from Render.
-  if (/^https?:\/\/(www\.)?api\.caisbe\.org$/i.test(raw)) {
-    raw = "https://caisbe-api.onrender.com";
+  // Bracket access keeps this a runtime env read (Next can inline process.env.API_URL at build).
+  let raw = (process.env["API_URL"] || "http://127.0.0.1:8000").trim().replace(/\/$/, "");
+  // Browsers can call api.caisbe.org. Render → Cloudflare custom domain returns Error 1000.
+  if (/api\.caisbe\.org/i.test(raw)) {
+    raw = RENDER_API;
   }
   if (!/^https?:\/\//i.test(raw)) {
     return "http://127.0.0.1:8000";
@@ -23,7 +25,6 @@ const FORWARD_REQUEST_HEADERS = [
   "range",
   "user-agent",
   "accept-language",
-  // Client identity / geo (required for site analytics behind this proxy)
   "x-forwarded-for",
   "x-real-ip",
   "cf-connecting-ip",
@@ -56,13 +57,13 @@ function clientIp(request: NextRequest): string | null {
 }
 
 async function proxy(request: NextRequest, path: string[]): Promise<NextResponse> {
-  const target = `${apiBase()}/api/${path.join("/")}${request.nextUrl.search}`;
+  const base = apiBase();
+  const targetPath = `/api/${path.join("/")}${request.nextUrl.search}`;
   const headers = new Headers();
   for (const key of FORWARD_REQUEST_HEADERS) {
     const value = request.headers.get(key);
     if (value) headers.set(key, value);
   }
-  // Ensure the API sees the browser IP, not the Next.js service IP.
   const ip = clientIp(request);
   if (ip) {
     headers.set("x-forwarded-for", ip);
@@ -88,12 +89,28 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     }
   }
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(target, init);
-  } catch {
+  async function upstreamFetch(url: string): Promise<Response | null> {
+    try {
+      return await fetch(url, init);
+    } catch {
+      return null;
+    }
+  }
+
+  let upstream = await upstreamFetch(`${base}${targetPath}`);
+  if (
+    upstream &&
+    (upstream.headers.get("content-type") || "").toLowerCase().includes("text/html") &&
+    base !== RENDER_API
+  ) {
+    upstream = await upstreamFetch(`${RENDER_API}${targetPath}`);
+  }
+  if (!upstream && base !== RENDER_API) {
+    upstream = await upstreamFetch(`${RENDER_API}${targetPath}`);
+  }
+  if (!upstream) {
     return NextResponse.json(
-      { detail: "Unable to reach the API. Check API_URL on the web service." },
+      { detail: "Unable to reach the API. Please try again shortly." },
       { status: 502 },
     );
   }
@@ -122,10 +139,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
   const body = await upstream.arrayBuffer();
   if (upstreamType.includes("text/html")) {
     return NextResponse.json(
-      {
-        detail:
-          "Unable to reach the API. Set API_URL to https://caisbe-api.onrender.com (not api.caisbe.org).",
-      },
+      { detail: "Unable to reach the API. Please try again shortly." },
       { status: 502 },
     );
   }
