@@ -3,14 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const RENDER_API = "https://caisbe-api.onrender.com";
+const RENDER_API_PUBLIC = "https://caisbe-api.onrender.com";
+/** Render private network address (same account/region). */
+const RENDER_API_PRIVATE = "http://caisbe-api:10000";
 
-function apiBase(): string {
+function configuredApiBase(): string {
   // Bracket access keeps this a runtime env read (Next can inline process.env.API_URL at build).
   let raw = (process.env["API_URL"] || "http://127.0.0.1:8000").trim().replace(/\/$/, "");
-  // Browsers can call api.caisbe.org. Render → Cloudflare custom domain returns Error 1000.
   if (/api\.caisbe\.org/i.test(raw)) {
-    raw = RENDER_API;
+    raw = RENDER_API_PUBLIC;
   }
   if (!/^https?:\/\//i.test(raw)) {
     return "http://127.0.0.1:8000";
@@ -18,12 +19,19 @@ function apiBase(): string {
   return raw;
 }
 
+function candidateBases(): string[] {
+  const configured = configuredApiBase();
+  const bases = [RENDER_API_PRIVATE, RENDER_API_PUBLIC, configured];
+  return [...new Set(bases)];
+}
+
 const FORWARD_REQUEST_HEADERS = [
   "content-type",
   "authorization",
   "accept",
   "range",
-  "user-agent",
+  // Intentionally NOT forwarding browser user-agent — Cloudflare may Error 1000
+  // when a datacenter IP presents a browser UA to api/onrender hostnames.
   "accept-language",
   "x-forwarded-for",
   "x-real-ip",
@@ -47,6 +55,15 @@ const FORWARD_RESPONSE_HEADERS = [
   "last-modified",
 ] as const;
 
+type AttemptLog = {
+  base: string;
+  status: number | null;
+  contentType: string | null;
+  okJson: boolean;
+  error?: string;
+  preview?: string;
+};
+
 function clientIp(request: NextRequest): string | null {
   for (const key of ["cf-connecting-ip", "true-client-ip", "x-real-ip"] as const) {
     const value = request.headers.get(key)?.trim();
@@ -56,14 +73,48 @@ function clientIp(request: NextRequest): string | null {
   return forwarded || null;
 }
 
+function isUnusableUpstream(status: number, contentType: string, preview: string): boolean {
+  const type = contentType.toLowerCase();
+  if (type.includes("text/html")) return true;
+  if (status === 403 && /error 1000|prohibited ip/i.test(preview)) return true;
+  if (/dns points to prohibited ip/i.test(preview)) return true;
+  return false;
+}
+
+function looksLikeJson(contentType: string, preview: string): boolean {
+  const type = contentType.toLowerCase();
+  if (type.includes("application/json") || type.includes("application/problem+json")) return true;
+  const trimmed = preview.trimStart();
+  return trimmed.startsWith("{") || trimmed.startsWith("[");
+}
+
+async function debugLog(payload: Record<string, unknown>) {
+  // #region agent log
+  fetch("http://127.0.0.1:7888/ingest/5f144341-267a-42f3-bd43-77522fc291b2", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "a72485" },
+    body: JSON.stringify({
+      sessionId: "a72485",
+      timestamp: Date.now(),
+      ...payload,
+    }),
+  }).catch(() => {});
+  // #endregion
+}
+
 async function proxy(request: NextRequest, path: string[]): Promise<NextResponse> {
-  const base = apiBase();
   const targetPath = `/api/${path.join("/")}${request.nextUrl.search}`;
   const headers = new Headers();
   for (const key of FORWARD_REQUEST_HEADERS) {
     const value = request.headers.get(key);
     if (value) headers.set(key, value);
   }
+  // Prefer JSON from the API; avoid negotiated HTML error pages.
+  if (!headers.has("accept")) {
+    headers.set("accept", "application/json");
+  }
+  headers.set("user-agent", "caisbe-portal-proxy/1.0");
+
   const ip = clientIp(request);
   if (ip) {
     headers.set("x-forwarded-for", ip);
@@ -80,76 +131,125 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     cache: "no-store",
   };
 
+  let bodyBuffer: ArrayBuffer | null = null;
   if (method !== "GET" && method !== "HEAD") {
     if (isMultipart) {
       init.body = request.body;
       init.duplex = "half";
     } else {
-      init.body = await request.arrayBuffer();
+      bodyBuffer = await request.arrayBuffer();
+      init.body = bodyBuffer;
     }
   }
 
-  async function upstreamFetch(url: string): Promise<Response | null> {
+  const attempts: AttemptLog[] = [];
+  let chosen: { base: string; upstream: Response; body: ArrayBuffer; contentType: string } | null =
+    null;
+
+  for (const base of candidateBases()) {
+    // Multipart streams can only be consumed once — only try first base for uploads.
+    if (isMultipart && attempts.length > 0) break;
+    if (bodyBuffer) {
+      init.body = bodyBuffer;
+    }
+    const url = `${base}${targetPath}`;
     try {
-      return await fetch(url, init);
-    } catch {
-      return null;
+      const upstream = await fetch(url, init);
+      const upstreamType = (upstream.headers.get("content-type") || "").toLowerCase();
+      const streamResponse =
+        path[0] === "uploads" ||
+        upstreamType.startsWith("video/") ||
+        upstreamType.startsWith("audio/") ||
+        upstreamType.startsWith("application/octet-stream") ||
+        upstreamType.startsWith("application/pdf");
+
+      if (streamResponse) {
+        // #region agent log
+        void debugLog({
+          location: "portal/app/api/[...path]/route.ts:stream",
+          message: "stream upstream chosen",
+          hypothesisId: "A",
+          data: { base, status: upstream.status, upstreamType, path: targetPath },
+        });
+        // #endregion
+        const responseHeaders = new Headers();
+        for (const key of FORWARD_RESPONSE_HEADERS) {
+          const value = upstream.headers.get(key);
+          if (value) responseHeaders.set(key, value);
+        }
+        return new NextResponse(upstream.body, {
+          status: upstream.status,
+          headers: responseHeaders,
+        });
+      }
+
+      const body = await upstream.arrayBuffer();
+      const preview = new TextDecoder().decode(body.slice(0, 240));
+      const unusable = isUnusableUpstream(upstream.status, upstreamType, preview);
+      const okJson = !unusable && looksLikeJson(upstreamType, preview);
+      attempts.push({
+        base,
+        status: upstream.status,
+        contentType: upstreamType || null,
+        okJson,
+        preview: preview.replace(/\s+/g, " ").slice(0, 160),
+      });
+
+      if (okJson && !chosen) {
+        chosen = { base, upstream, body, contentType: upstreamType };
+        break;
+      }
+    } catch (error) {
+      attempts.push({
+        base,
+        status: null,
+        contentType: null,
+        okJson: false,
+        error: error instanceof Error ? error.message : "fetch failed",
+      });
     }
   }
 
-  let upstream = await upstreamFetch(`${base}${targetPath}`);
-  // If the custom domain still returns Cloudflare HTML, fall back once to the Render host.
-  if (
-    upstream &&
-    (upstream.headers.get("content-type") || "").toLowerCase().includes("text/html") &&
-    base !== RENDER_API
-  ) {
-    upstream = await upstreamFetch(`${RENDER_API}${targetPath}`);
-  }
-  if (!upstream && base !== RENDER_API) {
-    upstream = await upstreamFetch(`${RENDER_API}${targetPath}`);
-  }
-  if (!upstream) {
+  // #region agent log
+  void debugLog({
+    location: "portal/app/api/[...path]/route.ts:proxy",
+    message: "portal proxy attempts",
+    hypothesisId: "A,B,C,D,E",
+    data: {
+      path: targetPath,
+      configured: configuredApiBase(),
+      chosenBase: chosen?.base ?? null,
+      attempts,
+    },
+  });
+  // #endregion
+
+  if (!chosen) {
     return NextResponse.json(
-      { detail: "Unable to reach the API. Please try again shortly." },
+      {
+        detail: "Unable to reach the API. Please try again shortly.",
+        debug: {
+          service: "portal",
+          configured: configuredApiBase(),
+          attempts,
+        },
+      },
       { status: 502 },
     );
   }
 
   const responseHeaders = new Headers();
   for (const key of FORWARD_RESPONSE_HEADERS) {
-    const value = upstream.headers.get(key);
+    const value = chosen.upstream.headers.get(key);
     if (value) responseHeaders.set(key, value);
   }
-
-  const upstreamType = (upstream.headers.get("content-type") || "").toLowerCase();
-  const streamResponse =
-    path[0] === "uploads" ||
-    upstreamType.startsWith("video/") ||
-    upstreamType.startsWith("audio/") ||
-    upstreamType.startsWith("application/octet-stream") ||
-    upstreamType.startsWith("application/pdf");
-
-  if (streamResponse) {
-    return new NextResponse(upstream.body, {
-      status: upstream.status,
-      headers: responseHeaders,
-    });
-  }
-
-  const body = await upstream.arrayBuffer();
-  if (upstreamType.includes("text/html")) {
-    return NextResponse.json(
-      { detail: "Unable to reach the API. Please try again shortly." },
-      { status: 502 },
-    );
-  }
   responseHeaders.delete("content-length");
-  if (body.byteLength > 0) {
-    responseHeaders.set("content-length", String(body.byteLength));
+  if (chosen.body.byteLength > 0) {
+    responseHeaders.set("content-length", String(chosen.body.byteLength));
   }
-  return new NextResponse(body, {
-    status: upstream.status,
+  responseHeaders.set("x-caisbe-api-base", chosen.base);
+  return new NextResponse(chosen.body, {
+    status: chosen.upstream.status,
     headers: responseHeaders,
   });
 }
