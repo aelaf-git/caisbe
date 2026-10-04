@@ -13,13 +13,15 @@ import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
 import Tabs from "@/components/ui/Tabs";
 import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
+import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { apiFetch, ApiError, type Course } from "@/lib/auth";
 import { resolveUploadUrl } from "@/lib/mediaUrl";
 
 type Filter = "all" | "draft" | "published";
 
 export default function AdminCoursesPage() {
-  const { confirm, dialog } = useConfirmDialog();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { notice, dialog: noticeDialog } = useNoticeDialog();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,12 +67,20 @@ export default function AdminCoursesPage() {
     });
     if (!ok) return;
     setDeletingId(course.id);
-    setError(null);
     try {
       await apiFetch(`/admin/courses/${course.id}`, { method: "DELETE" });
       setCourses((prev) => prev.filter((item) => item.id !== course.id));
+      await notice({
+        tone: "success",
+        title: "Done",
+        description: `“${course.title}” was deleted.`,
+      });
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to delete course.");
+      await notice({
+        tone: "error",
+        title: "Something went wrong",
+        description: err instanceof ApiError ? err.detail : "Unable to delete course.",
+      });
     } finally {
       setDeletingId(null);
     }
@@ -78,7 +88,8 @@ export default function AdminCoursesPage() {
 
   return (
     <div className="space-y-7">
-      {dialog}
+      {confirmDialog}
+      {noticeDialog}
       <PageHeader
         eyebrow="Learning content"
         title="Courses"

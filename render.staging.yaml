@@ -63,7 +63,7 @@ services:
       - key: EMAIL_FROM_NEWSLETTER
         value: CAISBE Newsletter <newsletter@caisbe.org>
       - key: EMAIL_FROM_CONTACT
-        value: CAISBE Contact <contact@caisbe.org>
+        value: CAISBE <contact@caisbe.org>
       - key: EMAIL_FROM_INFO
         value: CAISBE <info@caisbe.org>
       - key: EMAIL_FROM_SYSTEM

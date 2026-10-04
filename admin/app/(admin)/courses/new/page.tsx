@@ -4,17 +4,18 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import PassMarkControl from "@/components/lms/PassMarkControl";
-import Alert from "@/components/ui/Alert";
 import BackButton from "@/components/ui/BackButton";
 import Button, { buttonStyles } from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import PageHeader from "@/components/ui/PageHeader";
+import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { apiFetch, ApiError, type Course } from "@/lib/auth";
 import { slugify } from "@/lib/ordinalTitles";
 
 export default function AdminCreateCoursePage() {
   const router = useRouter();
+  const { notice, dialog } = useNoticeDialog();
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -22,12 +23,10 @@ export default function AdminCreateCoursePage() {
   const [slugManual, setSlugManual] = useState(false);
   const [passPercent, setPassPercent] = useState(70);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setSubmitting(true);
-    setError(null);
     try {
       const created = await apiFetch<Course>("/admin/courses", {
         method: "POST",
@@ -41,21 +40,24 @@ export default function AdminCreateCoursePage() {
       });
       router.replace(`/courses/${created.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to create course.");
+      await notice({
+        tone: "error",
+        title: "Something went wrong",
+        description: err instanceof ApiError ? err.detail : "Unable to create course.",
+      });
       setSubmitting(false);
     }
   }
 
   return (
     <div className="mx-auto max-w-4xl space-y-7">
+      {dialog}
       <BackButton href="/courses" label="Back to all courses" />
       <PageHeader
         eyebrow="Courses / New"
         title="Create a course"
         description="Start with the essentials. You’ll add curriculum, assessments, and the certificate in the course workspace."
       />
-
-      {error ? <Alert tone="error">{error}</Alert> : null}
 
       <form onSubmit={handleCreate}>
         <Card padding="lg" className="space-y-6">

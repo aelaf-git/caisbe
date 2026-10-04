@@ -8,6 +8,7 @@ import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
+import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { apiFetch, ApiError } from "@/lib/auth";
 import { resolveUploadUrl } from "@/lib/mediaUrl";
 
@@ -42,6 +43,7 @@ function statusLabel(status: string) {
 }
 
 export default function AssignmentsPage() {
+  const { notice, dialog } = useNoticeDialog();
   const [rows, setRows] = useState<AssignmentSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,6 @@ export default function AssignmentsPage() {
 
   async function review(id: number, status: "passed" | "failed") {
     setBusyId(id);
-    setError(null);
     try {
       const updated = await apiFetch<AssignmentSubmission>(`/admin/assignment-submissions/${id}/review`, {
         method: "POST",
@@ -79,8 +80,17 @@ export default function AssignmentsPage() {
         }
         return current.map((row) => (row.id === id ? updated : row));
       });
+      await notice({
+        tone: "success",
+        title: "Done",
+        description: status === "passed" ? "Submission marked as passed." : "Submission marked as failed.",
+      });
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to review the submission.");
+      await notice({
+        tone: "error",
+        title: "Something went wrong",
+        description: err instanceof ApiError ? err.detail : "Unable to review the submission.",
+      });
     } finally {
       setBusyId(null);
     }
@@ -93,6 +103,7 @@ export default function AssignmentsPage() {
 
   return (
     <div className="space-y-6">
+      {dialog}
       <PageHeader
         eyebrow="Learning"
         title="Assignments"

@@ -46,11 +46,12 @@ export default function ContactMessagesAdminPage() {
         items={items}
         loading={loading}
         onRefresh={load}
-        onError={(message) => {
-          void notice({ tone: "error", title: "Something went wrong", description: message });
+        onError={async (message) => {
+          await notice({ tone: "error", title: "Something went wrong", description: message });
         }}
-        onSuccess={(message) => {
-          void notice({ tone: "success", title: "Done", description: message });
+        onSuccess={async (message) => {
+          const title = message.startsWith("Reply sent") ? "Reply sent" : "Done";
+          await notice({ tone: "success", title, description: message });
         }}
         askConfirm={confirm}
       />

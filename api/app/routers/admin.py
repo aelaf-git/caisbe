@@ -2687,7 +2687,7 @@ def admin_reply_contact_message(
     html_body = (
         f"<p>Hello {full_name},</p>"
         f"<p>{body.replace(chr(10), '<br>')}</p>"
-        "<p>— CAISBE Education</p>"
+        "<p>— CAISBE</p>"
         "<hr>"
         "<p><small>In reply to your message:</small></p>"
         f"<blockquote>{row.comments.replace(chr(10), '<br>')}</blockquote>"

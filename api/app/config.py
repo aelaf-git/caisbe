@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     # Fallback From if a purpose-specific address is unset (domain must be verified in Resend).
     email_from: str = "CAISBE <noreply@caisbe.org>"
     email_from_newsletter: str = "CAISBE Newsletter <newsletter@caisbe.org>"
-    email_from_contact: str = "CAISBE Contact <contact@caisbe.org>"
+    email_from_contact: str = "CAISBE <contact@caisbe.org>"
     email_from_info: str = "CAISBE <info@caisbe.org>"
     email_from_system: str = "CAISBE <noreply@caisbe.org>"
 
