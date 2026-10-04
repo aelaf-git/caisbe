@@ -14,6 +14,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import Tabs from "@/components/ui/Tabs";
 import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
 import { apiFetch, ApiError, type Course } from "@/lib/auth";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 
 type Filter = "all" | "draft" | "published";
 
@@ -134,7 +135,11 @@ export default function AdminCoursesPage() {
                 <span className="relative h-14 w-20 shrink-0 overflow-hidden border border-ifma-border-light bg-[#f3f0ec]">
                   {course.cover_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={course.cover_url} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={resolveUploadUrl(course.cover_url) ?? course.cover_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center text-[10px] font-bold uppercase tracking-wide text-caisbe-red">
                       {course.code.slice(0, 4)}

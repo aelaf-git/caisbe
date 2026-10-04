@@ -718,6 +718,19 @@ def submit_quiz(
     )
 
 
+_STUDENT_UPLOAD_SUFFIXES = {
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".gif",
+}
+_STUDENT_UPLOAD_MAX_BYTES = 25 * 1024 * 1024
+
+
 @router.post("/me/uploads", response_model=UploadOut)
 async def student_upload(
     request: Request,
@@ -727,16 +740,16 @@ async def student_upload(
 
     if current_user.role == "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Use the admin upload.")
-    form = await request.form(max_part_size=25 * 1024 * 1024)
+    form = await request.form(max_part_size=_STUDENT_UPLOAD_MAX_BYTES)
     uploaded = form.get("file")
     if not isinstance(uploaded, UploadFile):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing file upload")
     url, filename = await save_upload(
         uploaded,
-        allowed_suffixes={".pdf", ".doc", ".docx"},
-        max_bytes=25 * 1024 * 1024,
-        invalid_detail="Upload a PDF or Word file.",
-        too_large_detail="File is too large.",
+        allowed_suffixes=_STUDENT_UPLOAD_SUFFIXES,
+        max_bytes=_STUDENT_UPLOAD_MAX_BYTES,
+        invalid_detail="Upload a PDF, Word, or image file (JPG, PNG, WebP, GIF).",
+        too_large_detail="File is too large. Maximum size is 25 MB.",
     )
     return UploadOut(url=url, filename=filename)
 
@@ -747,7 +760,7 @@ def _assignment_file_ok(url: str | None) -> bool:
     if not url or not url.strip():
         return False
     path = url.strip().split("?")[0].lower()
-    return is_managed_upload_url(url) and path.endswith((".pdf", ".doc", ".docx"))
+    return is_managed_upload_url(url) and path.endswith(tuple(_STUDENT_UPLOAD_SUFFIXES))
 
 
 @router.post("/me/blocks/{block_id}/submit")

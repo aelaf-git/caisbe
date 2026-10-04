@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ProgressBar from "@/components/portal/ProgressBar";
 import type { Course } from "@/lib/auth";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 
 type PrimaryAction =
   | { href: string; label: string; tone?: "primary" | "complete" }
@@ -57,7 +58,7 @@ export default function CourseCard({
         {course.cover_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={course.cover_url}
+            src={resolveUploadUrl(course.cover_url) ?? course.cover_url}
             alt=""
             className="h-full w-full object-cover"
           />

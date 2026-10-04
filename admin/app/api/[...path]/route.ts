@@ -7,10 +7,27 @@ function apiBase(): string {
   return (process.env.API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 }
 
+const FORWARD_REQUEST_HEADERS = [
+  "content-type",
+  "authorization",
+  "accept",
+  "range",
+] as const;
+
+const FORWARD_RESPONSE_HEADERS = [
+  "content-type",
+  "content-length",
+  "content-range",
+  "accept-ranges",
+  "cache-control",
+  "etag",
+  "last-modified",
+] as const;
+
 async function proxy(request: NextRequest, path: string[]): Promise<NextResponse> {
   const target = `${apiBase()}/api/${path.join("/")}${request.nextUrl.search}`;
   const headers = new Headers();
-  for (const key of ["content-type", "authorization", "accept"]) {
+  for (const key of FORWARD_REQUEST_HEADERS) {
     const value = request.headers.get(key);
     if (value) headers.set(key, value);
   }
@@ -23,7 +40,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     cache: "no-store",
   };
   if (method !== "GET" && method !== "HEAD") {
-    // Stream the body so large uploads (and multipart hero images) do not buffer in Next.
+    // Stream the body so large uploads do not buffer in Next.
     init.body = request.body;
     init.duplex = "half";
   }
@@ -39,7 +56,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
   }
 
   const responseHeaders = new Headers();
-  for (const key of ["content-type", "cache-control"]) {
+  for (const key of FORWARD_RESPONSE_HEADERS) {
     const value = upstream.headers.get(key);
     if (value) responseHeaders.set(key, value);
   }
@@ -53,6 +70,10 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
 type RouteContext = { params: Promise<{ path: string[] }> };
 
 export async function GET(request: NextRequest, context: RouteContext) {
+  return proxy(request, (await context.params).path);
+}
+
+export async function HEAD(request: NextRequest, context: RouteContext) {
   return proxy(request, (await context.params).path);
 }
 

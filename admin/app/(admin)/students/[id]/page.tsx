@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError, type AdminStudent } from "@/lib/auth";
 import Button from "@/components/ui/Button";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 
 type AssignmentSubmission = {
   id: number;
@@ -79,7 +80,12 @@ export default function StudentProfilePrintPage() {
               </p>
               <p className="text-caisbe-muted">{row.course_title}</p>
               {row.file_url ? (
-                <a href={row.file_url} className="font-semibold text-caisbe-red underline" target="_blank" rel="noreferrer">
+                <a
+                  href={resolveUploadUrl(row.file_url) ?? row.file_url}
+                  className="font-semibold text-caisbe-red underline"
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   {row.file_name || "Download submission"}
                 </a>
               ) : (

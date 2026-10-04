@@ -138,6 +138,10 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       setError(null);
       setMessage(null);
       try {
+        const maxBytes = 20 * 1024 * 1024;
+        if (file.size > maxBytes) {
+          throw new Error("File is too large. Maximum size is 20 MB.");
+        }
         const body = new FormData();
         body.append("file", file);
         body.append("kind", kind);
