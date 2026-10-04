@@ -748,6 +748,7 @@ async def student_upload(
         uploaded,
         allowed_suffixes=_STUDENT_UPLOAD_SUFFIXES,
         max_bytes=_STUDENT_UPLOAD_MAX_BYTES,
+        folder="assignments",
         invalid_detail="Upload a PDF, Word, or image file (JPG, PNG, WebP, GIF).",
         too_large_detail="File is too large. Maximum size is 25 MB.",
     )
@@ -1229,6 +1230,7 @@ async def _save_membership_upload(
     uploaded: UploadFile,
     *,
     allowed_suffixes: set[str],
+    folder: str,
     max_bytes: int = 20 * 1024 * 1024,
     invalid_detail: str = "Upload a PDF, Word, or image file.",
 ) -> tuple[str, str]:
@@ -1238,6 +1240,7 @@ async def _save_membership_upload(
         uploaded,
         allowed_suffixes=allowed_suffixes,
         max_bytes=max_bytes,
+        folder=folder,
         invalid_detail=invalid_detail,
         empty_detail="Uploaded file is empty.",
         too_large_detail="File is too large. Maximum size is 20 MB.",
@@ -1293,6 +1296,7 @@ async def apply_my_membership(
             file_url, original_name = await _save_membership_upload(
                 uploaded,
                 allowed_suffixes=_MEMBERSHIP_DOC_SUFFIXES,
+                folder="membership/supporting",
             )
             supporting_note = f"{label}: {original_name}\nFile: {file_url}"
     else:
@@ -1352,6 +1356,7 @@ async def upload_membership_supporting_document(
     file_url, original_name = await _save_membership_upload(
         uploaded,
         allowed_suffixes=_MEMBERSHIP_DOC_SUFFIXES,
+        folder="membership/supporting",
     )
     application = (
         db.query(MembershipApplication)
@@ -1395,6 +1400,7 @@ async def apply_my_membership_file(
     file_url, original_name = await _save_membership_upload(
         uploaded,
         allowed_suffixes=_MEMBERSHIP_FORM_SUFFIXES,
+        folder="membership/forms",
         invalid_detail="Upload a PDF or Word file.",
     )
 

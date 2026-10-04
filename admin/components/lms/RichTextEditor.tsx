@@ -129,7 +129,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     setUploading(true);
     setUploadError(null);
     try {
-      const uploaded = await apiUpload("/admin/uploads", file);
+      const uploaded = await apiUpload("/admin/uploads", file, { folder: "courses/media" });
       editor.chain().focus().setImage({ src: uploaded.url, alt: file.name }).run();
     } catch (err) {
       setUploadError(err instanceof ApiError ? err.detail : "Unable to upload image.");

@@ -1672,10 +1672,12 @@ async def admin_upload(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Missing file upload",
         )
+    folder = str(form.get("folder") or "general")
     url, display_name = await save_upload(
         uploaded,
         allowed_suffixes=ALLOWED_UPLOAD_EXTENSIONS,
         max_bytes=MAX_UPLOAD_BYTES,
+        folder=folder,
         invalid_detail="File type not allowed. Use videos, images, PDF, EPUB, or Word.",
         too_large_detail="File is too large. Maximum upload size is 500 MB.",
     )

@@ -387,6 +387,8 @@ export async function apiFetch<T>(
 
 export type ApiUploadOptions = {
   onProgress?: (percent: number) => void;
+  /** R2/local folder under uploads/ (e.g. heroes, courses/covers). */
+  folder?: string;
 };
 
 export async function apiUpload(
@@ -405,6 +407,9 @@ export async function apiUpload(
   const token = getToken();
   const body = new FormData();
   body.append("file", file);
+  if (options?.folder) {
+    body.append("folder", options.folder);
+  }
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();

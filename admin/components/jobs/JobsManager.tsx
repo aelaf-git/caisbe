@@ -173,6 +173,7 @@ export default function JobsManager({
     setUploadProgress(0);
     try {
       const uploaded = await apiUpload("/admin/uploads", file, {
+        folder: "jobs",
         onProgress: (percent) => setUploadProgress(percent),
       });
       setAttachmentUrl(uploaded.url);

@@ -53,7 +53,7 @@ export default function BlockView({
     const src = mediaSrc(block.url) ?? block.url;
     const isFile =
       src.startsWith("/api/uploads/") ||
-      /\/uploads\/[a-f0-9]{32}\./i.test(src) ||
+      /\/uploads\/(?:[\w.-]+\/)*[a-f0-9]{32}\./i.test(src) ||
       /\.(mp4|webm|mov|m4v)(\?|$)/i.test(src);
     return (
       <div className="space-y-2">

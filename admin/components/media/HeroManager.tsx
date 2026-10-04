@@ -186,6 +186,7 @@ export default function HeroManager({
     setFormError(null);
     try {
       const uploaded = await apiUpload("/admin/uploads", file, {
+        folder: "heroes",
         onProgress: (percent) => setFileProgress(percent),
       });
       setFileUrl(uploaded.url);

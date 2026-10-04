@@ -85,7 +85,7 @@ export default function NewsletterPanel({
     try {
       const uploaded: NewsletterAttachment[] = [];
       for (const file of Array.from(files)) {
-        const result = await apiUpload("/admin/uploads", file);
+        const result = await apiUpload("/admin/uploads", file, { folder: "newsletter" });
         uploaded.push({
           filename: result.filename || file.name,
           file_url: result.url,

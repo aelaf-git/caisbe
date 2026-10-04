@@ -4,8 +4,8 @@ export function isAdminUpload(url: string | null | undefined): boolean {
   if (!url) return false;
   const path = url.split("?")[0];
   if (path.includes("/api/uploads/")) return true;
-  // Object-storage keys: .../uploads/<32-hex>.<ext>
-  return /\/uploads\/[a-f0-9]{32}\.[a-z0-9]+$/i.test(path);
+  // Object-storage keys: .../uploads/<optional folders>/<32-hex>.<ext>
+  return /\/uploads\/(?:[\w.-]+\/)*[a-f0-9]{32}\.[a-z0-9]+$/i.test(path);
 }
 
 export function isLegacyChapterReading(block: ContentBlock): boolean {

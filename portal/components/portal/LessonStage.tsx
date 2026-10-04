@@ -173,7 +173,7 @@ function readingKind(url: string | null): "pdf" | "doc" | "epub" | "link" | "fil
   if (
     /^https?:\/\//i.test(raw) &&
     !path.includes("/api/uploads/") &&
-    !/\/uploads\/[a-f0-9]{32}\./i.test(path)
+    !/\/uploads\/(?:[\w.-]+\/)*[a-f0-9]{32}\./i.test(path)
   ) {
     return "link";
   }

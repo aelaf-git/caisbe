@@ -4,7 +4,13 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function apiBase(): string {
-  return (process.env.API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+  // Use || so empty string from a bad Docker ARG does not produce relative fetch URLs
+  // (relative /api/... would hit this Next app and return HTML → login JSON parse failures).
+  const raw = (process.env.API_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "");
+  if (!/^https?:\/\//i.test(raw)) {
+    return "http://127.0.0.1:8000";
+  }
+  return raw;
 }
 
 const FORWARD_REQUEST_HEADERS = [
@@ -33,15 +39,22 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
   }
 
   const method = request.method.toUpperCase();
+  const contentType = (request.headers.get("content-type") || "").toLowerCase();
+  const isMultipart = contentType.includes("multipart/form-data");
   const init: RequestInit & { duplex?: "half" } = {
     method,
     headers,
     redirect: "manual",
     cache: "no-store",
   };
+
   if (method !== "GET" && method !== "HEAD") {
-    init.body = request.body;
-    init.duplex = "half";
+    if (isMultipart) {
+      init.body = request.body;
+      init.duplex = "half";
+    } else {
+      init.body = await request.arrayBuffer();
+    }
   }
 
   let upstream: Response;
@@ -60,7 +73,27 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     if (value) responseHeaders.set(key, value);
   }
 
-  return new NextResponse(upstream.body, {
+  const upstreamType = (upstream.headers.get("content-type") || "").toLowerCase();
+  const streamResponse =
+    path[0] === "uploads" ||
+    upstreamType.startsWith("video/") ||
+    upstreamType.startsWith("audio/") ||
+    upstreamType.startsWith("application/octet-stream") ||
+    upstreamType.startsWith("application/pdf");
+
+  if (streamResponse) {
+    return new NextResponse(upstream.body, {
+      status: upstream.status,
+      headers: responseHeaders,
+    });
+  }
+
+  const body = await upstream.arrayBuffer();
+  responseHeaders.delete("content-length");
+  if (body.byteLength > 0) {
+    responseHeaders.set("content-length", String(body.byteLength));
+  }
+  return new NextResponse(body, {
     status: upstream.status,
     headers: responseHeaders,
   });

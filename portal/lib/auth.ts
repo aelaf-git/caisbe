@@ -138,7 +138,15 @@ export async function apiFetch<T>(
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const text = await response.text();
+  if (!text.trim()) {
+    throw new ApiError(response.status, "Empty response from server.");
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError(response.status, "Invalid response from server.");
+  }
 }
 
 function parseErrorDetail(status: number, text: string): ApiError {

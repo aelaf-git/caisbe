@@ -220,6 +220,7 @@ export default function EventsManager({
     setUploadProgress(0);
     try {
       const uploaded = await apiUpload("/admin/uploads", file, {
+        folder: "events",
         onProgress: (percent) => setUploadProgress(percent),
       });
       setReportFileUrl(uploaded.url);

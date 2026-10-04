@@ -17,8 +17,33 @@ from starlette.datastructures import UploadFile as StarletteUploadFile
 from app.config import settings
 
 UPLOAD_KEY_PREFIX = "uploads/"
+
+# Organized object-key folders (R2 "directories"). Keep allowlisted to avoid path traversal.
+UPLOAD_FOLDERS = frozenset(
+    {
+        "courses/covers",
+        "courses/media",
+        "courses/readings",
+        "courses/assignments",
+        "heroes",
+        "magazines",
+        "magazines/covers",
+        "jobs",
+        "events",
+        "news",
+        "newsletter",
+        "membership/forms",
+        "membership/supporting",
+        "assignments",
+        "general",
+    }
+)
+
+# Legacy flat: …/uploads/<uuid>.ext
+# Nested: …/uploads/<folder…>/<uuid>.ext  (also /api/uploads/…)
 _MANAGED_OBJECT_RE = re.compile(
-    r"(?:/api/uploads/|/uploads/)([a-f0-9]{32}\.[a-z0-9]+)$",
+    r"(?:/api/uploads/|/uploads/)"
+    r"((?:[a-z0-9][a-z0-9_-]*/)*[a-f0-9]{32}\.[a-z0-9]+)$",
     re.IGNORECASE,
 )
 
@@ -33,8 +58,30 @@ def object_storage_enabled() -> bool:
     )
 
 
+def normalize_upload_folder(folder: str | None, *, default: str = "general") -> str:
+    """Return an allowlisted folder path (no leading/trailing slash)."""
+    raw = (folder or default).strip().strip("/").lower().replace("\\", "/")
+    raw = re.sub(r"/+", "/", raw)
+    if not raw:
+        raw = default
+    if raw not in UPLOAD_FOLDERS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid upload folder '{raw}'.",
+        )
+    return raw
+
+
+def object_key_for(folder: str, filename: str) -> str:
+    return f"{UPLOAD_KEY_PREFIX}{folder.strip('/')}/{filename.lstrip('/')}"
+
+
+def local_public_url_for(folder: str, filename: str) -> str:
+    return f"/api/uploads/{folder.strip('/')}/{filename.lstrip('/')}"
+
+
 def is_managed_upload_url(url: str | None) -> bool:
-    """True for local /api/uploads/… or object-storage …/uploads/<uuid>.<ext> URLs."""
+    """True for local /api/uploads/… or object-storage …/uploads/…/<uuid>.<ext> URLs."""
     if not url or not url.strip():
         return False
     path = url.strip().split("?")[0]
@@ -114,20 +161,27 @@ def _put_bytes(data: bytes, key: str, content_type: str | None) -> None:
         _raise_storage_error(exc)
 
 
-def save_bytes(data: bytes, *, suffix: str, content_type: str | None = None) -> str:
+def save_bytes(
+    data: bytes,
+    *,
+    suffix: str,
+    content_type: str | None = None,
+    folder: str | None = "general",
+) -> str:
     if not data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty")
+    folder_key = normalize_upload_folder(folder)
     safe_name = f"{uuid.uuid4().hex}{suffix.lower()}"
     if object_storage_enabled():
-        key = f"{UPLOAD_KEY_PREFIX}{safe_name}"
+        key = object_key_for(folder_key, safe_name)
         _put_bytes(data, key, content_type)
         return public_url_for_key(key)
 
-    root = Path(settings.upload_dir)
+    root = Path(settings.upload_dir) / folder_key
     root.mkdir(parents=True, exist_ok=True)
     dest = root / safe_name
     dest.write_bytes(data)
-    return f"/api/uploads/{safe_name}"
+    return local_public_url_for(folder_key, safe_name)
 
 
 async def save_upload(
@@ -135,6 +189,7 @@ async def save_upload(
     *,
     allowed_suffixes: set[str],
     max_bytes: int,
+    folder: str | None = "general",
     invalid_detail: str = "File type not allowed.",
     empty_detail: str = "Uploaded file is empty",
     too_large_detail: str | None = None,
@@ -144,6 +199,7 @@ async def save_upload(
     if suffix not in allowed_suffixes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=invalid_detail)
 
+    folder_key = normalize_upload_folder(folder)
     too_large = too_large_detail or f"File is too large. Maximum size is {max_bytes // (1024 * 1024)} MB."
     content_type = (uploaded.content_type or "").strip() or None
     safe_name = f"{uuid.uuid4().hex}{suffix}"
@@ -151,7 +207,7 @@ async def save_upload(
     chunk_size = 1024 * 1024
 
     if object_storage_enabled():
-        key = f"{UPLOAD_KEY_PREFIX}{safe_name}"
+        key = object_key_for(folder_key, safe_name)
         with tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024) as tmp:
             while True:
                 chunk = await uploaded.read(chunk_size)
@@ -171,7 +227,7 @@ async def save_upload(
         display = (uploaded.filename or safe_name)[:120]
         return public_url_for_key(key), display
 
-    root = Path(settings.upload_dir)
+    root = Path(settings.upload_dir) / folder_key
     root.mkdir(parents=True, exist_ok=True)
     dest = root / safe_name
     try:
@@ -194,7 +250,20 @@ async def save_upload(
         dest.unlink(missing_ok=True)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=empty_detail)
     display = (uploaded.filename or safe_name)[:120]
-    return f"/api/uploads/{safe_name}", display
+    return local_public_url_for(folder_key, safe_name), display
+
+
+def _relative_upload_path(file_url: str) -> str:
+    """Return path under uploads/ (e.g. assignments/abc…pdf or legacy abc…pdf)."""
+    path = file_url.strip().split("?")[0]
+    match = _MANAGED_OBJECT_RE.search(path)
+    if match:
+        return match.group(1)
+    # Fallback: basename only (legacy callers)
+    name = Path(urlparse(path).path).name
+    if not name or name in {".", ".."}:
+        raise FileNotFoundError("Invalid upload path")
+    return name
 
 
 def read_managed_bytes(file_url: str) -> bytes:
@@ -204,31 +273,45 @@ def read_managed_bytes(file_url: str) -> bytes:
         raise FileNotFoundError("Not a managed upload URL")
 
     path = raw.split("?")[0]
-    match = _MANAGED_OBJECT_RE.search(path)
-    stored_name = match.group(1) if match else Path(urlparse(path).path).name
-    if not stored_name or stored_name in {".", ".."}:
+    relative = _relative_upload_path(raw)
+    if ".." in relative.split("/"):
         raise FileNotFoundError("Invalid upload path")
 
     # Legacy / local API-served files
     if "/api/uploads/" in path:
-        dest = Path(settings.upload_dir) / stored_name
+        dest = Path(settings.upload_dir) / relative
         if dest.is_file():
             return dest.read_bytes()
-        # May have been migrated to object storage under the same name
+        # Flat legacy filename may live at upload root even if URL had no folder
+        flat = Path(settings.upload_dir) / Path(relative).name
+        if flat.is_file():
+            return flat.read_bytes()
+        # May have been migrated to object storage under the same relative key
         if object_storage_enabled():
-            key = f"{UPLOAD_KEY_PREFIX}{stored_name}"
-            response = _s3_client().get_object(Bucket=settings.s3_bucket.strip(), Key=key)
-            return response["Body"].read()
-        raise FileNotFoundError(stored_name)
+            key = f"{UPLOAD_KEY_PREFIX}{relative}"
+            try:
+                response = _s3_client().get_object(Bucket=settings.s3_bucket.strip(), Key=key)
+                return response["Body"].read()
+            except Exception:
+                # Also try flat legacy key
+                legacy_key = f"{UPLOAD_KEY_PREFIX}{Path(relative).name}"
+                response = _s3_client().get_object(Bucket=settings.s3_bucket.strip(), Key=legacy_key)
+                return response["Body"].read()
+        raise FileNotFoundError(relative)
 
     if object_storage_enabled():
-        key = f"{UPLOAD_KEY_PREFIX}{stored_name}"
+        key = f"{UPLOAD_KEY_PREFIX}{relative}"
         try:
             response = _s3_client().get_object(Bucket=settings.s3_bucket.strip(), Key=key)
             return response["Body"].read()
         except Exception:
-            with urlopen(raw, timeout=60) as resp:  # noqa: S310 — managed public upload URLs
-                return resp.read()
+            try:
+                legacy_key = f"{UPLOAD_KEY_PREFIX}{Path(relative).name}"
+                response = _s3_client().get_object(Bucket=settings.s3_bucket.strip(), Key=legacy_key)
+                return response["Body"].read()
+            except Exception:
+                with urlopen(raw, timeout=60) as resp:  # noqa: S310 — managed public upload URLs
+                    return resp.read()
 
     with urlopen(raw, timeout=60) as resp:  # noqa: S310
         return resp.read()

@@ -319,6 +319,7 @@ async def apply_membership_file(
         uploaded,
         allowed_suffixes=FORM_UPLOAD_EXTENSIONS,
         max_bytes=MAX_FORM_UPLOAD_BYTES,
+        folder="membership/forms",
         invalid_detail="Upload a PDF or Word file.",
         empty_detail="Uploaded file is empty.",
         too_large_detail="File is too large. Maximum size is 20 MB.",

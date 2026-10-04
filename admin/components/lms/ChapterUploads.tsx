@@ -70,7 +70,7 @@ export default function ChapterUploads({
     if (!blockType) {
       throw new Error("File type not allowed. Use videos, images, PDF, EPUB, or Word.");
     }
-    const uploaded = await apiUpload("/admin/uploads", file);
+    const uploaded = await apiUpload("/admin/uploads", file, { folder: "courses/media" });
     await apiFetch(`/admin/chapters/${chapter.id}/blocks`, {
       method: "POST",
       body: JSON.stringify({

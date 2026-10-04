@@ -38,7 +38,7 @@ export default function CourseCoverField({
     }
     setUploading(true);
     try {
-      const uploaded = await apiUpload("/admin/uploads", file);
+      const uploaded = await apiUpload("/admin/uploads", file, { folder: "courses/covers" });
       await onChange(uploaded.url);
     } catch (err) {
       onError(err instanceof ApiError ? err.detail : "Unable to upload cover image.");

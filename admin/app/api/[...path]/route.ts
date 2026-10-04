@@ -4,7 +4,13 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function apiBase(): string {
-  return (process.env.API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+  // Use || so empty string from a bad Docker ARG does not produce relative fetch URLs
+  // (relative /api/... would hit this Next app and return HTML → "Invalid response from server").
+  const raw = (process.env.API_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "");
+  if (!/^https?:\/\//i.test(raw)) {
+    return "http://127.0.0.1:8000";
+  }
+  return raw;
 }
 
 const FORWARD_REQUEST_HEADERS = [
@@ -33,16 +39,24 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
   }
 
   const method = request.method.toUpperCase();
+  const contentType = (request.headers.get("content-type") || "").toLowerCase();
+  const isMultipart = contentType.includes("multipart/form-data");
   const init: RequestInit & { duplex?: "half" } = {
     method,
     headers,
     redirect: "manual",
     cache: "no-store",
   };
+
   if (method !== "GET" && method !== "HEAD") {
-    // Stream the body so large uploads do not buffer in Next.
-    init.body = request.body;
-    init.duplex = "half";
+    if (isMultipart) {
+      // Stream large uploads (videos, etc.).
+      init.body = request.body;
+      init.duplex = "half";
+    } else {
+      // Buffer JSON/form bodies — more reliable for login/register than duplex streaming.
+      init.body = await request.arrayBuffer();
+    }
   }
 
   let upstream: Response;
@@ -61,7 +75,29 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     if (value) responseHeaders.set(key, value);
   }
 
-  return new NextResponse(upstream.body, {
+  const upstreamType = (upstream.headers.get("content-type") || "").toLowerCase();
+  const streamResponse =
+    path[0] === "uploads" ||
+    upstreamType.startsWith("video/") ||
+    upstreamType.startsWith("audio/") ||
+    upstreamType.startsWith("application/octet-stream") ||
+    upstreamType.startsWith("application/pdf");
+
+  if (streamResponse) {
+    return new NextResponse(upstream.body, {
+      status: upstream.status,
+      headers: responseHeaders,
+    });
+  }
+
+  // Buffer JSON/HTML API responses so clients never see a truncated body.
+  const body = await upstream.arrayBuffer();
+  // Recompute length after buffering; drop mismatched upstream content-length.
+  responseHeaders.delete("content-length");
+  if (body.byteLength > 0) {
+    responseHeaders.set("content-length", String(body.byteLength));
+  }
+  return new NextResponse(body, {
     status: upstream.status,
     headers: responseHeaders,
   });
