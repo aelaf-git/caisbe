@@ -49,12 +49,14 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_publishable_key: str = ""
-    smtp_host: str = ""
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
-    smtp_from: str = "newsletter@caisbe.org"
-    smtp_use_tls: bool = True
+    # Resend (newsletters + all transactional email). Leave empty in dev to log instead of send.
+    resend_api_key: str = ""
+    # Fallback From if a purpose-specific address is unset (domain must be verified in Resend).
+    email_from: str = "CAISBE <noreply@caisbe.org>"
+    email_from_newsletter: str = "CAISBE Newsletter <newsletter@caisbe.org>"
+    email_from_contact: str = "CAISBE Contact <contact@caisbe.org>"
+    email_from_info: str = "CAISBE <info@caisbe.org>"
+    email_from_system: str = "CAISBE <noreply@caisbe.org>"
 
     @field_validator("database_url", mode="before")
     @classmethod

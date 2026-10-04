@@ -1849,6 +1849,7 @@ def admin_send_newsletter(
                 to=row.email,
                 subject=subject,
                 html_body=body_html,
+                purpose="newsletter",
                 attachments=attachments,
             )
             sent_count += 1
@@ -1858,7 +1859,7 @@ def admin_send_newsletter(
     if sent_count == 0:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Unable to deliver newsletter to any recipient. Check SMTP settings.",
+            detail="Unable to deliver newsletter to any recipient. Check Resend settings.",
         )
 
     campaign = NewsletterCampaign(
@@ -2692,7 +2693,12 @@ def admin_reply_contact_message(
         f"<blockquote>{row.comments.replace(chr(10), '<br>')}</blockquote>"
     )
     try:
-        send_email(to=row.email, subject=subject, html_body=html_body)
+        send_email(
+            to=row.email,
+            subject=subject,
+            html_body=html_body,
+            purpose="contact",
+        )
     except EmailDeliveryError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 

@@ -1,18 +1,18 @@
-"""Transactional email via SMTP (stdlib). Logs instead of sending when SMTP is not configured."""
+"""Transactional email via Resend. Logs instead of sending when RESEND_API_KEY is unset."""
 
 from __future__ import annotations
 
+import base64
 import logging
-import mimetypes
-import smtplib
-from email.mime.application import MIMEApplication
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import re
 from pathlib import Path
+from typing import Literal
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+EmailPurpose = Literal["newsletter", "contact", "info", "system"]
 
 
 class EmailAttachment:
@@ -25,11 +25,33 @@ class EmailDeliveryError(RuntimeError):
     pass
 
 
+def from_address_for(purpose: EmailPurpose = "system") -> str:
+    """Resolve the Resend From header for a mail purpose."""
+    mapping = {
+        "newsletter": settings.email_from_newsletter,
+        "contact": settings.email_from_contact,
+        "info": settings.email_from_info,
+        "system": settings.email_from_system,
+    }
+    # Fall back through purpose → generic EMAIL_FROM → safe default.
+    for candidate in (
+        mapping.get(purpose, ""),
+        settings.email_from,
+        "CAISBE <noreply@caisbe.org>",
+    ):
+        value = (candidate or "").strip()
+        if value:
+            return value
+    return "CAISBE <noreply@caisbe.org>"
+
+
 def send_email(
     *,
     to: str,
     subject: str,
     html_body: str,
+    purpose: EmailPurpose = "system",
+    reply_to: str | None = None,
     attachments: list[EmailAttachment] | None = None,
 ) -> None:
     recipient = to.strip().lower()
@@ -37,54 +59,52 @@ def send_email(
         raise EmailDeliveryError("Recipient email is required.")
 
     files = attachments or []
+    api_key = settings.resend_api_key.strip()
+    from_addr = from_address_for(purpose)
 
-    if not settings.smtp_host:
+    if not api_key:
         logger.info(
-            "SMTP not configured — email not sent (dev mode). to=%s subject=%s attachments=%s",
+            "RESEND_API_KEY not configured — email not sent (dev mode). "
+            "purpose=%s from=%s to=%s subject=%s attachments=%s",
+            purpose,
+            from_addr,
             recipient,
             subject,
             [item.filename for item in files],
         )
         return
 
-    msg = MIMEMultipart("mixed")
-    msg["Subject"] = subject
-    msg["From"] = settings.smtp_from
-    msg["To"] = recipient
-
-    alternative = MIMEMultipart("alternative")
-    plain = _html_to_plain(html_body)
-    alternative.attach(MIMEText(plain, "plain", "utf-8"))
-    alternative.attach(MIMEText(html_body, "html", "utf-8"))
-    msg.attach(alternative)
-
-    for item in files:
-        mime_type, _ = mimetypes.guess_type(item.filename)
-        maintype, _, subtype = (mime_type or "application/octet-stream").partition("/")
-        part = MIMEApplication(item.content, _subtype=subtype or "octet-stream")
-        part.add_header("Content-Disposition", "attachment", filename=item.filename)
-        if maintype:
-            part.set_type(f"{maintype}/{subtype or 'octet-stream'}")
-        msg.attach(part)
+    payload: dict = {
+        "from": from_addr,
+        "to": [recipient],
+        "subject": subject,
+        "html": html_body,
+        "text": _html_to_plain(html_body),
+    }
+    reply = (reply_to or "").strip()
+    if reply:
+        payload["reply_to"] = reply
+    if files:
+        payload["attachments"] = [
+            {
+                "filename": item.filename,
+                "content": base64.b64encode(item.content).decode("ascii"),
+            }
+            for item in files
+        ]
 
     try:
-        if settings.smtp_use_tls:
-            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30)
-            server.starttls()
-        else:
-            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30)
+        import resend
 
-        if settings.smtp_user:
-            server.login(settings.smtp_user, settings.smtp_password)
-        server.sendmail(settings.smtp_from, [recipient], msg.as_string())
-        server.quit()
-    except smtplib.SMTPException as exc:
+        resend.api_key = api_key
+        resend.Emails.send(payload)
+    except EmailDeliveryError:
+        raise
+    except Exception as exc:
         raise EmailDeliveryError(f"Failed to send email to {recipient}: {exc}") from exc
 
 
 def _html_to_plain(html: str) -> str:
-    import re
-
     text = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
     text = re.sub(r"</p>", "\n\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", "", text)
