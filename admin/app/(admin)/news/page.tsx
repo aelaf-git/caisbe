@@ -5,14 +5,15 @@ import NewsManager from "@/components/news/NewsManager";
 import Alert from "@/components/ui/Alert";
 import PageHeader from "@/components/ui/PageHeader";
 import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
+import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { apiFetch, ApiError, type NewsPost } from "@/lib/auth";
 
 export default function NewsAdminPage() {
   const [posts, setPosts] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const { confirm, dialog } = useConfirmDialog();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { notice, dialog: noticeDialog } = useNoticeDialog();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,23 +41,21 @@ export default function NewsAdminPage() {
       />
 
       {error ? <Alert tone="error">{error}</Alert> : null}
-      {success ? <Alert tone="success">{success}</Alert> : null}
 
       <NewsManager
         posts={posts}
         loading={loading}
         onRefresh={load}
         onError={(message) => {
-          setSuccess(null);
-          setError(message);
+          void notice({ tone: "error", title: "Something went wrong", description: message });
         }}
         onSuccess={(message) => {
-          setError(null);
-          setSuccess(message);
+          void notice({ tone: "success", title: "Done", description: message });
         }}
         askConfirm={confirm}
       />
-      {dialog}
+      {confirmDialog}
+      {noticeDialog}
     </div>
   );
 }
