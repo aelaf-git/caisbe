@@ -116,6 +116,15 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
   }
 
   const body = await upstream.arrayBuffer();
+  if (upstreamType.includes("text/html")) {
+    return NextResponse.json(
+      {
+        detail:
+          "Unable to reach the API. Set API_URL to https://caisbe-api.onrender.com (not api.caisbe.org).",
+      },
+      { status: 502 },
+    );
+  }
   responseHeaders.delete("content-length");
   if (body.byteLength > 0) {
     responseHeaders.set("content-length", String(body.byteLength));

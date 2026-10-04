@@ -116,9 +116,18 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     });
   }
 
-  // Buffer JSON/HTML API responses so clients never see a truncated body.
+  // Buffer JSON API responses so clients never see a truncated body.
   const body = await upstream.arrayBuffer();
-  // Recompute length after buffering; drop mismatched upstream content-length.
+  // Cloudflare / CDN HTML errors must not reach the browser as opaque failures.
+  if (upstreamType.includes("text/html")) {
+    return NextResponse.json(
+      {
+        detail:
+          "Unable to reach the API. Set API_URL to https://caisbe-api.onrender.com (not api.caisbe.org).",
+      },
+      { status: 502 },
+    );
+  }
   responseHeaders.delete("content-length");
   if (body.byteLength > 0) {
     responseHeaders.set("content-length", String(body.byteLength));

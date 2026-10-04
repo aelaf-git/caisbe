@@ -18,7 +18,7 @@ COPY admin ./admin
 COPY web/package.json ./web/
 COPY portal/package.json ./portal/
 
-ARG API_URL=https://api.caisbe.org
+ARG API_URL=https://caisbe-api.onrender.com
 ARG NEXT_PUBLIC_API_URL=https://api.caisbe.org
 ARG NEXT_PUBLIC_SITE_URL=https://caisbe.org
 ARG NEXT_PUBLIC_ADMIN_URL=https://admin.caisbe.org
@@ -38,7 +38,7 @@ ENV NODE_ENV=production \
     PORT=3000 \
     NEXT_TELEMETRY_DISABLED=1 \
     NODE_OPTIONS=--max-old-space-size=384 \
-    API_URL=https://api.caisbe.org
+    API_URL=https://caisbe-api.onrender.com
 
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs

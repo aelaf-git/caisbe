@@ -339,6 +339,13 @@ function parseErrorDetail(status: number, text: string): ApiError {
 async function parseError(response: Response): Promise<ApiError> {
   try {
     const text = await response.text();
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    if (contentType.includes("text/html") || text.trimStart().startsWith("<!")) {
+      return new ApiError(
+        response.status,
+        "Unable to reach the server. Please try again in a moment.",
+      );
+    }
     return parseErrorDetail(response.status, text);
   } catch {
     return new ApiError(response.status, `Request failed (${response.status})`);

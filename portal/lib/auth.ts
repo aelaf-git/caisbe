@@ -97,7 +97,15 @@ export class ApiError extends Error {
 async function parseError(response: Response): Promise<ApiError> {
   let detail = `Request failed (${response.status})`;
   try {
-    const data = (await response.json()) as { detail?: string | { msg?: string }[] };
+    const text = await response.text();
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    if (contentType.includes("text/html") || text.trimStart().startsWith("<!")) {
+      return new ApiError(
+        response.status,
+        "Unable to reach the server. Please try again in a moment.",
+      );
+    }
+    const data = JSON.parse(text) as { detail?: string | { msg?: string }[] };
     if (typeof data.detail === "string") {
       detail = data.detail;
     } else if (Array.isArray(data.detail) && data.detail[0]?.msg) {

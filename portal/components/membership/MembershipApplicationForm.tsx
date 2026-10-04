@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch, ApiError, type AuthUser } from "@/lib/auth";
 import {
@@ -134,6 +134,7 @@ export default function MembershipApplicationForm({
   onSuccess?: () => void;
 }) {
   const { register } = useAuth();
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
   const names = splitName(user?.full_name || user?.given_name);
   const [mode, setMode] = useState<Mode>("online");
   const [firstName, setFirstName] = useState(user?.given_name || names.first);
@@ -215,6 +216,11 @@ export default function MembershipApplicationForm({
   useEffect(() => {
     setSupportingDocument(null);
   }, [selectedType]);
+
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   function toggle<T extends string>(
     current: FlagMap<T>,
@@ -374,6 +380,9 @@ export default function MembershipApplicationForm({
       onSuccess?.();
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : err instanceof Error ? err.message : "Unable to submit.");
+      requestAnimationFrame(() => {
+        errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
     } finally {
       setBusy(false);
     }
@@ -468,7 +477,6 @@ export default function MembershipApplicationForm({
         </div>
       ) : null}
 
-      {error ? <p className="mt-4 text-sm text-caisbe-red">{error}</p> : null}
       {message ? <p className="mt-4 text-sm text-caisbe-text">{message}</p> : null}
 
       {mode === "online" || isRegister ? (
@@ -749,11 +757,20 @@ export default function MembershipApplicationForm({
       </label>
       ) : null}
 
-      <div className="mt-6">
+      <div className="mt-6 space-y-3">
+        {error ? (
+          <p
+            ref={errorRef}
+            role="alert"
+            className="rounded-lg border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red"
+          >
+            {error}
+          </p>
+        ) : null}
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+          className="inline-flex h-11 w-full items-center justify-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
         >
           {busy
             ? "Submitting…"

@@ -70,7 +70,10 @@ function RegisterForm() {
             <MembershipApplicationForm
               kind="application"
               variant="register"
-              onRegistered={() => router.replace(nextPath)}
+              onRegistered={() => {
+                // Hard navigation so the token is picked up even if client state lags.
+                window.location.assign(nextPath);
+              }}
             />
           </div>
           <p className="mt-6 text-sm text-caisbe-muted">
