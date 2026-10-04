@@ -1,6 +1,8 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.security.passwords import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, validate_password_strength
 
 ThemeChoice = Literal["light", "dark"]
 FontSizeChoice = Literal["sm", "md", "lg", "xl"]
@@ -42,8 +44,16 @@ class AppSettingsUpdate(BaseModel):
 
 
 class AdminPasswordChange(BaseModel):
-    current_password: str = Field(min_length=1, max_length=128)
-    new_password: str = Field(min_length=8, max_length=128)
+    current_password: str = Field(min_length=1, max_length=MAX_PASSWORD_LENGTH)
+    new_password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
+
+    @field_validator("new_password")
+    @classmethod
+    def strong_new_password(cls, value: str) -> str:
+        try:
+            return validate_password_strength(value)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 class CourseReportRow(BaseModel):

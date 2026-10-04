@@ -18,8 +18,10 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import FormField, { fieldClassName } from "@/components/ui/FormField";
 import PageHeader from "@/components/ui/PageHeader";
+import PasswordCriteriaList from "@/components/ui/PasswordCriteriaList";
 import Skeleton from "@/components/ui/Skeleton";
 import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
+import { MIN_PASSWORD_LENGTH, passwordStrengthError } from "@/lib/password";
 
 type AppSettings = {
   institute_name: string;
@@ -106,11 +108,12 @@ export default function SettingsPage() {
 
   async function handlePassword(event: FormEvent) {
     event.preventDefault();
-    if (newPassword !== confirmPassword) {
+    const strengthError = passwordStrengthError(newPassword, confirmPassword);
+    if (strengthError) {
       await notice({
         tone: "error",
         title: "Something went wrong",
-        description: "New passwords do not match.",
+        description: strengthError,
       });
       return;
     }
@@ -373,7 +376,10 @@ export default function SettingsPage() {
 
       <Card>
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Change password</h2>
-        <p className="mt-1 text-sm text-caisbe-muted">Use at least eight characters for your new password.</p>
+        <p className="mt-1 text-sm text-caisbe-muted">
+          Use at least {MIN_PASSWORD_LENGTH} characters with upper and lower case letters, a number, and a
+          special character.
+        </p>
         <form onSubmit={(e) => void handlePassword(e)} className="mt-6 max-w-md space-y-5">
           <FormField label="Current password">
             <input
@@ -392,10 +398,12 @@ export default function SettingsPage() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className={fieldClassName}
-              minLength={8}
+              minLength={MIN_PASSWORD_LENGTH}
+              maxLength={128}
               required
             />
           </FormField>
+          <PasswordCriteriaList password={newPassword} />
           <FormField label="Confirm new password">
             <input
               autoComplete="new-password"
@@ -403,10 +411,16 @@ export default function SettingsPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className={fieldClassName}
-              minLength={8}
+              minLength={MIN_PASSWORD_LENGTH}
+              maxLength={128}
               required
             />
           </FormField>
+          <PasswordCriteriaList
+            password={newPassword}
+            confirmPassword={confirmPassword}
+            mode="match"
+          />
           <Button type="submit" disabled={passwordBusy} variant="secondary">
             {passwordBusy ? "Updating…" : "Update password"}
           </Button>

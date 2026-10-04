@@ -8,6 +8,7 @@ import DownloadCertificateButton from "@/components/certificates/DownloadCertifi
 import MembershipCertificateDocument from "@/components/certificates/MembershipCertificateDocument";
 import MembershipApplicationForm from "@/components/membership/MembershipApplicationForm";
 import { certificatePdfFileName } from "@/lib/certificatePdf";
+import { certificateVerifyUrl } from "@/lib/certificateVerifyUrl";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
 import { formatMoney, membershipTypeLabel, type CheckoutResult } from "@/lib/commerce";
@@ -94,13 +95,10 @@ function MembershipPageInner() {
     }
   }, [searchParams]);
 
-  const verifyUrl = useMemo(() => {
-    if (!cert) return "";
-    if (typeof window !== "undefined") {
-      return `${window.location.origin}/certificates/verify/${cert.certificate_code}`;
-    }
-    return cert.verify_url || "";
-  }, [cert]);
+  const verifyUrl = useMemo(
+    () => (cert ? certificateVerifyUrl(cert.certificate_code, cert.verify_url) : ""),
+    [cert],
+  );
 
   async function startMembershipPayment() {
     if (!pendingType) return;

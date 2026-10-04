@@ -7,16 +7,9 @@ import CertificateDocument from "@/components/certificates/CertificateDocument";
 import DownloadCertificateButton from "@/components/certificates/DownloadCertificateButton";
 import BackButton from "@/components/ui/BackButton";
 import { certificatePdfFileName } from "@/lib/certificatePdf";
+import { certificateVerifyUrl } from "@/lib/certificateVerifyUrl";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { Certificate } from "@/lib/lms";
-
-function verifyUrlFor(cert: Certificate): string {
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}/certificates/verify/${cert.certificate_code}`;
-  }
-  if (cert.verify_url && /^https?:\/\//i.test(cert.verify_url)) return cert.verify_url;
-  return `/certificates/verify/${cert.certificate_code}`;
-}
 
 export default function CertificatePage() {
   const params = useParams<{ code: string }>();
@@ -48,7 +41,10 @@ export default function CertificatePage() {
     };
   }, [user, params.code]);
 
-  const verifyUrl = useMemo(() => (cert ? verifyUrlFor(cert) : ""), [cert]);
+  const verifyUrl = useMemo(
+    () => (cert ? certificateVerifyUrl(cert.certificate_code, cert.verify_url) : ""),
+    [cert],
+  );
 
   if (loading || !user) {
     return <div className="px-4 py-16 text-center text-sm text-caisbe-muted">Loading…</div>;

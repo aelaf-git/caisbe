@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { QRCodeSVG } from "qrcode.react";
+import CertificateQr from "@/components/certificates/CertificateQr";
 
 /** Fixed A4 landscape design size — do not fluid-scale internal layout. */
 export const CERTIFICATE_WIDTH_PX = 900;
@@ -247,9 +247,7 @@ export default function MembershipCertificateDocument({
             </div>
 
             <div className="col-start-2 row-start-1 justify-self-center">
-              <div className="rounded-sm bg-white p-1 print:p-0">
-                <QRCodeSVG value={verifyUrl} size={96} level="M" includeMargin={false} />
-              </div>
+              <CertificateQr verifyUrl={verifyUrl} />
             </div>
 
             <div className="col-start-3 row-start-1 justify-self-center px-2 text-center">

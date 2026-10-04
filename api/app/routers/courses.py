@@ -305,8 +305,13 @@ def _render_certificate(
 
 
 def _certificate_verify_url(certificate_code: str) -> str:
-    base = settings.portal_public_url.rstrip("/")
-    return f"{base}/certificates/verify/{certificate_code}"
+    from urllib.parse import quote
+
+    base = (settings.portal_public_url or "http://localhost:3002").rstrip("/")
+    if not base.startswith(("http://", "https://")):
+        base = f"https://{base.lstrip('/')}"
+    code = quote(str(certificate_code).strip(), safe="-._~")
+    return f"{base}/certificates/verify/{code}"
 
 
 def _issue_certificate(db: Session, user: User, course: Course) -> str:

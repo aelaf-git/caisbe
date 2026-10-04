@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import CertificateDocument from "@/components/certificates/CertificateDocument";
 import MembershipCertificateDocument from "@/components/certificates/MembershipCertificateDocument";
+import { certificateVerifyUrl } from "@/lib/certificateVerifyUrl";
 import type { CertificateVerify } from "@/lib/lms";
 
 export default function VerifyCertificatePage() {
@@ -15,7 +16,7 @@ export default function VerifyCertificatePage() {
   const [pageUrl, setPageUrl] = useState("");
 
   useEffect(() => {
-    setPageUrl(`${window.location.origin}/certificates/verify/${params.code}`);
+    setPageUrl(certificateVerifyUrl(params.code));
   }, [params.code]);
 
   useEffect(() => {
@@ -44,7 +45,8 @@ export default function VerifyCertificatePage() {
     };
   }, [params.code]);
 
-  const verifyUrl = pageUrl || result?.verify_url || "";
+  const verifyUrl =
+    pageUrl || certificateVerifyUrl(params.code, result?.verify_url) || result?.verify_url || "";
   const isMembership = result?.kind === "membership";
 
   return (
