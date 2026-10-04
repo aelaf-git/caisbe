@@ -84,13 +84,13 @@ export const offices = [
   },
   {
     region: "United States",
-    address: "2367 Speers Road, Brampton",
-    mapQuery: "2367 Speers Road, Brampton, ON, Canada",
+    address: "191 Peachtree Street NE,\nAtlanta, GA 30303, USA",
+    mapQuery: "191 Peachtree Street NE, Atlanta, GA 30303, USA",
   },
   {
     region: "Africa",
-    address: "Africa Union, Mexico road, Addis Ababa",
-    mapQuery: "African Union Headquarters, Mexico Road, Addis Ababa, Ethiopia",
+    address: "African Union, Mexico Road,\nRosvelt Street, Addis Ababa",
+    mapQuery: "African Union, Mexico Road, Rosvelt Street, Addis Ababa, Ethiopia",
   },
 ];
 
@@ -263,7 +263,7 @@ const rawFooterColumns = [
     links: [
       { label: "Professional Development", href: "/professional-development" },
       {
-        label: "On-site Corporate Training",
+        label: "On-Site Corporate Training",
         href: "/professional-development/learning-formats/on-site-corporate-training",
       },
       { label: "Membership", href: "/membership" },
@@ -301,7 +301,7 @@ const rawFooterColumns = [
     links: [
       { label: "Certificate Programs", href: "/professional-development" },
       {
-        label: "On-site Corporate Training",
+        label: "On-Site Corporate Training",
         href: "/professional-development/learning-formats/on-site-corporate-training",
       },
       { label: "FAQ", href: "/faq" },

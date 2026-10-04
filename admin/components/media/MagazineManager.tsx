@@ -137,6 +137,7 @@ export default function MagazineManager({
     else setCoverProgress(0);
     try {
       const uploaded = await apiUpload("/admin/uploads", file, {
+        folder: kind === "file" ? "magazines" : "magazines/covers",
         onProgress: (percent) => {
           if (kind === "file") setFileProgress(percent);
           else setCoverProgress(percent);

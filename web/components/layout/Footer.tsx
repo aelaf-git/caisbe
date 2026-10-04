@@ -98,7 +98,7 @@ export default async function Footer() {
             <div key={column.title}>
               <Link
                 href={column.href}
-                className="font-hopewell-display mb-4 block text-sm font-bold uppercase tracking-wide text-white transition-colors hover:text-white/85"
+                className="font-hopewell-display mb-4 block text-base font-bold uppercase tracking-wide text-white transition-colors hover:text-white/85"
               >
                 {column.title}
               </Link>
@@ -107,7 +107,7 @@ export default async function Footer() {
                   <li key={`${column.title}-${link.label}`}>
                     <Link
                       href={link.href}
-                      className="text-sm font-semibold text-white/95 transition-colors hover:text-white"
+                      className="text-base font-semibold text-white/95 transition-colors hover:text-white"
                     >
                       {link.label}
                     </Link>
@@ -120,16 +120,16 @@ export default async function Footer() {
           <div>
             <Link
               href="/contact"
-              className="font-hopewell-display mb-4 block text-sm font-bold uppercase tracking-wide text-white transition-colors hover:text-white/85"
+              className="font-hopewell-display mb-4 block text-base font-bold uppercase tracking-wide text-white transition-colors hover:text-white/85"
             >
               Contact
             </Link>
-            <p className="text-sm font-semibold leading-6 text-white/95">
+            <p className="text-base font-semibold leading-6 text-white/95">
               {footerAddress}
             </p>
             <Link
               href="/contact"
-              className="mt-3 inline-block text-sm font-semibold text-white/95 transition-colors hover:text-white"
+              className="mt-3 inline-block text-base font-semibold text-white/95 transition-colors hover:text-white"
             >
               Get in touch
             </Link>
@@ -152,10 +152,10 @@ export default async function Footer() {
         <div className="mt-10 border-t border-white/25 pt-10">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-md">
-              <p className="font-hopewell-display text-sm font-bold uppercase tracking-wide text-white">
+              <p className="font-hopewell-display text-base font-bold uppercase tracking-wide text-white">
                 Subscribe to newsletter
               </p>
-              <p className="mt-2 text-sm font-semibold leading-6 text-white/90">
+              <p className="mt-2 text-base font-semibold leading-6 text-white/90">
                 Get magazine issues and CAISBE news by email.
               </p>
             </div>
@@ -165,7 +165,7 @@ export default async function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-white/25 pt-6 text-sm font-semibold text-white sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-3 border-t border-white/25 pt-6 text-base font-semibold text-white sm:flex-row sm:items-center sm:justify-between">
           <p>Copyright © 2026 {siteFullName}</p>
           <Link
             href="/privacy-policy"

@@ -5,6 +5,15 @@ export type CertificateProgram = {
   slug: string;
 };
 
+export type LearningFormat = {
+  slug: string;
+  title: string;
+  description: string;
+  details: string[];
+  ctaLabel: string;
+  ctaHref: string;
+};
+
 export function certificatePath(slug: string) {
   return `/professional-development/${slug}`;
 }
@@ -41,32 +50,53 @@ export const professionalDevelopmentContent = {
     title: "Learning Formats",
     description:
       "CAISBE delivers certificate programs through flexible learning formats designed for working professionals, students, and organizations.",
+    educationOptionsTitle: "Education Options",
+    educationOptionsIntro:
+      "Choose the learning format that fits your schedule, location, and goals.",
     items: [
       {
         slug: "online-self-paced",
-        title: "Online (self-paced)",
+        title: "Online (Self-Paced)",
         description:
-          "Study independently with structured online modules you can complete at your own pace, from anywhere.",
+          "Learn anytime, anywhere at your own pace with 24/7 access to interactive digital materials—no fixed schedule.",
+        details: [
+          "Modules include microlessons, video presentations, review quizzes, practice exams, and tools like flashcards.",
+        ],
+        ctaLabel: "Register for a course",
+        ctaHref: "/professional-development",
       },
       {
         slug: "virtual-live-classes",
-        title: "Virtual Live Classes",
+        title: "Virtual Classes",
         description:
-          "Join instructor-led live sessions online for interactive learning, discussion, and real-time support.",
+          "Live instructor-led sessions online—join from anywhere and interact in real time via video, chat, and shared tools.",
+        details: [
+          "Sessions blend live teaching with self-paced study through discussions, case studies, and collaborative activities.",
+        ],
+        ctaLabel: "Register for a course",
+        ctaHref: "/professional-development",
       },
       {
         slug: "in-person-classroom-training",
         title: "In-Person Classroom Training",
         description:
-          "Learn in a classroom setting with peers and instructors through hands-on, face-to-face training.",
+          "Face-to-face classroom learning with expert instructors, peer networking, and a focused environment.",
+        details: [
+          "Available in Addis Ababa, Nairobi, South Africa, Canada, and many other locations worldwide.",
+        ],
+        ctaLabel: "Register for a course",
+        ctaHref: "/professional-development",
       },
       {
         slug: "on-site-corporate-training",
-        title: "On-site Corporate Training",
+        title: "On-Site Corporate Training",
         description:
-          "Bring CAISBE training to your organization with customized programs delivered on-site for your team.",
+          "Customized training at your company’s location—tailored content, flexible scheduling, and team-focused learning without travel.",
+        details: [],
+        ctaLabel: "Contact us for details",
+        ctaHref: "/contact",
       },
-    ],
+    ] satisfies LearningFormat[],
   },
 };
 

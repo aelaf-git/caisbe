@@ -224,7 +224,9 @@ def _validate_reading_url(url: str | None) -> None:
         )
     raw = url.strip()
     lowered = raw.split("?")[0].lower()
-    if "/api/uploads/" in lowered and lowered.endswith((".pdf", ".doc", ".docx", ".epub")):
+    from app.services.storage import is_managed_upload_url
+
+    if is_managed_upload_url(raw) and lowered.endswith((".pdf", ".doc", ".docx", ".epub")):
         return
     parsed = urlparse(raw)
     if parsed.scheme in {"http", "https"} and parsed.netloc:
@@ -255,6 +257,8 @@ def _validate_assignment(url: str | None, body: str | None) -> None:
 
 
 def _validate_upload_url(url: str | None, *, field: str = "file") -> None:
+    from app.services.storage import is_managed_upload_url
+
     if not url or not url.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -262,6 +266,11 @@ def _validate_upload_url(url: str | None, *, field: str = "file") -> None:
         )
     path = url.split("?")[0].lower()
     if not any(path.endswith(ext) for ext in ALLOWED_UPLOAD_EXTENSIONS):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="URL must point to an uploaded file from the media library.",
+        )
+    if not is_managed_upload_url(url) and not path.startswith(("http://", "https://")):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="URL must point to an uploaded file from the media library.",
@@ -1647,7 +1656,6 @@ def admin_update_quiz(
 # --- Uploads ---
 
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
-UPLOAD_CHUNK_BYTES = 1024 * 1024
 
 
 @router.post("/uploads", response_model=UploadOut)
@@ -1655,6 +1663,8 @@ async def admin_upload(
     request: Request,
     _: User = Depends(require_admin),
 ) -> UploadOut:
+    from app.services.storage import save_upload
+
     form = await request.form(max_part_size=MAX_UPLOAD_BYTES)
     uploaded = form.get("file")
     if not isinstance(uploaded, UploadFile):
@@ -1662,44 +1672,16 @@ async def admin_upload(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Missing file upload",
         )
-    file = uploaded
-
-    upload_root = Path(settings.upload_dir)
-    upload_root.mkdir(parents=True, exist_ok=True)
-    suffix = Path(file.filename or "file").suffix.lower()
-    if suffix not in ALLOWED_UPLOAD_EXTENSIONS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File type not allowed. Use videos, images, PDF, EPUB, or Word.",
-        )
-    safe_name = f"{uuid.uuid4().hex}{suffix}"
-    dest = upload_root / safe_name
-    written = 0
-    try:
-        with dest.open("wb") as out:
-            while True:
-                chunk = await file.read(UPLOAD_CHUNK_BYTES)
-                if not chunk:
-                    break
-                written += len(chunk)
-                if written > MAX_UPLOAD_BYTES:
-                    raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail="File is too large. Maximum upload size is 500 MB.",
-                    )
-                out.write(chunk)
-    except Exception:
-        if dest.exists():
-            dest.unlink(missing_ok=True)
-        raise
-
-    if written == 0:
-        if dest.exists():
-            dest.unlink(missing_ok=True)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty")
-
-    display_name = (file.filename or safe_name)[:120]
-    return UploadOut(url=f"/api/uploads/{safe_name}", filename=display_name)
+    folder = str(form.get("folder") or "general")
+    url, display_name = await save_upload(
+        uploaded,
+        allowed_suffixes=ALLOWED_UPLOAD_EXTENSIONS,
+        max_bytes=MAX_UPLOAD_BYTES,
+        folder=folder,
+        invalid_detail="File type not allowed. Use videos, images, PDF, EPUB, or Word.",
+        too_large_detail="File is too large. Maximum upload size is 500 MB.",
+    )
+    return UploadOut(url=url, filename=display_name)
 
 
 # --- Media library ---
@@ -1867,6 +1849,7 @@ def admin_send_newsletter(
                 to=row.email,
                 subject=subject,
                 html_body=body_html,
+                purpose="newsletter",
                 attachments=attachments,
             )
             sent_count += 1
@@ -1876,7 +1859,7 @@ def admin_send_newsletter(
     if sent_count == 0:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Unable to deliver newsletter to any recipient. Check SMTP settings.",
+            detail="Unable to deliver newsletter to any recipient. Check Resend settings.",
         )
 
     campaign = NewsletterCampaign(
@@ -2704,13 +2687,18 @@ def admin_reply_contact_message(
     html_body = (
         f"<p>Hello {full_name},</p>"
         f"<p>{body.replace(chr(10), '<br>')}</p>"
-        "<p>— CAISBE Education</p>"
+        "<p>— CAISBE</p>"
         "<hr>"
         "<p><small>In reply to your message:</small></p>"
         f"<blockquote>{row.comments.replace(chr(10), '<br>')}</blockquote>"
     )
     try:
-        send_email(to=row.email, subject=subject, html_body=html_body)
+        send_email(
+            to=row.email,
+            subject=subject,
+            html_body=html_body,
+            purpose="contact",
+        )
     except EmailDeliveryError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 

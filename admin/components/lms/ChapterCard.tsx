@@ -487,7 +487,7 @@ function ReadingsPanel({
     setSaving(true);
     try {
       if (source === "file" && file) {
-        const uploaded = await apiUpload("/admin/uploads", file);
+        const uploaded = await apiUpload("/admin/uploads", file, { folder: "courses/readings" });
         url = uploaded.url;
         label = file.name;
         fallbackTitle = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || file.name;
@@ -547,7 +547,9 @@ function ReadingsPanel({
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-caisbe-text">{block.title || "Reading"}</p>
                 <p className="truncate text-xs text-caisbe-muted">
-                  {block.url?.includes("/api/uploads/") ? block.label || "Uploaded file" : block.url || "Link"}
+                  {block.url && (/\/api\/uploads\//.test(block.url) || /\/uploads\/[a-f0-9]{32}\./i.test(block.url))
+                    ? block.label || "Uploaded file"
+                    : block.url || "Link"}
                 </p>
               </div>
               <DeleteIconButton
@@ -683,7 +685,7 @@ function AssignmentsPanel({
       let body: string | null = null;
       let nextTitle = trimmedTitle;
       if (source === "file" && file) {
-        const uploaded = await apiUpload("/admin/uploads", file);
+        const uploaded = await apiUpload("/admin/uploads", file, { folder: "courses/assignments" });
         url = uploaded.url;
         label = file.name;
         nextTitle = trimmedTitle || file.name.replace(/\.[^.]+$/, "");

@@ -11,7 +11,7 @@ export default function AuthNav() {
       </a>
       <a
         href={portalMembershipRegisterUrl()}
-        className="inline-flex h-8 items-center rounded-full bg-caisbe-red px-4 text-sm font-bold text-white transition hover:bg-caisbe-red-dark"
+        className="inline-flex h-9 items-center rounded-full bg-caisbe-red px-4 text-base font-bold text-white transition hover:bg-caisbe-red-dark"
       >
         Register
       </a>

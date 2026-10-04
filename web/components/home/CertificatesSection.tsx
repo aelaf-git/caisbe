@@ -73,7 +73,7 @@ export default async function CertificatesSection() {
                 />
               ) : (
                 <div className="flex aspect-video items-center bg-[#f7f9fa] px-4">
-                  <p className="text-sm font-semibold text-caisbe-red">
+                  <p className="text-base font-semibold text-caisbe-red">
                     {course.code}
                   </p>
                 </div>
@@ -82,10 +82,10 @@ export default async function CertificatesSection() {
                 <h3 className="font-hopewell-display text-lg font-bold leading-snug text-caisbe-text-dark">
                   {course.title}
                 </h3>
-                <p className="mt-2 line-clamp-3 flex-1 text-sm leading-6 text-caisbe-muted">
+                <p className="mt-2 line-clamp-3 flex-1 text-base leading-7 text-caisbe-muted">
                   {course.description}
                 </p>
-                <span className="mt-4 text-sm font-bold text-caisbe-red">
+                <span className="mt-4 text-base font-bold text-caisbe-red">
                   View Program
                 </span>
               </div>

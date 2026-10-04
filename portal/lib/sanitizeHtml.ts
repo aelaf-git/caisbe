@@ -69,6 +69,9 @@ export function sanitizeContentBody(body: string): string {
 export function sanitizeCoursePresentation(body: string): string {
   let html = sanitizeContentBody(body);
   html = html.replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, "$1");
-  html = html.replace(/<img\b[^>]*\bsrc=["'](?![^"']*\/api\/uploads\/)[^"']*["'][^>]*>/gi, "");
+  html = html.replace(
+    /<img\b[^>]*\bsrc=["'](?![^"']*(?:\/api\/uploads\/|\/uploads\/[a-f0-9]{32}\.))[^"']*["'][^>]*>/gi,
+    "",
+  );
   return html;
 }

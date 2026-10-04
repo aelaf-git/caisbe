@@ -42,10 +42,5 @@ export default async function LearningFormatPage({
     notFound();
   }
 
-  return (
-    <LearningFormatPageContent
-      title={format.title}
-      description={format.description}
-    />
-  );
+  return <LearningFormatPageContent format={format} />;
 }

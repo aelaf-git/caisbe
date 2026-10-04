@@ -157,6 +157,7 @@ export default function NewsManager({
 
   async function uploadFile(file: File): Promise<string> {
     const uploaded = await apiUpload("/admin/uploads", file, {
+      folder: "news",
       onProgress: (percent) => setUploadProgress(percent),
     });
     return uploaded.url;

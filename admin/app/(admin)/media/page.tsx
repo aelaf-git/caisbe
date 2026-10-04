@@ -8,6 +8,7 @@ import Alert from "@/components/ui/Alert";
 import PageHeader from "@/components/ui/PageHeader";
 import Tabs from "@/components/ui/Tabs";
 import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
+import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import {
   apiFetch,
   ApiError,
@@ -26,8 +27,8 @@ export default function MediaPage() {
   const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const { confirm, dialog } = useConfirmDialog();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { notice, dialog: noticeDialog } = useNoticeDialog();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -56,6 +57,20 @@ export default function MediaPage() {
     void load();
   }, [load]);
 
+  const showSuccess = useCallback(
+    (message: string) => {
+      void notice({ tone: "success", title: "Done", description: message });
+    },
+    [notice],
+  );
+
+  const showActionError = useCallback(
+    (message: string) => {
+      void notice({ tone: "error", title: "Something went wrong", description: message });
+    },
+    [notice],
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -74,27 +89,19 @@ export default function MediaPage() {
         onChange={(next) => {
           setTab(next);
           setError(null);
-          setSuccess(null);
         }}
         ariaLabel="Media sections"
       />
 
       {error ? <Alert tone="error">{error}</Alert> : null}
-      {success ? <Alert tone="success">{success}</Alert> : null}
 
       {tab === "hero" ? (
         <HeroManager
           assets={heroAssets}
           loading={loading}
           onRefresh={load}
-          onError={(message) => {
-            setSuccess(null);
-            setError(message);
-          }}
-          onSuccess={(message) => {
-            setError(null);
-            setSuccess(message);
-          }}
+          onError={showActionError}
+          onSuccess={showSuccess}
           askConfirm={confirm}
         />
       ) : tab === "magazines" ? (
@@ -102,14 +109,8 @@ export default function MediaPage() {
           assets={assets}
           loading={loading}
           onRefresh={load}
-          onError={(message) => {
-            setSuccess(null);
-            setError(message);
-          }}
-          onSuccess={(message) => {
-            setError(null);
-            setSuccess(message);
-          }}
+          onError={showActionError}
+          onSuccess={showSuccess}
           askConfirm={confirm}
         />
       ) : (
@@ -118,17 +119,12 @@ export default function MediaPage() {
           campaigns={campaigns}
           loading={loading}
           onRefresh={load}
-          onError={(message) => {
-            setSuccess(null);
-            setError(message);
-          }}
-          onSuccess={(message) => {
-            setError(null);
-            setSuccess(message);
-          }}
+          onError={showActionError}
+          onSuccess={showSuccess}
         />
       )}
-      {dialog}
+      {confirmDialog}
+      {noticeDialog}
     </div>
   );
 }

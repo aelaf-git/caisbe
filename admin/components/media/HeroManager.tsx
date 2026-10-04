@@ -32,8 +32,12 @@ type AskConfirm = (options: {
 }) => Promise<boolean>;
 
 function resolveMediaSrc(url: string): string {
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
   if (url.startsWith("/images/")) return `${SITE_URL}${url}`;
+  // Uploaded media: absolute R2 URLs or same-origin /api/uploads via Next proxy.
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/api/")) {
+    return url;
+  }
+  if (url.startsWith("/uploads/")) return `/api${url}`;
   return url;
 }
 
@@ -182,6 +186,7 @@ export default function HeroManager({
     setFormError(null);
     try {
       const uploaded = await apiUpload("/admin/uploads", file, {
+        folder: "heroes",
         onProgress: (percent) => setFileProgress(percent),
       });
       setFileUrl(uploaded.url);

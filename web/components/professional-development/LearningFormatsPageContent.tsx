@@ -20,7 +20,11 @@ export default function LearningFormatsPageContent() {
         backHref="/professional-development"
         backLabel="Back to certificate programs"
       />
-      <ContentSection wide>
+      <ContentSection
+        title={formats.educationOptionsTitle}
+        description={formats.educationOptionsIntro}
+        wide
+      >
         <div className="grid gap-6 sm:grid-cols-2">
           {formats.items.map((format, index) => (
             <ContentCard
@@ -28,6 +32,7 @@ export default function LearningFormatsPageContent() {
               title={format.title}
               description={format.description}
               href={learningFormatPath(format.slug)}
+              hrefLabel="View details"
               style={{ animationDelay: `${index * 70}ms` }}
             />
           ))}

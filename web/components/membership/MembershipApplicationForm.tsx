@@ -138,6 +138,10 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       setError(null);
       setMessage(null);
       try {
+        const maxBytes = 20 * 1024 * 1024;
+        if (file.size > maxBytes) {
+          throw new Error("File is too large. Maximum size is 20 MB.");
+        }
         const body = new FormData();
         body.append("file", file);
         body.append("kind", kind);
@@ -191,7 +195,6 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       chapterName.trim() ? `Chapter: ${chapterName.trim()}` : null,
       chapterLabels.length ? `Chapter membership: ${chapterLabels.join(", ")}` : null,
       additionalLabels.length ? `Additional options: ${additionalLabels.join(", ")}` : null,
-      mode === "upload" && file ? `Form upload: ${file.name}` : null,
       "Agreed to CAISBE bylaws and code of ethics.",
     ].filter(Boolean);
 
@@ -217,9 +220,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       setMessage(
         isRenewal
           ? "Renewal request received. Our team will confirm your membership renewal."
-          : mode === "upload"
-            ? "Your completed form was received. Our team will review your membership application."
-            : "Application received. Our team will review your membership registration.",
+          : "Application received. Our team will review your membership registration.",
       );
       setFile(null);
     } catch (err) {

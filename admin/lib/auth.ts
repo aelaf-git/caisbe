@@ -387,6 +387,8 @@ export async function apiFetch<T>(
 
 export type ApiUploadOptions = {
   onProgress?: (percent: number) => void;
+  /** R2/local folder under uploads/ (e.g. heroes, courses/covers). */
+  folder?: string;
 };
 
 export async function apiUpload(
@@ -399,15 +401,20 @@ export async function apiUpload(
     throw new ApiError(413, "File is too large. Maximum upload size is 500 MB.");
   }
 
-  const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
-  const url = apiBase ? `${apiBase}/api${path}` : `/api${path}`;
+  // Same-origin /api rewrite (like apiFetch) — avoid cross-origin XHR to NEXT_PUBLIC_API_URL,
+  // which often surfaces as a generic "Network error" in the browser.
+  const url = `/api${path}`;
   const token = getToken();
   const body = new FormData();
   body.append("file", file);
+  if (options?.folder) {
+    body.append("folder", options.folder);
+  }
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);
+    xhr.timeout = 10 * 60 * 1000;
 
     if (token) {
       xhr.setRequestHeader("Authorization", `Bearer ${token}`);
@@ -434,6 +441,9 @@ export async function apiUpload(
 
     xhr.onerror = () => {
       reject(new ApiError(0, "Network error while uploading file."));
+    };
+    xhr.ontimeout = () => {
+      reject(new ApiError(0, "Upload timed out. Try a smaller file or retry."));
     };
 
     xhr.send(body);

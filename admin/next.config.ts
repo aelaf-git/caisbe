@@ -1,28 +1,21 @@
 import type { NextConfig } from "next";
 import path from "path";
 
-const apiUrl = process.env.API_URL ?? "http://127.0.0.1:8000";
-
 const nextConfig: NextConfig = {
-  // Monorepo: dependencies are hoisted to the repo root node_modules
+  output: "standalone",
+  // Monorepo: trace files from the repo root so standalone includes hoisted deps.
+  outputFileTracingRoot: path.join(__dirname, ".."),
   turbopack: {
     root: path.join(__dirname, ".."),
   },
   experimental: {
-    // Large chapter uploads (videos) pass through the Next rewrite/proxy.
+    // Large chapter uploads (videos) pass through the App Router API proxy.
     proxyClientMaxBodySize: "500mb",
     serverActions: {
       bodySizeLimit: "500mb",
     },
   },
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${apiUrl}/api/:path*`,
-      },
-    ];
-  },
+  // API proxy is handled at runtime by app/api/[...path]/route.ts (reads API_URL on Render).
 };
 
 export default nextConfig;

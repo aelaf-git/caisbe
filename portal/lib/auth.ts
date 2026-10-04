@@ -138,31 +138,92 @@ export async function apiFetch<T>(
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const text = await response.text();
+  if (!text.trim()) {
+    throw new ApiError(response.status, "Empty response from server.");
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError(response.status, "Invalid response from server.");
+  }
 }
+
+function parseErrorDetail(status: number, text: string): ApiError {
+  let detail = `Request failed (${status})`;
+  try {
+    const data = JSON.parse(text) as { detail?: string | { msg?: string }[] };
+    if (typeof data.detail === "string") {
+      detail = data.detail;
+    } else if (Array.isArray(data.detail) && data.detail[0]?.msg) {
+      detail = data.detail[0].msg;
+    }
+  } catch {
+    // keep default
+  }
+  return new ApiError(status, detail);
+}
+
+export type ApiUploadOptions = {
+  onProgress?: (percent: number) => void;
+  /** Client-side size guard; API may still enforce a lower limit. */
+  maxBytes?: number;
+};
 
 export async function apiUpload(
   path: string,
   file: File,
+  options?: ApiUploadOptions,
 ): Promise<{ url: string; filename: string }> {
-  const headers = new Headers();
-  const token = getToken();
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  const maxBytes = options?.maxBytes ?? 25 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new ApiError(
+      413,
+      `File is too large. Maximum upload size is ${Math.round(maxBytes / (1024 * 1024))} MB.`,
+    );
   }
 
+  // Same-origin /api proxy — avoid cross-origin XHR (generic "Network error").
+  const url = `/api${path}`;
+  const token = getToken();
   const body = new FormData();
   body.append("file", file);
 
-  const response = await fetch(`/api${path}`, {
-    method: "POST",
-    headers,
-    body,
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.timeout = 10 * 60 * 1000;
+
+    if (token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    }
+
+    xhr.upload.onprogress = (event) => {
+      if (!options?.onProgress || !event.lengthComputable || event.total <= 0) return;
+      const percent = Math.min(100, Math.round((event.loaded / event.total) * 100));
+      options.onProgress(percent);
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        options?.onProgress?.(100);
+        try {
+          resolve(JSON.parse(xhr.responseText) as { url: string; filename: string });
+        } catch {
+          reject(new ApiError(xhr.status, "Invalid response from server."));
+        }
+        return;
+      }
+      reject(parseErrorDetail(xhr.status, xhr.responseText || ""));
+    };
+
+    xhr.onerror = () => {
+      reject(new ApiError(0, "Network error while uploading file."));
+    };
+    xhr.ontimeout = () => {
+      reject(new ApiError(0, "Upload timed out. Try a smaller file or retry."));
+    };
+
+    xhr.send(body);
   });
-
-  if (!response.ok) {
-    throw await parseError(response);
-  }
-
-  return response.json() as Promise<{ url: string; filename: string }>;
 }

@@ -29,14 +29,14 @@ export default function OfficesSection() {
                 <h3 className="font-hopewell-display text-lg font-bold text-caisbe-text-dark">
                   {office.region}
                 </h3>
-                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-caisbe-muted">
+                <p className="mt-2 whitespace-pre-line text-base leading-7 text-caisbe-muted">
                   {office.address}
                 </p>
                 <a
                   href={officeDirectionsUrl(office.mapQuery)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 inline-flex text-sm font-bold text-caisbe-red transition-colors hover:text-caisbe-red-dark"
+                  className="mt-4 inline-flex text-base font-bold text-caisbe-red transition-colors hover:text-caisbe-red-dark"
                 >
                   Direction
                 </a>

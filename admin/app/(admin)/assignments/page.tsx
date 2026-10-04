@@ -8,7 +8,9 @@ import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
+import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { apiFetch, ApiError } from "@/lib/auth";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 
 type AssignmentSubmission = {
   id: number;
@@ -28,11 +30,12 @@ type AssignmentSubmission = {
 type StatusFilter = "under_review" | "passed" | "failed" | "all";
 
 function fileHref(url: string | null) {
-  if (!url) return null;
-  if (/^https?:\/\//i.test(url)) return url;
-  const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
-  const path = url.startsWith("/") ? url : `/${url}`;
-  return apiBase ? `${apiBase}${path}` : path;
+  return resolveUploadUrl(url);
+}
+
+function isImageSubmission(url: string | null, name: string | null): boolean {
+  const path = (url || name || "").split("?")[0].toLowerCase();
+  return /\.(jpe?g|png|webp|gif)$/i.test(path);
 }
 
 function statusLabel(status: string) {
@@ -40,6 +43,7 @@ function statusLabel(status: string) {
 }
 
 export default function AssignmentsPage() {
+  const { notice, dialog } = useNoticeDialog();
   const [rows, setRows] = useState<AssignmentSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +69,6 @@ export default function AssignmentsPage() {
 
   async function review(id: number, status: "passed" | "failed") {
     setBusyId(id);
-    setError(null);
     try {
       const updated = await apiFetch<AssignmentSubmission>(`/admin/assignment-submissions/${id}/review`, {
         method: "POST",
@@ -77,8 +80,17 @@ export default function AssignmentsPage() {
         }
         return current.map((row) => (row.id === id ? updated : row));
       });
+      await notice({
+        tone: "success",
+        title: "Done",
+        description: status === "passed" ? "Submission marked as passed." : "Submission marked as failed.",
+      });
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to review the submission.");
+      await notice({
+        tone: "error",
+        title: "Something went wrong",
+        description: err instanceof ApiError ? err.detail : "Unable to review the submission.",
+      });
     } finally {
       setBusyId(null);
     }
@@ -91,6 +103,7 @@ export default function AssignmentsPage() {
 
   return (
     <div className="space-y-6">
+      {dialog}
       <PageHeader
         eyebrow="Learning"
         title="Assignments"
@@ -182,14 +195,24 @@ export default function AssignmentsPage() {
                   </div>
 
                   {href ? (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex text-sm font-semibold text-caisbe-red hover:underline"
-                    >
-                      {row.file_name || "Open submitted file"}
-                    </a>
+                    <div className="space-y-2">
+                      {isImageSubmission(row.file_url, row.file_name) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={href}
+                          alt={row.file_name || "Assignment submission"}
+                          className="max-h-64 max-w-full rounded-md border border-ifma-border object-contain"
+                        />
+                      ) : null}
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex text-sm font-semibold text-caisbe-red hover:underline"
+                      >
+                        {row.file_name || "Open submitted file"}
+                      </a>
+                    </div>
                   ) : row.body ? (
                     <div className="rounded-md border border-ifma-border-light bg-[#f8fafc] px-4 py-3 text-sm whitespace-pre-wrap text-caisbe-text">
                       {row.body}

@@ -5,6 +5,7 @@ import BlockView, { TopicSections } from "@/components/portal/BlockView";
 import ExamPlayer from "@/components/portal/ExamPlayer";
 import type { ContentBlock, CourseDetail, Lesson, QuizAttempt } from "@/lib/lms";
 import type { NavSelection } from "@/components/portal/coursePlayerTypes";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 import { readingsForChapter } from "@/lib/readings";
 
 export default function LessonStage({
@@ -169,7 +170,13 @@ function readingKind(url: string | null): "pdf" | "doc" | "epub" | "link" | "fil
   if (path.endsWith(".pdf")) return "pdf";
   if (path.endsWith(".doc") || path.endsWith(".docx")) return "doc";
   if (path.endsWith(".epub")) return "epub";
-  if (/^https?:\/\//i.test(raw) && !path.includes("/api/uploads/")) return "link";
+  if (
+    /^https?:\/\//i.test(raw) &&
+    !path.includes("/api/uploads/") &&
+    !/\/uploads\/(?:[\w.-]+\/)*[a-f0-9]{32}\./i.test(path)
+  ) {
+    return "link";
+  }
   return "file";
 }
 
@@ -213,7 +220,7 @@ function ChapterReadings({ title, readings }: { title: string; readings: Content
             return (
               <li key={block.id}>
                 <a
-                  href={block.url}
+                  href={resolveUploadUrl(block.url) ?? block.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 rounded-md border border-ifma-border px-3 py-3 text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"

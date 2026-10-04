@@ -1,22 +1,47 @@
-import { PageHero } from "@/components/pages/ContentPage";
-import { learningFormatsPath } from "@/lib/data/professional-development";
+import {
+  ContentSection,
+  PageHero,
+} from "@/components/pages/ContentPage";
+import ButtonLink from "@/components/ui/ButtonLink";
+import {
+  learningFormatsPath,
+  type LearningFormat,
+} from "@/lib/data/professional-development";
 
 type LearningFormatPageContentProps = {
-  title: string;
-  description: string;
+  format: LearningFormat;
 };
 
 export default function LearningFormatPageContent({
-  title,
-  description,
+  format,
 }: LearningFormatPageContentProps) {
+  const hasDetails = format.details.length > 0;
+
   return (
-    <PageHero
-      eyebrow="Learning Formats"
-      title={title}
-      lead={description}
-      backHref={learningFormatsPath()}
-      backLabel="Back to learning formats"
-    />
+    <>
+      <PageHero
+        eyebrow="Learning Formats"
+        title={format.title}
+        lead={format.description}
+        backHref={learningFormatsPath()}
+        backLabel="Back to learning formats"
+        actions={
+          <ButtonLink href={format.ctaHref} variant="primary">
+            {format.ctaLabel}
+          </ButtonLink>
+        }
+      />
+      {hasDetails ? (
+        <ContentSection wide>
+          <div className="max-w-3xl space-y-5">
+            {format.details.map((paragraph) => (
+              <p key={paragraph} className="text-base leading-8 text-caisbe-text">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        </ContentSection>
+      ) : null}
+    </>
   );
 }

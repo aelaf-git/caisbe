@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import FormField from "@/components/ui/FormField";
 import { apiUpload, ApiError } from "@/lib/auth";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 
 const COVER_ACCEPT = "image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif";
 
@@ -37,7 +38,7 @@ export default function CourseCoverField({
     }
     setUploading(true);
     try {
-      const uploaded = await apiUpload("/admin/uploads", file);
+      const uploaded = await apiUpload("/admin/uploads", file, { folder: "courses/covers" });
       await onChange(uploaded.url);
     } catch (err) {
       onError(err instanceof ApiError ? err.detail : "Unable to upload cover image.");
@@ -55,7 +56,11 @@ export default function CourseCoverField({
         <div className="relative aspect-video bg-[#f3f0ec]">
           {value ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={value} alt="Course cover preview" className="h-full w-full object-cover" />
+            <img
+              src={resolveUploadUrl(value) ?? value}
+              alt="Course cover preview"
+              className="h-full w-full object-cover"
+            />
           ) : (
             <div className="flex h-full items-center justify-center px-4 text-center text-sm text-caisbe-muted">
               No cover image yet

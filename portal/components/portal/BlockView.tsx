@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import QuizPlayer from "@/components/portal/QuizPlayer";
 import { apiFetch, apiUpload, ApiError } from "@/lib/auth";
 import type { ContentBlock, Lesson, QuizAttempt } from "@/lib/lms";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 import { outlineNumber } from "@/lib/outlineNumber";
 import { isAdminUpload, isLegacyChapterReading } from "@/lib/readings";
 import { sanitizeCoursePresentation } from "@/lib/sanitizeHtml";
@@ -19,6 +20,10 @@ function ResourceChip({ href, label }: { href: string; label: string }) {
       {label}
     </a>
   );
+}
+
+function mediaSrc(url: string | null | undefined): string | null {
+  return resolveUploadUrl(url);
 }
 
 export default function BlockView({
@@ -45,19 +50,23 @@ export default function BlockView({
   }
 
   if (block.block_type === "video" && block.url) {
-    const isFile = block.url.startsWith("/api/uploads/") || block.url.endsWith(".mp4");
+    const src = mediaSrc(block.url) ?? block.url;
+    const isFile =
+      src.startsWith("/api/uploads/") ||
+      /\/uploads\/(?:[\w.-]+\/)*[a-f0-9]{32}\./i.test(src) ||
+      /\.(mp4|webm|mov|m4v)(\?|$)/i.test(src);
     return (
       <div className="space-y-2">
         {block.title ? <h3 className="text-lg font-semibold text-caisbe-text">{block.title}</h3> : null}
         <div className="overflow-hidden rounded-md bg-black">
           {isFile ? (
-            <video controls className="aspect-video w-full" src={block.url}>
+            <video controls className="aspect-video w-full" src={src}>
               <track kind="captions" />
             </video>
           ) : (
             <iframe
               title={block.title || "Video lecture"}
-              src={block.url}
+              src={src}
               className="aspect-video h-full w-full border-0"
               allowFullScreen
             />
@@ -68,13 +77,14 @@ export default function BlockView({
   }
 
   if (block.block_type === "image" && block.url) {
+    const src = mediaSrc(block.url) ?? block.url;
     return (
       <div className="space-y-2">
         {block.title ? <h3 className="text-lg font-semibold text-caisbe-text">{block.title}</h3> : null}
         <div className="overflow-hidden rounded-md border border-ifma-border bg-[#fafaf8]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={block.url}
+            src={src}
             alt={block.title || "Course image"}
             className="max-h-[480px] w-full object-contain"
           />
@@ -84,13 +94,14 @@ export default function BlockView({
   }
 
   if (block.block_type === "pdf" && block.url) {
+    const src = mediaSrc(block.url) ?? block.url;
     return (
       <div className="space-y-3">
         {block.title ? <h3 className="text-lg font-semibold text-caisbe-text">{block.title}</h3> : null}
-        <ResourceChip href={block.url} label="Open PDF" />
+        <ResourceChip href={src} label="Open PDF" />
         <iframe
           title={block.title || "PDF"}
-          src={block.url}
+          src={src}
           className="h-[480px] w-full rounded-md border border-ifma-border bg-admin-surface"
         />
       </div>
@@ -98,11 +109,12 @@ export default function BlockView({
   }
 
   if ((block.block_type === "document" || block.block_type === "epub") && block.url) {
+    const src = mediaSrc(block.url) ?? block.url;
     return (
       <div className="space-y-2">
         {block.title ? <h3 className="text-lg font-semibold text-caisbe-text">{block.title}</h3> : null}
         <ResourceChip
-          href={block.url}
+          href={src}
           label={block.block_type === "epub" ? "Download EPUB" : "Download document"}
         />
       </div>
@@ -200,10 +212,10 @@ function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete
       let body: string | null = null;
       if (source === "file") {
         if (!file) {
-          setError("Choose a PDF or Word file.");
+          setError("Choose a PDF, Word, or image file.");
           return;
         }
-        const uploaded = await apiUpload("/me/uploads", file);
+        const uploaded = await apiUpload("/me/uploads", file, { maxBytes: 25 * 1024 * 1024 });
         url = uploaded.url;
         name = uploaded.filename;
       } else {
@@ -268,7 +280,7 @@ function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete
         <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Instructions</h3>
         {block.url ? (
           <a
-            href={block.url}
+            href={mediaSrc(block.url) ?? block.url}
             download
             className="flex items-center gap-3 rounded-md border border-ifma-border bg-admin-surface px-4 py-3 text-caisbe-text transition-colors hover:border-caisbe-red hover:text-caisbe-red"
           >
@@ -320,7 +332,7 @@ function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete
             className="space-y-4 rounded-md border border-ifma-border bg-[#fafaf8] p-4 md:p-5"
           >
             <p className="text-sm text-caisbe-muted">
-              Complete the exercise, then submit either a document or a written answer.
+              Complete the exercise, then submit a document, photo, or written answer.
             </p>
             <div className="flex w-full max-w-md rounded-md border border-ifma-border bg-admin-surface p-1">
               <button
@@ -333,7 +345,7 @@ function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete
                   source === "file" ? "bg-caisbe-red text-white" : "text-caisbe-text hover:bg-ifma-border-light"
                 }`}
               >
-                Upload document
+                Upload file
               </button>
               <button
                 type="button"
@@ -350,12 +362,12 @@ function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete
             </div>
             {source === "file" ? (
               <label className="block space-y-2">
-                <span className="text-sm font-medium text-caisbe-text">PDF or Word file</span>
+                <span className="text-sm font-medium text-caisbe-text">PDF, Word, or photo</span>
                 <input
                   key="answer-file"
                   type="file"
                   required
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
                   onChange={(event) => setFile(event.target.files?.[0] ?? null)}
                   className="block w-full rounded-md border border-ifma-border bg-admin-surface px-3 py-2.5 text-sm text-caisbe-muted file:mr-3 file:rounded-md file:border-0 file:bg-caisbe-red/10 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-caisbe-red"
                 />

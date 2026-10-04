@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CertificatePreview from "@/components/certificates/CertificatePreview";
 import ChapterCard from "@/components/lms/ChapterCard";
 import CourseCoverField from "@/components/lms/CourseCoverField";
@@ -9,7 +9,6 @@ import { CourseStatusBadge, SaveStatus } from "@/components/lms/CourseEditorChro
 import FinalExamEditor, { type ExamDraft } from "@/components/lms/FinalExamEditor";
 import PassMarkControl from "@/components/lms/PassMarkControl";
 import { emptyQuestion } from "@/components/lms/QuizQuestionEditor";
-import Alert from "@/components/ui/Alert";
 import BackButton from "@/components/ui/BackButton";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -19,6 +18,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
 import Tabs from "@/components/ui/Tabs";
+import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { AutosaveProvider, autosaveLabel, useAutosaveRegistry } from "@/hooks/autosaveContext";
 import { useAutosave } from "@/hooks/useAutosave";
 import { apiFetch, ApiError } from "@/lib/auth";
@@ -61,10 +61,24 @@ function AdminCourseEditorInner() {
   const params = useParams<{ id: string }>();
   const courseId = Number(params.id);
   const { flushAll, overallStatus } = useAutosaveRegistry();
+  const { notice, dialog: noticeDialog } = useNoticeDialog();
+
+  const showError = useCallback(
+    (message: string) => {
+      void notice({ tone: "error", title: "Something went wrong", description: message });
+    },
+    [notice],
+  );
+
+  const showSuccess = useCallback(
+    (message: string) => {
+      void notice({ tone: "success", title: "Done", description: message });
+    },
+    [notice],
+  );
 
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [contentError, setContentError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [savingChanges, setSavingChanges] = useState(false);
@@ -141,9 +155,9 @@ function AdminCourseEditorInner() {
     try {
       await refreshCourse();
     } catch (err) {
-      setContentError(err instanceof ApiError ? err.detail : "Unable to refresh course.");
+      showError(err instanceof ApiError ? err.detail : "Unable to refresh course.");
     }
-  }, [refreshCourse]);
+  }, [refreshCourse, showError]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -180,15 +194,9 @@ function AdminCourseEditorInner() {
     },
   });
 
-  const sectionError = useMemo(
-    () => metaAutosave.error,
-    [metaAutosave.error],
-  );
-
   async function commitCover(cover_url: string | null) {
     setMeta((current) => ({ ...current, cover_url }));
     setCoverSaving(true);
-    setError(null);
     try {
       // Persist cover immediately as draft when published; live columns stay until Save changes.
       const updated = await apiFetch<CourseDetail>(`/admin/courses/${courseId}`, {
@@ -205,8 +213,9 @@ function AdminCourseEditorInner() {
         return snapshot;
       });
       if (snapshot) await metaAutosave.flush(snapshot);
+      showSuccess("Cover image saved.");
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to save cover image.");
+      showError(err instanceof ApiError ? err.detail : "Unable to save cover image.");
       setMeta((current) => ({ ...current, cover_url: course?.cover_url ?? null }));
     } finally {
       setCoverSaving(false);
@@ -215,15 +224,15 @@ function AdminCourseEditorInner() {
 
   async function saveChanges() {
     setSavingChanges(true);
-    setError(null);
     try {
       await flushAll();
       const updated = await apiFetch<CourseDetail>(`/admin/courses/${courseId}/save-changes`, {
         method: "POST",
       });
       hydrateFromCourse(updated);
+      showSuccess("Changes saved.");
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to save changes.");
+      showError(err instanceof ApiError ? err.detail : "Unable to save changes.");
     } finally {
       setSavingChanges(false);
     }
@@ -232,7 +241,6 @@ function AdminCourseEditorInner() {
   async function togglePublish() {
     const next = status === "published" ? "draft" : "published";
     setPublishing(true);
-    setError(null);
     try {
       await flushAll();
       const updated = await apiFetch<CourseDetail>(`/admin/courses/${courseId}`, {
@@ -240,8 +248,9 @@ function AdminCourseEditorInner() {
         body: JSON.stringify({ status: next }),
       });
       hydrateFromCourse(updated);
+      showSuccess(next === "published" ? "Course published." : "Course unpublished.");
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to update status.");
+      showError(err instanceof ApiError ? err.detail : "Unable to update status.");
     } finally {
       setPublishing(false);
     }
@@ -249,7 +258,6 @@ function AdminCourseEditorInner() {
 
   async function addChapter() {
     if (!course) return;
-    setContentError(null);
     try {
       const created = await apiFetch<{ id: number }>(`/admin/courses/${courseId}/chapters`, {
         method: "POST",
@@ -268,8 +276,9 @@ function AdminCourseEditorInner() {
       });
       setFocusChapterId(created.id);
       await softReload();
+      showSuccess("Chapter added.");
     } catch (err) {
-      setContentError(err instanceof ApiError ? err.detail : "Unable to add chapter.");
+      showError(err instanceof ApiError ? err.detail : "Unable to add chapter.");
     }
   }
 
@@ -305,6 +314,7 @@ function AdminCourseEditorInner() {
 
   return (
     <div className="space-y-6 pb-12">
+      {noticeDialog}
       <BackButton href="/courses" label="Back to all courses" />
 
       <PageHeader
@@ -339,9 +349,6 @@ function AdminCourseEditorInner() {
           <Tabs items={SECTION_NAV} value={activeSection} onChange={setActiveSection} ariaLabel="Course editor sections" />
         </div>
       </div>
-
-      {error ? <Alert tone="error">{error}</Alert> : null}
-      {sectionError ? <Alert tone="error">{sectionError}</Alert> : null}
 
       {showSection("details") ? (
       <Card id="details" className="scroll-mt-48 space-y-5">
@@ -393,7 +400,7 @@ function AdminCourseEditorInner() {
         <CourseCoverField
           value={meta.cover_url}
           onChange={(cover_url) => commitCover(cover_url)}
-          onError={setError}
+          onError={showError}
           saving={coverSaving}
         />
         <PassMarkControl
@@ -438,7 +445,6 @@ function AdminCourseEditorInner() {
             <span aria-hidden>+</span> Add chapter
           </Button>
         </div>
-        {contentError ? <Alert tone="error">{contentError}</Alert> : null}
         <div className="space-y-4">
           {course.chapters.map((chapter, index) => (
             <ChapterCard
@@ -449,7 +455,7 @@ function AdminCourseEditorInner() {
               onChanged={async () => {
                 await softReload();
               }}
-              onError={setContentError}
+              onError={showError}
             />
           ))}
           {course.chapters.length === 0 ? (
@@ -476,7 +482,7 @@ function AdminCourseEditorInner() {
           baselineKey={baselineKey}
           exam={exam}
           onChange={setExam}
-          onError={setContentError}
+          onError={showError}
         />
       </Card>
       ) : null}

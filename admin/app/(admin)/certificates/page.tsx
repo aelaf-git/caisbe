@@ -6,13 +6,14 @@ import MembershipCertificateTypesManager from "@/components/certificates/Members
 import Alert from "@/components/ui/Alert";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/ui/PageHeader";
+import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { apiFetch, ApiError, type MembershipCertificateType } from "@/lib/auth";
 
 export default function CertificatesPage() {
   const [items, setItems] = useState<MembershipCertificateType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { notice, dialog: noticeDialog } = useNoticeDialog();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,7 +41,6 @@ export default function CertificatesPage() {
       />
 
       {error ? <Alert tone="error">{error}</Alert> : null}
-      {success ? <Alert tone="success">{success}</Alert> : null}
 
       <Card className="space-y-4">
         <div>
@@ -57,12 +57,10 @@ export default function CertificatesPage() {
           loading={loading}
           onRefresh={load}
           onError={(message) => {
-            setSuccess(null);
-            setError(message);
+            void notice({ tone: "error", title: "Something went wrong", description: message });
           }}
           onSuccess={(message) => {
-            setError(null);
-            setSuccess(message);
+            void notice({ tone: "success", title: "Done", description: message });
           }}
         />
       </Card>
@@ -78,6 +76,7 @@ export default function CertificatesPage() {
         </div>
         <CertificatePreview kind="completion" />
       </Card>
+      {noticeDialog}
     </div>
   );
 }

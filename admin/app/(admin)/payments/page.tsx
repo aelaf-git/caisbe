@@ -9,6 +9,7 @@ import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
+import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 
 type PaymentRow = {
   id: number;
@@ -29,6 +30,7 @@ function money(cents: number) {
 }
 
 export default function PaymentsPage() {
+  const { notice, dialog } = useNoticeDialog();
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,8 +57,17 @@ export default function PaymentsPage() {
     try {
       await apiFetch(`/admin/payments/${id}/refund`, { method: "POST" });
       await load();
+      await notice({
+        tone: "success",
+        title: "Done",
+        description: "Payment refunded.",
+      });
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to refund.");
+      await notice({
+        tone: "error",
+        title: "Something went wrong",
+        description: err instanceof ApiError ? err.detail : "Unable to refund.",
+      });
     } finally {
       setBusyId(null);
     }
@@ -64,13 +75,24 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Commerce" title="Payments" description="Review Stripe and complimentary enrollments, print receipts, and refund." />
+      {dialog}
+      <PageHeader
+        eyebrow="Commerce"
+        title="Payments"
+        description="Review Stripe and complimentary enrollments, print receipts, and refund."
+      />
       {error ? <Alert tone="error">{error}</Alert> : null}
       <Card padding="none" className="overflow-hidden">
         {loading ? (
-          <div className="space-y-3 p-6">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
+          <div className="space-y-3 p-6">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-12" />
+            ))}
+          </div>
         ) : rows.length === 0 ? (
-          <div className="p-4"><EmptyState title="No payments yet" description="Student checkouts will appear here." /></div>
+          <div className="p-4">
+            <EmptyState title="No payments yet" description="Student checkouts will appear here." />
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -88,18 +110,30 @@ export default function PaymentsPage() {
                   <tr key={row.id}>
                     <td className="px-4 py-3">
                       <p className="font-medium">{row.student_name}</p>
-                      <p className="text-xs text-caisbe-muted">{row.student_email} · {row.order_number}</p>
+                      <p className="text-xs text-caisbe-muted">
+                        {row.student_email} · {row.order_number}
+                      </p>
                     </td>
                     <td className="px-4 py-3">{row.course_title}</td>
-                    <td className="px-4 py-3">{money(row.amount_cents)} · {row.provider}</td>
+                    <td className="px-4 py-3">
+                      {money(row.amount_cents)} · {row.provider}
+                    </td>
                     <td className="px-4 py-3 capitalize">{row.status.replaceAll("_", " ")}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
-                        <Link href={`/payments/${row.id}/receipt`} className="text-sm font-semibold text-caisbe-red">
+                        <Link
+                          href={`/payments/${row.id}/receipt`}
+                          className="text-sm font-semibold text-caisbe-red"
+                        >
                           Print receipt
                         </Link>
                         {row.status === "succeeded" || row.status === "pending" ? (
-                          <Button size="sm" variant="ghost" disabled={busyId === row.id} onClick={() => void refund(row.id)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={busyId === row.id}
+                            onClick={() => void refund(row.id)}
+                          >
                             Refund
                           </Button>
                         ) : null}
