@@ -23,27 +23,27 @@ export function PageHero({
   className = "",
 }: PageHeroProps) {
   return (
-    <section className={`relative overflow-hidden bg-[#f8fafc] py-16 md:py-24 ${className}`}>
+    <section className={`relative overflow-hidden bg-[#f8fafc] py-12 sm:py-16 md:py-24 ${className}`}>
       <div className="relative mx-auto max-w-7xl px-4 motion-safe:animate-page-fade-in">
         {backHref ? (
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <BackButton href={backHref} label={backLabel} />
           </div>
         ) : null}
-        <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark">
+        <p className="inline-flex max-w-full rounded-full bg-caisbe-red/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark sm:px-4">
           {eyebrow}
         </p>
-        <h1 className="font-hopewell-display mt-4 max-w-3xl text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
+        <h1 className="font-hopewell-display mt-4 max-w-3xl text-2xl font-extrabold tracking-tight text-caisbe-text-dark sm:text-3xl md:text-4xl">
           {title}
         </h1>
         {lead ? (
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-caisbe-text">
+          <p className="mt-4 max-w-2xl text-base leading-7 text-caisbe-text sm:mt-6 sm:text-lg sm:leading-8">
             {lead}
           </p>
         ) : null}
         {children}
         {actions ? (
-          <div className="mt-10 flex flex-wrap items-center gap-4">{actions}</div>
+          <div className="mt-8 flex flex-wrap items-center gap-3 sm:mt-10 sm:gap-4">{actions}</div>
         ) : null}
       </div>
     </section>
@@ -54,7 +54,7 @@ type ContentSectionProps = {
   id?: string;
   title?: string;
   description?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   /** @deprecated All sections use the shared max-w-7xl site shell. Kept for call-site compatibility. */
   wide?: boolean;
   className?: string;

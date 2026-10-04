@@ -17,6 +17,19 @@ const FORWARD_REQUEST_HEADERS = [
   "authorization",
   "accept",
   "range",
+  "user-agent",
+  "accept-language",
+  // Client identity / geo (required for site analytics behind this proxy)
+  "x-forwarded-for",
+  "x-real-ip",
+  "cf-connecting-ip",
+  "true-client-ip",
+  "cf-ipcountry",
+  "cf-ipcity",
+  "x-vercel-ip-country",
+  "x-vercel-ip-city",
+  "cloudfront-viewer-country",
+  "x-country-code",
 ] as const;
 
 const FORWARD_RESPONSE_HEADERS = [
@@ -29,12 +42,27 @@ const FORWARD_RESPONSE_HEADERS = [
   "last-modified",
 ] as const;
 
+function clientIp(request: NextRequest): string | null {
+  for (const key of ["cf-connecting-ip", "true-client-ip", "x-real-ip"] as const) {
+    const value = request.headers.get(key)?.trim();
+    if (value) return value;
+  }
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return forwarded || null;
+}
+
 async function proxy(request: NextRequest, path: string[]): Promise<NextResponse> {
   const target = `${apiBase()}/api/${path.join("/")}${request.nextUrl.search}`;
   const headers = new Headers();
   for (const key of FORWARD_REQUEST_HEADERS) {
     const value = request.headers.get(key);
     if (value) headers.set(key, value);
+  }
+  // Ensure the API sees the browser IP, not the Next.js service IP.
+  const ip = clientIp(request);
+  if (ip) {
+    headers.set("x-forwarded-for", ip);
+    headers.set("x-real-ip", ip);
   }
 
   const method = request.method.toUpperCase();

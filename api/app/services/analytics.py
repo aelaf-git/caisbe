@@ -16,19 +16,12 @@ from app.schemas.analytics import (
     SiteVisitPathStatOut,
     SiteVisitStatsOut,
 )
+from app.security.client_ip import get_client_ip
 from app.services.geo_labels import ISO_COUNTRIES, TIMEZONE_COUNTRIES
 
 
 def client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()[:64]
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()[:64]
-    if request.client and request.client.host:
-        return request.client.host[:64]
-    return "unknown"
+    return get_client_ip(request)
 
 
 def request_country(request: Request) -> str | None:
@@ -126,15 +119,24 @@ def record_site_visit(db: Session, request: Request, payload: SiteVisitIn) -> No
     if recent:
         return
 
+    timezone_name = (payload.timezone or "").strip()[:64] or None
+    country = request_country(request)
+    # Persist a human label from timezone when CDN geo headers are absent
+    # so admin breakdowns are not stuck on "Unknown" for local/proxy traffic.
+    if not country and timezone_name:
+        mapped = TIMEZONE_COUNTRIES.get(timezone_name)
+        if mapped and mapped != "Unknown":
+            country = mapped[:64]
+
     visit = SiteVisit(
         path=path,
         ip_address=ip,
-        country=request_country(request),
+        country=country,
         city=(payload.city or "").strip()[:120] or request_city(request),
         referrer=(payload.referrer or "").strip()[:1024] or None,
         user_agent=(request.headers.get("user-agent") or "")[:512] or None,
         language=(payload.language or request.headers.get("accept-language") or "")[:64] or None,
-        timezone=(payload.timezone or "").strip()[:64] or None,
+        timezone=timezone_name,
     )
     db.add(visit)
     db.commit()
@@ -158,17 +160,27 @@ def _ranked_named(views: dict[str, int], ips: dict[str, set[str]], limit: int = 
     ]
 
 
+def _range_start(now: datetime, days: int | None) -> datetime | None:
+    """Inclusive calendar-day window start (UTC): today plus (days - 1) prior days."""
+    if days is None:
+        return None
+    start_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return start_today - timedelta(days=max(days, 1) - 1)
+
+
 def site_visit_stats(db: Session, days: int | None = None) -> SiteVisitStatsOut:
     now = datetime.now(timezone.utc)
     start_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    start_week = now - timedelta(days=7)
+    start_week = _range_start(now, 7)
 
     rows = db.query(SiteVisit).all()
     today = [row for row in rows if row.visited_at and _aware(row.visited_at) >= start_today]
-    week = [row for row in rows if row.visited_at and _aware(row.visited_at) >= start_week]
+    week = [row for row in rows if row.visited_at and _aware(row.visited_at) >= start_week] if start_week else []
 
-    window_start = now - timedelta(days=days) if days else None
-    previous_start = now - timedelta(days=days * 2) if days else None
+    window_start = _range_start(now, days)
+    previous_start = (
+        window_start - timedelta(days=days) if days and window_start is not None else None
+    )
 
     def in_window(row: SiteVisit, start: datetime | None, end: datetime | None = None) -> bool:
         if row.visited_at is None:

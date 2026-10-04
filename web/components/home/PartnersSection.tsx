@@ -14,7 +14,7 @@ export default function PartnersSection() {
         <p className="mt-4 text-base leading-8 text-caisbe-text">
           {partnersContent.thankYouLead}
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+        <div className="mt-8 flex w-full flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
           <ButtonLink href="/partners" variant="primary">
             Learn about partnerships
           </ButtonLink>

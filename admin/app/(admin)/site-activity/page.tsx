@@ -84,17 +84,39 @@ export default function SiteActivityPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Views", value: stats?.total_views, delta: deltaText(stats?.total_views ?? 0, stats?.previous_views) },
-          { label: "Unique visitors", value: stats?.unique_visitors, delta: deltaText(stats?.unique_visitors ?? 0, stats?.previous_unique) },
-          { label: "Landing views", value: stats?.landing_views, delta: null },
-          { label: "Top country", value: topCountry?.country ?? "—", delta: topCountry ? `${topCountry.views} views` : null },
+          {
+            label: "Views",
+            value: stats?.total_views ?? 0,
+            delta: deltaText(stats?.total_views ?? 0, stats?.previous_views),
+            compact: false,
+          },
+          {
+            label: "Unique visitors",
+            value: stats?.unique_visitors ?? 0,
+            delta: deltaText(stats?.unique_visitors ?? 0, stats?.previous_unique),
+            compact: false,
+          },
+          { label: "Landing views", value: stats?.landing_views ?? 0, delta: null, compact: false },
+          {
+            label: "Top country",
+            value: topCountry?.country ?? "—",
+            delta: topCountry ? `${topCountry.views} views` : null,
+            compact: true,
+          },
         ].map((item) => (
           <Card key={item.label} padding="sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">{item.label}</p>
             {loading && !stats ? (
               <Skeleton className="mt-3 h-9 w-24" />
             ) : (
-              <p className="mt-2 font-display text-3xl font-semibold text-caisbe-text-dark">{item.value ?? 0}</p>
+              <p
+                className={`mt-2 font-display font-semibold text-caisbe-text-dark ${
+                  item.compact ? "truncate text-xl md:text-2xl" : "text-3xl"
+                }`}
+                title={typeof item.value === "string" ? item.value : undefined}
+              >
+                {item.value}
+              </p>
             )}
             {item.delta ? <p className="mt-1 text-xs text-caisbe-muted">{item.delta}</p> : null}
           </Card>

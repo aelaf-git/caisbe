@@ -83,15 +83,15 @@ export default function HeroSection() {
 
   return (
     <section className="relative overflow-hidden bg-[#f8fafc]">
-      <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 md:py-20 lg:grid-cols-2 lg:gap-16 lg:py-24">
-        <div>
-          <h1 className="font-hopewell-display text-4xl font-extrabold leading-[1.08] tracking-tight text-caisbe-text-dark md:text-5xl">
+      <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 py-12 sm:gap-10 sm:py-16 md:py-20 lg:grid-cols-2 lg:gap-16 lg:py-24">
+        <div className="min-w-0">
+          <h1 className="font-hopewell-display text-3xl font-extrabold leading-[1.08] tracking-tight text-caisbe-text-dark sm:text-4xl md:text-5xl">
             {siteFullName}
           </h1>
-          <p className="mt-5 max-w-xl text-xl leading-8 text-caisbe-muted">
+          <p className="mt-4 max-w-xl text-base leading-7 text-caisbe-muted sm:mt-5 sm:text-xl sm:leading-8">
             {heroIntro}
           </p>
-          <div className="mt-8">
+          <div className="mt-6 sm:mt-8 sm:inline-flex">
             <ButtonLink href={portalMembershipRegisterUrl()} variant="pill">
               Join {siteName}
             </ButtonLink>

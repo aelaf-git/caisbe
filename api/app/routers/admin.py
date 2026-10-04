@@ -733,14 +733,16 @@ def admin_list_site_visits(
     path: str | None = Query(default=None, max_length=512),
     landing_only: bool = Query(default=False),
     days: int | None = Query(default=None, ge=1, le=365),
-    country: str | None = Query(default=None, max_length=64),
+    country: str | None = Query(default=None, max_length=120),
     limit: int = Query(default=200, ge=1, le=1000),
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[SiteVisitOut]:
     query = db.query(SiteVisit)
     if days:
-        since = datetime.now(timezone.utc) - timedelta(days=days)
+        now = datetime.now(timezone.utc)
+        start_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        since = start_today - timedelta(days=max(days, 1) - 1)
         query = query.filter(SiteVisit.visited_at >= since)
     if landing_only:
         query = query.filter(SiteVisit.path == "/")

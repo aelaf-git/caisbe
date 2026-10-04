@@ -6,7 +6,7 @@ import {
   fetchPublishedCourses,
   type Course,
 } from "@/lib/api";
-import { mainNavigation } from "@/lib/data/navigation";
+import { mainNavigation, utilityLinks } from "@/lib/data/navigation";
 
 function toNavSections(courses: Course[]): NavSectionData[] {
   const courseLinks = courses.map((course) => ({
@@ -47,7 +47,7 @@ export default async function MainNav() {
   return (
     <>
       <DesktopMegaMenu sections={sections} />
-      <MobileNav sections={sections} />
+      <MobileNav sections={sections} utilityLinks={utilityLinks} />
     </>
   );
 }
