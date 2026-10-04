@@ -5,7 +5,11 @@ export const runtime = "nodejs";
 
 function apiBase(): string {
   // Use || so empty string from a bad Docker ARG does not produce relative fetch URLs.
-  const raw = (process.env.API_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "");
+  let raw = (process.env.API_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "");
+  // Server-side calls to the Cloudflare custom domain fail with Error 1000 from Render.
+  if (/^https?:\/\/(www\.)?api\.caisbe\.org$/i.test(raw)) {
+    raw = "https://caisbe-api.onrender.com";
+  }
   if (!/^https?:\/\//i.test(raw)) {
     return "http://127.0.0.1:8000";
   }
