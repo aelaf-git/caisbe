@@ -137,11 +137,11 @@ const rawNavigation: readonly RawNavSection[] = [
         href: "/professional-development/learning-formats",
         links: [
           {
-            label: "Online (self-paced)",
+            label: "Online (Self-Paced)",
             href: "/professional-development/learning-formats/online-self-paced",
           },
           {
-            label: "Virtual Live Classes",
+            label: "Virtual Classes",
             href: "/professional-development/learning-formats/virtual-live-classes",
           },
           {
@@ -149,7 +149,7 @@ const rawNavigation: readonly RawNavSection[] = [
             href: "/professional-development/learning-formats/in-person-classroom-training",
           },
           {
-            label: "On-site Corporate Training",
+            label: "On-Site Corporate Training",
             href: "/professional-development/learning-formats/on-site-corporate-training",
           },
         ],

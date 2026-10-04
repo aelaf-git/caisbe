@@ -263,7 +263,7 @@ const rawFooterColumns = [
     links: [
       { label: "Professional Development", href: "/professional-development" },
       {
-        label: "On-site Corporate Training",
+        label: "On-Site Corporate Training",
         href: "/professional-development/learning-formats/on-site-corporate-training",
       },
       { label: "Membership", href: "/membership" },
@@ -301,7 +301,7 @@ const rawFooterColumns = [
     links: [
       { label: "Certificate Programs", href: "/professional-development" },
       {
-        label: "On-site Corporate Training",
+        label: "On-Site Corporate Training",
         href: "/professional-development/learning-formats/on-site-corporate-training",
       },
       { label: "FAQ", href: "/faq" },
