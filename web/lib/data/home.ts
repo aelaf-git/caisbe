@@ -289,6 +289,7 @@ const rawFooterColumns = [
     href: "/about",
     links: [
       { label: "Our Mission", href: "/about#mission" },
+      { label: "Partners", href: "/partners" },
       { label: "Offices", href: "/contact" },
       { label: "Projects", href: "/projects" },
       { label: "Contact", href: "/contact" },
