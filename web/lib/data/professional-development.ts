@@ -58,10 +58,9 @@ export const professionalDevelopmentContent = {
         slug: "online-self-paced",
         title: "Online (Self-Paced)",
         description:
-          "Learn anytime, anywhere at your own speed. Access course materials, videos, and assessments on demand with no fixed schedule.",
+          "Learn anytime, anywhere at your own pace with 24/7 access to interactive digital materials—no fixed schedule.",
         details: [
-          "Learn anytime, anywhere at your own pace with 24/7 access to interactive digital materials.",
-          "Enjoy flexible modules featuring microlessons, video presentations, review quizzes, practice exams, and tools like flashcards.",
+          "Modules include microlessons, video presentations, review quizzes, practice exams, and tools like flashcards.",
         ],
         ctaLabel: "Register for a course",
         ctaHref: "/professional-development",
@@ -70,10 +69,9 @@ export const professionalDevelopmentContent = {
         slug: "virtual-live-classes",
         title: "Virtual Classes",
         description:
-          "Live instructor-led sessions delivered online. Interact in real time via video, chat, and shared tools while joining from anywhere.",
+          "Live instructor-led sessions online—join from anywhere and interact in real time via video, chat, and shared tools.",
         details: [
-          "These classes are delivered as live, instructor-led sessions that blend real-time teaching with self-paced study.",
-          "Interact directly with instructors through discussions, case studies, and collaborative activities.",
+          "Sessions blend live teaching with self-paced study through discussions, case studies, and collaborative activities.",
         ],
         ctaLabel: "Register for a course",
         ctaHref: "/professional-development",
@@ -82,9 +80,8 @@ export const professionalDevelopmentContent = {
         slug: "in-person-classroom-training",
         title: "In-Person Classroom Training",
         description:
-          "Traditional face-to-face learning in a classroom setting. Benefit from direct interaction with instructors and peers in a focused environment.",
+          "Face-to-face classroom learning with expert instructors, peer networking, and a focused environment.",
         details: [
-          "This learning experience is led by expert instructors in a classroom setting and includes networking with peers.",
           "Available in Addis Ababa, Nairobi, South Africa, Canada, and many other locations worldwide.",
         ],
         ctaLabel: "Register for a course",
@@ -94,10 +91,8 @@ export const professionalDevelopmentContent = {
         slug: "on-site-corporate-training",
         title: "On-Site Corporate Training",
         description:
-          "Customized training delivered at your company’s location. Tailored content, flexible scheduling, and team-focused learning without travel.",
-        details: [
-          "Bring CAISBE experts to your workplace with programs shaped around your team’s goals, schedule, and operational context.",
-        ],
+          "Customized training at your company’s location—tailored content, flexible scheduling, and team-focused learning without travel.",
+        details: [],
         ctaLabel: "Contact us for details",
         ctaHref: "/contact",
       },

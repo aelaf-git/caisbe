@@ -15,6 +15,8 @@ type LearningFormatPageContentProps = {
 export default function LearningFormatPageContent({
   format,
 }: LearningFormatPageContentProps) {
+  const hasDetails = format.details.length > 0;
+
   return (
     <>
       <PageHero
@@ -29,20 +31,17 @@ export default function LearningFormatPageContent({
           </ButtonLink>
         }
       />
-      <ContentSection title="About this format" wide>
-        <div className="max-w-3xl space-y-5">
-          {format.details.map((paragraph) => (
-            <p key={paragraph} className="text-base leading-8 text-caisbe-text">
-              {paragraph}
-            </p>
-          ))}
-          <div className="pt-2">
-            <ButtonLink href={format.ctaHref} variant="secondary">
-              {format.ctaLabel}
-            </ButtonLink>
+      {hasDetails ? (
+        <ContentSection wide>
+          <div className="max-w-3xl space-y-5">
+            {format.details.map((paragraph) => (
+              <p key={paragraph} className="text-base leading-8 text-caisbe-text">
+                {paragraph}
+              </p>
+            ))}
           </div>
-        </div>
-      </ContentSection>
+        </ContentSection>
+      ) : null}
     </>
   );
 }
