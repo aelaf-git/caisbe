@@ -213,7 +213,7 @@ export default function ManageProfilePage() {
       <PageHeader
         eyebrow="Account"
         title="Manage your profile"
-        description="Password, billing history, security questions, saved cards, and appearance."
+        description="Update the personal and contact details from your CAISBE registration, plus password, billing, and security."
       />
       {error ? (
         <div className="border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">{error}</div>
@@ -221,7 +221,9 @@ export default function ManageProfilePage() {
 
       <Card>
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Profile details</h2>
-        <p className="mt-1 mb-4 text-sm text-caisbe-muted">Same fields used for JOIN CAISBE membership applications.</p>
+        <p className="mt-1 mb-4 text-sm text-caisbe-muted">
+          Same personal and contact fields as registration. Membership changes stay on the Membership page.
+        </p>
         <ProfileForm initial={profileFromUser(user)} onSaved={() => void refreshUser()} />
       </Card>
 
