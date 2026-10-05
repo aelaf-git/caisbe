@@ -16,6 +16,11 @@ security = HTTPBearer(auto_error=False)
 
 EMAIL_VERIFY_HOURS = 72
 PASSWORD_RESET_HOURS = 1
+LOGIN_MAX_FAILURES = 5
+LOGIN_LOCKOUT_MINUTES = 15
+
+# Fixed bcrypt hash so missing-user logins spend similar CPU to real checks.
+_DUMMY_PASSWORD_HASH = bcrypt.hashpw(b"login-timing-dummy", bcrypt.gensalt()).decode("utf-8")
 
 
 def hash_password(password: str) -> str:
@@ -24,6 +29,11 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
+
+
+def verify_password_or_dummy(password: str, hashed_password: str | None) -> bool:
+    """Always run bcrypt; use dummy hash when no user/hash so timing is harder to exploit."""
+    return verify_password(password, hashed_password or _DUMMY_PASSWORD_HASH)
 
 
 def create_access_token(subject: str) -> str:

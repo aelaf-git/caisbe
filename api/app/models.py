@@ -38,6 +38,8 @@ class User(Base):
     membership_status: Mapped[str] = mapped_column(String(32), default="pending")
     profile_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failed_login_count: Mapped[int] = mapped_column(Integer, default=0)
+    login_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     enrollments: Mapped[list["Enrollment"]] = relationship(back_populates="user")

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session
@@ -24,6 +25,8 @@ from app.schemas.auth import (
 )
 from app.security.auth import (
     EMAIL_VERIFY_HOURS,
+    LOGIN_LOCKOUT_MINUTES,
+    LOGIN_MAX_FAILURES,
     PASSWORD_RESET_HOURS,
     create_access_token,
     get_current_user,
@@ -33,7 +36,9 @@ from app.security.auth import (
     new_email_verify_token,
     new_password_reset_token,
     verify_password,
+    verify_password_or_dummy,
 )
+from app.security.client_ip import get_client_ip
 from app.security.limiter import limiter
 from app.services.commerce import apply_profile_fields, normalize_membership_type, profile_is_complete
 from app.services.membership import (
@@ -47,13 +52,49 @@ from app.services.membership import (
 from app.services.password_reset_email import send_password_reset_email
 from app.services.verify_email import send_verification_email
 
-FORGOT_PASSWORD_MESSAGE = (
-    "If an account exists for that email, we sent instructions to continue."
-)
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 _MEMBERSHIP_DOC_SUFFIXES = {".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png", ".webp"}
+FORGOT_PASSWORD_MESSAGE = (
+    "If an account exists for that email, we sent instructions to continue."
+)
+_INVALID_CREDENTIALS = "Invalid email or password"
+
+
+def _mask_email(email: str) -> str:
+    local, _, domain = email.partition("@")
+    if not domain:
+        return "***"
+    head = local[:1] if local else "*"
+    return f"{head}***@{domain}"
+
+
+def _log_login_failure(email: str, client_ip: str, reason: str) -> None:
+    logger.warning(
+        "login_failed email=%s ip=%s reason=%s",
+        _mask_email(email),
+        client_ip,
+        reason,
+    )
+
+
+def _record_failed_login(db: Session, user: User) -> None:
+    user.failed_login_count = int(user.failed_login_count or 0) + 1
+    if user.failed_login_count >= LOGIN_MAX_FAILURES:
+        user.login_locked_until = datetime.now(timezone.utc) + timedelta(minutes=LOGIN_LOCKOUT_MINUTES)
+        user.failed_login_count = 0
+    db.commit()
+
+
+def _user_is_locked(user: User, now: datetime) -> bool:
+    until = user.login_locked_until
+    if until is None:
+        return False
+    if until.tzinfo is None:
+        until = until.replace(tzinfo=timezone.utc)
+    return until > now
 
 
 def user_to_out(user: User, db: Session | None = None) -> UserOut:
@@ -309,23 +350,47 @@ def verify_email(
 
 
 @router.post("/login", response_model=TokenResponse)
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
     email = payload.email.lower().strip()
+    client_ip = get_client_ip(request)
+    now = datetime.now(timezone.utc)
+
     user = db.query(User).filter(User.email == email).first()
+    pending = (
+        None
+        if user is not None
+        else db.query(PendingRegistration).filter(PendingRegistration.email == email).first()
+    )
+
+    hash_to_check: str | None = None
     if user is not None:
-        if not verify_password(payload.password, user.hashed_password):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        hash_to_check = user.hashed_password
+    elif pending is not None:
+        hash_to_check = pending.hashed_password
+
+    password_ok = verify_password_or_dummy(payload.password, hash_to_check)
+    locked = user is not None and _user_is_locked(user, now)
+
+    if locked:
+        _log_login_failure(email, client_ip, "locked")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_CREDENTIALS)
+
+    if user is not None:
+        if not password_ok:
+            _record_failed_login(db, user)
+            _log_login_failure(email, client_ip, "bad_credentials")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_CREDENTIALS)
         if user.email_verified_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Please verify your email before signing in.",
-            )
+            _log_login_failure(email, client_ip, "unverified")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_CREDENTIALS)
+        user.failed_login_count = 0
+        user.login_locked_until = None
+        db.commit()
         token = create_access_token(user.email)
         return TokenResponse(access_token=token, user=user_to_out(user, db))
 
-    pending = db.query(PendingRegistration).filter(PendingRegistration.email == email).first()
-    if pending is not None and verify_password(payload.password, pending.hashed_password):
+    if pending is not None and password_ok:
         try:
             raw_token = _refresh_pending_verify_token(db, pending)
             send_verification_email(
@@ -335,8 +400,8 @@ def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -
                 next_path="/membership",
             )
         except Exception:
-            # Still tell them to verify even if resend fails; they can register again if needed.
             pass
+        _log_login_failure(email, client_ip, "unverified_pending")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(
@@ -345,7 +410,8 @@ def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -
             ),
         )
 
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+    _log_login_failure(email, client_ip, "bad_credentials")
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_CREDENTIALS)
 
 
 @router.post("/forgot-password", response_model=ForgotPasswordOut)
@@ -396,7 +462,7 @@ def forgot_password(
 
 
 @router.post("/reset-password", response_model=ResetPasswordOut)
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def reset_password(
     request: Request,
     payload: ResetPasswordIn,
