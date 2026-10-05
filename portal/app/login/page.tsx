@@ -19,6 +19,7 @@ function PortalLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsVerification, setNeedsVerification] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const nextPath = safeNextPath(searchParams.get("next"), "/dashboard");
 
@@ -32,6 +33,7 @@ function PortalLoginForm() {
     event.preventDefault();
     setError(null);
     setNeedsVerification(false);
+    setShowForgotPassword(false);
     setSubmitting(true);
     try {
       const loggedIn = await login(email, password);
@@ -46,10 +48,15 @@ function PortalLoginForm() {
       const detail =
         err instanceof ApiError ? err.detail : "Unable to log in. Please try again.";
       setError(detail);
-      setNeedsVerification(
+      const isVerify =
         err instanceof ApiError &&
-          err.status === 403 &&
-          detail.toLowerCase().includes("verify your email"),
+        err.status === 403 &&
+        detail.toLowerCase().includes("verify your email");
+      setNeedsVerification(isVerify);
+      setShowForgotPassword(
+        !isVerify &&
+          err instanceof ApiError &&
+          (err.status === 401 || detail.toLowerCase().includes("invalid email or password")),
       );
     } finally {
       setSubmitting(false);
@@ -168,6 +175,18 @@ function PortalLoginForm() {
                       className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
                     >
                       Register again
+                    </Link>
+                    .
+                  </p>
+                ) : null}
+                {showForgotPassword ? (
+                  <p className="mt-2 text-caisbe-muted">
+                    Forgot your password?{" "}
+                    <Link
+                      href={`/forgot-password?email=${encodeURIComponent(email.trim())}`}
+                      className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                    >
+                      Reset it by email
                     </Link>
                     .
                   </p>
