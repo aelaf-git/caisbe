@@ -44,6 +44,7 @@ from app.models import (
     Order,
     Payment,
     Promotion,
+    UserDocument,
 )
 from app.schemas.commerce import PaymentOut, PromotionIn, PromotionOut
 from app.schemas.admin_ops import (
@@ -86,6 +87,7 @@ from app.schemas.courses import (
     QuizQuestionIn,
     QuizUpdate,
     UploadOut,
+    UserDocumentOut,
 )
 from app.schemas.analytics import AdminDashboardOut, SiteVisitOut, SiteVisitStatsOut
 from app.schemas.media import (
@@ -2165,6 +2167,24 @@ def admin_list_assignment_submissions(
         .all()
     )
     return [_assignment_submission_out(row) for row in rows]
+
+
+@router.get("/students/{student_id}/documents", response_model=list[UserDocumentOut])
+def admin_list_student_documents(
+    student_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[UserDocumentOut]:
+    student = db.query(User).filter(User.id == student_id, User.role == "student").first()
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    rows = (
+        db.query(UserDocument)
+        .filter(UserDocument.user_id == student_id)
+        .order_by(UserDocument.id.desc())
+        .all()
+    )
+    return [UserDocumentOut.model_validate(row) for row in rows]
 
 
 @router.post("/assignment-submissions/{submission_id}/review", response_model=AssignmentSubmissionOut)

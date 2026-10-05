@@ -112,6 +112,23 @@ export default function ProfileForm({
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const syncKey = useMemo(
+    () =>
+      [
+        initial.email,
+        initial.given_name,
+        initial.family_name,
+        initial.phone,
+        initial.country,
+        initial.city,
+        initial.address,
+        initial.organization,
+        initial.job_title,
+        initial.membership_type,
+      ].join("\u0001"),
+    [initial],
+  );
+
   const editableValues = useMemo(
     () => ({
       given_name: form.given_name,
@@ -139,7 +156,9 @@ export default function ProfileForm({
       organization: initial.organization,
       job_title: initial.job_title,
     });
-  }, [initial, resetBaseline]);
+    // Only re-sync when server-backed profile values change, not when parent re-creates the object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- syncKey captures initial field values
+  }, [syncKey, resetBaseline]);
 
   function update<K extends keyof ProfileFields>(key: K, value: ProfileFields[K]) {
     setForm((current) => ({ ...current, [key]: value }));

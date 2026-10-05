@@ -34,6 +34,7 @@ UPLOAD_FOLDERS = frozenset(
         "newsletter",
         "membership/forms",
         "membership/supporting",
+        "profile/supporting",
         "assignments",
         "general",
     }

@@ -83,6 +83,8 @@ def normalize_membership_type(value: str | None) -> str | None:
 def apply_profile_fields(user: User, data: dict) -> None:
     if "membership_type" in data and data["membership_type"] is not None:
         data["membership_type"] = normalize_membership_type(data["membership_type"])
+    # Optional strings may be cleared with null or "" from the profile editor.
+    clearable = {"address", "organization", "job_title", "given_name", "family_name"}
     for key in (
         "full_name",
         "given_name",
@@ -95,9 +97,16 @@ def apply_profile_fields(user: User, data: dict) -> None:
         "job_title",
         "membership_type",
     ):
-        if key in data and data[key] is not None:
-            value = data[key]
-            setattr(user, key, value.strip() if isinstance(value, str) else value)
+        if key not in data:
+            continue
+        value = data[key]
+        if value is None:
+            if key in clearable:
+                setattr(user, key, None)
+            continue
+        setattr(user, key, value.strip() if isinstance(value, str) else value)
+        if key in clearable and isinstance(value, str) and not value.strip():
+            setattr(user, key, None)
     if not user.membership_date:
         user.membership_date = datetime.now(timezone.utc)
     if profile_is_complete(user) and not user.profile_completed_at:

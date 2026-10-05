@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import AppearancePanel from "@/components/appearance/AppearancePanel";
 import ProfileForm, { profileFromUser } from "@/components/portal/ProfileForm";
+import SupportingDocumentsPanel from "@/components/portal/SupportingDocumentsPanel";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/ui/PageHeader";
 import SaveButton from "@/components/ui/SaveButton";
@@ -208,6 +209,21 @@ export default function ManageProfilePage() {
   const inputClass =
     "mt-1 h-11 w-full rounded-md border border-ifma-border bg-admin-surface px-3 text-sm outline-none focus:border-caisbe-red";
 
+  const profileInitial = useMemo(() => profileFromUser(user), [
+    user?.id,
+    user?.email,
+    user?.full_name,
+    user?.given_name,
+    user?.family_name,
+    user?.phone,
+    user?.country,
+    user?.city,
+    user?.address,
+    user?.organization,
+    user?.job_title,
+    user?.membership_type,
+  ]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -224,7 +240,11 @@ export default function ManageProfilePage() {
         <p className="mt-1 mb-4 text-sm text-caisbe-muted">
           Same personal and contact fields as registration. Membership changes stay on the Membership page.
         </p>
-        <ProfileForm initial={profileFromUser(user)} onSaved={() => void refreshUser()} />
+        <ProfileForm initial={profileInitial} onSaved={() => void refreshUser()} />
+      </Card>
+
+      <Card>
+        <SupportingDocumentsPanel />
       </Card>
 
       <Card>

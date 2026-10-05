@@ -70,6 +70,10 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    documents: Mapped[list["UserDocument"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 
 class PendingRegistration(Base):
@@ -704,6 +708,21 @@ class MembershipApplication(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped[User | None] = relationship()
+
+
+class UserDocument(Base):
+    """Supporting documents attached on the student manage-profile page."""
+
+    __tablename__ = "user_documents"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    label: Mapped[str] = mapped_column(String(160), default="Supporting document")
+    file_name: Mapped[str] = mapped_column(String(255))
+    file_url: Mapped[str] = mapped_column(String(1024))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="documents")
 
 
 class IndustryEvent(Base):

@@ -18,11 +18,20 @@ type AssignmentSubmission = {
   status: string;
 };
 
+type StudentDocument = {
+  id: number;
+  label: string;
+  file_name: string;
+  file_url: string;
+  created_at?: string | null;
+};
+
 export default function StudentProfilePrintPage() {
   const params = useParams<{ id: string }>();
   const { notice, dialog } = useNoticeDialog();
   const [student, setStudent] = useState<AdminStudent | null>(null);
   const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
+  const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<number | null>(null);
 
@@ -33,6 +42,9 @@ export default function StudentProfilePrintPage() {
     void apiFetch<AssignmentSubmission[]>(`/admin/students/${params.id}/assignment-submissions`)
       .then(setSubmissions)
       .catch(() => setSubmissions([]));
+    void apiFetch<StudentDocument[]>(`/admin/students/${params.id}/documents`)
+      .then(setDocuments)
+      .catch(() => setDocuments([]));
   }, [params.id]);
 
   async function review(id: number, status: "passed" | "failed") {
@@ -109,6 +121,26 @@ export default function StudentProfilePrintPage() {
           <dd className="capitalize">{student.membership_status || "pending"}</dd>
         </div>
       </dl>
+      <h2 className="font-display text-xl font-semibold">Supporting documents</h2>
+      {documents.length === 0 ? (
+        <p className="text-sm text-caisbe-muted">No supporting documents attached.</p>
+      ) : (
+        <ul className="space-y-2 text-sm">
+          {documents.map((doc) => (
+            <li key={doc.id} className="border border-ifma-border p-3">
+              <a
+                href={resolveUploadUrl(doc.file_url) ?? doc.file_url}
+                className="font-semibold text-caisbe-red underline"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {doc.file_name}
+              </a>
+              <p className="text-caisbe-muted">{doc.label}</p>
+            </li>
+          ))}
+        </ul>
+      )}
       <h2 className="font-display text-xl font-semibold">Assignment submissions</h2>
       {submissions.length === 0 ? (
         <p className="text-sm text-caisbe-muted">No assignment submissions yet.</p>

@@ -58,6 +58,20 @@ function looksLikeJson(contentType: string, preview: string): boolean {
   return trimmed.startsWith("{") || trimmed.startsWith("[");
 }
 
+/** Accept JSON bodies, or empty 2xx (e.g. FastAPI 204 No Content). */
+function isAcceptableUpstream(
+  status: number,
+  contentType: string,
+  preview: string,
+  bodyByteLength: number,
+): boolean {
+  if (isUnusableUpstream(status, contentType, preview)) return false;
+  if (status >= 200 && status < 300 && (status === 204 || status === 205 || bodyByteLength === 0)) {
+    return true;
+  }
+  return looksLikeJson(contentType, preview);
+}
+
 async function proxy(request: NextRequest, path: string[]): Promise<NextResponse> {
   const targetPath = `/api/${path.join("/")}${request.nextUrl.search}`;
   const headers = new Headers();
@@ -130,10 +144,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
 
       const body = await upstream.arrayBuffer();
       const preview = new TextDecoder().decode(body.slice(0, 240));
-      if (
-        !isUnusableUpstream(upstream.status, upstreamType, preview) &&
-        looksLikeJson(upstreamType, preview)
-      ) {
+      if (isAcceptableUpstream(upstream.status, upstreamType, preview, body.byteLength)) {
         chosen = { upstream, body };
         break;
       }

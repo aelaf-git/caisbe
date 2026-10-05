@@ -445,6 +445,16 @@ class AssignmentSubmissionOut(BaseModel):
     submitted_at: datetime | None = None
 
 
+class UserDocumentOut(BaseModel):
+    id: int
+    label: str
+    file_name: str
+    file_url: str
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class AssignmentReviewIn(BaseModel):
     status: str = Field(pattern="^(passed|failed)$")
 

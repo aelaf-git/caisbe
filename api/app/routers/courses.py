@@ -35,6 +35,7 @@ from app.models import (
     QuizAttempt,
     QuizQuestion,
     User,
+    UserDocument,
 )
 from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.schemas.courses import (
@@ -52,6 +53,7 @@ from app.schemas.courses import (
     QuizAttemptOut,
     QuizQuestionStudentOut,
     QuizSubmitIn,
+    UserDocumentOut,
 )
 from app.services.membership import (
     activate_membership,
@@ -1430,6 +1432,69 @@ async def apply_my_membership_file(
     db.commit()
     db.refresh(application)
     return MembershipApplicationOut.model_validate(application)
+
+
+@router.get("/me/documents", response_model=list[UserDocumentOut])
+def list_my_documents(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[UserDocumentOut]:
+    rows = (
+        db.query(UserDocument)
+        .filter(UserDocument.user_id == current_user.id)
+        .order_by(UserDocument.id.desc())
+        .all()
+    )
+    return [UserDocumentOut.model_validate(row) for row in rows]
+
+
+@router.post("/me/documents", response_model=UserDocumentOut, status_code=status.HTTP_201_CREATED)
+async def upload_my_document(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserDocumentOut:
+    if current_user.role == "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins cannot attach student documents.")
+    form = await request.form(max_part_size=20 * 1024 * 1024)
+    uploaded = form.get("file") or form.get("supporting_document")
+    if not isinstance(uploaded, UploadFile) or not (uploaded.filename or "").strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose a supporting document to upload.")
+    label = str(form.get("label") or form.get("supporting_document_label") or "Supporting document").strip()
+    if not label:
+        label = "Supporting document"
+    file_url, original_name = await _save_membership_upload(
+        uploaded,
+        allowed_suffixes=_MEMBERSHIP_DOC_SUFFIXES,
+        folder="profile/supporting",
+    )
+    row = UserDocument(
+        user_id=current_user.id,
+        label=label[:160],
+        file_name=original_name[:255],
+        file_url=file_url,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return UserDocumentOut.model_validate(row)
+
+
+@router.delete("/me/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_my_document(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    row = (
+        db.query(UserDocument)
+        .filter(UserDocument.id == document_id, UserDocument.user_id == current_user.id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    db.delete(row)
+    db.commit()
 
 
 @router.get("/me/certificates/{certificate_code}", response_model=CertificateOut)

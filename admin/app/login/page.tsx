@@ -134,13 +134,21 @@ export default function AdminLoginPage() {
               </div>
               </FormField>
               {error ? <Alert tone="error">{error}</Alert> : null}
-              <Button
-                type="submit"
-                disabled={submitting}
-                className="min-w-[180px]"
-              >
-                {submitting ? "Signing in…" : "Sign in"}
-              </Button>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="min-w-[180px]"
+                >
+                  {submitting ? "Signing in…" : "Sign in"}
+                </Button>
+                <a
+                  href={`${(process.env.NEXT_PUBLIC_PORTAL_URL || "https://portal.caisbe.org").replace(/\/$/, "")}/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`}
+                  className="text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                >
+                  Forgot password?
+                </a>
+              </div>
           </form>
         </div>
       </div>
