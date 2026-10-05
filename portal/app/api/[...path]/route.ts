@@ -29,8 +29,7 @@ function configuredApiBase(): string {
 
 function candidateBases(): string[] {
   const configured = configuredApiBase();
-  const bases = [...RENDER_API_PRIVATE_CANDIDATES, configured, RENDER_API_PUBLIC];
-  return [...new Set(bases)];
+  return [...new Set([...RENDER_API_PRIVATE_CANDIDATES, configured, RENDER_API_PUBLIC])];
 }
 
 const FORWARD_REQUEST_HEADERS = [
@@ -38,8 +37,8 @@ const FORWARD_REQUEST_HEADERS = [
   "authorization",
   "accept",
   "range",
-  // Intentionally NOT forwarding browser user-agent — Cloudflare may Error 1000
-  // when a datacenter IP presents a browser UA to api/onrender hostnames.
+  // Do not forward browser user-agent — Cloudflare may Error 1000 when a
+  // datacenter IP presents a browser UA to public API hostnames.
   "accept-language",
   "x-forwarded-for",
   "x-real-ip",
@@ -62,15 +61,6 @@ const FORWARD_RESPONSE_HEADERS = [
   "etag",
   "last-modified",
 ] as const;
-
-type AttemptLog = {
-  base: string;
-  status: number | null;
-  contentType: string | null;
-  okJson: boolean;
-  error?: string;
-  preview?: string;
-};
 
 function clientIp(request: NextRequest): string | null {
   for (const key of ["cf-connecting-ip", "true-client-ip", "x-real-ip"] as const) {
@@ -96,20 +86,6 @@ function looksLikeJson(contentType: string, preview: string): boolean {
   return trimmed.startsWith("{") || trimmed.startsWith("[");
 }
 
-async function debugLog(payload: Record<string, unknown>) {
-  // #region agent log
-  fetch("http://127.0.0.1:7888/ingest/5f144341-267a-42f3-bd43-77522fc291b2", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "a72485" },
-    body: JSON.stringify({
-      sessionId: "a72485",
-      timestamp: Date.now(),
-      ...payload,
-    }),
-  }).catch(() => {});
-  // #endregion
-}
-
 async function proxy(request: NextRequest, path: string[]): Promise<NextResponse> {
   const targetPath = `/api/${path.join("/")}${request.nextUrl.search}`;
   const headers = new Headers();
@@ -117,7 +93,6 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     const value = request.headers.get(key);
     if (value) headers.set(key, value);
   }
-  // Prefer JSON from the API; avoid negotiated HTML error pages.
   if (!headers.has("accept")) {
     headers.set("accept", "application/json");
   }
@@ -150,19 +125,17 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     }
   }
 
-  const attempts: AttemptLog[] = [];
-  let chosen: { base: string; upstream: Response; body: ArrayBuffer; contentType: string } | null =
-    null;
+  let chosen: { upstream: Response; body: ArrayBuffer } | null = null;
+  let tried = 0;
 
   for (const base of candidateBases()) {
     // Multipart streams can only be consumed once — only try first base for uploads.
-    if (isMultipart && attempts.length > 0) break;
-    if (bodyBuffer) {
-      init.body = bodyBuffer;
-    }
-    const url = `${base}${targetPath}`;
+    if (isMultipart && tried > 0) break;
+    tried += 1;
+    if (bodyBuffer) init.body = bodyBuffer;
+
     try {
-      const upstream = await fetch(url, init);
+      const upstream = await fetch(`${base}${targetPath}`, init);
       const upstreamType = (upstream.headers.get("content-type") || "").toLowerCase();
       const streamResponse =
         path[0] === "uploads" ||
@@ -172,14 +145,6 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
         upstreamType.startsWith("application/pdf");
 
       if (streamResponse) {
-        // #region agent log
-        void debugLog({
-          location: "portal/app/api/[...path]/route.ts:stream",
-          message: "stream upstream chosen",
-          hypothesisId: "A",
-          data: { base, status: upstream.status, upstreamType, path: targetPath },
-        });
-        // #endregion
         const responseHeaders = new Headers();
         for (const key of FORWARD_RESPONSE_HEADERS) {
           const value = upstream.headers.get(key);
@@ -193,55 +158,21 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
 
       const body = await upstream.arrayBuffer();
       const preview = new TextDecoder().decode(body.slice(0, 240));
-      const unusable = isUnusableUpstream(upstream.status, upstreamType, preview);
-      const okJson = !unusable && looksLikeJson(upstreamType, preview);
-      attempts.push({
-        base,
-        status: upstream.status,
-        contentType: upstreamType || null,
-        okJson,
-        preview: preview.replace(/\s+/g, " ").slice(0, 160),
-      });
-
-      if (okJson && !chosen) {
-        chosen = { base, upstream, body, contentType: upstreamType };
+      if (
+        !isUnusableUpstream(upstream.status, upstreamType, preview) &&
+        looksLikeJson(upstreamType, preview)
+      ) {
+        chosen = { upstream, body };
         break;
       }
-    } catch (error) {
-      attempts.push({
-        base,
-        status: null,
-        contentType: null,
-        okJson: false,
-        error: error instanceof Error ? error.message : "fetch failed",
-      });
+    } catch {
+      // Try the next candidate base.
     }
   }
 
-  // #region agent log
-  void debugLog({
-    location: "portal/app/api/[...path]/route.ts:proxy",
-    message: "portal proxy attempts",
-    hypothesisId: "A,B,C,D,E",
-    data: {
-      path: targetPath,
-      configured: configuredApiBase(),
-      chosenBase: chosen?.base ?? null,
-      attempts,
-    },
-  });
-  // #endregion
-
   if (!chosen) {
     return NextResponse.json(
-      {
-        detail: "Unable to reach the API. Please try again shortly.",
-        debug: {
-          service: "portal",
-          configured: configuredApiBase(),
-          attempts,
-        },
-      },
+      { detail: "Unable to reach the API. Please try again shortly." },
       { status: 502 },
     );
   }
@@ -255,7 +186,6 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
   if (chosen.body.byteLength > 0) {
     responseHeaders.set("content-length", String(chosen.body.byteLength));
   }
-  responseHeaders.set("x-caisbe-api-base", chosen.base);
   return new NextResponse(chosen.body, {
     status: chosen.upstream.status,
     headers: responseHeaders,

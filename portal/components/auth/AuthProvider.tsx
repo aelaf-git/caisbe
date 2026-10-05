@@ -15,6 +15,7 @@ import {
   setToken,
   type AuthUser,
   type RegisterPayload,
+  type RegisterPendingResponse,
   type TokenResponse,
 } from "@/lib/auth";
 
@@ -22,7 +23,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
-  register: (payload: RegisterPayload) => Promise<AuthUser>;
+  register: (payload: RegisterPayload | FormData) => Promise<RegisterPendingResponse>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 };
@@ -77,15 +78,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.user;
   }, []);
 
-  const register = useCallback(async (payload: RegisterPayload) => {
-    const data = await apiFetch<TokenResponse>("/auth/register", {
+  const register = useCallback(async (payload: RegisterPayload | FormData) => {
+    const body = payload instanceof FormData ? payload : JSON.stringify(payload);
+    return apiFetch<RegisterPendingResponse>("/auth/register", {
       method: "POST",
       auth: false,
-      body: JSON.stringify(payload),
+      body,
     });
-    setToken(data.access_token);
-    setUser(data.user);
-    return data.user;
   }, []);
 
   const logout = useCallback(() => {

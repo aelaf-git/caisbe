@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -12,6 +14,8 @@ from app.models import User
 
 security = HTTPBearer(auto_error=False)
 
+EMAIL_VERIFY_HOURS = 72
+
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -25,6 +29,16 @@ def create_access_token(subject: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
     payload = {"sub": subject, "exp": expire}
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
+
+
+def new_email_verify_token() -> tuple[str, str]:
+    """Return (raw_token, sha256_hex_hash) for email verification links."""
+    raw = secrets.token_urlsafe(32)
+    return raw, hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def hash_email_verify_token(raw_token: str) -> str:
+    return hashlib.sha256(raw_token.strip().encode("utf-8")).hexdigest()
 
 
 def get_current_user(

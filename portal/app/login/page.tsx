@@ -18,6 +18,7 @@ function PortalLoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const nextPath = safeNextPath(searchParams.get("next"), "/dashboard");
 
@@ -30,6 +31,7 @@ function PortalLoginForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setNeedsVerification(false);
     setSubmitting(true);
     try {
       const loggedIn = await login(email, password);
@@ -41,7 +43,14 @@ function PortalLoginForm() {
       }
       router.push(nextPath);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to log in. Please try again.");
+      const detail =
+        err instanceof ApiError ? err.detail : "Unable to log in. Please try again.";
+      setError(detail);
+      setNeedsVerification(
+        err instanceof ApiError &&
+          err.status === 403 &&
+          detail.toLowerCase().includes("verify your email"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -143,14 +152,34 @@ function PortalLoginForm() {
             </div>
 
             {error ? (
-              <p className="text-sm text-caisbe-red">
-                {error}{" "}
-                {error.includes("Admin") ? (
-                  <a href={ADMIN_URL} className="font-semibold underline">
-                    Open Admin
-                  </a>
+              <div
+                className={
+                  needsVerification
+                    ? "rounded-md border border-ifma-border bg-admin-surface px-4 py-3 text-sm text-caisbe-text"
+                    : "text-sm text-caisbe-red"
+                }
+              >
+                <p>{error}</p>
+                {needsVerification ? (
+                  <p className="mt-2 text-caisbe-muted">
+                    Open the link in that email to open your account, then sign in here. Link expired?{" "}
+                    <Link
+                      href={`/register?next=${encodeURIComponent(nextPath)}`}
+                      className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                    >
+                      Register again
+                    </Link>
+                    .
+                  </p>
                 ) : null}
-              </p>
+                {error.includes("Admin") ? (
+                  <p className="mt-1">
+                    <a href={ADMIN_URL} className="font-semibold underline">
+                      Open Admin
+                    </a>
+                  </p>
+                ) : null}
+              </div>
             ) : null}
 
             <button

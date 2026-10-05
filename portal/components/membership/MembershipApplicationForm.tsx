@@ -125,12 +125,14 @@ export default function MembershipApplicationForm({
   variant = "account",
   user = null,
   onRegistered,
+  onPendingVerification,
   onSuccess,
 }: {
   kind: Kind;
   variant?: Variant;
   user?: AuthUser | null;
   onRegistered?: () => void;
+  onPendingVerification?: (email: string) => void;
   onSuccess?: () => void;
 }) {
   const { register } = useAuth();
@@ -328,25 +330,31 @@ export default function MembershipApplicationForm({
       const selectedIsStudent = (selectedType || "student") === "student";
 
       if (isRegister) {
-        await register({
-          full_name: fullName,
-          email,
-          phone,
-          country,
-          city,
-          password,
-          given_name: firstName.trim() || null,
-          family_name: lastName.trim() || null,
-          address: address.trim() || null,
-          organization: organization.trim().slice(0, 160) || null,
-          job_title: position.trim().slice(0, 120) || null,
-          membership_type: selectedType,
-          details,
-        });
+        const body = new FormData();
+        body.append("full_name", fullName);
+        body.append("email", email);
+        body.append("phone", phone);
+        body.append("country", country);
+        body.append("city", city);
+        body.append("password", password);
+        if (firstName.trim()) body.append("given_name", firstName.trim());
+        if (lastName.trim()) body.append("family_name", lastName.trim());
+        if (address.trim()) body.append("address", address.trim());
+        if (organization.trim()) body.append("organization", organization.trim().slice(0, 160));
+        if (position.trim()) body.append("job_title", position.trim().slice(0, 120));
+        body.append("membership_type", selectedType || "student");
+        body.append("details", details);
         if (supportingDocument) {
-          await uploadSupportingDocument(supportingDocument, supportingLabel);
+          body.append("supporting_document", supportingDocument);
+          body.append("supporting_document_label", supportingLabel);
         }
-        onRegistered?.();
+        const pending = await register(body);
+        setMessage(
+          pending.message ||
+            "Check your email to verify and open your account. Your account is created only after you verify.",
+        );
+        setSupportingDocument(null);
+        onPendingVerification?.(pending.email);
         return;
       }
 

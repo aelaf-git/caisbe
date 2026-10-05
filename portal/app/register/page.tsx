@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import MembershipApplicationForm from "@/components/membership/MembershipApplicationForm";
 import { safeNextPath } from "@/lib/membershipApplication";
@@ -13,6 +13,7 @@ function RegisterForm() {
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
   const nextPath = safeNextPath(searchParams.get("next"), "/membership");
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && user) {
@@ -62,29 +63,51 @@ function RegisterForm() {
             priority
             className="h-16 w-auto object-contain sm:h-20"
           />
-          <p className="mt-6 text-sm text-caisbe-muted">
-            Creating an account makes you a student member immediately (free certificate). Each membership
-            type shows its current price on the form — paid types unlock after checkout on Membership.
-          </p>
-          <div className="mt-6">
-            <MembershipApplicationForm
-              kind="application"
-              variant="register"
-              onRegistered={() => {
-                // Hard navigation so the token is picked up even if client state lags.
-                window.location.assign(nextPath);
-              }}
-            />
-          </div>
-          <p className="mt-6 text-sm text-caisbe-muted">
-            Already have an account?{" "}
-            <Link
-              href={`/login?next=${encodeURIComponent(nextPath)}`}
-              className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
-            >
-              Login
-            </Link>
-          </p>
+          {pendingEmail ? (
+            <div className="mt-8 rounded-md border border-ifma-border bg-white p-6 shadow-brand-card">
+              <h1 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
+                Check your email
+              </h1>
+              <p className="mt-3 text-sm leading-6 text-caisbe-muted">
+                We sent a verification link to{" "}
+                <span className="font-semibold text-caisbe-text-dark">{pendingEmail}</span>. Open that
+                link to verify your email and open your account. The link expires in 72 hours.
+              </p>
+              <p className="mt-4 text-sm text-caisbe-muted">
+                Already verified?{" "}
+                <Link
+                  href={`/login?next=${encodeURIComponent(nextPath)}`}
+                  className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                >
+                  Login
+                </Link>
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="mt-6 text-sm text-caisbe-muted">
+                Submitting this form starts your signup. Your account opens only after you verify your
+                email. Student membership includes a free certificate; paid types unlock after checkout
+                on Membership.
+              </p>
+              <div className="mt-6">
+                <MembershipApplicationForm
+                  kind="application"
+                  variant="register"
+                  onPendingVerification={(email) => setPendingEmail(email)}
+                />
+              </div>
+              <p className="mt-6 text-sm text-caisbe-muted">
+                Already have an account?{" "}
+                <Link
+                  href={`/login?next=${encodeURIComponent(nextPath)}`}
+                  className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                >
+                  Login
+                </Link>
+              </p>
+            </>
+          )}
         </div>
       </div>
     </section>

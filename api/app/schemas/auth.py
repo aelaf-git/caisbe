@@ -44,6 +44,15 @@ class UserLogin(BaseModel):
     password: str
 
 
+class VerifyEmailIn(BaseModel):
+    token: str = Field(min_length=20, max_length=512)
+
+
+class RegisterPendingOut(BaseModel):
+    message: str
+    email: EmailStr
+
+
 class UserOut(BaseModel):
     id: int
     full_name: str

@@ -69,6 +69,11 @@ export type TokenResponse = {
   user: AuthUser;
 };
 
+export type RegisterPendingResponse = {
+  message: string;
+  email: string;
+};
+
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(TOKEN_KEY);

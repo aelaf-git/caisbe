@@ -65,6 +65,33 @@ class User(Base):
     )
 
 
+class PendingRegistration(Base):
+    """Signup held until the student verifies their email. No User row yet."""
+
+    __tablename__ = "pending_registrations"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    full_name: Mapped[str] = mapped_column(String(120))
+    phone: Mapped[str] = mapped_column(String(40))
+    country: Mapped[str] = mapped_column(String(100))
+    city: Mapped[str] = mapped_column(String(100))
+    hashed_password: Mapped[str] = mapped_column(String(255))
+    given_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    family_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    organization: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    job_title: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    membership_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)
+    supporting_document_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    supporting_document_label: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    supporting_document_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Course(Base):
     __tablename__ = "courses"
 
