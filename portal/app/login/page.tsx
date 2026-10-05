@@ -209,12 +209,14 @@ function PortalLoginForm() {
               >
                 {submitting ? "Signing in…" : "Sign in"}
               </button>
-              <Link
-                href="/forgot-password"
-                className="text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
-              >
-                Forgot password?
-              </Link>
+              {!showForgotPassword ? (
+                <Link
+                  href={`/forgot-password?email=${encodeURIComponent(email.trim())}`}
+                  className="text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                >
+                  Forgot password?
+                </Link>
+              ) : null}
             </div>
           </form>
 
