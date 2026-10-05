@@ -1,6 +1,6 @@
 """Email verified gate and password reset tokens.
 
-Revision ID: 027_email_verified_and_password_reset
+Revision ID: 027_email_verified_pw_reset
 Revises: 026_pending_registrations
 Create Date: 2026-10-05
 
@@ -11,7 +11,7 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "027_email_verified_and_password_reset"
+revision: str = "027_email_verified_pw_reset"
 down_revision: Union[str, None] = "026_pending_registrations"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -23,10 +23,11 @@ def upgrade() -> None:
         sa.Column("email_verified_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.execute(
-        sa.text(
-            "UPDATE users SET email_verified_at = COALESCE(created_at, NOW()) "
-            "WHERE email_verified_at IS NULL"
-        )
+        """
+        UPDATE users
+        SET email_verified_at = COALESCE(created_at, now())
+        WHERE email_verified_at IS NULL
+        """
     )
 
     op.create_table(
