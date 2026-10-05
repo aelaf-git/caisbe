@@ -9,8 +9,9 @@
 #   api.caisbe.org              → caisbe-api
 #
 # Server-side API_URL must use the Render private network (http://caisbe-api:10000),
-# not api.caisbe.org or caisbe-api.onrender.com. Those public hostnames go through
-# Cloudflare and return Error 1000 (dns_loop) when called from another Render service.
+# not api.caisbe.org or *.onrender.com. Those public hostnames go through Cloudflare
+# and return Error 1000 (dns_loop) when called from another Render service.
+# Next.js proxies rewrite accidental public API_URL values to http://<service>:10000.
 #
 # Cost note: every production web service is 0.5c-512mb ($7/mo, 0.5 CPU, 512 MB).
 # The API also needs a persistent disk. Postgres stays on basic-256mb.

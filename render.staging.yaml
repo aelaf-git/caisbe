@@ -2,6 +2,9 @@
 # Names and public URLs match the live Render services (suffix -090a).
 # Every resource here is Free: services spin down when idle, and there is no disk.
 #
+# Server-side API_URL must be the private network host (http://caisbe-staging-api-090a:10000).
+# Public *.onrender.com API URLs cause Cloudflare Error 1000 from Render → Render.
+#
 # After you push this file to `dev`:
 #   Blueprint CAISBE-DEV → Manual sync
 # Then Manual Deploy web, admin, and portal so Next.js picks up the new URLs.
@@ -79,7 +82,7 @@ services:
     healthCheckPath: /
     envVars:
       - key: API_URL
-        value: https://caisbe-staging-api-090a.onrender.com
+        value: http://caisbe-staging-api-090a:10000
       - key: NEXT_PUBLIC_SITE_URL
         value: https://caisbe-staging-web-090a.onrender.com
       - key: NEXT_PUBLIC_ADMIN_URL
@@ -97,7 +100,7 @@ services:
     healthCheckPath: /
     envVars:
       - key: API_URL
-        value: https://caisbe-staging-api-090a.onrender.com
+        value: http://caisbe-staging-api-090a:10000
       - key: NEXT_PUBLIC_API_URL
         value: https://caisbe-staging-api-090a.onrender.com
       - key: NEXT_PUBLIC_SITE_URL
@@ -117,7 +120,7 @@ services:
     healthCheckPath: /
     envVars:
       - key: API_URL
-        value: https://caisbe-staging-api-090a.onrender.com
+        value: http://caisbe-staging-api-090a:10000
       - key: NEXT_PUBLIC_SITE_URL
         value: https://caisbe-staging-web-090a.onrender.com
       - key: NEXT_PUBLIC_ADMIN_URL

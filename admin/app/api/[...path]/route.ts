@@ -1,29 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { candidateApiBases } from "@/lib/apiUpstream";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-const RENDER_API_PUBLIC = "https://caisbe-api.onrender.com";
-const RENDER_API_PRIVATE_CANDIDATES = [
-  "http://caisbe-api:10000",
-  "http://caisbe-api:8000",
-] as const;
-
-function configuredApiBase(): string {
-  let raw = (process.env["API_URL"] || "http://127.0.0.1:8000").trim().replace(/\/$/, "");
-  if (/api\.caisbe\.org/i.test(raw) || /caisbe-api\.onrender\.com/i.test(raw)) {
-    raw = RENDER_API_PRIVATE_CANDIDATES[0];
-  }
-  if (!/^https?:\/\//i.test(raw)) {
-    return "http://127.0.0.1:8000";
-  }
-  return raw;
-}
-
-function candidateBases(): string[] {
-  const configured = configuredApiBase();
-  return [...new Set([...RENDER_API_PRIVATE_CANDIDATES, configured, RENDER_API_PUBLIC])];
-}
 
 const FORWARD_REQUEST_HEADERS = [
   "content-type",
@@ -119,7 +98,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
   let chosen: { upstream: Response; body: ArrayBuffer } | null = null;
   let tried = 0;
 
-  for (const base of candidateBases()) {
+  for (const base of candidateApiBases()) {
     if (isMultipart && tried > 0) break;
     tried += 1;
     if (bodyBuffer) init.body = bodyBuffer;
