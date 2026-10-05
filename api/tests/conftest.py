@@ -1,0 +1,76 @@
+"""Pytest fixtures: in-memory SQLite + FastAPI TestClient."""
+
+from __future__ import annotations
+
+import os
+from collections.abc import Generator
+from unittest.mock import patch
+
+# Must be set before app modules read Settings / create the engine.
+os.environ["DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
+os.environ["APP_ENV"] = "development"
+os.environ["JWT_SECRET"] = "test-secret-key-for-pytest-only-not-for-prod"
+os.environ["RESEND_API_KEY"] = ""
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.db import Base, get_db
+from app.main import app
+from app.security.limiter import limiter
+
+# Shared in-memory DB across connections (needed for StaticPool + TestClient).
+engine = create_engine(
+    "sqlite+pysqlite:///:memory:",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@event.listens_for(engine, "connect")
+def _fk_pragma(dbapi_connection, _connection_record) -> None:
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
+@pytest.fixture(autouse=True)
+def _disable_rate_limiter() -> Generator[None, None, None]:
+    previous = getattr(limiter, "enabled", True)
+    limiter.enabled = False
+    yield
+    limiter.enabled = previous
+
+
+@pytest.fixture()
+def db() -> Generator[Session, None, None]:
+    import app.models  # noqa: F401 — register metadata
+
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    session = TestingSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+        Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture()
+def client(db: Session) -> Generator[TestClient, None, None]:
+    def override_get_db() -> Generator[Session, None, None]:
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+    with (
+        patch("app.main.upgrade_to_head"),
+        patch("app.main.seed_admin"),
+        patch("app.main.seed_industry_events"),
+    ):
+        with TestClient(app) as test_client:
+            yield test_client
+    app.dependency_overrides.clear()
