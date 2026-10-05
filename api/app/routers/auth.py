@@ -500,6 +500,8 @@ def reset_password(
         )
 
     user.hashed_password = hash_password(payload.new_password)
+    user.failed_login_count = 0
+    user.login_locked_until = None
     db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user.id).delete()
     db.commit()
     return ResetPasswordOut(message="Your password has been updated. You can sign in now.")
