@@ -53,6 +53,31 @@ class RegisterPendingOut(BaseModel):
     email: EmailStr
 
 
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordOut(BaseModel):
+    message: str
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = Field(min_length=20, max_length=512)
+    new_password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
+
+    @field_validator("new_password")
+    @classmethod
+    def strong_new_password(cls, value: str) -> str:
+        try:
+            return validate_password_strength(value)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
+
+
+class ResetPasswordOut(BaseModel):
+    message: str
+
+
 class UserOut(BaseModel):
     id: int
     full_name: str
@@ -69,6 +94,7 @@ class UserOut(BaseModel):
     membership_type: str | None = None
     membership_status: str = "pending"
     profile_completed: bool = False
+    email_verified: bool = False
     role: str = "student"
     pending_membership_type: str | None = None
     pending_membership_kind: str | None = None

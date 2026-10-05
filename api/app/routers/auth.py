@@ -5,11 +5,15 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, stat
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import PendingRegistration, SecurityQuestion, User
+from app.models import PasswordResetToken, PendingRegistration, SecurityQuestion, User
 from app.schemas.auth import (
+    ForgotPasswordIn,
+    ForgotPasswordOut,
     PasswordChangeIn,
     ProfileUpdate,
     RegisterPendingOut,
+    ResetPasswordIn,
+    ResetPasswordOut,
     SecurityQuestionOut,
     SecurityQuestionsSaveIn,
     TokenResponse,
@@ -20,11 +24,14 @@ from app.schemas.auth import (
 )
 from app.security.auth import (
     EMAIL_VERIFY_HOURS,
+    PASSWORD_RESET_HOURS,
     create_access_token,
     get_current_user,
     hash_email_verify_token,
     hash_password,
+    hash_password_reset_token,
     new_email_verify_token,
+    new_password_reset_token,
     verify_password,
 )
 from app.security.limiter import limiter
@@ -37,7 +44,12 @@ from app.services.membership import (
     membership_is_accessible,
     record_membership_application,
 )
+from app.services.password_reset_email import send_password_reset_email
 from app.services.verify_email import send_verification_email
+
+FORGOT_PASSWORD_MESSAGE = (
+    "If an account exists for that email, we sent instructions to continue."
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -47,6 +59,7 @@ _MEMBERSHIP_DOC_SUFFIXES = {".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png", ".
 def user_to_out(user: User, db: Session | None = None) -> UserOut:
     out = UserOut.model_validate(user)
     out.profile_completed = profile_is_complete(user)
+    out.email_verified = user.email_verified_at is not None
     if db is not None:
         pending = get_pending_membership_application(db, user)
         if pending and not is_student_membership(pending.membership_type):
@@ -158,6 +171,7 @@ def _open_account_from_pending(db: Session, pending: PendingRegistration) -> Use
         membership_type="student",
         membership_status="active",
         membership_date=now,
+        email_verified_at=now,
     )
     db.add(user)
     db.flush()
@@ -302,6 +316,11 @@ def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -
     if user is not None:
         if not verify_password(payload.password, user.hashed_password):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        if user.email_verified_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Please verify your email before signing in.",
+            )
         token = create_access_token(user.email)
         return TokenResponse(access_token=token, user=user_to_out(user, db))
 
@@ -327,6 +346,97 @@ def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -
         )
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordOut)
+@limiter.limit("5/minute")
+def forgot_password(
+    request: Request,
+    payload: ForgotPasswordIn,
+    db: Session = Depends(get_db),
+) -> ForgotPasswordOut:
+    email = payload.email.lower().strip()
+    user = db.query(User).filter(User.email == email).first()
+    if user is not None and user.email_verified_at is not None:
+        db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user.id).delete()
+        raw_token, token_hash = new_password_reset_token()
+        db.add(
+            PasswordResetToken(
+                user_id=user.id,
+                token_hash=token_hash,
+                expires_at=datetime.now(timezone.utc) + timedelta(hours=PASSWORD_RESET_HOURS),
+            )
+        )
+        db.commit()
+        try:
+            send_password_reset_email(
+                to=user.email,
+                full_name=user.full_name,
+                raw_token=raw_token,
+            )
+        except Exception:
+            # Keep generic response; token remains usable if email eventually delivers via logs in dev.
+            pass
+        return ForgotPasswordOut(message=FORGOT_PASSWORD_MESSAGE)
+
+    pending = db.query(PendingRegistration).filter(PendingRegistration.email == email).first()
+    if pending is not None:
+        try:
+            raw_token = _refresh_pending_verify_token(db, pending)
+            send_verification_email(
+                to=pending.email,
+                full_name=pending.full_name,
+                raw_token=raw_token,
+                next_path="/membership",
+            )
+        except Exception:
+            pass
+
+    return ForgotPasswordOut(message=FORGOT_PASSWORD_MESSAGE)
+
+
+@router.post("/reset-password", response_model=ResetPasswordOut)
+@limiter.limit("10/minute")
+def reset_password(
+    request: Request,
+    payload: ResetPasswordIn,
+    db: Session = Depends(get_db),
+) -> ResetPasswordOut:
+    token_hash = hash_password_reset_token(payload.token)
+    row = (
+        db.query(PasswordResetToken)
+        .filter(PasswordResetToken.token_hash == token_hash)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This password reset link is invalid or has expired.",
+        )
+    expires_at = row.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
+        db.query(PasswordResetToken).filter(PasswordResetToken.user_id == row.user_id).delete()
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This password reset link is invalid or has expired.",
+        )
+
+    user = db.query(User).filter(User.id == row.user_id).first()
+    if user is None or user.email_verified_at is None:
+        db.query(PasswordResetToken).filter(PasswordResetToken.user_id == row.user_id).delete()
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This password reset link is invalid or has expired.",
+        )
+
+    user.hashed_password = hash_password(payload.new_password)
+    db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user.id).delete()
+    db.commit()
+    return ResetPasswordOut(message="Your password has been updated. You can sign in now.")
 
 
 @router.get("/me", response_model=UserOut)

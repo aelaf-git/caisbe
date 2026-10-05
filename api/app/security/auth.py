@@ -15,6 +15,7 @@ from app.models import User
 security = HTTPBearer(auto_error=False)
 
 EMAIL_VERIFY_HOURS = 72
+PASSWORD_RESET_HOURS = 1
 
 
 def hash_password(password: str) -> str:
@@ -31,14 +32,21 @@ def create_access_token(subject: str) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
-def new_email_verify_token() -> tuple[str, str]:
-    """Return (raw_token, sha256_hex_hash) for email verification links."""
+def new_secure_token() -> tuple[str, str]:
+    """Return (raw_token, sha256_hex_hash) for email links."""
     raw = secrets.token_urlsafe(32)
     return raw, hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def hash_email_verify_token(raw_token: str) -> str:
+def hash_secure_token(raw_token: str) -> str:
     return hashlib.sha256(raw_token.strip().encode("utf-8")).hexdigest()
+
+
+# Aliases kept for call sites that name the verify/reset purpose explicitly.
+new_email_verify_token = new_secure_token
+hash_email_verify_token = hash_secure_token
+new_password_reset_token = new_secure_token
+hash_password_reset_token = hash_secure_token
 
 
 def get_current_user(
@@ -68,6 +76,11 @@ def get_current_user(
     user = db.query(User).filter(User.email == email.lower()).first()
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    if user.email_verified_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email before signing in.",
+        )
     return user
 
 

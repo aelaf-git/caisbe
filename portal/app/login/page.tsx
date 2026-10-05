@@ -182,13 +182,21 @@ function PortalLoginForm() {
               </div>
             ) : null}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex min-w-[180px] items-center justify-center rounded-full bg-caisbe-red px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark disabled:opacity-60"
-            >
-              {submitting ? "Signing in…" : "Sign in"}
-            </button>
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex min-w-[180px] items-center justify-center rounded-full bg-caisbe-red px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark disabled:opacity-60"
+              >
+                {submitting ? "Signing in…" : "Sign in"}
+              </button>
+              <Link
+                href="/forgot-password"
+                className="text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+              >
+                Forgot password?
+              </Link>
+            </div>
           </form>
 
           <p className="mt-6 text-sm text-caisbe-muted">
