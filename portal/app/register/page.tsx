@@ -64,7 +64,7 @@ function RegisterForm() {
             className="h-16 w-auto object-contain sm:h-20"
           />
           {pendingEmail ? (
-            <div className="mt-8 rounded-md border border-ifma-border bg-white p-6 shadow-brand-card">
+            <div className="mt-8 rounded-md border border-ifma-border bg-admin-surface p-6 shadow-brand-card">
               <h1 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
                 Check your email
               </h1>

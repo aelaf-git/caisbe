@@ -191,7 +191,7 @@ export default function StudentDashboardPage() {
               onClick={() => setTab(item.id)}
               className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 tab === item.id
-                  ? "bg-caisbe-red/10 text-caisbe-red"
+                  ? "bg-caisbe-red text-white"
                   : "text-caisbe-muted hover:bg-admin-surface hover:text-caisbe-text"
               }`}
             >

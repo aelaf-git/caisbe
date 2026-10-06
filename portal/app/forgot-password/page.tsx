@@ -33,7 +33,7 @@ function ForgotPasswordForm() {
 
   return (
     <section className="flex min-h-screen flex-1 items-center justify-center bg-admin-canvas px-4 py-10">
-      <div className="w-full max-w-md rounded-[20px] bg-white p-6 shadow-hopewell sm:p-8">
+      <div className="w-full max-w-md rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-8">
         <Image
           src="/images/logo.png"
           alt="CAISBE logo"
@@ -65,7 +65,7 @@ function ForgotPasswordForm() {
             </p>
             <form onSubmit={handleSubmit} className="mt-8 space-y-4">
               <div>
-                <label htmlFor="forgot-email" className="mb-1 block text-sm font-medium">
+                <label htmlFor="forgot-email" className="mb-1 block text-sm font-medium text-caisbe-text">
                   Email
                 </label>
                 <input
@@ -75,7 +75,7 @@ function ForgotPasswordForm() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface px-4 text-sm outline-none focus:border-caisbe-red"
+                  className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface-muted px-4 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red"
                 />
               </div>
               {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}

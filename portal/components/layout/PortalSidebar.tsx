@@ -175,8 +175,8 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
                     onClick={onNavigate}
                     className={`flex items-center justify-between gap-2 rounded-full px-3 py-2.5 text-sm transition-colors ${
                       active
-                        ? "bg-caisbe-red/10 font-semibold text-caisbe-red"
-                        : "text-caisbe-muted hover:bg-[#f8fafc] hover:text-caisbe-text"
+                        ? "bg-caisbe-red font-semibold text-white"
+                        : "text-caisbe-muted hover:bg-admin-surface-muted hover:text-caisbe-text"
                     }`}
                   >
                     <span className="flex min-w-0 items-center gap-3">

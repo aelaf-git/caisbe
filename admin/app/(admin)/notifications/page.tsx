@@ -35,7 +35,7 @@ export default function AdminNotificationsPage() {
       <PageHeader
         eyebrow="Publishing"
         title="Member notifications"
-        description="Send announcements, holiday messages, and other updates to all registered members in the student portal. Email newsletters stay under Media library."
+        description="Broadcast announcements, messages, and holiday notes to every registered member in the student portal."
       />
 
       {error ? <Alert tone="error">{error}</Alert> : null}

@@ -128,7 +128,7 @@ export default function AssignmentsPage() {
             className={`inline-flex h-10 items-center rounded-full border-2 px-4 text-sm font-bold transition ${
               filter === value
                 ? "border-caisbe-red bg-caisbe-red text-white"
-                : "border-ifma-border bg-white text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+                : "border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
             }`}
           >
             {label}

@@ -4,14 +4,14 @@ import { FormEvent, useState } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
-import FormField, { fieldClassName } from "@/components/ui/FormField";
+import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import Skeleton from "@/components/ui/Skeleton";
 import { apiFetch, ApiError, type NotificationBroadcast } from "@/lib/auth";
 
 const KINDS = [
-  { id: "announcement", label: "Important announcement" },
-  { id: "message", label: "General message" },
-  { id: "holiday", label: "Holiday message" },
+  { id: "announcement", label: "Announcement" },
+  { id: "message", label: "Message" },
+  { id: "holiday", label: "Holiday" },
 ] as const;
 
 export default function NotificationsManager({
@@ -30,7 +30,6 @@ export default function NotificationsManager({
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [kind, setKind] = useState<(typeof KINDS)[number]["id"]>("announcement");
-  const [link, setLink] = useState("");
   const [sending, setSending] = useState(false);
 
   async function handleSend(event: FormEvent) {
@@ -49,14 +48,13 @@ export default function NotificationsManager({
             title: title.trim(),
             body: body.trim(),
             kind,
-            link: link.trim() || null,
+            link: "/notifications",
             audience: "all_students",
           }),
         },
       );
       setTitle("");
       setBody("");
-      setLink("");
       setKind("announcement");
       await onRefresh();
       onSuccess(result.message || `Notification sent to ${result.recipient_count} member(s).`);
@@ -68,28 +66,35 @@ export default function NotificationsManager({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
       <Card>
-        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">
-          Send to all registered members
-        </h2>
+        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Compose</h2>
         <p className="mt-1 text-sm text-caisbe-muted">
-          Delivers an in-app portal notification (separate from email newsletters).
+          In-app notice for every registered member. Newsletters stay in Media library.
         </p>
-        <form onSubmit={(e) => void handleSend(e)} className="mt-4 space-y-4">
-          <FormField label="Type">
-            <select
-              className={fieldClassName}
-              value={kind}
-              onChange={(e) => setKind(e.target.value as (typeof KINDS)[number]["id"])}
-            >
-              {KINDS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </FormField>
+        <form onSubmit={(e) => void handleSend(e)} className="mt-5 space-y-4">
+          <div>
+            <p className="mb-1.5 text-sm font-semibold text-caisbe-text">Type</p>
+            <div className="flex flex-wrap gap-2">
+              {KINDS.map((option) => {
+                const selected = kind === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setKind(option.id)}
+                    className={`rounded-full border-2 px-4 py-2 text-sm font-bold transition ${
+                      selected
+                        ? "border-caisbe-red bg-caisbe-red text-white"
+                        : "border-ifma-border bg-admin-surface-muted text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <FormField label="Title">
             <input
               className={fieldClassName}
@@ -102,36 +107,36 @@ export default function NotificationsManager({
           </FormField>
           <FormField label="Message">
             <textarea
-              className={`${fieldClassName} min-h-32 py-2.5`}
+              className={`${textAreaClassName} min-h-36`}
               value={body}
               onChange={(e) => setBody(e.target.value)}
               maxLength={8000}
               required
-              placeholder="Write the announcement or message members should see in their portal notifications."
+              placeholder="Write what members should see in their portal notifications."
             />
           </FormField>
-          <FormField label="Optional link" hint="Portal path such as /membership or /courses">
-            <input
-              className={fieldClassName}
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              maxLength={255}
-              placeholder="/membership"
-            />
-          </FormField>
-          <Button type="submit" disabled={sending}>
+          <Button type="submit" disabled={sending} className="w-full sm:w-auto">
             {sending ? "Sending…" : "Send notification"}
           </Button>
         </form>
       </Card>
 
       <Card>
-        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Recent broadcasts</h2>
-        <p className="mt-1 text-sm text-caisbe-muted">Last 100 in-app notifications sent to members.</p>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Recent broadcasts</h2>
+            <p className="mt-1 text-sm text-caisbe-muted">Newest first · up to 100</p>
+          </div>
+          {!loading && broadcasts.length > 0 ? (
+            <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+              {broadcasts.length} sent
+            </p>
+          ) : null}
+        </div>
         {loading ? (
           <div className="mt-4 space-y-3">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
           </div>
         ) : broadcasts.length === 0 ? (
           <div className="mt-4">
@@ -141,12 +146,12 @@ export default function NotificationsManager({
             />
           </div>
         ) : (
-          <ul className="mt-4 space-y-3">
+          <ul className="mt-4 divide-y divide-ifma-border-light overflow-hidden rounded-[16px] border border-ifma-border-light">
             {broadcasts.map((row) => (
-              <li key={row.id} className="border border-ifma-border-light px-3 py-3 text-sm">
+              <li key={row.id} className="bg-admin-surface-muted/40 px-4 py-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-semibold text-caisbe-text-dark">{row.title}</p>
-                  <span className="rounded-full bg-caisbe-red/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-caisbe-red">
+                  <span className="rounded-full bg-caisbe-red px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
                     {row.kind.replaceAll("_", " ")}
                   </span>
                 </div>

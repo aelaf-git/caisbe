@@ -52,7 +52,7 @@ function ResetPasswordForm() {
 
   return (
     <section className="flex min-h-screen flex-1 items-center justify-center bg-admin-canvas px-4 py-10">
-      <div className="w-full max-w-md rounded-[20px] bg-white p-6 shadow-hopewell sm:p-8">
+      <div className="w-full max-w-md rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-8">
         <Image
           src="/images/logo.png"
           alt="CAISBE logo"
@@ -84,7 +84,7 @@ function ResetPasswordForm() {
             </p>
             <form onSubmit={handleSubmit} className="mt-8 space-y-4">
               <div>
-                <label htmlFor="reset-password" className="mb-1 block text-sm font-medium">
+                <label htmlFor="reset-password" className="mb-1 block text-sm font-medium text-caisbe-text">
                   New password
                 </label>
                 <input
@@ -95,12 +95,12 @@ function ResetPasswordForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={!token}
-                  className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface px-4 text-sm outline-none focus:border-caisbe-red disabled:opacity-60"
+                  className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface-muted px-4 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red disabled:opacity-60"
                 />
                 <PasswordCriteriaList password={password} className="mt-2" />
               </div>
               <div>
-                <label htmlFor="reset-confirm" className="mb-1 block text-sm font-medium">
+                <label htmlFor="reset-confirm" className="mb-1 block text-sm font-medium text-caisbe-text">
                   Confirm password
                 </label>
                 <input
@@ -111,7 +111,7 @@ function ResetPasswordForm() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={!token}
-                  className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface px-4 text-sm outline-none focus:border-caisbe-red disabled:opacity-60"
+                  className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface-muted px-4 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red disabled:opacity-60"
                 />
               </div>
               {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
