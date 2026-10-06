@@ -1,8 +1,5 @@
 import ButtonLink from "@/components/ui/ButtonLink";
-import {
-  ContentSection,
-  PageHero,
-} from "@/components/pages/ContentPage";
+import { ContentSection, PageHero } from "@/components/pages/ContentPage";
 import { partnersContent } from "@/lib/data/partners";
 
 export default function PartnersPageContent() {
@@ -10,46 +7,73 @@ export default function PartnersPageContent() {
     eyebrow,
     title,
     lead,
-    paragraphs,
+    intro,
+    benefitsTitle,
+    benefitsBody,
+    howItWorksTitle,
+    howItWorksBody,
     thankYouTitle,
     thankYouLead,
     contactEmail,
     ctaLabel,
   } = partnersContent;
 
+  const mailtoHref = `mailto:${contactEmail}?subject=${encodeURIComponent("Partnership inquiry")}`;
+
   return (
     <>
-      <PageHero eyebrow={eyebrow} title={title} lead={lead} />
+      <PageHero
+        eyebrow={eyebrow}
+        title={title}
+        lead={lead}
+        actions={
+          <ButtonLink href={mailtoHref} variant="primary">
+            {ctaLabel}
+          </ButtonLink>
+        }
+      />
 
-      <ContentSection wide>
-        <div className="mx-auto max-w-3xl space-y-6">
-          {paragraphs.map((paragraph) => (
-            <p key={paragraph.slice(0, 40)} className="text-base leading-8 text-caisbe-text">
-              {paragraph.includes(contactEmail) ? (
-                <>
-                  {paragraph.split(contactEmail)[0]}
-                  <a
-                    href={`mailto:${contactEmail}`}
-                    className="font-semibold text-caisbe-red underline-offset-2 hover:underline"
-                  >
-                    {contactEmail}
-                  </a>
-                  {paragraph.split(contactEmail)[1]}
-                </>
-              ) : (
-                paragraph
-              )}
-            </p>
-          ))}
-          <div className="pt-2">
-            <ButtonLink href={`mailto:${contactEmail}`} variant="primary">
-              {ctaLabel}
-            </ButtonLink>
-          </div>
+      <ContentSection className="!py-20 md:!py-24">
+        <p className="max-w-3xl text-base leading-8 text-caisbe-text md:text-lg">
+          {intro}
+        </p>
+      </ContentSection>
+
+      <ContentSection
+        id="benefits"
+        title={benefitsTitle}
+        description={benefitsBody}
+        className="!py-20 md:!py-24 bg-[#fafafa]"
+      />
+
+      <ContentSection
+        id="how-it-works"
+        title={howItWorksTitle}
+        description={howItWorksBody}
+        className="!py-20 md:!py-24"
+      >
+        <div>
+          <ButtonLink href={mailtoHref} variant="primary">
+            {ctaLabel}
+          </ButtonLink>
+          <p className="mt-4 max-w-3xl text-sm leading-6 text-caisbe-muted">
+            Prefer to write us directly? Email{" "}
+            <a
+              href={mailtoHref}
+              className="font-semibold text-caisbe-red underline-offset-2 hover:underline"
+            >
+              {contactEmail}
+            </a>
+            .
+          </p>
         </div>
       </ContentSection>
 
-      <ContentSection title={thankYouTitle} description={thankYouLead} />
+      <ContentSection
+        title={thankYouTitle}
+        description={thankYouLead}
+        className="!py-20 md:!py-24 bg-[#fafafa]"
+      />
     </>
   );
 }

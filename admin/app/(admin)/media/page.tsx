@@ -1,9 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import BlogManager from "@/components/media/BlogManager";
 import HeroManager from "@/components/media/HeroManager";
 import MagazineManager from "@/components/media/MagazineManager";
 import NewsletterPanel from "@/components/media/NewsletterPanel";
+import PodcastManager from "@/components/media/PodcastManager";
+import YouTubeManager from "@/components/media/YouTubeManager";
 import Alert from "@/components/ui/Alert";
 import PageHeader from "@/components/ui/PageHeader";
 import Tabs from "@/components/ui/Tabs";
@@ -17,12 +20,15 @@ import {
   type NewsletterSubscriber,
 } from "@/lib/auth";
 
-type Tab = "hero" | "magazines" | "newsletter";
+type Tab = "hero" | "magazines" | "youtube" | "podcasts" | "blog" | "newsletter";
 
 export default function MediaPage() {
   const [tab, setTab] = useState<Tab>("hero");
   const [heroAssets, setHeroAssets] = useState<MediaAsset[]>([]);
-  const [assets, setAssets] = useState<MediaAsset[]>([]);
+  const [magazineAssets, setMagazineAssets] = useState<MediaAsset[]>([]);
+  const [youtubeAssets, setYoutubeAssets] = useState<MediaAsset[]>([]);
+  const [podcastAssets, setPodcastAssets] = useState<MediaAsset[]>([]);
+  const [blogAssets, setBlogAssets] = useState<MediaAsset[]>([]);
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
   const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,14 +40,21 @@ export default function MediaPage() {
     setLoading(true);
     setError(null);
     try {
-      const [heroData, mediaData, subscriberData, campaignData] = await Promise.all([
-        apiFetch<MediaAsset[]>("/admin/media?category=hero"),
-        apiFetch<MediaAsset[]>("/admin/media?category=magazine"),
-        apiFetch<NewsletterSubscriber[]>("/admin/newsletter/subscribers"),
-        apiFetch<NewsletterCampaign[]>("/admin/newsletter/campaigns"),
-      ]);
+      const [heroData, magazines, youtube, podcasts, blogs, subscriberData, campaignData] =
+        await Promise.all([
+          apiFetch<MediaAsset[]>("/admin/media?category=hero"),
+          apiFetch<MediaAsset[]>("/admin/media?category=magazine"),
+          apiFetch<MediaAsset[]>("/admin/media?category=youtube"),
+          apiFetch<MediaAsset[]>("/admin/media?category=podcast"),
+          apiFetch<MediaAsset[]>("/admin/media?category=blog"),
+          apiFetch<NewsletterSubscriber[]>("/admin/newsletter/subscribers"),
+          apiFetch<NewsletterCampaign[]>("/admin/newsletter/campaigns"),
+        ]);
       setHeroAssets(heroData);
-      setAssets(mediaData);
+      setMagazineAssets(magazines);
+      setYoutubeAssets(youtube);
+      setPodcastAssets(podcasts);
+      setBlogAssets(blogs);
       setSubscribers(subscriberData);
       setCampaigns(campaignData);
     } catch (err) {
@@ -76,18 +89,21 @@ export default function MediaPage() {
       <PageHeader
         eyebrow="Content"
         title="Media library"
-        description="Manage the homepage hero carousel, magazine issues, and newsletters."
+        description="Manage the homepage hero, magazines, YouTube videos, podcasts, blog posts, and newsletters."
       />
 
       <Tabs
         items={[
           { id: "hero", label: "Hero", count: heroAssets.length },
-          { id: "magazines", label: "Magazines", count: assets.length },
+          { id: "magazines", label: "Magazines", count: magazineAssets.length },
+          { id: "youtube", label: "YouTube", count: youtubeAssets.length },
+          { id: "podcasts", label: "Podcasts", count: podcastAssets.length },
+          { id: "blog", label: "Blog", count: blogAssets.length },
           { id: "newsletter", label: "Newsletter", count: subscribers.length },
         ]}
         value={tab}
         onChange={(next) => {
-          setTab(next);
+          setTab(next as Tab);
           setError(null);
         }}
         ariaLabel="Media sections"
@@ -104,16 +120,48 @@ export default function MediaPage() {
           onSuccess={showSuccess}
           askConfirm={confirm}
         />
-      ) : tab === "magazines" ? (
+      ) : null}
+      {tab === "magazines" ? (
         <MagazineManager
-          assets={assets}
+          assets={magazineAssets}
           loading={loading}
           onRefresh={load}
           onError={showActionError}
           onSuccess={showSuccess}
           askConfirm={confirm}
         />
-      ) : (
+      ) : null}
+      {tab === "youtube" ? (
+        <YouTubeManager
+          assets={youtubeAssets}
+          loading={loading}
+          onRefresh={load}
+          onError={showActionError}
+          onSuccess={showSuccess}
+          askConfirm={confirm}
+        />
+      ) : null}
+      {tab === "podcasts" ? (
+        <PodcastManager
+          assets={podcastAssets}
+          loading={loading}
+          onRefresh={load}
+          onError={showActionError}
+          onSuccess={showSuccess}
+          askConfirm={confirm}
+        />
+      ) : null}
+      {tab === "blog" ? (
+        <BlogManager
+          assets={blogAssets}
+          loading={loading}
+          onRefresh={load}
+          onError={showActionError}
+          onSuccess={showSuccess}
+          askConfirm={confirm}
+        />
+      ) : null}
+      {tab === "newsletter" ? (
         <NewsletterPanel
           subscribers={subscribers}
           campaigns={campaigns}
@@ -122,7 +170,7 @@ export default function MediaPage() {
           onError={showActionError}
           onSuccess={showSuccess}
         />
-      )}
+      ) : null}
       {confirmDialog}
       {noticeDialog}
     </div>

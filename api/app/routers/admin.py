@@ -158,6 +158,10 @@ ALLOWED_UPLOAD_EXTENSIONS = {
     ".webm",
     ".mov",
     ".m4v",
+    ".mp3",
+    ".m4a",
+    ".wav",
+    ".ogg",
     ".jpg",
     ".jpeg",
     ".png",
@@ -286,6 +290,139 @@ def _validate_upload_url(url: str | None, *, field: str = "file") -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="URL must point to an uploaded file from the media library.",
         )
+
+
+def _normalize_media_fields(
+    *,
+    category: str,
+    title: str,
+    description: str | None,
+    file_url: str | None,
+    cover_url: str | None,
+    external_url: str | None,
+    body: str | None,
+) -> dict:
+    from app.services.media_channels import (
+        CHANNEL_CATEGORIES,
+        extract_youtube_id,
+        is_http_url,
+        is_podcast_external_url,
+        youtube_thumbnail_url,
+    )
+    from app.services.storage import is_managed_upload_url
+
+    cat = (category or "magazine").strip().lower() or "magazine"
+    if cat not in CHANNEL_CATEGORIES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid media category.",
+        )
+    clean_title = title.strip()
+    if not clean_title:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title is required.")
+    clean_description = strip_plain_text(description) if description else None
+    clean_file = (file_url or "").strip() or None
+    clean_cover = (cover_url or "").strip() or None
+    clean_external = (external_url or "").strip() or None
+    clean_body = strip_plain_text(body) if body else None
+
+    if cat in {"hero", "magazine"}:
+        if not clean_file:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File URL is required for this media type.",
+            )
+        _validate_upload_url(clean_file, field="File")
+        if clean_cover:
+            _validate_upload_url(clean_cover, field="Cover")
+        return {
+            "title": clean_title,
+            "description": clean_description,
+            "file_url": clean_file,
+            "cover_url": clean_cover,
+            "external_url": None,
+            "body": None,
+            "category": cat,
+        }
+
+    if cat == "youtube":
+        video_id = extract_youtube_id(clean_external or "")
+        if not video_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Enter a valid YouTube URL.",
+            )
+        if clean_cover:
+            if clean_cover.startswith("https://img.youtube.com/"):
+                pass
+            else:
+                _validate_upload_url(clean_cover, field="Cover")
+        else:
+            clean_cover = youtube_thumbnail_url(video_id)
+        return {
+            "title": clean_title,
+            "description": clean_description,
+            "file_url": None,
+            "cover_url": clean_cover,
+            "external_url": clean_external,
+            "body": None,
+            "category": cat,
+        }
+
+    if cat == "podcast":
+        if not clean_external and not clean_file:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Add a podcast episode URL or upload an audio file.",
+            )
+        if clean_external:
+            if not (
+                is_podcast_external_url(clean_external)
+                or is_managed_upload_url(clean_external)
+                or is_http_url(clean_external)
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Enter a valid podcast episode URL.",
+                )
+            # Prefer external link; uploaded audio can sit in file_url instead.
+            if is_managed_upload_url(clean_external) and not clean_file:
+                clean_file = clean_external
+                # keep external_url for listen CTA when it's a public http link
+                if not is_http_url(clean_external):
+                    clean_external = clean_external
+        if clean_file:
+            _validate_upload_url(clean_file, field="Audio file")
+        if clean_cover:
+            _validate_upload_url(clean_cover, field="Cover")
+        listen_url = clean_external or clean_file
+        return {
+            "title": clean_title,
+            "description": clean_description,
+            "file_url": clean_file,
+            "cover_url": clean_cover,
+            "external_url": listen_url,
+            "body": None,
+            "category": cat,
+        }
+
+    # blog
+    if not clean_body or len(clean_body.strip()) < 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Blog body is required.",
+        )
+    if clean_cover:
+        _validate_upload_url(clean_cover, field="Cover")
+    return {
+        "title": clean_title,
+        "description": clean_description,
+        "file_url": None,
+        "cover_url": clean_cover,
+        "external_url": None,
+        "body": clean_body,
+        "category": "blog",
+    }
 
 
 def _block_has_content(block: ContentBlock, children_by_parent: dict[int, list[ContentBlock]]) -> bool:
@@ -1713,7 +1850,7 @@ async def admin_upload(
         allowed_suffixes=ALLOWED_UPLOAD_EXTENSIONS,
         max_bytes=MAX_UPLOAD_BYTES,
         folder=folder,
-        invalid_detail="File type not allowed. Use videos, images, PDF, EPUB, or Word.",
+        invalid_detail="File type not allowed. Use videos, audio, images, PDF, EPUB, or Word.",
         too_large_detail="File is too large. Maximum upload size is 500 MB.",
     )
     return UploadOut(url=url, filename=display_name)
@@ -1745,16 +1882,25 @@ def admin_create_media(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> MediaAssetOut:
-    _validate_upload_url(payload.file_url, field="File")
-    if payload.cover_url:
-        _validate_upload_url(payload.cover_url, field="Cover")
+    from app.services.media_channels import media_public_path
 
+    fields = _normalize_media_fields(
+        category=payload.category,
+        title=payload.title,
+        description=payload.description,
+        file_url=payload.file_url,
+        cover_url=payload.cover_url,
+        external_url=payload.external_url,
+        body=payload.body,
+    )
     asset = MediaAsset(
-        title=payload.title.strip(),
-        description=strip_plain_text(payload.description),
-        file_url=payload.file_url.strip(),
-        cover_url=payload.cover_url.strip() if payload.cover_url else None,
-        category=payload.category.strip().lower() or "magazine",
+        title=fields["title"],
+        description=fields["description"],
+        file_url=fields["file_url"],
+        cover_url=fields["cover_url"],
+        external_url=fields["external_url"],
+        body=fields["body"],
+        category=fields["category"],
         published=payload.published,
         featured=payload.featured,
         sort_order=payload.sort_order,
@@ -1769,7 +1915,7 @@ def admin_create_media(
             title="New media published",
             body=f'"{asset.title}" is now available in CAISBE media resources.',
             kind="media",
-            path="/resources/media",
+            path=media_public_path(asset.category),
         )
     db.commit()
     db.refresh(asset)
@@ -1783,25 +1929,37 @@ def admin_update_media(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> MediaAssetOut:
+    from app.services.media_channels import media_public_path
+
     asset = db.query(MediaAsset).filter(MediaAsset.id == asset_id).first()
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media asset not found")
 
     was_published = bool(asset.published)
     data = payload.model_dump(exclude_unset=True)
-    if "file_url" in data:
-        _validate_upload_url(data["file_url"], field="File")
-    if data.get("cover_url"):
-        _validate_upload_url(data["cover_url"], field="Cover")
-    if "title" in data and data["title"]:
-        data["title"] = data["title"].strip()
-    if "description" in data:
-        data["description"] = strip_plain_text(data["description"])
-    if "category" in data and data["category"]:
-        data["category"] = data["category"].strip().lower()
+    fields = _normalize_media_fields(
+        category=data.get("category", asset.category),
+        title=data.get("title", asset.title),
+        description=data["description"] if "description" in data else asset.description,
+        file_url=data["file_url"] if "file_url" in data else asset.file_url,
+        cover_url=data["cover_url"] if "cover_url" in data else asset.cover_url,
+        external_url=data["external_url"] if "external_url" in data else asset.external_url,
+        body=data["body"] if "body" in data else asset.body,
+    )
+    asset.title = fields["title"]
+    asset.description = fields["description"]
+    asset.file_url = fields["file_url"]
+    asset.cover_url = fields["cover_url"]
+    asset.external_url = fields["external_url"]
+    asset.body = fields["body"]
+    asset.category = fields["category"]
+    if "published" in data:
+        asset.published = bool(data["published"])
+    if "featured" in data:
+        asset.featured = bool(data["featured"])
+    if "sort_order" in data and data["sort_order"] is not None:
+        asset.sort_order = int(data["sort_order"])
 
-    for key, value in data.items():
-        setattr(asset, key, value)
     if asset.published and not was_published:
         from app.services.notifications import notify_students_publication
 
@@ -1810,7 +1968,7 @@ def admin_update_media(
             title="New media published",
             body=f'"{asset.title}" is now available in CAISBE media resources.',
             kind="media",
-            path="/resources/media",
+            path=media_public_path(asset.category),
         )
     db.commit()
     db.refresh(asset)

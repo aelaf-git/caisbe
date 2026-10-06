@@ -2,8 +2,10 @@ export type MediaAsset = {
   id: number;
   title: string;
   description: string | null;
-  file_url: string;
+  file_url: string | null;
   cover_url: string | null;
+  external_url: string | null;
+  body: string | null;
   category: string;
   published: boolean;
   featured: boolean;
@@ -152,12 +154,23 @@ export async function apiFetch<T>(
   return response.json() as Promise<T>;
 }
 
+export async function fetchPublishedMedia(
+  category: string,
+  options?: { featured?: boolean },
+): Promise<MediaAsset[]> {
+  const params = new URLSearchParams({ category });
+  if (options?.featured) params.set("featured", "true");
+  return apiFetch<MediaAsset[]>(`/media?${params.toString()}`);
+}
+
 export async function fetchPublishedMagazines(options?: {
   featured?: boolean;
 }): Promise<MediaAsset[]> {
-  const params = new URLSearchParams({ category: "magazine" });
-  if (options?.featured) params.set("featured", "true");
-  return apiFetch<MediaAsset[]>(`/media?${params.toString()}`);
+  return fetchPublishedMedia("magazine", options);
+}
+
+export async function fetchPublishedMediaAsset(id: number): Promise<MediaAsset> {
+  return apiFetch<MediaAsset>(`/media/${id}`);
 }
 
 export async function fetchPublishedEvents(options?: {

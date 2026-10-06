@@ -538,8 +538,14 @@ class MediaAsset(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    file_url: Mapped[str] = mapped_column(String(1024))
+    # Uploaded file (magazine PDF, hero media, podcast audio). Optional for link channels.
+    file_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     cover_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    # External watch/listen URL (YouTube, Spotify, Apple Podcasts, etc.).
+    external_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    # Full blog post body (plain text).
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # hero | magazine | youtube | podcast | blog
     category: Mapped[str] = mapped_column(String(32), default="magazine", index=True)
     published: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     featured: Mapped[bool] = mapped_column(Boolean, default=False)

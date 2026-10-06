@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AdvocacyPageContent from "@/components/resources/AdvocacyPageContent";
 import MagazinePageContent from "@/components/resources/MagazinePageContent";
+import MediaChannelPageContent from "@/components/resources/MediaChannelPageContent";
 import { MediaItemContent } from "@/components/resources/MembersCornerContent";
 import TopicPageContent from "@/components/pages/TopicPageContent";
 import {
@@ -57,6 +58,10 @@ export default async function ResourceSubpage({ params }: Props) {
 
   if (slug === "magazine") {
     return <MagazinePageContent />;
+  }
+
+  if (slug === "youtube" || slug === "podcast" || slug === "blog") {
+    return <MediaChannelPageContent channel={slug} />;
   }
 
   if (mediaSlugs.includes(slug)) {

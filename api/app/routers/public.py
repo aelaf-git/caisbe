@@ -69,6 +69,7 @@ def get_hero_carousel(db: Session = Depends(get_db)) -> HeroCarouselOut:
             media_type=_media_type_from_url(row.file_url),
         )
         for row in rows
+        if row.file_url
     ]
     return HeroCarouselOut(transition_ms=transition, slides=slides)
 
@@ -89,6 +90,21 @@ def list_published_media(
         .all()
     )
     return [MediaAssetOut.model_validate(row) for row in rows]
+
+
+@router.get("/media/{asset_id}", response_model=MediaAssetOut)
+def get_published_media_asset(
+    asset_id: int,
+    db: Session = Depends(get_db),
+) -> MediaAssetOut:
+    row = (
+        db.query(MediaAsset)
+        .filter(MediaAsset.id == asset_id, MediaAsset.published.is_(True))
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
+    return MediaAssetOut.model_validate(row)
 
 
 @router.get("/events", response_model=list[IndustryEventOut])

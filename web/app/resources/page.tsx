@@ -4,6 +4,7 @@ import {
   ContentSection,
   SubsectionIndex,
 } from "@/components/pages/ContentPage";
+import { helpDeskContent } from "@/lib/data/helpDesk";
 import { advocacyContent, mediaContent } from "@/lib/data/resources";
 import { resourcesPages } from "@/lib/data/site-pages";
 
@@ -25,6 +26,11 @@ const featuredResources = [
     description:
       "Policy dialogue, Africa–Canada collaboration, and strategic consultancy for sustainable built environments.",
     href: `/resources/${advocacyContent.slug}`,
+  },
+  {
+    title: helpDeskContent.title,
+    description: "How can we help? Search FAQs about courses, exams, membership, and more.",
+    href: `/resources/${helpDeskContent.slug}`,
   },
   {
     title: mediaContent.title,

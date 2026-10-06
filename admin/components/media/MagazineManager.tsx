@@ -114,7 +114,7 @@ export default function MagazineManager({
     setEditingId(asset.id);
     setTitle(asset.title);
     setDescription(asset.description ?? "");
-    setFileUrl(asset.file_url);
+    setFileUrl(asset.file_url ?? null);
     setCoverUrl(asset.cover_url);
     setFeatured(asset.featured);
     setFileProgress(0);
@@ -509,14 +509,18 @@ export default function MagazineManager({
                     </button>
                   </td>
                   <td className="px-6 py-4">
-                    <a
-                      href={asset.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-caisbe-green hover:underline"
-                    >
-                      Open
-                    </a>
+                    {asset.file_url ? (
+                      <a
+                        href={asset.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-caisbe-green hover:underline"
+                      >
+                        Open
+                      </a>
+                    ) : (
+                      <span className="text-caisbe-muted">—</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="inline-flex items-center gap-1">

@@ -73,7 +73,7 @@ export default function MagazinePageContent() {
                       <div className="flex-1" />
                     )}
                     <a
-                      href={issue.file_url}
+                      href={issue.file_url || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-6 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"

@@ -89,8 +89,10 @@ export type MediaAsset = {
   id: number;
   title: string;
   description: string | null;
-  file_url: string;
+  file_url: string | null;
   cover_url: string | null;
+  external_url: string | null;
+  body: string | null;
   category: string;
   published: boolean;
   featured: boolean;

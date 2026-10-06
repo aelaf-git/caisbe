@@ -31,7 +31,12 @@ export default function ButtonLink({
   className = "",
 }: ButtonLinkProps) {
   const classNameFull = `${variantStyles[variant]} ${className}`;
-  if (href.startsWith("http://") || href.startsWith("https://")) {
+  const isExternal =
+    href.startsWith("http://") ||
+    href.startsWith("https://") ||
+    href.startsWith("mailto:") ||
+    href.startsWith("tel:");
+  if (isExternal) {
     return (
       <a href={href} className={classNameFull}>
         {children}

@@ -180,6 +180,10 @@ const rawNavigation: readonly RawNavSection[] = [
             label: "Advocacy and Government",
             href: "/resources/advocacy-government-affairs",
           },
+          {
+            label: "CAISBE Help Desk",
+            href: "/resources/help-desk",
+          },
         ],
       },
       {

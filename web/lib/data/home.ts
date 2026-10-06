@@ -305,7 +305,7 @@ const rawFooterColumns = [
         label: "On-Site Corporate Training",
         href: "/professional-development/learning-formats/on-site-corporate-training",
       },
-      { label: "FAQ", href: "/faq" },
+      { label: "CAISBE Help Desk", href: "/resources/help-desk" },
       {
         label: "Membership Overview and Benefits",
         href: "/membership/overview",

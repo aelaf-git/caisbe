@@ -68,8 +68,8 @@ export const mediaContent = {
         "Learning snippets for FM practitioners",
         "Institute updates and partner features",
       ],
-      ctaLabel: "Contact for Channel Access",
-      ctaHref: "/contact",
+      ctaLabel: "Browse videos",
+      ctaHref: "/resources/youtube",
     },
     {
       slug: "podcast",
@@ -82,8 +82,8 @@ export const mediaContent = {
         "Regional perspectives from Africa and Canada",
         "Trends in workplace, assets, and green buildings",
       ],
-      ctaLabel: "Ask About Episodes",
-      ctaHref: "/contact",
+      ctaLabel: "Browse episodes",
+      ctaHref: "/resources/podcast",
     },
     {
       slug: "blog",
@@ -96,8 +96,8 @@ export const mediaContent = {
         "Policy and advocacy context for FM leaders",
         "Announcements tied to programs and learning",
       ],
-      ctaLabel: "Suggest a Topic",
-      ctaHref: "/contact",
+      ctaLabel: "Browse posts",
+      ctaHref: "/resources/blog",
     },
   ],
 };
