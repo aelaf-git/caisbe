@@ -1170,8 +1170,15 @@ def list_my_notifications(
     db: Session = Depends(get_db),
 ) -> dict:
     from app.schemas.notifications import NotificationListOut, NotificationOut
-    from app.services.notifications import list_user_notifications, unread_notification_count
+    from app.services.notifications import (
+        ensure_membership_expiry_reminders,
+        list_user_notifications,
+        unread_notification_count,
+    )
 
+    created = ensure_membership_expiry_reminders(db, current_user)
+    if created:
+        db.commit()
     items = list_user_notifications(db, current_user)
     return NotificationListOut(
         unread_count=unread_notification_count(db, current_user),

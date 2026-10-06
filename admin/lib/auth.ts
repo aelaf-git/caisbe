@@ -216,6 +216,18 @@ export type NewsletterCampaign = {
   sent_at: string;
 };
 
+export type NotificationBroadcast = {
+  id: number;
+  title: string;
+  body: string;
+  kind: "announcement" | "message" | "holiday" | string;
+  link?: string | null;
+  audience: string;
+  recipient_count: number;
+  created_at: string;
+  sent_by_name?: string | null;
+};
+
 export type AdminDashboard = {
   students: number;
   courses_total: number;

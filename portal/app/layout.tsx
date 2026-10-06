@@ -8,6 +8,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "CAISBE Student Portal",
   description: "CAISBE student course portal",
+  icons: {
+    icon: [{ url: "/images/favicon.png", type: "image/png" }],
+    apple: [{ url: "/images/favicon.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

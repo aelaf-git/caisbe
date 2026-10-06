@@ -324,6 +324,17 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
         course = item.course or db.query(Course).filter(Course.id == item.course_id).one()
         _ensure_enrollment(db, user, course, "enrolled")
 
+    from app.services.notifications import notify_payment_received
+
+    item_titles = [item.title for item in order.items if (item.title or "").strip()]
+    order_label = ", ".join(item_titles[:3]) if item_titles else order.number
+    notify_payment_received(
+        db,
+        user,
+        amount_cents=paid,
+        order_name=order_label,
+    )
+
 
 def _cancel_stale_pending_course_checkouts(db: Session, user: User, course_ids: list[int]) -> None:
     """Clear stuck pending_payment enrollments/orders so checkout can be retried.

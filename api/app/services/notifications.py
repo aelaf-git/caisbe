@@ -6,7 +6,9 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.models import Notification, User
+from app.models import Enrollment, MembershipCertificate, Notification, NotificationBroadcast, User
+
+MEMBERSHIP_EXPIRY_REMINDER_DAYS = 14
 
 
 def notify_users(
@@ -42,16 +44,144 @@ def notify_all_students(
     kind: str = "info",
     link: str | None = None,
 ) -> list[Notification]:
-    student_ids = [
-        row[0]
-        for row in db.query(User.id).filter(User.role == "student").all()
-    ]
+    student_ids = [row[0] for row in db.query(User.id).filter(User.role == "student").all()]
     return notify_users(
         db,
         student_ids,
         title=title,
         body=body,
         kind=kind,
+        link=link,
+    )
+
+
+def notify_enrolled_students(
+    db: Session,
+    course_id: int,
+    *,
+    title: str,
+    body: str,
+    kind: str = "course_update",
+    link: str | None = None,
+) -> list[Notification]:
+    user_ids = [
+        row[0]
+        for row in db.query(Enrollment.user_id)
+        .filter(
+            Enrollment.course_id == course_id,
+            Enrollment.status.notin_(("pending_payment", "revoked")),
+        )
+        .distinct()
+        .all()
+    ]
+    return notify_users(db, user_ids, title=title, body=body, kind=kind, link=link)
+
+
+def broadcast_to_students(
+    db: Session,
+    *,
+    title: str,
+    body: str,
+    kind: str = "announcement",
+    link: str | None = None,
+    audience: str = "all_students",
+    sent_by_id: int | None = None,
+) -> NotificationBroadcast:
+    rows = notify_all_students(db, title=title, body=body, kind=kind, link=link)
+    broadcast = NotificationBroadcast(
+        title=title.strip()[:255],
+        body=body.strip(),
+        kind=(kind or "announcement").strip()[:40] or "announcement",
+        link=(link or "").strip()[:255] or None,
+        audience=(audience or "all_students").strip()[:40] or "all_students",
+        recipient_count=len(rows),
+        sent_by_id=sent_by_id,
+    )
+    db.add(broadcast)
+    db.flush()
+    return broadcast
+
+
+def notify_payment_received(
+    db: Session,
+    user: User,
+    *,
+    amount_cents: int,
+    order_name: str | None = None,
+) -> list[Notification]:
+    dollars = amount_cents / 100
+    label = (order_name or "your order").strip() or "your order"
+    return notify_users(
+        db,
+        [user.id],
+        title="Payment received",
+        body=f"We received your payment of ${dollars:,.2f} for {label}. Thank you.",
+        kind="payment",
+        link="/account",
+    )
+
+
+def ensure_membership_expiry_reminders(db: Session, user: User) -> list[Notification]:
+    """Create at most one reminder when membership expires within 14 days or has expired."""
+    if user.role != "student":
+        return []
+    cert = (
+        db.query(MembershipCertificate)
+        .filter(MembershipCertificate.user_id == user.id)
+        .first()
+    )
+    if cert is None or cert.expires_at is None:
+        return []
+
+    now = datetime.now(timezone.utc)
+    expires = cert.expires_at
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+
+    days_left = (expires.date() - now.date()).days
+    if days_left > MEMBERSHIP_EXPIRY_REMINDER_DAYS:
+        return []
+
+    expiry_key = expires.date().isoformat()
+    link = f"/membership#expiry-{expiry_key}"
+    existing = (
+        db.query(Notification)
+        .filter(
+            Notification.user_id == user.id,
+            Notification.kind == "membership_expiry",
+            Notification.link == link,
+        )
+        .first()
+    )
+    if existing is not None:
+        return []
+
+    if days_left < 0:
+        title = "Membership expired"
+        body = (
+            f"Your CAISBE membership expired on {expires.strftime('%B %d, %Y')}. "
+            "Renew on the Membership page to restore full access."
+        )
+    elif days_left == 0:
+        title = "Membership expires today"
+        body = (
+            "Your CAISBE membership expires today. "
+            "Renew on the Membership page to keep your access."
+        )
+    else:
+        title = "Membership expiry reminder"
+        body = (
+            f"Your CAISBE membership expires on {expires.strftime('%B %d, %Y')} "
+            f"({days_left} day{'s' if days_left != 1 else ''} left). "
+            "Renew on the Membership page when you are ready."
+        )
+
+    return notify_users(
+        db,
+        [user.id],
+        title=title,
+        body=body,
+        kind="membership_expiry",
         link=link,
     )
 

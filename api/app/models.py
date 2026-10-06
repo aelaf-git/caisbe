@@ -833,6 +833,24 @@ class Notification(Base):
     user: Mapped["User"] = relationship(back_populates="notifications")
 
 
+class NotificationBroadcast(Base):
+    """Admin-sent announcement/message log (in-app notifications to members)."""
+
+    __tablename__ = "notification_broadcasts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    body: Mapped[str] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(String(40), default="announcement")
+    link: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    audience: Mapped[str] = mapped_column(String(40), default="all_students")
+    recipient_count: Mapped[int] = mapped_column(Integer, default=0)
+    sent_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    sent_by: Mapped[User | None] = relationship()
+
+
 class JobPosting(Base):
     """CAISBE job board listings with manual publish and expiry dates."""
 

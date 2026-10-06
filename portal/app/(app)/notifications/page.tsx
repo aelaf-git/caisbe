@@ -106,6 +106,9 @@ export default function NotificationsPage() {
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
                         {new Date(item.created_at).toLocaleString()}
+                        <span className="ml-2 rounded-full bg-admin-surface-muted px-2 py-0.5 text-[10px] font-bold text-caisbe-text">
+                          {item.kind.replaceAll("_", " ")}
+                        </span>
                         {unread ? (
                           <span className="ml-2 rounded-full bg-caisbe-red px-2 py-0.5 text-[10px] font-bold text-white">
                             New

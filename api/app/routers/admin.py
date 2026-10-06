@@ -41,6 +41,7 @@ from app.models import (
     QuizQuestion,
     User,
     MembershipApplication,
+    NotificationBroadcast,
     Order,
     Payment,
     Promotion,
@@ -129,6 +130,11 @@ from app.schemas.news import (
     NewsPostOut,
     NewsPostUpdateIn,
     slugify_title,
+)
+from app.schemas.notifications import (
+    AdminNotificationBroadcastOut,
+    AdminNotificationSendIn,
+    AdminNotificationSendOut,
 )
 from app.services.analytics import display_city, display_country, site_visit_stats
 from app.services.email import EmailDeliveryError, load_upload_attachment, send_email
@@ -1091,7 +1097,20 @@ def admin_save_course_changes(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
     if course.status == "published":
+        from app.services.notifications import notify_enrolled_students
+
         _apply_course_draft_meta(course)
+        notify_enrolled_students(
+            db,
+            course.id,
+            title="Course updated",
+            body=(
+                f'"{course.title}" ({course.code}) was updated. '
+                "Open My courses to review the latest content."
+            ),
+            kind="course_update",
+            link=f"/courses/{course.id}",
+        )
     else:
         # Draft courses already persist to live columns on autosave.
         course.draft_meta = None
@@ -1805,6 +1824,67 @@ def admin_list_newsletter_campaigns(
         .all()
     )
     return [NewsletterCampaignOut.model_validate(row) for row in rows]
+
+
+@router.get("/notifications/broadcasts", response_model=list[AdminNotificationBroadcastOut])
+def admin_list_notification_broadcasts(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[AdminNotificationBroadcastOut]:
+    rows = (
+        db.query(NotificationBroadcast)
+        .order_by(NotificationBroadcast.id.desc())
+        .limit(100)
+        .all()
+    )
+    return [
+        AdminNotificationBroadcastOut(
+            id=row.id,
+            title=row.title,
+            body=row.body,
+            kind=row.kind,
+            link=row.link,
+            audience=row.audience,
+            recipient_count=row.recipient_count,
+            created_at=row.created_at,
+            sent_by_name=row.sent_by.full_name if row.sent_by else None,
+        )
+        for row in rows
+    ]
+
+
+@router.post("/notifications/send", response_model=AdminNotificationSendOut)
+def admin_send_notification_broadcast(
+    payload: AdminNotificationSendIn,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminNotificationSendOut:
+    title = payload.title.strip()
+    body = strip_plain_text(payload.body) or ""
+    if not title:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title is required.")
+    if not body.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message body is required.")
+
+    from app.services.notifications import broadcast_to_students
+
+    link = (payload.link or "").strip() or None
+    broadcast = broadcast_to_students(
+        db,
+        title=title,
+        body=body,
+        kind=payload.kind,
+        link=link,
+        audience=payload.audience,
+        sent_by_id=admin.id,
+    )
+    db.commit()
+    db.refresh(broadcast)
+    return AdminNotificationSendOut(
+        broadcast_id=broadcast.id,
+        recipient_count=broadcast.recipient_count,
+        message=f"Notification sent to {broadcast.recipient_count} registered member(s).",
+    )
 
 
 @router.post("/newsletter/send", response_model=NewsletterSendOut)
