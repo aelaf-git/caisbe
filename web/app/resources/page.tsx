@@ -7,6 +7,7 @@ import {
 import { helpDeskContent } from "@/lib/data/helpDesk";
 import { advocacyContent, mediaContent } from "@/lib/data/resources";
 import { resourcesPages } from "@/lib/data/site-pages";
+import { ticketsContent } from "@/lib/data/tickets";
 
 export const metadata: Metadata = {
   title: "Resources | CAISBE",
@@ -31,6 +32,11 @@ const featuredResources = [
     title: helpDeskContent.title,
     description: "How can we help? Search FAQs about courses, exams, membership, and more.",
     href: `/resources/${helpDeskContent.slug}`,
+  },
+  {
+    title: ticketsContent.title,
+    description: ticketsContent.lead,
+    href: `/resources/${ticketsContent.slug}`,
   },
   {
     title: mediaContent.title,

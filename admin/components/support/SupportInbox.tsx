@@ -36,7 +36,7 @@ export default function SupportInbox() {
       setThreads(rows);
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to load support inbox.");
+      setError(err instanceof ApiError ? err.detail : "Unable to load tickets.");
     }
   }, [statusFilter]);
 
@@ -53,7 +53,7 @@ export default function SupportInbox() {
         current.map((row) => (row.id === threadId ? { ...row, unread_count: 0 } : row)),
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to open conversation.");
+      setError(err instanceof ApiError ? err.detail : "Unable to open ticket.");
     }
   }, []);
 
@@ -156,7 +156,7 @@ export default function SupportInbox() {
       <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
         <aside className="max-h-[70vh] space-y-1 overflow-y-auto rounded-md border border-ifma-border bg-admin-surface p-2">
           {threads.length === 0 ? (
-            <p className="px-3 py-8 text-center text-sm text-caisbe-muted">No conversations.</p>
+            <p className="px-3 py-8 text-center text-sm text-caisbe-muted">No tickets.</p>
           ) : (
             threads.map((thread) => {
               const active = thread.id === selectedId;
@@ -270,7 +270,7 @@ export default function SupportInbox() {
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center text-sm text-caisbe-muted">
-              Select a conversation from the inbox.
+              Select a ticket from the inbox.
             </div>
           )}
         </section>

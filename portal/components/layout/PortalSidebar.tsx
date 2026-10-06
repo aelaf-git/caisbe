@@ -32,7 +32,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Account",
     items: [
-      { href: "/messages", label: "Messages", icon: "chat", match: "prefix" },
+      { href: "/messages", label: "Tickets", icon: "chat", match: "prefix" },
       { href: "/notifications", label: "Notifications", icon: "bell", match: "prefix" },
       { href: "/account", label: "Manage profile", icon: "user", match: "prefix" },
     ],

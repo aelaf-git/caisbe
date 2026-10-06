@@ -86,7 +86,7 @@ export default function AboutPageContent() {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-caisbe-red">
                 {person.role}
               </p>
-              <h3 className="font-display mt-3 text-xl font-semibold text-caisbe-text-dark">
+              <h3 className="font-hopewell-display mt-3 text-xl font-bold tracking-tight text-caisbe-text-dark">
                 {person.name}
               </h3>
               <p className="mt-2 text-sm font-medium leading-6 text-caisbe-text">
@@ -129,12 +129,12 @@ export default function AboutPageContent() {
                     className="h-full w-full object-contain p-2"
                   />
                 ) : (
-                  <span className="font-display text-sm font-bold tracking-wide text-caisbe-red">
+                  <span className="font-hopewell-display text-sm font-bold tracking-wide text-caisbe-red">
                     {member.shortName}
                   </span>
                 )}
               </div>
-              <h3 className="font-display mt-4 text-base font-semibold leading-snug text-caisbe-text-dark">
+              <h3 className="font-hopewell-display mt-4 text-base font-bold leading-snug tracking-tight text-caisbe-text-dark">
                 {member.name}
               </h3>
               <p className="mt-2 text-sm leading-6 text-caisbe-text">
@@ -147,7 +147,7 @@ export default function AboutPageContent() {
 
       <ContentSection className="!py-20 md:!py-24 text-center">
         <div className="mx-auto max-w-2xl">
-          <h2 className="font-display text-caisbe-text-dark text-2xl font-semibold md:text-3xl">
+          <h2 className="font-hopewell-display text-caisbe-text-dark text-2xl font-extrabold tracking-tight md:text-3xl">
             {builtEnvironment.title}
           </h2>
           <p className="mt-4 text-base leading-8 text-caisbe-text">

@@ -66,7 +66,9 @@ export default function MagazinePageContent() {
                     </div>
                   )}
                   <div className="flex flex-1 flex-col p-6">
-                    <h3 className="text-lg font-semibold text-ifma-navy">{issue.title}</h3>
+                    <h3 className="font-hopewell-display text-lg font-bold tracking-tight text-ifma-navy">
+                      {issue.title}
+                    </h3>
                     {issue.description ? (
                       <p className="mt-3 flex-1 text-sm leading-6 text-ifma-muted">{issue.description}</p>
                     ) : (

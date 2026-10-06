@@ -89,7 +89,7 @@ export default function HelpDeskPageContent() {
               </p>
               <div className="mt-6">
                 <ButtonLink href={helpDeskContent.contactHref} variant="primary">
-                  Contact Us
+                  {helpDeskContent.contactLabel}
                 </ButtonLink>
               </div>
             </div>

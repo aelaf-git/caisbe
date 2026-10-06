@@ -8,8 +8,8 @@ export default function AdminSupportPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Support"
-        title="Student messages"
-        description="Reply to student questions and issues in near real time. Students message from the portal Messages page."
+        title="Student tickets"
+        description="Review and reply to student IT and support tickets. Students open tickets from the portal Tickets page."
       />
       <SupportInbox />
     </div>

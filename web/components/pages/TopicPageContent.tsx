@@ -1,3 +1,4 @@
+import ButtonLink from "@/components/ui/ButtonLink";
 import {
   ContentSection,
   PageHero,
@@ -25,6 +26,13 @@ export default function TopicPageContent({
         lead={page.lead}
         backHref={indexHref}
         backLabel={indexLabel}
+        actions={
+          page.ctaLabel && page.ctaHref ? (
+            <ButtonLink href={page.ctaHref} variant="primary">
+              {page.ctaLabel}
+            </ButtonLink>
+          ) : undefined
+        }
       >
         <p className="mt-6 text-base leading-7 text-caisbe-muted">
           {page.description}

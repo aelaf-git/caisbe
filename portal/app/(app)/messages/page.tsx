@@ -40,7 +40,7 @@ export default function MessagesPage() {
       setError(null);
       return rows;
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to load messages.");
+      setError(err instanceof ApiError ? err.detail : "Unable to load tickets.");
       return [];
     }
   }, []);
@@ -59,7 +59,7 @@ export default function MessagesPage() {
         current.map((row) => (row.id === threadId ? { ...row, unread_count: 0 } : row)),
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to open conversation.");
+      setError(err instanceof ApiError ? err.detail : "Unable to open ticket.");
     }
   }, []);
 
@@ -118,7 +118,7 @@ export default function MessagesPage() {
       await loadThreads();
       await openThread(created.id);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to start conversation.");
+      setError(err instanceof ApiError ? err.detail : "Unable to create ticket.");
     } finally {
       setBusy(false);
     }
@@ -153,8 +153,8 @@ export default function MessagesPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Support"
-        title="Messages"
-        description="Ask questions or file issues with CAISBE admin. Conversations update in near real time."
+        title="Tickets"
+        description="Open tickets for IT and technical issues, or ask questions. Track status and replies in near real time."
       />
 
       <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
@@ -168,11 +168,11 @@ export default function MessagesPage() {
             }}
             className="w-full rounded-md border-2 border-caisbe-red bg-caisbe-red px-3 py-2 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark"
           >
-            New message
+            New ticket
           </button>
           <ul className="max-h-[60vh] space-y-1 overflow-y-auto">
             {threads.length === 0 ? (
-              <li className="px-2 py-6 text-center text-sm text-caisbe-muted">No conversations yet.</li>
+              <li className="px-2 py-6 text-center text-sm text-caisbe-muted">No tickets yet.</li>
             ) : (
               threads.map((thread) => {
                 const active = thread.id === selectedId && !composing;
@@ -212,7 +212,7 @@ export default function MessagesPage() {
         <section className="flex min-h-[420px] flex-col rounded-md border border-ifma-border bg-admin-surface">
           {composing ? (
             <form onSubmit={(e) => void createThread(e)} className="flex flex-1 flex-col gap-4 p-5">
-              <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Start a conversation</h2>
+              <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Open a new ticket</h2>
               <label className="block text-sm font-semibold text-caisbe-text">
                 Type
                 <select
@@ -320,7 +320,7 @@ export default function MessagesPage() {
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center px-5 text-sm text-caisbe-muted">
-              Select a conversation or start a new message.
+              Select a ticket or open a new one.
             </div>
           )}
         </section>

@@ -184,6 +184,10 @@ const rawNavigation: readonly RawNavSection[] = [
             label: "CAISBE Help Desk",
             href: "/resources/help-desk",
           },
+          {
+            label: "Tickets",
+            href: "/resources/tickets",
+          },
         ],
       },
       {

@@ -81,7 +81,7 @@ export default async function NewsPageContent() {
                       {formatNewsDate(post.posted_on)}
                       {post.tag ? ` · ${post.tag}` : ""}
                     </p>
-                    <h3 className="mt-2 font-display text-2xl font-semibold text-caisbe-text-dark">
+                    <h3 className="mt-2 font-hopewell-display text-2xl font-bold tracking-tight text-caisbe-text-dark">
                       {post.title}
                     </h3>
                     {post.short_description ? (

@@ -50,7 +50,9 @@ export default function JoinCaisbeForm() {
 
   return (
     <form onSubmit={(e) => void submit(e)} className="mt-10 grid gap-4 border border-ifma-border bg-white p-6 md:grid-cols-2">
-      <h2 className="font-display text-xl font-semibold text-caisbe-text-dark md:col-span-2">Join CAISBE</h2>
+      <h2 className="font-hopewell-display text-xl font-extrabold tracking-tight text-caisbe-text-dark md:col-span-2">
+        Join CAISBE
+      </h2>
       <p className="text-sm text-caisbe-muted md:col-span-2">
         This form uses the same membership fields as the student portal. It does not enroll you in a course.
       </p>
