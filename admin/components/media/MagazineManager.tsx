@@ -124,7 +124,7 @@ export default function MagazineManager({
     resetBaseline({
       title: asset.title.trim(),
       description: (asset.description ?? "").trim(),
-      file_url: asset.file_url,
+      file_url: asset.file_url ?? null,
       cover_url: asset.cover_url,
       featured: asset.featured,
     });

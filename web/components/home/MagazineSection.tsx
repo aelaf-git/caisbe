@@ -66,14 +66,16 @@ export default async function MagazineSection() {
                   ) : (
                     <div className="flex-1" />
                   )}
-                  <a
-                    href={issue.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 text-base font-bold text-caisbe-red hover:underline"
-                  >
-                    Read issue
-                  </a>
+                  {issue.file_url ? (
+                    <a
+                      href={issue.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 text-base font-bold text-caisbe-red hover:underline"
+                    >
+                      Read issue
+                    </a>
+                  ) : null}
                 </div>
               </article>
             ))}
