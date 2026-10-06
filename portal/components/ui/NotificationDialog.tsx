@@ -42,6 +42,10 @@ export default function NotificationDialog({
 
   if (!item) return null;
 
+  const externalLink = Boolean(item.link && /^https?:\/\//i.test(item.link));
+  const linkClassName =
+    "inline-flex h-11 items-center justify-center rounded-full border-2 border-caisbe-red bg-admin-surface px-6 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white";
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <button
@@ -75,12 +79,19 @@ export default function NotificationDialog({
           {item.body}
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-          {item.link ? (
-            <Link
+          {item.link && externalLink ? (
+            <a
               href={item.link}
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={onClose}
-              className="inline-flex h-11 items-center justify-center rounded-full border-2 border-caisbe-red bg-admin-surface px-6 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
+              className={linkClassName}
             >
+              Open related page
+            </a>
+          ) : null}
+          {item.link && !externalLink ? (
+            <Link href={item.link} onClick={onClose} className={linkClassName}>
               Open related page
             </Link>
           ) : null}

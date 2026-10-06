@@ -6,9 +6,23 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.models import Enrollment, MembershipCertificate, Notification, NotificationBroadcast, User
 
 MEMBERSHIP_EXPIRY_REMINDER_DAYS = 14
+
+EVENT_TYPE_PATHS = {
+    "calendar": "/events/calendar",
+    "expo": "/events/expo",
+    "conferences": "/events/conferences",
+}
+
+
+def public_site_link(path: str) -> str:
+    """Absolute URL on the public marketing site for notification CTAs."""
+    base = (settings.web_public_url or "").strip().rstrip("/") or "https://caisbe.org"
+    clean = "/" + (path or "").strip().lstrip("/")
+    return f"{base}{clean}"
 
 
 def notify_users(
@@ -52,6 +66,24 @@ def notify_all_students(
         body=body,
         kind=kind,
         link=link,
+    )
+
+
+def notify_students_publication(
+    db: Session,
+    *,
+    title: str,
+    body: str,
+    kind: str,
+    path: str,
+) -> list[Notification]:
+    """Notify every student when public content is newly published."""
+    return notify_all_students(
+        db,
+        title=title,
+        body=body,
+        kind=kind,
+        link=public_site_link(path),
     )
 
 

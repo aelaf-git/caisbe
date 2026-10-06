@@ -1760,6 +1760,17 @@ def admin_create_media(
         sort_order=payload.sort_order,
     )
     db.add(asset)
+    db.flush()
+    if asset.published:
+        from app.services.notifications import notify_students_publication
+
+        notify_students_publication(
+            db,
+            title="New media published",
+            body=f'"{asset.title}" is now available in CAISBE media resources.',
+            kind="media",
+            path="/resources/media",
+        )
     db.commit()
     db.refresh(asset)
     return MediaAssetOut.model_validate(asset)
@@ -1776,6 +1787,7 @@ def admin_update_media(
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media asset not found")
 
+    was_published = bool(asset.published)
     data = payload.model_dump(exclude_unset=True)
     if "file_url" in data:
         _validate_upload_url(data["file_url"], field="File")
@@ -1790,6 +1802,16 @@ def admin_update_media(
 
     for key, value in data.items():
         setattr(asset, key, value)
+    if asset.published and not was_published:
+        from app.services.notifications import notify_students_publication
+
+        notify_students_publication(
+            db,
+            title="New media published",
+            body=f'"{asset.title}" is now available in CAISBE media resources.',
+            kind="media",
+            path="/resources/media",
+        )
     db.commit()
     db.refresh(asset)
     return MediaAssetOut.model_validate(asset)
@@ -2416,6 +2438,17 @@ def admin_create_event(
         sort_order=payload.sort_order,
     )
     db.add(event)
+    db.flush()
+    if event.published:
+        from app.services.notifications import EVENT_TYPE_PATHS, notify_students_publication
+
+        notify_students_publication(
+            db,
+            title="New event posted",
+            body=f'"{event.title}" is now on the CAISBE events calendar.',
+            kind="event",
+            path=EVENT_TYPE_PATHS.get(event.event_type, "/events"),
+        )
     db.commit()
     db.refresh(event)
     return IndustryEventOut.model_validate(event)
@@ -2431,6 +2464,7 @@ def admin_update_event(
     event = db.query(IndustryEvent).filter(IndustryEvent.id == event_id).first()
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    was_published = bool(event.published)
     data = payload.model_dump(exclude_unset=True)
     if "report_file_url" in data and data["report_file_url"]:
         _validate_upload_url(data["report_file_url"], field="Report file")
@@ -2442,6 +2476,16 @@ def admin_update_event(
             if key == "event_type" and value:
                 value = value.lower()
         setattr(event, key, value)
+    if event.published and not was_published:
+        from app.services.notifications import EVENT_TYPE_PATHS, notify_students_publication
+
+        notify_students_publication(
+            db,
+            title="New event posted",
+            body=f'"{event.title}" is now on the CAISBE events calendar.',
+            kind="event",
+            path=EVENT_TYPE_PATHS.get(event.event_type, "/events"),
+        )
     db.commit()
     db.refresh(event)
     return IndustryEventOut.model_validate(event)
@@ -2537,6 +2581,18 @@ def admin_create_job(
         sort_order=payload.sort_order,
     )
     db.add(row)
+    db.flush()
+    if row.published:
+        from app.services.notifications import notify_students_publication
+
+        company = f" at {row.company}" if row.company else ""
+        notify_students_publication(
+            db,
+            title="New job posted",
+            body=f'"{row.title}"{company} is now on the CAISBE job board.',
+            kind="job",
+            path="/careers/jobs",
+        )
     db.commit()
     db.refresh(row)
     return _job_out(row)
@@ -2552,6 +2608,7 @@ def admin_update_job(
     row = db.query(JobPosting).filter(JobPosting.id == job_id).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    was_published = bool(row.published)
     data = payload.model_dump(exclude_unset=True)
     if "attachment_url" in data and data["attachment_url"]:
         _validate_upload_url(data["attachment_url"], field="Attachment")
@@ -2578,6 +2635,17 @@ def admin_update_job(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Expiry date must be on or after the upload/post date.",
+        )
+    if row.published and not was_published:
+        from app.services.notifications import notify_students_publication
+
+        company = f" at {row.company}" if row.company else ""
+        notify_students_publication(
+            db,
+            title="New job posted",
+            body=f'"{row.title}"{company} is now on the CAISBE job board.',
+            kind="job",
+            path="/careers/jobs",
         )
     db.commit()
     db.refresh(row)
@@ -2668,6 +2736,18 @@ def admin_create_news(
         sort_order=payload.sort_order,
     )
     db.add(row)
+    db.flush()
+    if row.published:
+        from app.services.notifications import notify_students_publication
+
+        blurb = (row.short_description or row.title).strip()
+        notify_students_publication(
+            db,
+            title="New announcement",
+            body=blurb[:500],
+            kind="announcement",
+            path=f"/news/{row.slug}",
+        )
     db.commit()
     db.refresh(row)
     return _news_out(row)
@@ -2683,6 +2763,7 @@ def admin_update_news(
     row = db.query(NewsPost).filter(NewsPost.id == post_id).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
+    was_published = bool(row.published)
     data = payload.model_dump(exclude_unset=True)
     if "cover_url" in data and data["cover_url"]:
         _validate_upload_url(data["cover_url"], field="Cover image")
@@ -2715,6 +2796,17 @@ def admin_update_news(
             if key != "title" and key != "slug" and not value:
                 value = None
         setattr(row, key, value)
+    if row.published and not was_published:
+        from app.services.notifications import notify_students_publication
+
+        blurb = (row.short_description or row.title).strip()
+        notify_students_publication(
+            db,
+            title="New announcement",
+            body=blurb[:500],
+            kind="announcement",
+            path=f"/news/{row.slug}",
+        )
     db.commit()
     db.refresh(row)
     return _news_out(row)

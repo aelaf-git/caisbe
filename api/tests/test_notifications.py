@@ -223,3 +223,77 @@ def test_ensure_membership_expiry_skips_far_future(db: Session) -> None:
     db.commit()
     created = ensure_membership_expiry_reminders(db, user)
     assert created == []
+
+
+def test_publishing_event_and_news_notifies_students(client: TestClient, db: Session) -> None:
+    student = _student(db, "pub-student@example.com")
+    admin = _admin(db)
+    token = _login(client, admin.email)
+    starts = datetime.now(timezone.utc) + timedelta(days=14)
+
+    draft_event = client.post(
+        "/api/admin/events",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "FM Summit Draft",
+            "event_type": "calendar",
+            "starts_on": starts.isoformat(),
+            "published": False,
+        },
+    )
+    assert draft_event.status_code == 201, draft_event.text
+    assert (
+        db.query(Notification)
+        .filter(Notification.user_id == student.id, Notification.kind == "event")
+        .count()
+        == 0
+    )
+
+    published = client.patch(
+        f"/api/admin/events/{draft_event.json()['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"published": True},
+    )
+    assert published.status_code == 200, published.text
+    event_notes = (
+        db.query(Notification)
+        .filter(Notification.user_id == student.id, Notification.kind == "event")
+        .all()
+    )
+    assert len(event_notes) == 1
+    assert "FM Summit Draft" in event_notes[0].body
+    assert event_notes[0].link and "/events/calendar" in event_notes[0].link
+
+    news = client.post(
+        "/api/admin/news",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Chapter update",
+            "short_description": "New chapter office hours.",
+            "posted_on": datetime.now(timezone.utc).isoformat(),
+            "published": True,
+        },
+    )
+    assert news.status_code == 201, news.text
+    news_notes = (
+        db.query(Notification)
+        .filter(Notification.user_id == student.id, Notification.kind == "announcement")
+        .all()
+    )
+    assert len(news_notes) == 1
+    assert news_notes[0].title == "New announcement"
+    assert news_notes[0].link and "/news/" in news_notes[0].link
+
+    # Republishing edits should not spam another notification
+    again = client.patch(
+        f"/api/admin/news/{news.json()['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"short_description": "Updated hours."},
+    )
+    assert again.status_code == 200
+    assert (
+        db.query(Notification)
+        .filter(Notification.user_id == student.id, Notification.kind == "announcement")
+        .count()
+        == 1
+    )

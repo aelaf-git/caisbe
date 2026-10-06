@@ -82,7 +82,7 @@ export default function NotificationsPage() {
       <PageHeader
         eyebrow="Account"
         title="Notifications"
-        description="Updates about your courses, membership, and account. Click a notification to open it."
+        description="Updates about courses, membership, events, announcements, and more. Click a notification to open it."
         actions={
           data && data.unread_count > 0 ? (
             <button

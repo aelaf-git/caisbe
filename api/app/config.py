@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     s3_public_base_url: str = ""
     s3_region: str = "auto"
     portal_public_url: str = "http://localhost:3002"
+    # Public marketing site (news, events, jobs, media) — used in student notification links.
+    web_public_url: str = "http://localhost:3000"
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_publishable_key: str = ""
