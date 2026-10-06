@@ -57,6 +57,15 @@ class Settings(BaseSettings):
     email_from_contact: str = "CAISBE <contact@caisbe.org>"
     email_from_info: str = "CAISBE <info@caisbe.org>"
     email_from_system: str = "CAISBE <noreply@caisbe.org>"
+    # Automatic job board sync (curated feed + optional Adzuna / Arbeitnow).
+    job_sync_enabled: bool = True
+    job_sync_interval_hours: int = 12
+    job_sync_on_startup: bool = True
+    job_sync_expiry_days: int = 45
+    job_feed_url: str = ""
+    adzuna_app_id: str = ""
+    adzuna_app_key: str = ""
+    adzuna_country: str = "ca"
 
     @field_validator("database_url", mode="before")
     @classmethod

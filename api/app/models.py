@@ -852,9 +852,12 @@ class NotificationBroadcast(Base):
 
 
 class JobPosting(Base):
-    """CAISBE job board listings with manual publish and expiry dates."""
+    """CAISBE job board listings (manual and auto-synced) with expiry dates."""
 
     __tablename__ = "job_postings"
+    __table_args__ = (
+        UniqueConstraint("source_label", "external_id", name="uq_job_source_external"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String(255))
@@ -865,7 +868,8 @@ class JobPosting(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     apply_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     attachment_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
-    source_label: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_label: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    external_id: Mapped[str | None] = mapped_column(String(160), nullable=True, index=True)
     posted_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     expires_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)

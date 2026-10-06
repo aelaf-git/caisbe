@@ -109,6 +109,7 @@ from app.schemas.jobs import (
     JobPostingCreateIn,
     JobPostingOut,
     JobPostingUpdateIn,
+    JobSyncOut,
 )
 from app.schemas.testimonials import (
     TestimonialCreateIn,
@@ -2423,6 +2424,29 @@ def admin_list_jobs(
         .all()
     )
     return [_job_out(row, now=now) for row in rows]
+
+
+@router.post("/jobs/sync", response_model=JobSyncOut)
+def admin_sync_jobs(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> JobSyncOut:
+    from app.services.job_sync import sync_jobs
+
+    result = sync_jobs(db)
+    message = (
+        f"Synced jobs: {result.created} new, {result.updated} updated, {result.skipped} unchanged."
+    )
+    if result.errors:
+        message += f" Some sources reported errors ({len(result.errors)})."
+    return JobSyncOut(
+        created=result.created,
+        updated=result.updated,
+        skipped=result.skipped,
+        sources=result.sources or [],
+        errors=result.errors or [],
+        message=message,
+    )
 
 
 @router.post("/jobs", response_model=JobPostingOut, status_code=status.HTTP_201_CREATED)

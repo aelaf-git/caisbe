@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -17,6 +19,37 @@ from app.security.middleware import SecurityHeadersMiddleware
 from app.seeds.admin import seed_admin
 from app.seeds.events_cpd import seed_industry_events
 
+logger = logging.getLogger(__name__)
+
+
+def _run_job_sync() -> None:
+    from app.services.job_sync import sync_jobs
+
+    db = SessionLocal()
+    try:
+        result = sync_jobs(db)
+        logger.info(
+            "Job sync complete created=%s updated=%s skipped=%s sources=%s",
+            result.created,
+            result.updated,
+            result.skipped,
+            result.sources,
+        )
+    except Exception:  # noqa: BLE001 — keep API up if sync fails
+        logger.exception("Job sync failed")
+    finally:
+        db.close()
+
+
+async def _job_sync_loop(stop: asyncio.Event) -> None:
+    hours = max(1, int(settings.job_sync_interval_hours or 12))
+    while not stop.is_set():
+        try:
+            await asyncio.wait_for(stop.wait(), timeout=hours * 3600)
+            break
+        except TimeoutError:
+            await asyncio.to_thread(_run_job_sync)
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -30,7 +63,23 @@ async def lifespan(_: FastAPI):
         seed_industry_events(db)
     finally:
         db.close()
-    yield
+
+    stop = asyncio.Event()
+    sync_task: asyncio.Task | None = None
+    if settings.job_sync_enabled:
+        if settings.job_sync_on_startup:
+            await asyncio.to_thread(_run_job_sync)
+        sync_task = asyncio.create_task(_job_sync_loop(stop))
+    try:
+        yield
+    finally:
+        stop.set()
+        if sync_task is not None:
+            sync_task.cancel()
+            try:
+                await sync_task
+            except asyncio.CancelledError:
+                pass
 
 
 app = FastAPI(

@@ -70,6 +70,8 @@ def client(db: Session) -> Generator[TestClient, None, None]:
         patch("app.main.upgrade_to_head"),
         patch("app.main.seed_admin"),
         patch("app.main.seed_industry_events"),
+        patch("app.main._run_job_sync"),
+        patch("app.config.settings.job_sync_enabled", False),
     ):
         with TestClient(app) as test_client:
             yield test_client

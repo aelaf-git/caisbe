@@ -129,6 +129,7 @@ export type JobPosting = {
   apply_url: string | null;
   attachment_url: string | null;
   source_label: string | null;
+  external_id?: string | null;
   posted_on: string;
   expires_on: string;
   published: boolean;

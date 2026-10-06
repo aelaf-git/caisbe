@@ -14,6 +14,7 @@ class JobPostingOut(BaseModel):
     apply_url: str | None = None
     attachment_url: str | None = None
     source_label: str | None = None
+    external_id: str | None = None
     posted_on: datetime
     expires_on: datetime
     published: bool
@@ -24,6 +25,15 @@ class JobPostingOut(BaseModel):
     is_expired: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class JobSyncOut(BaseModel):
+    created: int
+    updated: int
+    skipped: int
+    sources: list[str] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
+    message: str
 
 
 class JobPostingCreateIn(BaseModel):
