@@ -37,7 +37,6 @@ export default function ContentProtectionShell({
   return (
     <div ref={rootRef} className="relative select-none outline-none" style={PROTECTED_CONTENT_STYLE}>
       {children}
-      <p className="mt-3 text-xs text-caisbe-muted">Protected content — copying is disabled.</p>
     </div>
   );
 }

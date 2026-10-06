@@ -647,6 +647,52 @@ def complete_lesson(
     }
 
 
+@router.delete("/me/lessons/{lesson_id}/complete", status_code=status.HTTP_200_OK)
+def uncomplete_lesson(
+    lesson_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, int | bool]:
+    """Allow a student to clear the completed mark on a topic."""
+    lesson = (
+        db.query(Lesson)
+        .options(
+            joinedload(Lesson.chapter)
+            .joinedload(Chapter.course)
+            .joinedload(Course.chapters)
+            .joinedload(Chapter.lessons)
+        )
+        .filter(Lesson.id == lesson_id)
+        .first()
+    )
+    if lesson is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
+
+    course = lesson.chapter.course
+    if course.status != "published":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    enrollment = require_active_enrollment(db, current_user, course.id)
+    existing = (
+        db.query(LessonProgress)
+        .filter(LessonProgress.user_id == current_user.id, LessonProgress.lesson_id == lesson_id)
+        .first()
+    )
+    if existing is not None:
+        db.delete(existing)
+        db.flush()
+
+    course = _load_published_course(db, course.id)
+    _recompute_progress(db, current_user, course, enrollment)
+    if enrollment.status == "completed" and not course_completion_requirements_met(
+        db, current_user, course
+    ):
+        enrollment.status = "enrolled"
+
+    db.commit()
+    return {"completed": False, "progress": enrollment.progress}
+
+
 @router.post("/me/quizzes/{quiz_id}/submit", response_model=QuizAttemptOut)
 def submit_quiz(
     quiz_id: int,

@@ -32,6 +32,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Account",
     items: [
+      { href: "/messages", label: "Messages", icon: "chat", match: "prefix" },
       { href: "/notifications", label: "Notifications", icon: "bell", match: "prefix" },
       { href: "/account", label: "Manage profile", icon: "user", match: "prefix" },
     ],
@@ -91,6 +92,11 @@ function NavIcon({ name }: { name: string }) {
         <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
       </>
     ),
+    chat: (
+      <>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </>
+    ),
   };
   return (
     <svg
@@ -119,6 +125,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
   const router = useRouter();
   const [cartCount, setCartCount] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -135,6 +142,13 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
       })
       .catch(() => {
         if (active) setUnreadNotifications(0);
+      });
+    void apiFetch<{ unread_count: number }>("/me/support/unread")
+      .then((data) => {
+        if (active) setUnreadMessages(data.unread_count);
+      })
+      .catch(() => {
+        if (active) setUnreadMessages(0);
       });
     return () => {
       active = false;
@@ -186,6 +200,11 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
                     {item.href === "/cart" && cartCount > 0 ? (
                       <span className="rounded-full bg-caisbe-red px-2 py-0.5 text-xs font-semibold text-white">
                         {cartCount}
+                      </span>
+                    ) : null}
+                    {item.href === "/messages" && unreadMessages > 0 ? (
+                      <span className="rounded-full bg-caisbe-red px-2 py-0.5 text-xs font-semibold text-white">
+                        {unreadMessages}
                       </span>
                     ) : null}
                     {item.href === "/notifications" && unreadNotifications > 0 ? (

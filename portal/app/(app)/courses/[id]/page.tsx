@@ -171,14 +171,24 @@ export default function CoursePlayerPage() {
     return { kind: "chapter-block", blockId: assignment.id };
   }, [activeChapterBlock, course, selection]);
 
-  async function markComplete() {
+  async function toggleTopicComplete() {
     if (!activeTopic) return;
     setBusy(true);
     try {
-      await apiFetch(`/me/lessons/${activeTopic.id}/complete`, { method: "POST" });
+      if (activeTopic.completed) {
+        await apiFetch(`/me/lessons/${activeTopic.id}/complete`, { method: "DELETE" });
+      } else {
+        await apiFetch(`/me/lessons/${activeTopic.id}/complete`, { method: "POST" });
+      }
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to mark complete.");
+      setError(
+        err instanceof ApiError
+          ? err.detail
+          : activeTopic.completed
+            ? "Unable to mark incomplete."
+            : "Unable to mark complete.",
+      );
     } finally {
       setBusy(false);
     }
@@ -266,7 +276,7 @@ export default function CoursePlayerPage() {
                 activeChapterBlock={activeChapterBlock}
                 chapterMedia={chapterMedia}
                 busy={busy}
-                onMarkComplete={() => void markComplete()}
+                onToggleTopicComplete={() => void toggleTopicComplete()}
                 onReload={load}
                 onQuizResult={(result: QuizAttempt | null) => {
                   setQuizPassed(result != null);

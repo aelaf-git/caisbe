@@ -17,7 +17,7 @@ export default function LessonStage({
   activeChapterBlock,
   chapterMedia,
   busy,
-  onMarkComplete,
+  onToggleTopicComplete,
   onReload,
   onQuizResult,
   onPrev,
@@ -33,7 +33,7 @@ export default function LessonStage({
   activeChapterBlock: ContentBlock | null;
   chapterMedia: ContentBlock[];
   busy: boolean;
-  onMarkComplete: () => void;
+  onToggleTopicComplete: () => void;
   onReload: () => Promise<void>;
   onQuizResult?: (result: QuizAttempt | null) => void;
   onPrev: () => void;
@@ -134,11 +134,19 @@ export default function LessonStage({
         {activeTopic ? (
           <button
             type="button"
-            disabled={busy || activeTopic.completed}
-            onClick={onMarkComplete}
-            className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            disabled={busy}
+            onClick={onToggleTopicComplete}
+            className={
+              activeTopic.completed
+                ? "rounded-md border-2 border-ifma-border bg-admin-surface px-6 py-2.5 text-sm font-semibold uppercase text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red disabled:opacity-60"
+                : "rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            }
           >
-            {activeTopic.completed ? "Topic completed" : busy ? "Saving…" : "Mark topic complete"}
+            {busy
+              ? "Saving…"
+              : activeTopic.completed
+                ? "Mark topic incomplete"
+                : "Mark topic complete"}
           </button>
         ) : (
           <span />

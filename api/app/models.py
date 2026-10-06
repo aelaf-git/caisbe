@@ -79,6 +79,11 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    support_threads: Mapped[list["SupportThread"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="SupportThread.user_id",
+    )
 
 
 class PendingRegistration(Base):
@@ -828,6 +833,59 @@ class Testimonial(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class SupportThread(Base):
+    """Student ↔ admin support conversation (portal messaging)."""
+
+    __tablename__ = "support_threads"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    subject: Mapped[str] = mapped_column(String(255))
+    # question | issue | general
+    kind: Mapped[str] = mapped_column(String(32), default="question", index=True)
+    # open | waiting_admin | waiting_student | closed
+    status: Mapped[str] = mapped_column(String(32), default="open", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+    last_message_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        index=True,
+    )
+
+    user: Mapped["User"] = relationship(
+        back_populates="support_threads",
+        foreign_keys=[user_id],
+    )
+    messages: Mapped[list["SupportMessage"]] = relationship(
+        back_populates="thread",
+        cascade="all, delete-orphan",
+        order_by="SupportMessage.id",
+    )
+
+
+class SupportMessage(Base):
+    __tablename__ = "support_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    thread_id: Mapped[int] = mapped_column(
+        ForeignKey("support_threads.id", ondelete="CASCADE"),
+        index=True,
+    )
+    sender_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    body: Mapped[str] = mapped_column(Text)
+    is_from_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    thread: Mapped["SupportThread"] = relationship(back_populates="messages")
+    sender: Mapped["User"] = relationship(foreign_keys=[sender_user_id])
 
 
 class ContactMessage(Base):
