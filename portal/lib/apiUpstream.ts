@@ -3,9 +3,17 @@
  * Never use public Cloudflare / onrender HTTPS from a Render service (Error 1000).
  */
 
+export const UPSTREAM_FETCH_TIMEOUT_MS = 12_000;
+export const UPSTREAM_COLD_START_RETRIES = 2;
+export const UPSTREAM_RETRY_DELAY_MS = 500;
+
 export function normalizeApiBase(raw: string | undefined | null): string {
-  let value = (raw || "http://127.0.0.1:8000").trim().replace(/\/$/, "");
+  let value = (raw || "http://127.0.0.1:8000").trim();
   if (!value) value = "http://127.0.0.1:8000";
+
+  // Strip trailing slashes and accidental `/api` path (proxies already prefix `/api/...`).
+  value = value.replace(/\/+$/, "");
+  value = value.replace(/\/api$/i, "");
 
   // https://my-api.onrender.com → http://my-api:10000 (Render private network)
   const onrender = value.match(/^https?:\/\/([a-z0-9-]+)\.onrender\.com(?::\d+)?$/i);
@@ -32,10 +40,18 @@ export function candidateApiBases(apiUrlEnv?: string | null): string[] {
   );
   const out: string[] = [configured];
 
-  const private10000 = configured.match(/^(http:\/\/[a-z0-9.-]+):10000$/i);
-  if (private10000) {
-    out.push(`${private10000[1]}:8000`);
+  // Render private services listen on 10000; local/docker often use 8000.
+  const hostPort = configured.match(/^(http:\/\/[a-z0-9.-]+):(\d+)$/i);
+  if (hostPort) {
+    const host = hostPort[1];
+    const port = hostPort[2];
+    if (port === "10000") out.push(`${host}:8000`);
+    else if (port === "8000") out.push(`${host}:10000`);
   }
 
   return [...new Set(out)];
+}
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

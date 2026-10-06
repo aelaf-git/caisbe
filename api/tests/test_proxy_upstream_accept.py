@@ -30,7 +30,12 @@ def is_acceptable_upstream(
         return False
     if 200 <= status < 300 and (status in (204, 205) or body_byte_length == 0):
         return True
-    return looks_like_json(content_type, preview)
+    if looks_like_json(content_type, preview):
+        return True
+    # Forward plain-text API errors — do not mask as "Unable to reach the API".
+    if status >= 400 and "text/html" not in content_type.lower():
+        return True
+    return False
 
 
 def test_accepts_204_no_content() -> None:
@@ -45,6 +50,17 @@ def test_accepts_json_200() -> None:
     assert is_acceptable_upstream(200, "application/json", '{"ok":true}', 11) is True
 
 
+def test_accepts_login_json_401() -> None:
+    assert (
+        is_acceptable_upstream(401, "application/json", '{"detail":"Invalid credentials"}', 30)
+        is True
+    )
+
+
+def test_accepts_plain_text_api_error() -> None:
+    assert is_acceptable_upstream(500, "text/plain", "Internal Server Error", 21) is True
+
+
 def test_rejects_html_502_style() -> None:
     assert is_acceptable_upstream(200, "text/html", "<!DOCTYPE html>Error 1000", 40) is False
 
@@ -54,7 +70,3 @@ def test_rejects_cf_error_1000() -> None:
         is_acceptable_upstream(403, "text/plain", "Error 1000: DNS points to prohibited IP", 40)
         is False
     )
-
-
-def test_rejects_non_json_error_body() -> None:
-    assert is_acceptable_upstream(500, "text/plain", "Internal Server Error", 21) is False

@@ -26,12 +26,22 @@ type StudentDocument = {
   created_at?: string | null;
 };
 
+type IntegrityEvent = {
+  id: number;
+  phase: string;
+  event_type: string;
+  detail_json?: string | null;
+  created_at: string;
+  final_exam_id: number;
+};
+
 export default function StudentProfilePrintPage() {
   const params = useParams<{ id: string }>();
   const { notice, dialog } = useNoticeDialog();
   const [student, setStudent] = useState<AdminStudent | null>(null);
   const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
+  const [integrity, setIntegrity] = useState<IntegrityEvent[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<number | null>(null);
 
@@ -45,6 +55,9 @@ export default function StudentProfilePrintPage() {
     void apiFetch<StudentDocument[]>(`/admin/students/${params.id}/documents`)
       .then(setDocuments)
       .catch(() => setDocuments([]));
+    void apiFetch<IntegrityEvent[]>(`/admin/students/${params.id}/exam-integrity`)
+      .then(setIntegrity)
+      .catch(() => setIntegrity([]));
   }, [params.id]);
 
   async function review(id: number, status: "passed" | "failed") {
@@ -179,6 +192,23 @@ export default function StudentProfilePrintPage() {
                   </Button>
                 </div>
               ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+      <h2 className="font-display text-xl font-semibold">Exam integrity log</h2>
+      {integrity.length === 0 ? (
+        <p className="text-sm text-caisbe-muted">No secure-exam integrity events recorded.</p>
+      ) : (
+        <ul className="max-h-80 space-y-2 overflow-y-auto text-sm print:max-h-none">
+          {integrity.map((row) => (
+            <li key={row.id} className="border border-ifma-border px-3 py-2">
+              <p className="font-semibold text-caisbe-text">
+                {row.event_type.replaceAll("_", " ")} · {row.phase}
+              </p>
+              <p className="text-caisbe-muted">
+                Exam #{row.final_exam_id} · {new Date(row.created_at).toLocaleString()}
+              </p>
             </li>
           ))}
         </ul>

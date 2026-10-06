@@ -65,19 +65,22 @@ async def lifespan(_: FastAPI):
         db.close()
 
     stop = asyncio.Event()
-    sync_task: asyncio.Task | None = None
+    background_tasks: list[asyncio.Task] = []
     if settings.job_sync_enabled:
+        # Never block lifespan on external job feeds — that kept /api/login
+        # unreachable during cold starts ("Unable to reach the API").
         if settings.job_sync_on_startup:
-            await asyncio.to_thread(_run_job_sync)
-        sync_task = asyncio.create_task(_job_sync_loop(stop))
+            background_tasks.append(asyncio.create_task(asyncio.to_thread(_run_job_sync)))
+        background_tasks.append(asyncio.create_task(_job_sync_loop(stop)))
     try:
         yield
     finally:
         stop.set()
-        if sync_task is not None:
-            sync_task.cancel()
+        for task in background_tasks:
+            task.cancel()
+        for task in background_tasks:
             try:
-                await sync_task
+                await task
             except asyncio.CancelledError:
                 pass
 

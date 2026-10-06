@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { candidateApiBases } from "@/lib/apiUpstream";
+import {
+  UPSTREAM_COLD_START_RETRIES,
+  UPSTREAM_FETCH_TIMEOUT_MS,
+  UPSTREAM_RETRY_DELAY_MS,
+  candidateApiBases,
+  sleep,
+} from "@/lib/apiUpstream";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,8 +15,6 @@ const FORWARD_REQUEST_HEADERS = [
   "authorization",
   "accept",
   "range",
-  // Do not forward browser user-agent — Cloudflare may Error 1000 when a
-  // datacenter IP presents a browser UA to public API hostnames.
   "accept-language",
   "x-forwarded-for",
   "x-real-ip",
@@ -58,7 +62,10 @@ function looksLikeJson(contentType: string, preview: string): boolean {
   return trimmed.startsWith("{") || trimmed.startsWith("[");
 }
 
-/** Accept JSON bodies, or empty 2xx (e.g. FastAPI 204 No Content). */
+/**
+ * Accept any real API response that is not Cloudflare/HTML.
+ * Connection failures alone should produce the generic 502 — not API 4xx/5xx bodies.
+ */
 function isAcceptableUpstream(
   status: number,
   contentType: string,
@@ -69,7 +76,21 @@ function isAcceptableUpstream(
   if (status >= 200 && status < 300 && (status === 204 || status === 205 || bodyByteLength === 0)) {
     return true;
   }
-  return looksLikeJson(contentType, preview);
+  if (looksLikeJson(contentType, preview)) return true;
+  // Forward plain-text FastAPI/uvicorn errors instead of masking as unreachable.
+  if (status >= 400 && !contentType.includes("text/html")) return true;
+  return false;
+}
+
+async function fetchUpstream(
+  url: string,
+  init: RequestInit & { duplex?: "half" },
+): Promise<Response> {
+  const signal =
+    typeof AbortSignal !== "undefined" && "timeout" in AbortSignal
+      ? AbortSignal.timeout(UPSTREAM_FETCH_TIMEOUT_MS)
+      : undefined;
+  return fetch(url, { ...init, signal });
 }
 
 async function proxy(request: NextRequest, path: string[]): Promise<NextResponse> {
@@ -113,47 +134,59 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
 
   let chosen: { upstream: Response; body: ArrayBuffer } | null = null;
   let tried = 0;
+  const bases = candidateApiBases();
+  const failures: string[] = [];
 
-  for (const base of candidateApiBases()) {
-    // Multipart streams can only be consumed once — only try first base for uploads.
+  for (const base of bases) {
     if (isMultipart && tried > 0) break;
     tried += 1;
-    if (bodyBuffer) init.body = bodyBuffer;
 
-    try {
-      const upstream = await fetch(`${base}${targetPath}`, init);
-      const upstreamType = (upstream.headers.get("content-type") || "").toLowerCase();
-      const streamResponse =
-        path[0] === "uploads" ||
-        upstreamType.startsWith("video/") ||
-        upstreamType.startsWith("audio/") ||
-        upstreamType.startsWith("application/octet-stream") ||
-        upstreamType.startsWith("application/pdf");
+    const attempts = isMultipart ? 1 : UPSTREAM_COLD_START_RETRIES + 1;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      if (bodyBuffer) init.body = bodyBuffer;
+      try {
+        const upstream = await fetchUpstream(`${base}${targetPath}`, init);
+        const upstreamType = (upstream.headers.get("content-type") || "").toLowerCase();
+        const streamResponse =
+          path[0] === "uploads" ||
+          upstreamType.startsWith("video/") ||
+          upstreamType.startsWith("audio/") ||
+          upstreamType.startsWith("application/octet-stream") ||
+          upstreamType.startsWith("application/pdf");
 
-      if (streamResponse) {
-        const responseHeaders = new Headers();
-        for (const key of FORWARD_RESPONSE_HEADERS) {
-          const value = upstream.headers.get(key);
-          if (value) responseHeaders.set(key, value);
+        if (streamResponse) {
+          const responseHeaders = new Headers();
+          for (const key of FORWARD_RESPONSE_HEADERS) {
+            const value = upstream.headers.get(key);
+            if (value) responseHeaders.set(key, value);
+          }
+          return new NextResponse(upstream.body, {
+            status: upstream.status,
+            headers: responseHeaders,
+          });
         }
-        return new NextResponse(upstream.body, {
-          status: upstream.status,
-          headers: responseHeaders,
-        });
-      }
 
-      const body = await upstream.arrayBuffer();
-      const preview = new TextDecoder().decode(body.slice(0, 240));
-      if (isAcceptableUpstream(upstream.status, upstreamType, preview, body.byteLength)) {
-        chosen = { upstream, body };
+        const body = await upstream.arrayBuffer();
+        const preview = new TextDecoder().decode(body.slice(0, 240));
+        if (isAcceptableUpstream(upstream.status, upstreamType, preview, body.byteLength)) {
+          chosen = { upstream, body };
+          break;
+        }
+        failures.push(`${base} → HTTP ${upstream.status} unusable`);
         break;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "fetch failed";
+        failures.push(`${base} attempt ${attempt + 1}: ${msg}`);
+        if (attempt + 1 < attempts) {
+          await sleep(UPSTREAM_RETRY_DELAY_MS * (attempt + 1));
+        }
       }
-    } catch {
-      // Try the next candidate base.
     }
+    if (chosen) break;
   }
 
   if (!chosen) {
+    console.error("[caisbe-portal-proxy] upstream unreachable", { targetPath, bases, failures });
     return NextResponse.json(
       { detail: "Unable to reach the API. Please try again shortly." },
       { status: 502 },

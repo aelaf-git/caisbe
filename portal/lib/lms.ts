@@ -68,6 +68,8 @@ export type FinalExam = {
   time_limit_minutes: number | null;
   questions_to_appear?: number | null;
   question_bank_size?: number;
+  secure_mode?: boolean;
+  max_integrity_violations?: number;
   questions: QuizQuestion[];
 };
 
@@ -85,6 +87,17 @@ export type ExamSessionState = {
   latest_passed: boolean | null;
   order: ExamOrder | null;
   questions?: QuizQuestion[];
+  secure_mode?: boolean;
+  secure_ok?: boolean;
+  violation_count?: number;
+  max_integrity_violations?: number;
+  locked_out?: boolean;
+};
+
+export type ExamPrecheckResult = {
+  allowed: boolean;
+  reasons: string[];
+  secure_ok: boolean;
 };
 
 export type CertificateTemplate = {
@@ -102,6 +115,7 @@ export type CourseDetail = {
   status: string;
   cover_url: string | null;
   pass_percent: number;
+  content_protection?: boolean;
   chapters: Chapter[];
   final_exam: FinalExam | null;
   certificate_template?: CertificateTemplate | null;
@@ -124,6 +138,8 @@ export type QuizAttempt = {
   passed: boolean;
   certificate_code: string | null;
   reviews?: QuizAnswerReview[];
+  integrity_violations?: number;
+  locked_out?: boolean;
 };
 
 export type Certificate = {

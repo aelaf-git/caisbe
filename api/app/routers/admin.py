@@ -23,6 +23,7 @@ from app.models import (
     ContentBlock,
     Course,
     Enrollment,
+    ExamIntegrityEvent,
     FinalExam,
     IndustryEvent,
     JobPosting,
@@ -78,6 +79,7 @@ from app.schemas.courses import (
     AdminCourseListOut,
     CourseOut,
     CourseUpdate,
+    ExamIntegrityEventOut,
     FinalExamOut,
     FinalExamUpdate,
     LessonCreate,
@@ -1005,6 +1007,7 @@ def admin_create_course(
         cover_url=payload.cover_url,
         pass_percent=pass_percent,
         price_cents=payload.price_cents,
+        content_protection=bool(payload.content_protection),
     )
     db.add(course)
     db.flush()
@@ -1049,6 +1052,10 @@ def admin_update_course(
     if "slug" in data and data["slug"]:
         data["slug"] = data["slug"].strip().lower()
     _apply_plain_text_fields(data, "title", "description")
+
+    # Apply immediately on live course (not draft_meta) so portal lockdown updates without publish.
+    if "content_protection" in data:
+        course.content_protection = bool(data.pop("content_protection"))
 
     meta = {key: data[key] for key in COURSE_DRAFT_META_KEYS if key in data}
     _write_course_meta(course, meta)
@@ -1585,6 +1592,10 @@ def admin_upsert_final_exam(
                     detail=f"Questions to appear ({appear}) cannot exceed the bank size ({bank_size}).",
                 )
         exam.questions_to_appear = appear
+    if payload.secure_mode is not None:
+        exam.secure_mode = payload.secure_mode
+    if payload.max_integrity_violations is not None:
+        exam.max_integrity_violations = payload.max_integrity_violations
 
     db.commit()
     exam = (
@@ -2266,6 +2277,53 @@ def admin_list_student_documents(
         .all()
     )
     return [UserDocumentOut.model_validate(row) for row in rows]
+
+
+@router.get(
+    "/courses/{course_id}/exam-attempts/{attempt_id}/integrity",
+    response_model=list[ExamIntegrityEventOut],
+)
+def admin_exam_attempt_integrity(
+    course_id: int,
+    attempt_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[ExamIntegrityEvent]:
+    attempt = (
+        db.query(QuizAttempt)
+        .options(joinedload(QuizAttempt.final_exam))
+        .filter(QuizAttempt.id == attempt_id, QuizAttempt.final_exam_id.isnot(None))
+        .first()
+    )
+    if attempt is None or attempt.final_exam is None or attempt.final_exam.course_id != course_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam attempt not found")
+    return (
+        db.query(ExamIntegrityEvent)
+        .filter(
+            ExamIntegrityEvent.user_id == attempt.user_id,
+            ExamIntegrityEvent.final_exam_id == attempt.final_exam_id,
+        )
+        .order_by(ExamIntegrityEvent.created_at.asc(), ExamIntegrityEvent.id.asc())
+        .all()
+    )
+
+
+@router.get("/students/{student_id}/exam-integrity", response_model=list[ExamIntegrityEventOut])
+def admin_student_exam_integrity(
+    student_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[ExamIntegrityEvent]:
+    student = db.query(User).filter(User.id == student_id, User.role == "student").first()
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    return (
+        db.query(ExamIntegrityEvent)
+        .filter(ExamIntegrityEvent.user_id == student_id)
+        .order_by(ExamIntegrityEvent.created_at.desc(), ExamIntegrityEvent.id.desc())
+        .limit(200)
+        .all()
+    )
 
 
 @router.post("/assignment-submissions/{submission_id}/review", response_model=AssignmentSubmissionOut)

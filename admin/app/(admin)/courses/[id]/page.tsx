@@ -43,6 +43,7 @@ type CourseMeta = {
   cover_url: string | null;
   pass_percent: number;
   price_cents: number;
+  content_protection: boolean;
 };
 
 function metaReady(meta: CourseMeta): boolean {
@@ -94,6 +95,7 @@ function AdminCourseEditorInner() {
     cover_url: null,
     pass_percent: 70,
     price_cents: 9900,
+    content_protection: true,
   });
   const [coverSaving, setCoverSaving] = useState(false);
 
@@ -102,6 +104,8 @@ function AdminCourseEditorInner() {
     pass_percent: 70,
     time_limit_minutes: null,
     questions_to_appear: null,
+    secure_mode: true,
+    max_integrity_violations: 3,
     questions: [emptyQuestion()],
   });
 
@@ -124,12 +128,15 @@ function AdminCourseEditorInner() {
       cover_url: data.cover_url ?? null,
       pass_percent: data.pass_percent,
       price_cents: data.price_cents ?? 9900,
+      content_protection: data.content_protection !== false,
     });
     setExam({
       title: data.final_exam?.title ?? "Final Exam",
       pass_percent: data.final_exam?.pass_percent ?? data.pass_percent,
       time_limit_minutes: data.final_exam?.time_limit_minutes ?? null,
       questions_to_appear: data.final_exam?.questions_to_appear ?? null,
+      secure_mode: data.final_exam?.secure_mode !== false,
+      max_integrity_violations: data.final_exam?.max_integrity_violations ?? 3,
       questions: data.final_exam?.questions?.length
         ? data.final_exam.questions.map((q) => ({
             prompt: q.prompt,
@@ -424,6 +431,22 @@ function AdminCourseEditorInner() {
             }
             onBlur={() => void metaAutosave.flush()}
           />
+        </FormField>
+        <FormField
+          label="Protect course content"
+          hint="Blocks copy/paste and hides lesson content when the student leaves the tab. Applies immediately (does not wait for Save changes). Final exams use Secure exam mode separately."
+        >
+          <label className="mt-1 flex items-center gap-2 text-sm text-caisbe-text">
+            <input
+              type="checkbox"
+              checked={meta.content_protection}
+              onChange={(e) => {
+                setMeta((current) => ({ ...current, content_protection: e.target.checked }));
+                void metaAutosave.flush({ ...meta, content_protection: e.target.checked });
+              }}
+            />
+            Enable content protection for enrolled students
+          </label>
         </FormField>
       </Card>
       ) : null}

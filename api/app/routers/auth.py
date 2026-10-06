@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import PasswordResetToken, PendingRegistration, SecurityQuestion, User
 from app.schemas.auth import (
+    AppearanceUpdate,
     ForgotPasswordIn,
     ForgotPasswordOut,
     PasswordChangeIn,
@@ -540,6 +541,21 @@ def update_profile(
             issue_membership_certificate(db, current_user)
         elif membership_is_accessible(db, current_user):
             issue_membership_certificate(db, current_user)
+    db.commit()
+    db.refresh(current_user)
+    return user_to_out(current_user, db)
+
+
+@router.patch("/me/appearance", response_model=UserOut)
+def update_appearance(
+    payload: AppearanceUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserOut:
+    """Persist portal theme/fonts on this student only (never global settings)."""
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(current_user, key, value)
     db.commit()
     db.refresh(current_user)
     return user_to_out(current_user, db)

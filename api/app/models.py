@@ -40,6 +40,11 @@ class User(Base):
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     failed_login_count: Mapped[int] = mapped_column(Integer, default=0)
     login_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Portal appearance — per student only (not global AppSetting / admin theme).
+    ui_theme: Mapped[str] = mapped_column(String(16), default="light")
+    ui_font_size: Mapped[str] = mapped_column(String(8), default="md")
+    ui_font_body: Mapped[str] = mapped_column(String(32), default="nunito")
+    ui_font_display: Mapped[str] = mapped_column(String(32), default="poppins")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     enrollments: Mapped[list["Enrollment"]] = relationship(back_populates="user")
@@ -130,6 +135,8 @@ class Course(Base):
     pass_percent: Mapped[int] = mapped_column(Integer, default=70)
     price_cents: Mapped[int] = mapped_column(Integer, default=9900)
     currency: Mapped[str] = mapped_column(String(8), default="usd")
+    # Block copy/paste in the student portal; soft hide when tab is inactive.
+    content_protection: Mapped[bool] = mapped_column(Boolean, default=True)
     # Working copy of details while status is published; portal keeps reading live columns.
     draft_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     has_unpublished_changes: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -288,6 +295,8 @@ class FinalExam(Base):
     time_limit_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # NULL = show the full bank; otherwise sample this many questions per attempt.
     questions_to_appear: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    secure_mode: Mapped[bool] = mapped_column(Boolean, default=True)
+    max_integrity_violations: Mapped[int] = mapped_column(Integer, default=3)
 
     course: Mapped[Course] = relationship(back_populates="final_exam")
     questions: Mapped[list["QuizQuestion"]] = relationship(
@@ -300,6 +309,10 @@ class FinalExam(Base):
         back_populates="final_exam",
         cascade="all, delete-orphan",
     )
+    integrity_events: Mapped[list["ExamIntegrityEvent"]] = relationship(
+        back_populates="final_exam",
+        cascade="all, delete-orphan",
+    )
 
 
 class ExamSession(Base):
@@ -309,10 +322,35 @@ class ExamSession(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     final_exam_id: Mapped[int] = mapped_column(ForeignKey("final_exams.id", ondelete="CASCADE"), index=True)
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Null until the student actually begins (after secure precheck when enabled).
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     order_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    secure_ok_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    violation_count: Mapped[int] = mapped_column(Integer, default=0)
+    locked_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     final_exam: Mapped[FinalExam] = relationship(back_populates="sessions")
+    integrity_events: Mapped[list["ExamIntegrityEvent"]] = relationship(back_populates="exam_session")
+
+
+class ExamIntegrityEvent(Base):
+    __tablename__ = "exam_integrity_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    final_exam_id: Mapped[int] = mapped_column(ForeignKey("final_exams.id", ondelete="CASCADE"), index=True)
+    exam_session_id: Mapped[int | None] = mapped_column(
+        ForeignKey("exam_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    phase: Mapped[str] = mapped_column(String(16))  # pre | live | post
+    event_type: Mapped[str] = mapped_column(String(64))
+    detail_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    final_exam: Mapped[FinalExam] = relationship(back_populates="integrity_events")
+    exam_session: Mapped[ExamSession | None] = relationship(back_populates="integrity_events")
 
 
 class QuizQuestion(Base):

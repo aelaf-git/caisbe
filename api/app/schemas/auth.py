@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -101,8 +102,39 @@ class UserOut(BaseModel):
     pending_membership_price_cents: int | None = None
     pending_membership_currency: str | None = None
     pending_membership_label: str | None = None
+    ui_theme: str = "light"
+    ui_font_size: str = "md"
+    ui_font_body: str = "nunito"
+    ui_font_display: str = "poppins"
 
     model_config = {"from_attributes": True}
+
+
+class AppearanceUpdate(BaseModel):
+    """Student portal theme/fonts — stored on the user row only."""
+
+    ui_theme: Literal["light", "dark"] | None = None
+    ui_font_size: Literal["sm", "md", "lg", "xl"] | None = None
+    ui_font_body: Literal[
+        "nunito",
+        "poppins",
+        "roboto",
+        "open-sans",
+        "inter",
+        "source-sans",
+        "merriweather",
+        "source-serif",
+    ] | None = None
+    ui_font_display: Literal[
+        "nunito",
+        "poppins",
+        "roboto",
+        "open-sans",
+        "inter",
+        "source-sans",
+        "merriweather",
+        "source-serif",
+    ] | None = None
 
 
 class ProfileUpdate(BaseModel):

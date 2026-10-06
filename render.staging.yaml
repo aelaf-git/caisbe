@@ -4,6 +4,7 @@
 #
 # Server-side API_URL must be the private network host (http://caisbe-staging-api-090a:10000).
 # Public *.onrender.com API URLs cause Cloudflare Error 1000 from Render → Render.
+# Runtime env only — Dockerfiles must not bake http://caisbe-api:10000.
 #
 # After you push this file to `dev`:
 #   Blueprint CAISBE-DEV → Manual sync

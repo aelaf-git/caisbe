@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     # Automatic job board sync (curated feed + optional Adzuna / Arbeitnow).
     job_sync_enabled: bool = True
     job_sync_interval_hours: int = 12
+    # Runs in a background task (must not block API readiness / login).
     job_sync_on_startup: bool = True
     job_sync_expiry_days: int = 45
     job_feed_url: str = ""

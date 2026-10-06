@@ -22,6 +22,10 @@ export type AuthUser = {
   pending_membership_price_cents?: number | null;
   pending_membership_currency?: string | null;
   pending_membership_label?: string | null;
+  ui_theme?: string;
+  ui_font_size?: string;
+  ui_font_body?: string;
+  ui_font_display?: string;
 };
 
 export type RegisterPayload = {

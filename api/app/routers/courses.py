@@ -23,6 +23,7 @@ from app.models import (
     ContentBlock,
     Course,
     Enrollment,
+    ExamIntegrityEvent,
     ExamSession,
     FinalExam,
     Lesson,
@@ -46,7 +47,12 @@ from app.schemas.courses import (
     CourseDetailStudentOut,
     CourseOut,
     EnrollmentOut,
+    ExamIntegrityBatchIn,
+    ExamIntegrityEventOut,
+    ExamIntegrityStateOut,
     ExamOrderOut,
+    ExamPrecheckIn,
+    ExamPrecheckOut,
     ExamSessionOut,
     MembershipCertificateOut,
     QuizAnswerReview,
@@ -895,7 +901,25 @@ def _exam_session(db: Session, user: User, exam: FinalExam) -> ExamSession | Non
     )
 
 
+VIOLATION_EVENT_TYPES = frozenset(
+    {
+        "fullscreen_exit",
+        "tab_blur",
+        "copy_attempt",
+        "paste_attempt",
+        "cut_attempt",
+        "context_menu",
+        "print_attempt",
+        "devtools_attempt",
+    }
+)
+
+PRECHECK_TTL = timedelta(minutes=20)
+
+
 def _session_expired(exam: FinalExam, session: ExamSession, now: datetime) -> bool:
+    if session.started_at is None:
+        return False
     limit = _exam_time_limit(exam)
     if limit is None:
         return False
@@ -903,11 +927,79 @@ def _session_expired(exam: FinalExam, session: ExamSession, now: datetime) -> bo
 
 
 def _remaining_seconds(exam: FinalExam, session: ExamSession, now: datetime) -> int | None:
+    if session.started_at is None:
+        return None
     limit = _exam_time_limit(exam)
     if limit is None:
         return None
     deadline = _as_utc(session.started_at) + limit
     return max(0, int((deadline - now).total_seconds()))
+
+
+def _secure_precheck_valid(exam: FinalExam, session: ExamSession | None, now: datetime) -> bool:
+    if not exam.secure_mode:
+        return True
+    if session is None or session.secure_ok_at is None:
+        return False
+    return now <= _as_utc(session.secure_ok_at) + PRECHECK_TTL
+
+
+def _record_integrity_event(
+    db: Session,
+    *,
+    user: User,
+    exam: FinalExam,
+    session: ExamSession | None,
+    phase: str,
+    event_type: str,
+    detail: dict | None = None,
+) -> ExamIntegrityEvent:
+    event = ExamIntegrityEvent(
+        user_id=user.id,
+        final_exam_id=exam.id,
+        exam_session_id=session.id if session else None,
+        phase=phase if phase in {"pre", "live", "post"} else "live",
+        event_type=event_type[:64],
+        detail_json=json.dumps(detail) if detail is not None else None,
+    )
+    db.add(event)
+    return event
+
+
+def _apply_violation(
+    db: Session,
+    *,
+    exam: FinalExam,
+    session: ExamSession,
+    event_type: str,
+    now: datetime,
+) -> bool:
+    """Increment violation_count when needed. Returns True if newly locked out."""
+    if event_type not in VIOLATION_EVENT_TYPES:
+        return False
+    if session.locked_out_at is not None:
+        return False
+    session.violation_count = int(session.violation_count or 0) + 1
+    max_v = max(1, int(exam.max_integrity_violations or 3))
+    if session.violation_count >= max_v:
+        session.locked_out_at = now
+        return True
+    return False
+
+
+def _ensure_pending_session(db: Session, user: User, exam: FinalExam) -> ExamSession:
+    session = _exam_session(db, user, exam)
+    if session is None:
+        session = ExamSession(
+            user_id=user.id,
+            final_exam_id=exam.id,
+            started_at=None,
+            order_json=None,
+            violation_count=0,
+        )
+        db.add(session)
+        db.flush()
+    return session
 
 
 def _appear_count(exam: FinalExam) -> int:
@@ -1019,20 +1111,25 @@ def _close_expired_exam_session(db: Session, user: User, exam: FinalExam, now: d
 def _exam_session_state(db: Session, user: User, exam: FinalExam, now: datetime) -> ExamSessionOut:
     _close_expired_exam_session(db, user, exam, now)
     session = _exam_session(db, user, exam)
-    if session is not None:
+    in_progress = session is not None and session.started_at is not None
+    if in_progress and session is not None:
         _ensure_exam_order(db, session, exam)
     latest = _latest_exam_attempt(db, user, exam)
-    in_progress = session is not None
     order = _exam_order(session) if in_progress else None
     return ExamSessionOut(
         in_progress=in_progress,
         started_at=session.started_at if session else None,
-        remaining_seconds=_remaining_seconds(exam, session, now) if session else None,
+        remaining_seconds=_remaining_seconds(exam, session, now) if in_progress and session else None,
         time_limit_minutes=exam.time_limit_minutes,
         latest_score=None if in_progress or latest is None else latest.score,
         latest_passed=None if in_progress or latest is None else latest.passed,
         order=order,
         questions=_student_questions_for_order(exam, order) if in_progress else [],
+        secure_mode=bool(exam.secure_mode),
+        secure_ok=_secure_precheck_valid(exam, session, now),
+        violation_count=int(session.violation_count or 0) if session else 0,
+        max_integrity_violations=max(1, int(exam.max_integrity_violations or 3)),
+        locked_out=bool(session and session.locked_out_at is not None),
     )
 
 
@@ -1060,6 +1157,154 @@ def get_final_exam_session(
     return state
 
 
+@router.post("/me/courses/{course_id}/final-exam/precheck", response_model=ExamPrecheckOut)
+def precheck_final_exam(
+    course_id: int,
+    payload: ExamPrecheckIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ExamPrecheckOut:
+    course = _load_published_course(db, course_id)
+    exam = _require_open_exam(db, current_user, course)
+    now = datetime.now(timezone.utc)
+    session = _ensure_pending_session(db, current_user, exam)
+
+    if not exam.secure_mode:
+        session.secure_ok_at = now
+        _record_integrity_event(
+            db,
+            user=current_user,
+            exam=exam,
+            session=session,
+            phase="pre",
+            event_type="precheck_skipped_insecure",
+            detail=None,
+        )
+        db.commit()
+        return ExamPrecheckOut(allowed=True, reasons=[], secure_ok=True)
+
+    reasons: list[str] = []
+    if not payload.rules_accepted:
+        reasons.append("Accept the exam rules to continue.")
+    if not payload.fullscreen_ok:
+        reasons.append("Enter fullscreen before starting.")
+    if not payload.visibility_api_ok:
+        reasons.append("Your browser must support focus/visibility monitoring.")
+    if not payload.camera_ok:
+        reasons.append("Allow camera access for the identity check.")
+
+    detail = {
+        "rules_accepted": payload.rules_accepted,
+        "fullscreen_ok": payload.fullscreen_ok,
+        "visibility_api_ok": payload.visibility_api_ok,
+        "camera_ok": payload.camera_ok,
+        "multi_monitor": payload.multi_monitor,
+        "user_agent": (payload.user_agent or "")[:512],
+    }
+    _record_integrity_event(
+        db,
+        user=current_user,
+        exam=exam,
+        session=session,
+        phase="pre",
+        event_type="precheck_attempt",
+        detail=detail,
+    )
+    if payload.multi_monitor:
+        _record_integrity_event(
+            db,
+            user=current_user,
+            exam=exam,
+            session=session,
+            phase="pre",
+            event_type="multi_monitor_detected",
+            detail={"multi_monitor": True},
+        )
+
+    if reasons:
+        session.secure_ok_at = None
+        _record_integrity_event(
+            db,
+            user=current_user,
+            exam=exam,
+            session=session,
+            phase="pre",
+            event_type="precheck_failed",
+            detail={"reasons": reasons},
+        )
+        db.commit()
+        return ExamPrecheckOut(allowed=False, reasons=reasons, secure_ok=False)
+
+    session.secure_ok_at = now
+    if session.locked_out_at is not None:
+        # Fresh precheck after a prior lockout only applies once the session was cleared on submit.
+        pass
+    _record_integrity_event(
+        db,
+        user=current_user,
+        exam=exam,
+        session=session,
+        phase="pre",
+        event_type="precheck_ok",
+        detail=detail,
+    )
+    db.commit()
+    return ExamPrecheckOut(allowed=True, reasons=[], secure_ok=True)
+
+
+@router.post("/me/courses/{course_id}/final-exam/integrity", response_model=ExamIntegrityStateOut)
+def report_final_exam_integrity(
+    course_id: int,
+    payload: ExamIntegrityBatchIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ExamIntegrityStateOut:
+    course = _load_published_course(db, course_id)
+    exam = _require_open_exam(db, current_user, course)
+    now = datetime.now(timezone.utc)
+    session = _exam_session(db, current_user, exam)
+    if session is None or session.started_at is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Exam is not in progress.")
+
+    newly_locked = False
+    for item in payload.events:
+        event_type = (item.event_type or "").strip()[:64]
+        if not event_type:
+            continue
+        _record_integrity_event(
+            db,
+            user=current_user,
+            exam=exam,
+            session=session,
+            phase=item.phase,
+            event_type=event_type,
+            detail=item.detail,
+        )
+        if _apply_violation(db, exam=exam, session=session, event_type=event_type, now=now):
+            newly_locked = True
+
+    if newly_locked:
+        _record_integrity_event(
+            db,
+            user=current_user,
+            exam=exam,
+            session=session,
+            phase="live",
+            event_type="lockout",
+            detail={"violation_count": session.violation_count},
+        )
+
+    db.commit()
+    max_v = max(1, int(exam.max_integrity_violations or 3))
+    locked = session.locked_out_at is not None
+    return ExamIntegrityStateOut(
+        violation_count=int(session.violation_count or 0),
+        max_integrity_violations=max_v,
+        locked_out=locked,
+        force_submit=locked,
+    )
+
+
 @router.post("/me/courses/{course_id}/final-exam/start", response_model=ExamSessionOut)
 def start_final_exam(
     course_id: int,
@@ -1069,17 +1314,53 @@ def start_final_exam(
     course = _load_published_course(db, course_id)
     exam = _require_open_exam(db, current_user, course)
     now = datetime.now(timezone.utc)
-    expired = _close_expired_exam_session(db, current_user, exam, now)
+    _close_expired_exam_session(db, current_user, exam, now)
     session = _exam_session(db, current_user, exam)
-    if session is None and expired is None:
+
+    if session is not None and session.started_at is not None:
+        state = _exam_session_state(db, current_user, exam, datetime.now(timezone.utc))
+        db.commit()
+        return state
+
+    if exam.secure_mode and not _secure_precheck_valid(exam, session, now):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complete the secure exam pre-check before starting.",
+        )
+
+    if session is None:
         session = ExamSession(
             user_id=current_user.id,
             final_exam_id=exam.id,
             started_at=now,
             order_json=json.dumps(_new_exam_order(exam)),
+            violation_count=0,
+            secure_ok_at=now if not exam.secure_mode else None,
         )
         db.add(session)
         db.flush()
+    else:
+        if session.locked_out_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This exam attempt was locked for integrity violations. Submit or contact an administrator.",
+            )
+        session.started_at = now
+        session.violation_count = 0
+        session.locked_out_at = None
+        if not session.order_json:
+            session.order_json = json.dumps(_new_exam_order(exam))
+        db.flush()
+
+    _record_integrity_event(
+        db,
+        user=current_user,
+        exam=exam,
+        session=session,
+        phase="live",
+        event_type="exam_started",
+        detail={"secure_mode": bool(exam.secure_mode)},
+    )
     state = _exam_session_state(db, current_user, exam, datetime.now(timezone.utc))
     db.commit()
     return state
@@ -1103,14 +1384,26 @@ def submit_final_exam(
         .with_for_update()
         .first()
     )
-    if session is None:
+    if session is None or session.started_at is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Start the exam before submitting.")
 
+    violations = int(session.violation_count or 0)
+    locked_out = session.locked_out_at is not None
     timed_out = _session_expired(exam, session, now)
-    if timed_out:
+    if timed_out or locked_out:
         score = 0
         passed = False
         answers_json = "{}"
+        if locked_out:
+            _record_integrity_event(
+                db,
+                user=current_user,
+                exam=exam,
+                session=session,
+                phase="post",
+                event_type="submit_locked_out",
+                detail={"violation_count": violations},
+            )
     else:
         order = _exam_order(session)
         selected = _questions_for_order(exam, order)
@@ -1130,6 +1423,22 @@ def submit_final_exam(
         answers_json=answers_json,
     )
     db.add(attempt)
+    _record_integrity_event(
+        db,
+        user=current_user,
+        exam=exam,
+        session=session,
+        phase="post",
+        event_type="exam_submitted",
+        detail={"score": score, "passed": passed, "violation_count": violations, "locked_out": locked_out},
+    )
+    # Keep integrity history; clear session_id link by deleting session after flush.
+    session_id = session.id
+    db.flush()
+    db.query(ExamIntegrityEvent).filter(ExamIntegrityEvent.exam_session_id == session_id).update(
+        {ExamIntegrityEvent.exam_session_id: None},
+        synchronize_session=False,
+    )
     db.delete(session)
 
     certificate_code = None
@@ -1146,6 +1455,8 @@ def submit_final_exam(
         passed=attempt.passed,
         certificate_code=certificate_code,
         reviews=[],
+        integrity_violations=violations,
+        locked_out=locked_out,
     )
 
 

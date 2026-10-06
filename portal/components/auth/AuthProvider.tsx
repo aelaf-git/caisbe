@@ -18,6 +18,13 @@ import {
   type RegisterPendingResponse,
   type TokenResponse,
 } from "@/lib/auth";
+import {
+  appearanceFromUser,
+  applyAppearance,
+  clearActiveAppearance,
+  setActiveAppearanceUserId,
+  writeStoredAppearance,
+} from "@/lib/appearance";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -75,6 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     setToken(data.access_token);
     setUser(data.user);
+    const appearance = appearanceFromUser(data.user);
+    writeStoredAppearance(data.user.id, appearance);
+    applyAppearance(appearance);
     return data.user;
   }, []);
 
@@ -90,6 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     clearToken();
     setUser(null);
+    clearActiveAppearance();
+    setActiveAppearanceUserId(null);
   }, []);
 
   return (
