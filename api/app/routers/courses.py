@@ -41,6 +41,8 @@ from app.models import (
 from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.schemas.courses import (
     AssignmentSubmitIn,
+    StudentAssignmentDetailOut,
+    StudentAssignmentOut,
     CertificateOut,
     UploadOut,
     CertificateVerifyOut,
@@ -70,7 +72,26 @@ from app.services.membership import (
 )
 from app.services.settings import get_setting
 
-from app.services.commerce import apply_profile_fields, normalize_membership_type, require_active_enrollment
+from app.services.assignments import (
+    append_attempt,
+    assignment_blocks_for_courses,
+    can_resubmit,
+    can_submit_new,
+    can_withdraw,
+    clear_grade,
+    due_has_passed,
+    grade_is_visible,
+    latest_submitted_at,
+    status_bucket,
+    submission_is_late,
+    submission_map,
+)
+from app.services.commerce import (
+    ACTIVE_ENROLLMENT,
+    apply_profile_fields,
+    normalize_membership_type,
+    require_active_enrollment,
+)
 
 router = APIRouter(tags=["courses"])
 
@@ -121,53 +142,10 @@ def _course_progress_units(db: Session, course_id: int) -> tuple[list[int], list
 def _assignment_review_status(
     db: Session, user_id: int, assignment_ids: list[int]
 ) -> dict[int, str]:
-    if not assignment_ids:
-        return {}
-    # Promote older completion-only rows so progress and review stay linked.
-    existing = {
-        row[0]
-        for row in db.query(AssignmentSubmission.content_block_id)
-        .filter(
-            AssignmentSubmission.user_id == user_id,
-            AssignmentSubmission.content_block_id.in_(assignment_ids),
-        )
-        .all()
+    return {
+        block_id: row.status
+        for block_id, row in submission_map(db, user_id, assignment_ids).items()
     }
-    legacy_rows = (
-        db.query(BlockCompletion)
-        .filter(
-            BlockCompletion.user_id == user_id,
-            BlockCompletion.content_block_id.in_(assignment_ids),
-        )
-        .all()
-    )
-    created = False
-    for row in legacy_rows:
-        if row.content_block_id in existing:
-            continue
-        db.add(
-            AssignmentSubmission(
-                user_id=user_id,
-                content_block_id=row.content_block_id,
-                body="Submitted earlier.",
-                status="under_review",
-            )
-        )
-        existing.add(row.content_block_id)
-        created = True
-    if created:
-        db.flush()
-
-    status_map = {
-        row.content_block_id: row.status
-        for row in db.query(AssignmentSubmission)
-        .filter(
-            AssignmentSubmission.user_id == user_id,
-            AssignmentSubmission.content_block_id.in_(assignment_ids),
-        )
-        .all()
-    }
-    return status_map
 
 
 def _completed_assignment_ids(db: Session, user_id: int, assignment_ids: list[int]) -> set[int]:
@@ -504,7 +482,7 @@ def get_course_detail(
             .distinct()
             .all()
         }
-    submission_status = _assignment_review_status(db, current_user.id, assignment_ids)
+    submissions = submission_map(db, current_user.id, assignment_ids)
     if db.new or db.dirty:
         db.commit()
 
@@ -515,8 +493,20 @@ def get_course_detail(
             if block.block_type == "quiz":
                 block.completed = block.quiz is not None and block.quiz.id in done_quizzes
             elif block.block_type == "assignment":
-                block.completed = block.id in submission_status
-                block.review_status = submission_status.get(block.id)
+                row = submissions.get(block.id)
+                block.completed = row is not None
+                block.review_status = row.status if row else None
+                submitted_at = latest_submitted_at(row) if row else None
+                visible = grade_is_visible(row.status) if row else False
+                block.submission_score = row.score if row and visible else None
+                block.submission_feedback = row.feedback if row and visible else None
+                block.submission_file_url = row.file_url if row else None
+                block.submission_file_name = row.file_name if row else None
+                block.submission_body = row.body if row else None
+                block.submitted_at = submitted_at
+                block.can_submit = row is None and can_submit_new(block.due_at)
+                block.can_resubmit = can_resubmit(row.status, block.due_at) if row else False
+                block.is_late = submission_is_late(block.due_at, submitted_at)
 
     return detail
 
@@ -823,6 +813,148 @@ def _assignment_file_ok(url: str | None) -> bool:
     return is_managed_upload_url(url) and path.endswith(tuple(_STUDENT_UPLOAD_SUFFIXES))
 
 
+def _student_assignment_detail(
+    block: ContentBlock, row: AssignmentSubmission | None
+) -> StudentAssignmentDetailOut:
+    chapter = block.chapter
+    course = chapter.course if chapter else None
+    submitted_at = latest_submitted_at(row) if row else None
+    visible = grade_is_visible(row.status) if row else False
+    attempts = sorted(row.attempts, key=lambda item: (item.submitted_at, item.id)) if row else []
+    return StudentAssignmentDetailOut(
+        block_id=block.id,
+        course_id=course.id if course else 0,
+        title=block.title or "Assignment",
+        instructions_body=block.body,
+        instructions_url=block.url,
+        instructions_label=block.label,
+        course_code=course.code if course else "",
+        course_title=course.title if course else "",
+        chapter_title=chapter.title if chapter else "",
+        points_possible=block.points_possible,
+        due_at=block.due_at,
+        bucket=status_bucket(row.status if row else None),
+        review_status=row.status if row else None,
+        score=row.score if row and visible else None,
+        feedback=row.feedback if row and visible else None,
+        graded_at=row.graded_at if row and visible else None,
+        body=row.body if row else None,
+        file_url=row.file_url if row else None,
+        file_name=row.file_name if row else None,
+        submitted_at=submitted_at,
+        is_late=submission_is_late(block.due_at, submitted_at),
+        can_submit=row is None and can_submit_new(block.due_at),
+        can_resubmit=can_resubmit(row.status, block.due_at) if row else False,
+        can_withdraw=can_withdraw(row.status) if row else False,
+        attempts=[
+            {
+                "id": attempt.id,
+                "body": attempt.body,
+                "file_url": attempt.file_url,
+                "file_name": attempt.file_name,
+                "submitted_at": attempt.submitted_at,
+            }
+            for attempt in attempts
+        ],
+    )
+
+
+@router.get("/me/assignments", response_model=list[StudentAssignmentOut])
+def list_my_assignments(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[StudentAssignmentOut]:
+    course_ids = [
+        row[0]
+        for row in db.query(Enrollment.course_id)
+        .filter(
+            Enrollment.user_id == current_user.id,
+            Enrollment.status.in_(ACTIVE_ENROLLMENT),
+        )
+        .all()
+    ]
+    blocks = assignment_blocks_for_courses(db, course_ids)
+    rows = submission_map(db, current_user.id, [block.id for block in blocks])
+    if db.new or db.dirty:
+        db.commit()
+    items: list[StudentAssignmentOut] = []
+    for block in blocks:
+        chapter = block.chapter
+        course = chapter.course if chapter else None
+        if course is None:
+            continue
+        row = rows.get(block.id)
+        submitted_at = latest_submitted_at(row) if row else None
+        visible = grade_is_visible(row.status) if row else False
+        items.append(
+            StudentAssignmentOut(
+                block_id=block.id,
+                course_id=course.id,
+                title=block.title or "Assignment",
+                course_code=course.code,
+                course_title=course.title,
+                chapter_title=chapter.title if chapter else "",
+                due_at=block.due_at,
+                bucket=status_bucket(row.status if row else None),
+                review_status=row.status if row else None,
+                score=row.score if row and visible else None,
+                points_possible=block.points_possible,
+                submitted_at=submitted_at,
+                is_late=submission_is_late(block.due_at, submitted_at),
+            )
+        )
+    items.sort(
+        key=lambda item: (
+            item.due_at is None,
+            item.due_at.timestamp() if item.due_at is not None else 0,
+            item.title.lower(),
+        )
+    )
+    return items
+
+
+@router.get("/me/assignments/{block_id}", response_model=StudentAssignmentDetailOut)
+def get_my_assignment(
+    block_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StudentAssignmentDetailOut:
+    block, course = _load_student_assignment(db, block_id)
+    require_active_enrollment(db, current_user, course.id)
+    rows = submission_map(db, current_user.id, [block.id])
+    if db.new or db.dirty:
+        db.commit()
+    return _student_assignment_detail(block, rows.get(block.id))
+
+
+def _load_student_assignment(db: Session, block_id: int) -> tuple[ContentBlock, Course]:
+    block = (
+        db.query(ContentBlock)
+        .options(joinedload(ContentBlock.chapter).joinedload(Chapter.course))
+        .filter(ContentBlock.id == block_id)
+        .first()
+    )
+    if block is None or block.block_type != "assignment" or block.chapter is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+    course = block.chapter.course
+    if course is None or course.status != "published":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+    return block, course
+
+
+def _submission_payload(payload: AssignmentSubmitIn) -> tuple[str | None, str | None, str | None]:
+    body = (payload.body or "").strip()
+    has_file = _assignment_file_ok(payload.url)
+    if has_file == bool(body):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Submit either a document or a written answer.",
+        )
+    if has_file and payload.url:
+        return None, payload.url.strip(), (payload.file_name or "").strip() or None
+    return body or None, None, None
+
+
 @router.post("/me/blocks/{block_id}/submit")
 def submit_assignment(
     block_id: int,
@@ -830,17 +962,7 @@ def submit_assignment(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, int | str | bool]:
-    block = (
-        db.query(ContentBlock)
-        .options(joinedload(ContentBlock.chapter))
-        .filter(ContentBlock.id == block_id)
-        .first()
-    )
-    if block is None or block.block_type != "assignment" or block.chapter_id is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
-    course = db.query(Course).filter(Course.id == block.chapter.course_id).first()
-    if course is None or course.status != "published":
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    block, course = _load_student_assignment(db, block_id)
     require_active_enrollment(db, current_user, course.id)
     existing = (
         db.query(AssignmentSubmission)
@@ -850,26 +972,52 @@ def submit_assignment(
         )
         .first()
     )
-    if existing is not None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This assignment is already submitted.")
-    body = (payload.body or "").strip()
-    has_file = _assignment_file_ok(payload.url)
-    if has_file == bool(body):
+    if existing is not None and existing.status == "passed":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Submit either a document or a written answer.",
+            detail="This assignment has been marked passed and can no longer be changed.",
         )
-    db.add(
-        AssignmentSubmission(
+    if existing is None and not can_submit_new(block.due_at):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The due date for this assignment has passed.",
+        )
+    if existing is not None and not can_resubmit(existing.status, block.due_at):
+        if due_has_passed(block.due_at):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The due date for this assignment has passed.",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This assignment cannot be resubmitted.",
+        )
+    text, file_url, file_name = _submission_payload(payload)
+    now = datetime.now(timezone.utc)
+    if existing is None:
+        existing = AssignmentSubmission(
             user_id=current_user.id,
             content_block_id=block.id,
-            body=body or None,
-            file_url=payload.url.strip() if has_file and payload.url else None,
-            file_name=(payload.file_name or "").strip() or None,
             status="under_review",
+            created_at=now,
+            updated_at=now,
         )
-    )
+        db.add(existing)
+    else:
+        clear_grade(existing)
+    existing.body = text
+    existing.file_url = file_url
+    existing.file_name = file_name
+    existing.updated_at = now
     db.flush()
+    append_attempt(
+        db,
+        existing,
+        body=text,
+        file_url=file_url,
+        file_name=file_name,
+        submitted_at=now,
+    )
     enrollment = _apply_progress(db, current_user, course.id)
     db.commit()
     return {"completed": True, "status": "under_review", "progress": enrollment.progress}
@@ -881,17 +1029,7 @@ def unsubmit_assignment(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, int | bool]:
-    block = (
-        db.query(ContentBlock)
-        .options(joinedload(ContentBlock.chapter))
-        .filter(ContentBlock.id == block_id)
-        .first()
-    )
-    if block is None or block.block_type != "assignment" or block.chapter_id is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
-    course = db.query(Course).filter(Course.id == block.chapter.course_id).first()
-    if course is None or course.status != "published":
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    block, course = _load_student_assignment(db, block_id)
     require_active_enrollment(db, current_user, course.id)
     existing = (
         db.query(AssignmentSubmission)

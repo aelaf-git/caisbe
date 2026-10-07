@@ -2,8 +2,9 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { apiFetch, ApiError, type AdminStudent } from "@/lib/auth";
+import AssignmentReviewForm, { type AssignmentReviewPayload } from "@/components/lms/AssignmentReviewForm";
 import Button from "@/components/ui/Button";
+import { apiFetch, ApiError, type AdminStudent } from "@/lib/auth";
 import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { resolveUploadUrl } from "@/lib/mediaUrl";
 
@@ -16,6 +17,10 @@ type AssignmentSubmission = {
   file_url: string | null;
   file_name: string | null;
   status: string;
+  score: number | null;
+  feedback: string | null;
+  points_possible: number | null;
+  graded_at: string | null;
 };
 
 type StudentDocument = {
@@ -60,18 +65,18 @@ export default function StudentProfilePrintPage() {
       .catch(() => setIntegrity([]));
   }, [params.id]);
 
-  async function review(id: number, status: "passed" | "failed") {
+  async function review(id: number, payload: AssignmentReviewPayload) {
     setReviewing(id);
     try {
       const updated = await apiFetch<AssignmentSubmission>(`/admin/assignment-submissions/${id}/review`, {
         method: "POST",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(payload),
       });
       setSubmissions((current) => current.map((row) => (row.id === id ? updated : row)));
       await notice({
         tone: "success",
         title: "Done",
-        description: status === "passed" ? "Submission marked as passed." : "Submission marked as failed.",
+        description: payload.status === "passed" ? "Submission marked as passed." : "Submission marked as failed.",
       });
     } catch (err) {
       await notice({
@@ -178,20 +183,22 @@ export default function StudentProfilePrintPage() {
                 <p className="whitespace-pre-wrap text-caisbe-text">{row.body}</p>
               )}
               <p className="font-semibold capitalize">{row.status.replaceAll("_", " ")}</p>
-              {row.status === "under_review" ? (
-                <div className="flex gap-2 print:hidden">
-                  <Button disabled={reviewing === row.id} onClick={() => void review(row.id, "passed")}>
-                    Pass
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={reviewing === row.id}
-                    onClick={() => void review(row.id, "failed")}
-                  >
-                    Fail
-                  </Button>
-                </div>
+              {row.points_possible != null && row.score != null ? (
+                <p className="text-caisbe-text">
+                  Score {row.score} / {row.points_possible}
+                </p>
               ) : null}
+              {row.feedback ? <p className="whitespace-pre-wrap text-caisbe-text">{row.feedback}</p> : null}
+              <div className="print:hidden">
+                <AssignmentReviewForm
+                  key={`${row.id}-${row.status}-${row.score ?? ""}-${row.graded_at ?? ""}`}
+                  pointsPossible={row.points_possible}
+                  initialScore={row.score}
+                  initialFeedback={row.feedback}
+                  busy={reviewing === row.id}
+                  onReview={(payload) => void review(row.id, payload)}
+                />
+              </div>
             </li>
           ))}
         </ul>

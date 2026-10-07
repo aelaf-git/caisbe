@@ -39,6 +39,8 @@ export type ContentBlock = {
   label: string | null;
   parent_id?: number | null;
   sort_order: number;
+  points_possible?: number | null;
+  due_at?: string | null;
   quiz: Quiz | null;
 };
 

@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy.orm.attributes import flag_modified
 from starlette.datastructures import UploadFile
 
@@ -1565,6 +1565,8 @@ def admin_create_chapter_block(
         url=payload.url,
         label=strip_plain_text(payload.label),
         quiz_id=quiz_id,
+        points_possible=payload.points_possible if payload.block_type == "assignment" else None,
+        due_at=payload.due_at if payload.block_type == "assignment" else None,
         sort_order=payload.sort_order,
     )
     db.add(block)
@@ -1595,6 +1597,9 @@ def admin_update_block(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Block not found")
 
     data = payload.model_dump(exclude_unset=True)
+    if block.block_type != "assignment":
+        data.pop("points_possible", None)
+        data.pop("due_at", None)
     if block.block_type == "assignment" and ("url" in data or "body" in data):
         _validate_assignment(data.get("url", block.url), data.get("body", block.body))
     if block.block_type == "reading" and ("url" in data or "title" in data):
@@ -2379,10 +2384,13 @@ def admin_get_student(
 
 
 def _assignment_submission_out(row: AssignmentSubmission) -> AssignmentSubmissionOut:
+    from app.services.assignments import latest_submitted_at, submission_is_late
+
     block = row.block
     chapter = block.chapter if block else None
     course = chapter.course if chapter else None
     student = row.user
+    submitted_at = latest_submitted_at(row)
     return AssignmentSubmissionOut(
         id=row.id,
         content_block_id=row.content_block_id,
@@ -2393,16 +2401,23 @@ def _assignment_submission_out(row: AssignmentSubmission) -> AssignmentSubmissio
         file_url=row.file_url,
         file_name=row.file_name,
         status=row.status,
+        score=row.score,
+        feedback=row.feedback,
+        points_possible=block.points_possible if block else None,
+        due_at=block.due_at if block else None,
+        is_late=submission_is_late(block.due_at if block else None, submitted_at),
+        graded_at=row.graded_at,
         user_id=row.user_id,
         student_name=student.full_name if student else None,
         student_email=student.email if student else None,
-        submitted_at=row.created_at,
+        submitted_at=submitted_at,
     )
 
 
 def _assignment_submission_query(db: Session):
     return db.query(AssignmentSubmission).options(
         joinedload(AssignmentSubmission.user),
+        selectinload(AssignmentSubmission.attempts),
         joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course),
     )
 
@@ -2510,9 +2525,11 @@ def admin_student_exam_integrity(
 def admin_review_assignment(
     submission_id: int,
     payload: AssignmentReviewIn,
-    _: User = Depends(require_admin),
+    admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> AssignmentSubmissionOut:
+    from app.services.notifications import notify_users
+
     row = (
         _assignment_submission_query(db)
         .filter(AssignmentSubmission.id == submission_id)
@@ -2520,7 +2537,42 @@ def admin_review_assignment(
     )
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    block = row.block
+    points = block.points_possible if block else None
+    if points is not None:
+        if payload.score is None or payload.score > points:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Enter a score from 0 to {points}.",
+            )
+        row.score = payload.score
+    elif payload.score is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This assignment does not use a point score.",
+        )
+    else:
+        row.score = None
+    row.feedback = (payload.feedback or "").strip() or None
     row.status = payload.status
+    row.graded_at = datetime.now(timezone.utc)
+    row.graded_by_id = admin.id
+    row.updated_at = row.graded_at
+    assignment_title = block.title if block and block.title else "Assignment"
+    if points is not None and row.score is not None:
+        body = f"{assignment_title} was marked {payload.status} with a score of {row.score}/{points}."
+    else:
+        body = f"{assignment_title} was marked {payload.status}."
+    if row.feedback:
+        body = f"{body} Your instructor left feedback."
+    notify_users(
+        db,
+        [row.user_id],
+        title="Assignment evaluated",
+        body=body,
+        kind="assignment_graded",
+        link="/assignments",
+    )
     db.commit()
     db.refresh(row)
     row = (

@@ -41,6 +41,17 @@ export type ContentBlock = {
   sort_order: number;
   completed?: boolean;
   review_status?: string | null;
+  points_possible?: number | null;
+  due_at?: string | null;
+  submission_score?: number | null;
+  submission_feedback?: string | null;
+  submission_file_url?: string | null;
+  submission_file_name?: string | null;
+  submission_body?: string | null;
+  submitted_at?: string | null;
+  can_submit?: boolean;
+  can_resubmit?: boolean;
+  is_late?: boolean;
   quiz: Quiz | null;
 };
 

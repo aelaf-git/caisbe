@@ -24,6 +24,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Learning",
     items: [
       { href: "/courses", label: "My courses", icon: "book", match: "prefix" },
+      { href: "/assignments", label: "Assignments", icon: "clipboard", match: "prefix" },
       { href: "/cart", label: "Cart", icon: "cart", match: "exact" },
       { href: "/certificates", label: "Certificates", icon: "award", match: "prefix" },
       { href: "/membership", label: "Membership", icon: "badge", match: "prefix" },
@@ -95,6 +96,12 @@ function NavIcon({ name }: { name: string }) {
     chat: (
       <>
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </>
+    ),
+    clipboard: (
+      <>
+        <rect x="8" y="2" width="8" height="4" rx="1" />
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
       </>
     ),
   };

@@ -58,6 +58,18 @@ export default function CoursePlayerPage() {
       setCourse(data);
       setSelection((prev) => {
         if (prev) return prev;
+        const requested =
+          typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("block")) : NaN;
+        if (Number.isFinite(requested) && requested > 0) {
+          const match = data.chapters
+            .flatMap((chapter) => chapter.blocks ?? [])
+            .find(
+              (block) =>
+                block.id === requested &&
+                (block.block_type === "assignment" || block.block_type === "quiz"),
+            );
+          if (match) return { kind: "chapter-block", blockId: match.id };
+        }
         const firstTopic =
           data.chapters.flatMap((c) => c.lessons).find((l) => !l.completed) ??
           data.chapters[0]?.lessons[0] ??

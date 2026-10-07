@@ -267,6 +267,9 @@ class ContentBlock(Base):
     url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     label: Mapped[str | None] = mapped_column(String(255), nullable=True)
     quiz_id: Mapped[int | None] = mapped_column(ForeignKey("quizzes.id"), nullable=True)
+    # Used by assignment blocks. Other block types leave these empty.
+    points_possible: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     lesson: Mapped[Lesson | None] = relationship(
@@ -447,10 +450,38 @@ class AssignmentSubmission(Base):
     file_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="under_review")
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
+    graded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    graded_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user: Mapped[User] = relationship()
+    user: Mapped[User] = relationship(foreign_keys=[user_id])
+    graded_by: Mapped[User | None] = relationship(foreign_keys=[graded_by_id])
     block: Mapped["ContentBlock"] = relationship()
+    attempts: Mapped[list["AssignmentAttempt"]] = relationship(
+        back_populates="submission",
+        cascade="all, delete-orphan",
+        order_by="AssignmentAttempt.submitted_at",
+    )
+
+
+class AssignmentAttempt(Base):
+    __tablename__ = "assignment_attempts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    submission_id: Mapped[int] = mapped_column(
+        ForeignKey("assignment_submissions.id", ondelete="CASCADE"), index=True
+    )
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    submission: Mapped["AssignmentSubmission"] = relationship(back_populates="attempts")
 
 
 class QuizAttempt(Base):

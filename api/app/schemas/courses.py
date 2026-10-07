@@ -227,6 +227,8 @@ class ContentBlockCreate(BaseModel):
     label: str | None = None
     parent_id: int | None = None
     sort_order: int = 0
+    points_possible: int | None = Field(default=None, ge=1, le=10000)
+    due_at: datetime | None = None
     quiz_title: str | None = "Quiz"
     quiz_questions: list[QuizQuestionIn] = Field(default_factory=list)
 
@@ -238,6 +240,8 @@ class ContentBlockUpdate(BaseModel):
     label: str | None = None
     parent_id: int | None = None
     sort_order: int | None = None
+    points_possible: int | None = Field(default=None, ge=1, le=10000)
+    due_at: datetime | None = None
     quiz_title: str | None = None
     quiz_questions: list[QuizQuestionIn] | None = None
 
@@ -251,6 +255,8 @@ class ContentBlockOut(BaseModel):
     label: str | None
     parent_id: int | None = None
     sort_order: int
+    points_possible: int | None = None
+    due_at: datetime | None = None
     quiz: QuizOut | None = None
 
     model_config = {"from_attributes": True}
@@ -267,6 +273,17 @@ class ContentBlockStudentOut(BaseModel):
     sort_order: int
     completed: bool = False
     review_status: str | None = None
+    points_possible: int | None = None
+    due_at: datetime | None = None
+    submission_score: int | None = None
+    submission_feedback: str | None = None
+    submission_file_url: str | None = None
+    submission_file_name: str | None = None
+    submission_body: str | None = None
+    submitted_at: datetime | None = None
+    can_submit: bool = False
+    can_resubmit: bool = False
+    is_late: bool = False
     quiz: QuizStudentOut | None = None
 
     model_config = {"from_attributes": True}
@@ -499,10 +516,68 @@ class AssignmentSubmissionOut(BaseModel):
     file_url: str | None = None
     file_name: str | None = None
     status: str
+    score: int | None = None
+    feedback: str | None = None
+    points_possible: int | None = None
+    due_at: datetime | None = None
+    is_late: bool = False
+    graded_at: datetime | None = None
     user_id: int | None = None
     student_name: str | None = None
     student_email: str | None = None
     submitted_at: datetime | None = None
+
+
+class AssignmentAttemptOut(BaseModel):
+    id: int
+    body: str | None = None
+    file_url: str | None = None
+    file_name: str | None = None
+    submitted_at: datetime
+
+
+class StudentAssignmentOut(BaseModel):
+    block_id: int
+    course_id: int
+    title: str
+    course_code: str
+    course_title: str
+    chapter_title: str
+    due_at: datetime | None = None
+    bucket: str
+    review_status: str | None = None
+    score: int | None = None
+    points_possible: int | None = None
+    submitted_at: datetime | None = None
+    is_late: bool = False
+
+
+class StudentAssignmentDetailOut(BaseModel):
+    block_id: int
+    course_id: int
+    title: str
+    instructions_body: str | None = None
+    instructions_url: str | None = None
+    instructions_label: str | None = None
+    course_code: str
+    course_title: str
+    chapter_title: str
+    points_possible: int | None = None
+    due_at: datetime | None = None
+    bucket: str
+    review_status: str | None = None
+    score: int | None = None
+    feedback: str | None = None
+    graded_at: datetime | None = None
+    body: str | None = None
+    file_url: str | None = None
+    file_name: str | None = None
+    submitted_at: datetime | None = None
+    is_late: bool = False
+    can_submit: bool = False
+    can_resubmit: bool = False
+    can_withdraw: bool = False
+    attempts: list[AssignmentAttemptOut] = Field(default_factory=list)
 
 
 class UserDocumentOut(BaseModel):
@@ -517,6 +592,8 @@ class UserDocumentOut(BaseModel):
 
 class AssignmentReviewIn(BaseModel):
     status: str = Field(pattern="^(passed|failed)$")
+    score: int | None = Field(default=None, ge=0)
+    feedback: str | None = Field(default=None, max_length=5000)
 
 
 class QuizSubmitIn(BaseModel):

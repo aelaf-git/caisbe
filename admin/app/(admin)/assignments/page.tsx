@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Alert from "@/components/ui/Alert";
-import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
 import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
+import AssignmentReviewForm, { type AssignmentReviewPayload } from "@/components/lms/AssignmentReviewForm";
 import { apiFetch, ApiError } from "@/lib/auth";
 import { resolveUploadUrl } from "@/lib/mediaUrl";
 
@@ -21,6 +21,11 @@ type AssignmentSubmission = {
   file_url: string | null;
   file_name: string | null;
   status: string;
+  score: number | null;
+  feedback: string | null;
+  points_possible: number | null;
+  is_late: boolean;
+  graded_at: string | null;
   user_id: number | null;
   student_name: string | null;
   student_email: string | null;
@@ -67,12 +72,12 @@ export default function AssignmentsPage() {
     void load();
   }, [load]);
 
-  async function review(id: number, status: "passed" | "failed") {
+  async function review(id: number, payload: AssignmentReviewPayload) {
     setBusyId(id);
     try {
       const updated = await apiFetch<AssignmentSubmission>(`/admin/assignment-submissions/${id}/review`, {
         method: "POST",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(payload),
       });
       setRows((current) => {
         if (filter !== "all" && updated.status !== filter) {
@@ -83,7 +88,7 @@ export default function AssignmentsPage() {
       await notice({
         tone: "success",
         title: "Done",
-        description: status === "passed" ? "Submission marked as passed." : "Submission marked as failed.",
+        description: payload.status === "passed" ? "Submission marked as passed." : "Submission marked as failed.",
       });
     } catch (err) {
       await notice({
@@ -179,6 +184,13 @@ export default function AssignmentsPage() {
                             · {new Date(row.submitted_at).toLocaleString()}
                           </span>
                         ) : null}
+                        {row.is_late ? <span className="font-semibold text-caisbe-red"> · Late</span> : null}
+                        {row.points_possible != null && row.score != null ? (
+                          <span className="text-caisbe-muted">
+                            {" "}
+                            · {row.score}/{row.points_possible}
+                          </span>
+                        ) : null}
                       </p>
                     </div>
                     <span
@@ -230,44 +242,14 @@ export default function AssignmentsPage() {
                         View student
                       </Link>
                     ) : null}
-                    {row.status === "under_review" ? (
-                      <>
-                        <Button
-                          size="sm"
-                          disabled={busyId === row.id}
-                          onClick={() => void review(row.id, "passed")}
-                        >
-                          Pass
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={busyId === row.id}
-                          onClick={() => void review(row.id, "failed")}
-                        >
-                          Fail
-                        </Button>
-                      </>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant={row.status === "passed" ? "primary" : "ghost"}
-                          disabled={busyId === row.id}
-                          onClick={() => void review(row.id, "passed")}
-                        >
-                          Mark passed
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={row.status === "failed" ? "secondary" : "ghost"}
-                          disabled={busyId === row.id}
-                          onClick={() => void review(row.id, "failed")}
-                        >
-                          Mark failed
-                        </Button>
-                      </div>
-                    )}
+                    <AssignmentReviewForm
+                      key={`${row.id}-${row.status}-${row.score ?? ""}-${row.graded_at ?? ""}`}
+                      pointsPossible={row.points_possible}
+                      initialScore={row.score}
+                      initialFeedback={row.feedback}
+                      busy={busyId === row.id}
+                      onReview={(payload) => void review(row.id, payload)}
+                    />
                   </div>
                 </li>
               );

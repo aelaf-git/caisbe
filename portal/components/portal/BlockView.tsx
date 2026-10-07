@@ -155,6 +155,14 @@ export default function BlockView({
   return null;
 }
 
+function assignmentScore(block: ContentBlock): string | null {
+  if (block.review_status !== "passed" && block.review_status !== "failed") return null;
+  if (block.points_possible != null && block.submission_score != null) {
+    return `${block.submission_score} / ${block.points_possible}`;
+  }
+  return block.review_status === "passed" ? "Pass" : "Fail";
+}
+
 function reviewLabel(status: string | null | undefined): string {
   if (status === "passed") return "Passed";
   if (status === "failed") return "Failed";
@@ -276,6 +284,14 @@ function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete
         )}
       </div>
 
+      {block.points_possible != null || block.due_at ? (
+        <p className="text-sm text-caisbe-muted">
+          {block.points_possible != null ? <span>{block.points_possible} points</span> : null}
+          {block.points_possible != null && block.due_at ? <span> · </span> : null}
+          {block.due_at ? <span>Due {new Date(block.due_at).toLocaleString()}</span> : null}
+        </p>
+      ) : null}
+
       <section className="space-y-3">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Instructions</h3>
         {block.url ? (
@@ -314,6 +330,25 @@ function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete
                   ? "This assignment was marked as passed."
                   : "This assignment was marked as failed. You can still continue the course."}
             </p>
+            {assignmentScore(block) ? (
+              <p className="mt-2 text-sm font-semibold">Score: {assignmentScore(block)}</p>
+            ) : null}
+            {block.is_late ? <p className="mt-2 text-sm">Submitted after the due date.</p> : null}
+            {block.submission_feedback ? (
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{block.submission_feedback}</p>
+            ) : null}
+            {block.submission_file_url ? (
+              <a
+                href={mediaSrc(block.submission_file_url) ?? block.submission_file_url}
+                className="mt-3 inline-flex text-sm font-semibold underline"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {block.submission_file_name || "Your submitted file"}
+              </a>
+            ) : block.submission_body ? (
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{block.submission_body}</p>
+            ) : null}
             {status === "under_review" ? (
               <button
                 type="button"
@@ -324,9 +359,9 @@ function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete
                 {busy ? "Withdrawing…" : "Unsubmit"}
               </button>
             ) : null}
-            {error ? <p className="mt-3 text-sm text-caisbe-red">{error}</p> : null}
           </div>
-        ) : (
+        ) : null}
+        {block.can_submit || block.can_resubmit ? (
           <form
             onSubmit={(event) => void submit(event)}
             className="space-y-4 rounded-md border border-ifma-border bg-[#fafaf8] p-4 md:p-5"
@@ -387,16 +422,20 @@ function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete
                 />
               </label>
             )}
-            {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
             <button
               type="submit"
               disabled={busy}
               className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
             >
-              {busy ? "Submitting…" : "Submit for review"}
+              {busy ? "Submitting…" : block.can_resubmit ? "Resubmit" : "Submit for review"}
             </button>
           </form>
-        )}
+        ) : !status ? (
+          <p className="rounded-md border border-dashed border-ifma-border px-4 py-6 text-sm text-caisbe-muted">
+            The due date has passed. This assignment is closed.
+          </p>
+        ) : null}
+        {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
       </section>
     </div>
   );
