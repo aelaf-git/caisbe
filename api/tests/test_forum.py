@@ -66,6 +66,9 @@ def test_forum_boards_posts_and_moderation(client: TestClient, db: Session) -> N
         if board["slug"] == "announcements"
     )
     assert announcements["member_can_start"] is False
+    assert announcements["last_thread_title"] is None
+
+    assert client.get("/api/forum/boards/general-questions").status_code == 401
 
     blocked = client.post(
         "/api/forum/boards/announcements/threads",
@@ -90,13 +93,25 @@ def test_forum_boards_posts_and_moderation(client: TestClient, db: Session) -> N
     )
     assert reply.status_code == 201, reply.text
 
-    public = client.get(f"/api/forum/threads/{thread_id}")
+    assert client.get(f"/api/forum/threads/{thread_id}").status_code == 401
+
+    public = client.get(f"/api/forum/threads/{thread_id}", headers=student_headers)
     assert public.status_code == 200
     assert len(public.json()["replies"]) == 1
 
-    board = client.get("/api/forum/boards/general-questions")
+    board = client.get("/api/forum/boards/general-questions", headers=student_headers)
     assert board.status_code == 200
     assert board.json()["threads"][0]["reply_count"] == 1
+
+    directory = client.get("/api/forum/categories")
+    general = next(
+        item
+        for category in directory.json()
+        for item in category["boards"]
+        if item["slug"] == "general-questions"
+    )
+    assert general["last_thread_title"] is None
+    assert general["thread_count"] == 1
 
     hidden = client.patch(
         f"/api/admin/forum/threads/{thread_id}",
@@ -107,7 +122,8 @@ def test_forum_boards_posts_and_moderation(client: TestClient, db: Session) -> N
     assert hidden.json()["hidden"] is True
     assert hidden.json()["locked"] is True
 
-    assert client.get(f"/api/forum/threads/{thread_id}").status_code == 404
+    assert client.get(f"/api/forum/threads/{thread_id}").status_code == 401
+    assert client.get(f"/api/forum/threads/{thread_id}", headers=student_headers).status_code == 404
     locked_reply = client.post(
         f"/api/forum/threads/{thread_id}/replies",
         headers=student_headers,

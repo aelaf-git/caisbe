@@ -88,6 +88,14 @@ export function portalForumThreadUrl(slug: string, id: number) {
   return portalUrl(`/forum/${encodeURIComponent(slug)}/${id}`);
 }
 
+export function portalForumLoginUrl(nextPath = "/forum") {
+  return portalUrl(`/login?next=${encodeURIComponent(nextPath)}`);
+}
+
+export function portalForumRegisterUrl(nextPath = "/forum") {
+  return portalUrl(`/register?next=${encodeURIComponent(nextPath)}`);
+}
+
 export function formatForumTime(value: string | null | undefined) {
   if (!value) return "";
   const date = new Date(value);

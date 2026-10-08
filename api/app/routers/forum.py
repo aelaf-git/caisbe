@@ -167,34 +167,8 @@ def _visible_thread_counts(db: Session) -> dict[int, int]:
     return dict(rows)
 
 
-def _latest_visible_by_board(db: Session) -> dict[int, ForumThread]:
-    latest_times = (
-        db.query(
-            ForumThread.board_id.label("board_id"),
-            func.max(ForumThread.last_activity_at).label("latest"),
-        )
-        .filter(ForumThread.hidden.is_(False))
-        .group_by(ForumThread.board_id)
-        .subquery()
-    )
-    rows = (
-        db.query(ForumThread)
-        .join(
-            latest_times,
-            (ForumThread.board_id == latest_times.c.board_id)
-            & (ForumThread.last_activity_at == latest_times.c.latest)
-            & (ForumThread.hidden.is_(False)),
-        )
-        .order_by(ForumThread.id.desc())
-        .all()
-    )
-    picked: dict[int, ForumThread] = {}
-    for row in rows:
-        picked.setdefault(row.board_id, row)
-    return picked
-
-
 def _categories(db: Session) -> list[ForumCategoryOut]:
+    """Public directory: board names and descriptions only, never discussion titles."""
     categories = (
         db.query(ForumCategory)
         .options(selectinload(ForumCategory.boards))
@@ -202,7 +176,6 @@ def _categories(db: Session) -> list[ForumCategoryOut]:
         .all()
     )
     counts = _visible_thread_counts(db)
-    latest = _latest_visible_by_board(db)
     payload: list[ForumCategoryOut] = []
     for category in categories:
         boards = sorted(category.boards, key=lambda board: (board.sort_order, board.id))
@@ -221,10 +194,8 @@ def _categories(db: Session) -> list[ForumCategoryOut]:
                         member_can_start=board.member_can_start,
                         sort_order=board.sort_order,
                         thread_count=counts.get(board.id, 0),
-                        last_activity_at=(
-                            latest[board.id].last_activity_at if board.id in latest else None
-                        ),
-                        last_thread_title=latest[board.id].title if board.id in latest else None,
+                        last_activity_at=None,
+                        last_thread_title=None,
                     )
                     for board in boards
                 ],
@@ -275,7 +246,11 @@ def list_forum_categories(db: Session = Depends(get_db)) -> list[ForumCategoryOu
 
 
 @router.get("/forum/boards/{slug}", response_model=ForumBoardDetail)
-def get_forum_board(slug: str, db: Session = Depends(get_db)) -> ForumBoardDetail:
+def get_forum_board(
+    slug: str,
+    _: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ForumBoardDetail:
     board = _board_or_404(db, slug)
     threads = (
         db.query(ForumThread)
@@ -299,7 +274,11 @@ def get_forum_board(slug: str, db: Session = Depends(get_db)) -> ForumBoardDetai
 
 
 @router.get("/forum/threads/{thread_id}", response_model=ForumThreadDetail)
-def get_forum_thread(thread_id: int, db: Session = Depends(get_db)) -> ForumThreadDetail:
+def get_forum_thread(
+    thread_id: int,
+    _: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ForumThreadDetail:
     thread = _load_thread(db, thread_id)
     if thread is None or thread.hidden:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Discussion not found.")

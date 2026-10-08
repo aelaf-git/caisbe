@@ -1,3 +1,5 @@
+import { portalUrl } from "@/lib/api";
+
 export const networkPages = {
   overview: {
     slug: "overview",
@@ -33,8 +35,8 @@ export const networkPages = {
       "Introductions to peers and potential collaborators",
       "A pathway into broader CAISBE membership and events",
     ],
-    ctaLabel: "Engage CAISBE",
-    ctaHref: "/contact",
+    ctaLabel: "Sign in to discuss",
+    ctaHref: portalUrl("/login?next=/forum"),
   },
 } as const;
 

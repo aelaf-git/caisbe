@@ -27,6 +27,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/assignments", label: "Assignments", icon: "clipboard", match: "prefix" },
       { href: "/cart", label: "Cart", icon: "cart", match: "exact" },
       { href: "/certificates", label: "Certificates", icon: "award", match: "prefix" },
+      { href: "/forum", label: "Discussion forum", icon: "forum", match: "prefix" },
       { href: "/membership", label: "Membership", icon: "badge", match: "prefix" },
     ],
   },
@@ -34,7 +35,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Account",
     items: [
       { href: "/messages", label: "Tickets", icon: "chat", match: "prefix" },
-      { href: "/forum", label: "Discussion forum", icon: "forum", match: "prefix" },
       { href: "/notifications", label: "Notifications", icon: "bell", match: "prefix" },
       { href: "/account", label: "Manage profile", icon: "user", match: "prefix" },
     ],

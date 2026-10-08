@@ -120,6 +120,21 @@ export default function StudentDashboardPage() {
 
       <UnreadNotificationsBanner />
 
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Discussion forum</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-caisbe-muted">
+              Read and join student discussions on courses, careers, mentorship, and events. You are
+              signed in, so you can take part from here.
+            </p>
+          </div>
+          <Link href="/forum" className="text-sm font-semibold text-caisbe-red hover:underline">
+            Open forum
+          </Link>
+        </div>
+      </Card>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "In progress", value: current.filter((item) => item.status === "enrolled").length },
