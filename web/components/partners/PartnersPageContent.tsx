@@ -7,13 +7,10 @@ export default function PartnersPageContent() {
     eyebrow,
     title,
     lead,
-    intro,
     benefitsTitle,
-    benefitsBody,
+    benefits,
     howItWorksTitle,
-    howItWorksBody,
-    thankYouTitle,
-    thankYouLead,
+    steps,
     contactEmail,
     ctaLabel,
   } = partnersContent;
@@ -22,58 +19,47 @@ export default function PartnersPageContent() {
 
   return (
     <>
-      <PageHero
-        eyebrow={eyebrow}
-        title={title}
-        lead={lead}
-        actions={
-          <ButtonLink href={mailtoHref} variant="primary">
-            {ctaLabel}
-          </ButtonLink>
-        }
-      />
+      <PageHero eyebrow={eyebrow} title={title} lead={lead} />
 
-      <ContentSection className="!py-20 md:!py-24">
-        <p className="max-w-3xl text-base leading-8 text-caisbe-text md:text-lg">
-          {intro}
-        </p>
+      <ContentSection id="benefits" title={benefitsTitle}>
+        <ul className="grid gap-4 sm:grid-cols-2">
+          {benefits.map((benefit) => (
+            <li
+              key={benefit.title}
+              className="rounded-[20px] bg-white px-5 py-5 shadow-hopewell"
+            >
+              <h3 className="font-hopewell-display text-lg font-bold text-caisbe-text-dark">
+                {benefit.title}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-caisbe-text">{benefit.description}</p>
+            </li>
+          ))}
+        </ul>
       </ContentSection>
 
-      <ContentSection
-        id="benefits"
-        title={benefitsTitle}
-        description={benefitsBody}
-        className="!py-20 md:!py-24 bg-[#fafafa]"
-      />
-
-      <ContentSection
-        id="how-it-works"
-        title={howItWorksTitle}
-        description={howItWorksBody}
-        className="!py-20 md:!py-24"
-      >
-        <div>
+      <ContentSection id="how-it-works" title={howItWorksTitle} className="bg-[#fafafa]">
+        <ol className="grid gap-4 md:grid-cols-2">
+          {steps.map((step, index) => (
+            <li
+              key={step.title}
+              className="rounded-[20px] bg-white px-5 py-5 shadow-hopewell"
+            >
+              <p className="text-xs font-bold uppercase tracking-wider text-caisbe-red">
+                Step {index + 1}
+              </p>
+              <h3 className="font-hopewell-display mt-2 text-lg font-bold text-caisbe-text-dark">
+                {step.title}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-caisbe-text">{step.description}</p>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-8">
           <ButtonLink href={mailtoHref} variant="primary">
             {ctaLabel}
           </ButtonLink>
-          <p className="mt-4 max-w-3xl text-sm leading-6 text-caisbe-muted">
-            Prefer to write us directly? Email{" "}
-            <a
-              href={mailtoHref}
-              className="font-semibold text-caisbe-red underline-offset-2 hover:underline"
-            >
-              {contactEmail}
-            </a>
-            .
-          </p>
         </div>
       </ContentSection>
-
-      <ContentSection
-        title={thankYouTitle}
-        description={thankYouLead}
-        className="!py-20 md:!py-24 bg-[#fafafa]"
-      />
     </>
   );
 }
