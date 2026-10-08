@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import AppearancePanel from "@/components/appearance/AppearancePanel";
@@ -300,17 +301,26 @@ export default function ManageProfilePage() {
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">My invoices</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-left text-sm">
-            <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Invoice #</th><th className="px-3 py-2 pr-4">Bill date</th><th className="px-3 py-2 pr-4">Billing period</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2">Balance</th></tr></thead>
+            <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Invoice #</th><th className="px-3 py-2 pr-4">Bill date</th><th className="px-3 py-2 pr-4">Billing period</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2 pr-4">Balance</th><th className="px-3 py-2">Receipt</th></tr></thead>
             <tbody>
               {invoices.length === 0 ? (
-                <tr><td className="px-3 py-3 text-caisbe-muted" colSpan={5}>No invoices yet.</td></tr>
+                <tr><td className="px-3 py-3 text-caisbe-muted" colSpan={6}>No invoices yet.</td></tr>
               ) : invoices.map((invoice) => (
                 <tr key={invoice.id} className="border-t border-ifma-border-light">
                   <td className="px-3 py-3 pr-4 font-mono">{invoice.number}</td>
                   <td className="px-3 py-3 pr-4">{formatDate(invoice.bill_date)}</td>
                   <td className="px-3 py-3 pr-4">{formatDate(invoice.period_start)} – {formatDate(invoice.period_end)}</td>
                   <td className="px-3 py-3 pr-4">{formatMoney(invoice.amount_paid_cents)}</td>
-                  <td className="px-3 py-3">{formatMoney(invoice.balance_cents)}</td>
+                  <td className="px-3 py-3 pr-4">{formatMoney(invoice.balance_cents)}</td>
+                  <td className="px-3 py-3">
+                    {invoice.order_number ? (
+                      <Link href={`/account/receipts/${encodeURIComponent(invoice.order_number)}`} className="font-semibold text-caisbe-red hover:underline">
+                        Receipt
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -322,17 +332,22 @@ export default function ManageProfilePage() {
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">My orders</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-left text-sm">
-            <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Order name</th><th className="px-3 py-2 pr-4">Order date</th><th className="px-3 py-2 pr-4">Order total</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2">Balance</th></tr></thead>
+            <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Order name</th><th className="px-3 py-2 pr-4">Order date</th><th className="px-3 py-2 pr-4">Order total</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2 pr-4">Balance</th><th className="px-3 py-2">Receipt</th></tr></thead>
             <tbody>
               {orders.length === 0 ? (
-                <tr><td className="px-3 py-3 text-caisbe-muted" colSpan={5}>No orders yet.</td></tr>
+                <tr><td className="px-3 py-3 text-caisbe-muted" colSpan={6}>No orders yet.</td></tr>
               ) : orders.map((order) => (
                 <tr key={order.id} className="border-t border-ifma-border-light">
                   <td className="px-3 py-3 pr-4">{order.name} <span className="font-mono text-xs text-caisbe-muted">{order.number}</span></td>
                   <td className="px-3 py-3 pr-4">{formatDate(order.created_at)}</td>
                   <td className="px-3 py-3 pr-4">{formatMoney(order.total_cents, order.currency)}</td>
                   <td className="px-3 py-3 pr-4">{formatMoney(order.amount_paid_cents, order.currency)}</td>
-                  <td className="px-3 py-3">{formatMoney(order.balance_cents, order.currency)}</td>
+                  <td className="px-3 py-3 pr-4">{formatMoney(order.balance_cents, order.currency)}</td>
+                  <td className="px-3 py-3">
+                    <Link href={`/account/receipts/${encodeURIComponent(order.number)}`} className="font-semibold text-caisbe-red hover:underline">
+                      Receipt
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

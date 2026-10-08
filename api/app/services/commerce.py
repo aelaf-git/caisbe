@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -29,6 +30,8 @@ from app.services.membership import (
     mark_pending_membership_applications_active,
     revert_membership_to_student,
 )
+
+logger = logging.getLogger(__name__)
 
 MANUAL_UNLOCK_MARKER = "MANUAL_UNLOCK"
 STALE_PENDING_HOURS = 24
@@ -328,12 +331,27 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
 
     item_titles = [item.title for item in order.items if (item.title or "").strip()]
     order_label = ", ".join(item_titles[:3]) if item_titles else order.number
+    receipt_path = f"/account/receipts/{order.number}"
     notify_payment_received(
         db,
         user,
         amount_cents=paid,
         order_name=order_label,
+        receipt_path=receipt_path,
     )
+    if (user.email or "").strip():
+        try:
+            from app.services.receipt_email import send_receipt_email
+
+            send_receipt_email(
+                to=user.email,
+                full_name=user.full_name,
+                order_number=order.number,
+                amount_cents=paid,
+                currency=order.currency,
+            )
+        except Exception:
+            logger.exception("Receipt email failed for order %s", order.number)
 
 
 def _cancel_stale_pending_course_checkouts(db: Session, user: User, course_ids: list[int]) -> None:

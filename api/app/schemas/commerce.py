@@ -107,6 +107,7 @@ class OrderOut(BaseModel):
     balance_cents: int
     currency: str
     promo_code: str | None = None
+    invoice_number: str | None = None
     items: list[OrderItemOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}

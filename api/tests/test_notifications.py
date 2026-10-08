@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -133,13 +134,20 @@ def test_payment_fulfillment_creates_payment_notification(db: Session) -> None:
     db.commit()
     db.refresh(order)
 
-    fulfill_order(db, order)
-    db.commit()
+    with patch("app.services.receipt_email.send_email") as send_email:
+        fulfill_order(db, order)
+        db.commit()
+        fulfill_order(db, order)
+
+    assert send_email.call_count == 1
+    assert "/account/receipts/ORD-TEST-1" in send_email.call_args.kwargs["html_body"]
+    assert send_email.call_args.kwargs["to"] == user.email
 
     rows = db.query(Notification).filter(Notification.user_id == user.id, Notification.kind == "payment").all()
     assert len(rows) == 1
     assert "Payment received" in rows[0].title
     assert "$100.00" in rows[0].body
+    assert rows[0].link == "/account/receipts/ORD-TEST-1"
 
 
 def test_course_update_notifies_enrolled_students(db: Session) -> None:

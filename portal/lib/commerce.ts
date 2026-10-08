@@ -99,6 +99,7 @@ export type OrderRow = {
   balance_cents: number;
   currency: string;
   promo_code?: string | null;
+  invoice_number?: string | null;
   items?: OrderItemRow[];
 };
 

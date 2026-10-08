@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.config import settings
 from app.db import get_db
@@ -60,6 +60,7 @@ def _order_out(order: Order) -> OrderOut:
         balance_cents=max(0, order.total_cents - order.amount_paid_cents),
         currency=order.currency,
         promo_code=order.promo_code,
+        invoice_number=order.invoices[0].number if order.invoices else None,
         items=[
             OrderItemOut(
                 course_id=item.course_id,
@@ -327,7 +328,7 @@ def list_my_orders(
 ) -> list[OrderOut]:
     rows = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(joinedload(Order.items), selectinload(Order.invoices))
         .filter(Order.user_id == current_user.id)
         .order_by(Order.created_at.desc())
         .all()
@@ -432,7 +433,7 @@ def confirm_checkout(
             )
     order = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(joinedload(Order.items), selectinload(Order.invoices))
         .filter(Order.id == payment.order_id)
         .one()
     )
@@ -447,7 +448,7 @@ def get_my_order(
 ) -> OrderOut:
     order = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(joinedload(Order.items), selectinload(Order.invoices))
         .filter(Order.number == number, Order.user_id == current_user.id)
         .first()
     )

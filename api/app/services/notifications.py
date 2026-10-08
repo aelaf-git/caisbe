@@ -140,6 +140,7 @@ def notify_payment_received(
     *,
     amount_cents: int,
     order_name: str | None = None,
+    receipt_path: str | None = None,
 ) -> list[Notification]:
     dollars = amount_cents / 100
     label = (order_name or "your order").strip() or "your order"
@@ -149,7 +150,7 @@ def notify_payment_received(
         title="Payment received",
         body=f"We received your payment of ${dollars:,.2f} for {label}. Thank you.",
         kind="payment",
-        link="/account",
+        link=(receipt_path or "").strip() or "/account",
     )
 
 
