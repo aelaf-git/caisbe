@@ -1770,6 +1770,8 @@ def admin_upsert_certificate_template(
         template.title = strip_plain_text(payload.title) or "Certificate of Completion"
     if payload.body is not None:
         template.body = sanitize_html(payload.body) or ""
+    if "program_name" in payload.model_fields_set:
+        template.program_name = strip_plain_text(payload.program_name) or None
     db.commit()
     db.refresh(template)
     return template

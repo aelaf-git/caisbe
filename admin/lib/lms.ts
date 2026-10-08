@@ -76,6 +76,7 @@ export type CertificateTemplate = {
   id: number;
   title: string;
   body: string;
+  program_name?: string | null;
 };
 
 export type CourseDetail = {

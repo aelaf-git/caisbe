@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import CertificatePreview from "@/components/certificates/CertificatePreview";
 import ChapterCard from "@/components/lms/ChapterCard";
 import CourseCoverField from "@/components/lms/CourseCoverField";
@@ -22,7 +22,7 @@ import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { AutosaveProvider, autosaveLabel, useAutosaveRegistry } from "@/hooks/autosaveContext";
 import { useAutosave } from "@/hooks/useAutosave";
 import { apiFetch, ApiError } from "@/lib/auth";
-import type { CourseDetail } from "@/lib/lms";
+import type { CertificateTemplate, CourseDetail } from "@/lib/lms";
 import { numberedTitle, slugify } from "@/lib/ordinalTitles";
 
 const SECTION_NAV = [
@@ -111,6 +111,10 @@ function AdminCourseEditorInner() {
 
   const [activeSection, setActiveSection] = useState<EditorSection>("all");
   const [focusChapterId, setFocusChapterId] = useState<number | null>(null);
+  const [programMode, setProgramMode] = useState<"automatic" | "manual">("automatic");
+  const [programName, setProgramName] = useState("");
+  const [programSaving, setProgramSaving] = useState(false);
+  const programSaveSeq = useRef(0);
 
   function showSection(id: Exclude<EditorSection, "all">) {
     return activeSection === "all" || activeSection === id;
@@ -149,6 +153,9 @@ function AdminCourseEditorInner() {
           }))
         : [emptyQuestion()],
     });
+    const storedName = data.certificate_template?.program_name?.trim() ?? "";
+    setProgramMode(storedName ? "manual" : "automatic");
+    setProgramName(storedName);
     setBaselineKey((n) => n + 1);
   }
 
@@ -289,6 +296,32 @@ function AdminCourseEditorInner() {
     }
   }
 
+  async function saveProgramName(next: string) {
+    const cleaned = next.trim();
+    const seq = programSaveSeq.current + 1;
+    programSaveSeq.current = seq;
+    setProgramSaving(true);
+    try {
+      const saved = await apiFetch<CertificateTemplate>(
+        `/admin/courses/${courseId}/certificate-template`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ program_name: cleaned }),
+        },
+      );
+      if (programSaveSeq.current !== seq) return;
+      const stored = saved.program_name?.trim() ?? "";
+      setProgramMode(stored ? "manual" : "automatic");
+      setProgramName(stored);
+      setCourse((current) => (current ? { ...current, certificate_template: saved } : current));
+    } catch (err) {
+      if (programSaveSeq.current !== seq) return;
+      showError(err instanceof ApiError ? err.detail : "Unable to save the certificate name.");
+    } finally {
+      if (programSaveSeq.current === seq) setProgramSaving(false);
+    }
+  }
+
   const isPublished = status === "published";
   const needsPublishUpdate = isPublished && hasUnpublishedChanges;
   const draftLabel = autosaveLabel(overallStatus, {
@@ -318,6 +351,11 @@ function AdminCourseEditorInner() {
       />
     );
   }
+
+  const printedProgramName =
+    programMode === "manual" && programName.trim()
+      ? programName.trim()
+      : meta.title.trim() || "Sample Course";
 
   return (
     <div className="space-y-6 pb-12">
@@ -517,11 +555,68 @@ function AdminCourseEditorInner() {
       >
         <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Certificate</h2>
         <p className="text-sm text-caisbe-muted">
-          All courses use the standard CAISBE certificate design. When a student completes this course,
-          a certificate is issued with their name, the course title below, the issue date, and a
-          verification QR code.
+          All courses use the standard CAISBE certificate design. The program name prints on its own
+          line under the student name. Certificates already issued pick up a saved name the next time
+          they are opened.
         </p>
-        <CertificatePreview kind="completion" courseTitle={meta.title || "Sample Course"} />
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-semibold text-caisbe-text">Name on the certificate</legend>
+          <label className="flex items-start gap-2 text-sm text-caisbe-text">
+            <input
+              type="radio"
+              name="certificate-program-mode"
+              className="mt-1"
+              checked={programMode === "automatic"}
+              disabled={programSaving}
+              onChange={() => {
+                setProgramMode("automatic");
+                setProgramName("");
+                void saveProgramName("");
+              }}
+            />
+            <span>
+              <span className="font-medium">Automatic</span>
+              <span className="mt-0.5 block text-caisbe-muted">
+                Prints the published course title. Publish a renamed course and every issued certificate
+                shows that name.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-caisbe-text">
+            <input
+              type="radio"
+              name="certificate-program-mode"
+              className="mt-1"
+              checked={programMode === "manual"}
+              disabled={programSaving}
+              onChange={() => setProgramMode("manual")}
+            />
+            <span>
+              <span className="font-medium">Manual</span>
+              <span className="mt-0.5 block text-caisbe-muted">
+                Prints the exact wording you type, such as Real Estate Education when the course is
+                titled Real Estate Course.
+              </span>
+            </span>
+          </label>
+          {programMode === "manual" ? (
+            <FormField
+              label="Name printed on the certificate"
+              hint="Saved as soon as you leave the field. Clearing it returns to the course title."
+            >
+              <input
+                value={programName}
+                maxLength={255}
+                placeholder={meta.title.trim() || "Real Estate Education"}
+                className={fieldClassName}
+                disabled={programSaving}
+                onChange={(event) => setProgramName(event.target.value)}
+                onBlur={() => void saveProgramName(programName)}
+              />
+            </FormField>
+          ) : null}
+        </fieldset>
+        <CertificatePreview kind="completion" courseTitle={printedProgramName} />
       </Card>
       ) : null}
     </div>

@@ -468,12 +468,14 @@ class ExamIntegrityStateOut(BaseModel):
 class CertificateTemplateUpdate(BaseModel):
     title: str | None = None
     body: str | None = None
+    program_name: str | None = Field(default=None, max_length=255)
 
 
 class CertificateTemplateOut(BaseModel):
     id: int
     title: str
     body: str
+    program_name: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -626,6 +628,7 @@ class CertificateOut(BaseModel):
     student_name: str
     title: str
     body: str
+    program_name: str
     verify_url: str | None = None
     issued_by: str = "CAISBE"
 

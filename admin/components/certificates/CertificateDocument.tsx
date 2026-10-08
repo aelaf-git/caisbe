@@ -135,6 +135,12 @@ export default function CertificateDocument({
               {studentName}
             </p>
             <div className="mx-auto bg-[#7b1e3a]" style={{ marginTop: 8, height: 1, width: 280 }} />
+            <p
+              className="mx-auto font-[family-name:var(--font-cinzel)] font-semibold text-[#7b1e3a]"
+              style={{ marginTop: 16, maxWidth: 620, fontSize: 20, lineHeight: 1.3 }}
+            >
+              {courseTitle}
+            </p>
           </div>
 
           <p

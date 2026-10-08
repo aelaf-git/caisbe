@@ -167,6 +167,7 @@ export type Certificate = {
   student_name: string;
   title: string;
   body: string;
+  program_name?: string;
   verify_url?: string | null;
   issued_by?: string;
 };

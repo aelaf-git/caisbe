@@ -405,6 +405,8 @@ class CertificateTemplate(Base):
         Text,
         default="This certifies that {student_name} has successfully completed {course_title}.",
     )
+    # Empty means the certificate prints the live course title.
+    program_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     course: Mapped[Course] = relationship(back_populates="certificate_template")
 

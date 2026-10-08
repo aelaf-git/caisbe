@@ -72,7 +72,7 @@ export default function CertificatePage() {
       <div className="mt-6 print:mt-0">
         <CertificateDocument
           studentName={cert.student_name}
-          courseTitle={cert.course.title}
+          courseTitle={cert.program_name || cert.course.title}
           issuedAt={cert.issued_at}
           verifyUrl={verifyUrl}
           certificateCode={cert.certificate_code}
@@ -82,7 +82,11 @@ export default function CertificatePage() {
 
       <div className="mt-6 flex justify-center print:hidden">
         <DownloadCertificateButton
-          fileName={certificatePdfFileName(["CAISBE", cert.certificate_code, cert.course.title])}
+          fileName={certificatePdfFileName([
+            "CAISBE",
+            cert.certificate_code,
+            cert.program_name || cert.course.title,
+          ])}
         />
       </div>
     </section>

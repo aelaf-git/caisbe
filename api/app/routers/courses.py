@@ -271,6 +271,12 @@ def _apply_placeholders(
     )
 
 
+def certificate_program_name(course: Course) -> str:
+    template = course.certificate_template
+    custom = (template.program_name or "").strip() if template is not None else ""
+    return custom or course.title
+
+
 def _render_certificate(
     template: CertificateTemplate | None,
     student_name: str,
@@ -364,10 +370,11 @@ def _finalize_course_completion(
 
 
 def _certificate_to_out(row: Certificate, student_name: str, db: Session) -> CertificateOut:
+    program_name = certificate_program_name(row.course)
     rendered = _render_certificate(
         row.course.certificate_template,
         student_name,
-        row.course.title,
+        program_name,
         row.issued_at,
     )
     title = get_setting(db, "completion_cert_title") or rendered["title"]
@@ -380,6 +387,7 @@ def _certificate_to_out(row: Certificate, student_name: str, db: Session) -> Cer
         student_name=strip_plain_text(student_name) or student_name,
         title=strip_plain_text(title) or title,
         body=sanitize_html(rendered["body"]) or "",
+        program_name=program_name,
         verify_url=_certificate_verify_url(row.certificate_code),
         issued_by=issued_by,
     )
@@ -2027,7 +2035,10 @@ def verify_certificate(
     issued_by = get_setting(db, "institute_name") or "CAISBE"
     row = (
         db.query(Certificate)
-        .options(joinedload(Certificate.course), joinedload(Certificate.user))
+        .options(
+            joinedload(Certificate.course).joinedload(Course.certificate_template),
+            joinedload(Certificate.user),
+        )
         .filter(Certificate.certificate_code == certificate_code)
         .first()
     )
@@ -2043,7 +2054,7 @@ def verify_certificate(
             kind="completion",
             certificate_code=row.certificate_code,
             student_name=row.user.full_name,
-            course_title=row.course.title,
+            course_title=certificate_program_name(row.course),
             membership_number=None,
             issued_at=row.issued_at,
             issued_by=issued_by,
