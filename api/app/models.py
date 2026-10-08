@@ -1012,3 +1012,104 @@ class JobPosting(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class ForumCategory(Base):
+    """Top-level discussion forum bar (for example, Academic Support)."""
+
+    __tablename__ = "forum_categories"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    slug: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(160))
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    boards: Mapped[list["ForumBoard"]] = relationship(
+        back_populates="category",
+        cascade="all, delete-orphan",
+        order_by="ForumBoard.sort_order",
+    )
+
+
+class ForumBoard(Base):
+    """A discussion board inside a forum category."""
+
+    __tablename__ = "forum_boards"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("forum_categories.id", ondelete="CASCADE"),
+        index=True,
+    )
+    slug: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(160))
+    description: Mapped[str] = mapped_column(Text, default="")
+    member_can_start: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    category: Mapped["ForumCategory"] = relationship(back_populates="boards")
+    threads: Mapped[list["ForumThread"]] = relationship(
+        back_populates="board",
+        cascade="all, delete-orphan",
+    )
+
+
+class ForumThread(Base):
+    """A discussion started on a forum board."""
+
+    __tablename__ = "forum_threads"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    board_id: Mapped[int] = mapped_column(ForeignKey("forum_boards.id", ondelete="CASCADE"), index=True)
+    author_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text)
+    pinned: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    locked: Mapped[bool] = mapped_column(Boolean, default=False)
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+    last_activity_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        index=True,
+    )
+
+    board: Mapped["ForumBoard"] = relationship(back_populates="threads")
+    author: Mapped["User | None"] = relationship(foreign_keys=[author_id])
+    replies: Mapped[list["ForumReply"]] = relationship(
+        back_populates="thread",
+        cascade="all, delete-orphan",
+        order_by="ForumReply.created_at, ForumReply.id",
+    )
+
+
+class ForumReply(Base):
+    __tablename__ = "forum_replies"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    thread_id: Mapped[int] = mapped_column(
+        ForeignKey("forum_threads.id", ondelete="CASCADE"),
+        index=True,
+    )
+    author_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    body: Mapped[str] = mapped_column(Text)
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    thread: Mapped["ForumThread"] = relationship(back_populates="replies")
+    author: Mapped["User | None"] = relationship(foreign_keys=[author_id])

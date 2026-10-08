@@ -1,3 +1,4 @@
+import DiscussionForumHome from "@/components/network/DiscussionForumHome";
 import ButtonLink from "@/components/ui/ButtonLink";
 import {
   ContentSection,
@@ -50,6 +51,7 @@ export function NetworkSubpageContent({ slug }: { slug: NetworkSlug }) {
           </p>
         ))}
       </PageHero>
+      {slug === "discussion-forum" ? <DiscussionForumHome /> : null}
       <ContentSection title="Benefits of joining">
         <ul className="grid gap-3 sm:grid-cols-2">
           {page.benefits.map((benefit) => (

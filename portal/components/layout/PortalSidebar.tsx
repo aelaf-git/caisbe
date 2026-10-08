@@ -34,6 +34,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Account",
     items: [
       { href: "/messages", label: "Tickets", icon: "chat", match: "prefix" },
+      { href: "/forum", label: "Discussion forum", icon: "forum", match: "prefix" },
       { href: "/notifications", label: "Notifications", icon: "bell", match: "prefix" },
       { href: "/account", label: "Manage profile", icon: "user", match: "prefix" },
     ],
@@ -96,6 +97,13 @@ function NavIcon({ name }: { name: string }) {
     chat: (
       <>
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </>
+    ),
+    forum: (
+      <>
+        <path d="M4 6h16" />
+        <path d="M4 12h16" />
+        <path d="M4 18h10" />
       </>
     ),
     clipboard: (
