@@ -18,7 +18,7 @@ export default function CertificateProgramPageContent({
       backLabel="Back to certificate programs"
       actions={
         <ButtonLink href={courseEnrollUrl(course.id)} variant="primary">
-          Enroll / Register
+          Enroll
         </ButtonLink>
       }
     >

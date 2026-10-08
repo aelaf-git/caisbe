@@ -167,8 +167,18 @@ def _visible_thread_counts(db: Session) -> dict[int, int]:
     return dict(rows)
 
 
+def _latest_activity_by_board(db: Session) -> dict[int, datetime]:
+    rows = (
+        db.query(ForumThread.board_id, func.max(ForumThread.last_activity_at))
+        .filter(ForumThread.hidden.is_(False))
+        .group_by(ForumThread.board_id)
+        .all()
+    )
+    return {board_id: latest for board_id, latest in rows}
+
+
 def _categories(db: Session) -> list[ForumCategoryOut]:
-    """Public directory: board names and descriptions only, never discussion titles."""
+    """Directory of board names and descriptions. Activity time is included; titles are not."""
     categories = (
         db.query(ForumCategory)
         .options(selectinload(ForumCategory.boards))
@@ -176,6 +186,7 @@ def _categories(db: Session) -> list[ForumCategoryOut]:
         .all()
     )
     counts = _visible_thread_counts(db)
+    latest = _latest_activity_by_board(db)
     payload: list[ForumCategoryOut] = []
     for category in categories:
         boards = sorted(category.boards, key=lambda board: (board.sort_order, board.id))
@@ -194,7 +205,7 @@ def _categories(db: Session) -> list[ForumCategoryOut]:
                         member_can_start=board.member_can_start,
                         sort_order=board.sort_order,
                         thread_count=counts.get(board.id, 0),
-                        last_activity_at=None,
+                        last_activity_at=latest.get(board.id),
                         last_thread_title=None,
                     )
                     for board in boards

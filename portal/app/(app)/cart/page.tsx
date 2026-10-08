@@ -65,7 +65,12 @@ function CartInner() {
       await refreshUser();
       router.push(`/checkout/success?order=${result.order_number}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to complete purchase.");
+      const detail = err instanceof ApiError ? err.detail : "Unable to complete purchase.";
+      setError(
+        /already enrolled/i.test(detail)
+          ? "You already have one of these courses. Remove it and buy the others."
+          : detail,
+      );
       try {
         await loadCart();
       } catch {

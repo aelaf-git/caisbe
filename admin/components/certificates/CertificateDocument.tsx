@@ -1,6 +1,7 @@
 "use client";
 
 import { QRCodeSVG } from "qrcode.react";
+import { cssPx } from "@/lib/cssLength";
 import {
   CERTIFICATE_HEIGHT_PX,
   CERTIFICATE_WIDTH_PX,
@@ -75,8 +76,8 @@ export default function CertificateDocument({
               .certificate-document {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
-                width: ${CERTIFICATE_WIDTH_PX}px !important;
-                height: ${CERTIFICATE_HEIGHT_PX}px !important;
+                width: ${cssPx(CERTIFICATE_WIDTH_PX)}px !important;
+                height: ${cssPx(CERTIFICATE_HEIGHT_PX)}px !important;
               }
             }
           `,

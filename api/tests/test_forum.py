@@ -111,6 +111,7 @@ def test_forum_boards_posts_and_moderation(client: TestClient, db: Session) -> N
         if item["slug"] == "general-questions"
     )
     assert general["last_thread_title"] is None
+    assert general["last_activity_at"] is not None
     assert general["thread_count"] == 1
 
     hidden = client.patch(
@@ -155,3 +156,31 @@ def test_forum_boards_posts_and_moderation(client: TestClient, db: Session) -> N
     inbox = client.get("/api/admin/forum/threads?board_slug=announcements", headers=admin_headers)
     assert inbox.status_code == 200
     assert any(row["title"] == "Welcome to the forum" for row in inbox.json())
+
+
+def test_forum_stores_markup_as_plain_text_and_requires_a_user(client: TestClient, db: Session) -> None:
+    seed_forum(db)
+    assert client.get("/api/forum/boards/general-questions").status_code == 401
+
+    student = _user(db, email="forum-plain@example.com", role="student", name="Plain Text")
+    headers = {"Authorization": f"Bearer {_login(client, student.email)}"}
+    created = client.post(
+        "/api/forum/boards/general-questions/threads",
+        headers=headers,
+        json={
+            "title": "Is this safe? <script>alert(1)</script>",
+            "body": "'; DROP TABLE forum_threads;-- <img src=x onerror=alert(1)>",
+        },
+    )
+    assert created.status_code == 201, created.text
+    payload = created.json()
+    assert payload["title"] == "Is this safe? alert(1)"
+    assert payload["body"] == "'; DROP TABLE forum_threads;--"
+    assert "<" not in payload["title"]
+    assert "<" not in payload["body"]
+
+    detail = client.get(f"/api/forum/threads/{payload['id']}", headers=headers)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["body"] == payload["body"]
+    assert client.get(f"/api/forum/threads/{payload['id']}").status_code == 401
+    assert client.get("/api/forum/categories").status_code == 200

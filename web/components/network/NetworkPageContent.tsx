@@ -52,18 +52,20 @@ export function NetworkSubpageContent({ slug }: { slug: NetworkSlug }) {
         ))}
       </PageHero>
       {slug === "discussion-forum" ? <DiscussionForumHome /> : null}
-      <ContentSection title="Benefits of joining">
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {page.benefits.map((benefit) => (
-            <li
-              key={benefit}
-              className="rounded-[20px] bg-white px-4 py-3 text-sm font-medium text-caisbe-text shadow-hopewell"
-            >
-              {benefit}
-            </li>
-          ))}
-        </ul>
-      </ContentSection>
+      {page.benefits.length > 0 ? (
+        <ContentSection title="Benefits of joining">
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {page.benefits.map((benefit) => (
+              <li
+                key={benefit}
+                className="rounded-[20px] bg-white px-4 py-3 text-sm font-medium text-caisbe-text shadow-hopewell"
+              >
+                {benefit}
+              </li>
+            ))}
+          </ul>
+        </ContentSection>
+      ) : null}
     </>
   );
 }

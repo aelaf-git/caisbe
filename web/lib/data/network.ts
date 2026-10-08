@@ -23,18 +23,10 @@ export const networkPages = {
     slug: "discussion-forum",
     title: "Discussion Forum",
     description:
-      "The African Facility Management Discussion Forum connects professionals across Africa and beyond.",
-    lead: "A collaborative forum for professionals, experts, academics, and organizations across Africa and beyond.",
-    paragraphs: [
-      "The African Facility Management Discussion Forum is a collaborative platform that brings together facility management professionals, industry experts, academics, policymakers, and organizations from across Africa and beyond. The forum promotes knowledge sharing, professional networking, and cross-sector collaboration to address emerging challenges and opportunities in the built environment.",
-      "Members engage in discussions on facility operations, asset management, sustainability, workplace innovation, healthcare, education, commercial real estate, infrastructure, government facilities, and industrial sectors. Together, we foster best practices, innovation, and professional excellence to advance the Facility Management profession across Africa.",
-    ],
-    benefits: [
-      "Cross-sector conversations on real operational challenges",
-      "Visibility for research, practice, and policy ideas",
-      "Introductions to peers and potential collaborators",
-      "A pathway into broader CAISBE membership and events",
-    ],
+      "Student discussion boards for courses, careers, mentorship, and events. Sign in to take part.",
+    lead: "Sign in to the student portal to read and join discussions on courses, careers, mentorship, and events.",
+    paragraphs: [],
+    benefits: [],
     ctaLabel: "Sign in to discuss",
     ctaHref: portalUrl("/login?next=/forum"),
   },

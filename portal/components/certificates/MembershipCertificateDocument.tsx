@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import CertificateQr from "@/components/certificates/CertificateQr";
+import { cssPx } from "@/lib/cssLength";
 
 /** Fixed A4 landscape design size — do not fluid-scale internal layout. */
 export const CERTIFICATE_WIDTH_PX = 900;
@@ -124,10 +125,10 @@ export default function MembershipCertificateDocument({
               }
               .certificate-document {
                 position: relative !important;
-                width: ${CERTIFICATE_WIDTH_PX}px !important;
-                height: ${CERTIFICATE_HEIGHT_PX}px !important;
-                min-width: ${CERTIFICATE_WIDTH_PX}px !important;
-                min-height: ${CERTIFICATE_HEIGHT_PX}px !important;
+                width: ${cssPx(CERTIFICATE_WIDTH_PX)}px !important;
+                height: ${cssPx(CERTIFICATE_HEIGHT_PX)}px !important;
+                min-width: ${cssPx(CERTIFICATE_WIDTH_PX)}px !important;
+                min-height: ${cssPx(CERTIFICATE_HEIGHT_PX)}px !important;
                 max-width: none !important;
                 margin: 0 !important;
                 box-shadow: none !important;

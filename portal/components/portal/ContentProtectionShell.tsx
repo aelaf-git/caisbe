@@ -20,7 +20,10 @@ export default function ContentProtectionShell({
     if (!enabled) return;
     const root = rootRef.current;
     if (!root) return;
-    const detachProtection = attachContentProtection(root, { trackFocusLoss: true });
+    const detachProtection = attachContentProtection(root, {
+      trackFocusLoss: true,
+      allowAnswerPaste: true,
+    });
     const detachOverlay = attachAwayOverlay(root, {
       message: "Course content is hidden while you are away from this tab.",
     });

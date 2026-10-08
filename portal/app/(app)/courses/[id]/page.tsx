@@ -307,6 +307,10 @@ export default function CoursePlayerPage() {
                       playlistIndex < playlist.length - 1 &&
                       selectionUnlocked(course, playlist[playlistIndex + 1])
                 }
+                onReviewMaterials={() => {
+                  const firstTopic = course.chapters.flatMap((chapter) => chapter.lessons)[0];
+                  if (firstTopic) setSelection({ kind: "topic", topicId: firstTopic.id });
+                }}
                 onPrev={() => {
                   setQuizPassed(false);
                   if (playlistIndex > 0) setSelection(playlist[playlistIndex - 1]);

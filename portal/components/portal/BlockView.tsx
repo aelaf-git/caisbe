@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type WheelEvent } from "react";
 import QuizPlayer from "@/components/portal/QuizPlayer";
 import { apiFetch, apiUpload, ApiError } from "@/lib/auth";
 import type { ContentBlock, Lesson, QuizAttempt } from "@/lib/lms";
@@ -26,16 +26,53 @@ function mediaSrc(url: string | null | undefined): string | null {
   return resolveUploadUrl(url);
 }
 
+function viewerSrc(url: string) {
+  return `${url.split("#")[0]}#toolbar=0&navpanes=0`;
+}
+
+function ProtectedPdf({ src, title }: { src: string; title: string }) {
+  const frameRef = useRef<HTMLIFrameElement>(null);
+
+  function forwardScroll(event: WheelEvent<HTMLDivElement>) {
+    const frame = frameRef.current?.contentWindow;
+    if (!frame) return;
+    try {
+      frame.scrollBy({ top: event.deltaY, left: event.deltaX });
+    } catch {
+      // A cross-origin viewer ignores scripted scrolling.
+    }
+  }
+
+  return (
+    <div className="relative h-[480px] overflow-hidden rounded-md border border-ifma-border bg-admin-surface">
+      <iframe
+        ref={frameRef}
+        title={title}
+        src={viewerSrc(src)}
+        className="pointer-events-none h-full w-full border-0"
+      />
+      <div
+        className="absolute inset-0"
+        onContextMenu={(event) => event.preventDefault()}
+        onDragStart={(event) => event.preventDefault()}
+        onWheel={forwardScroll}
+      />
+    </div>
+  );
+}
+
 export default function BlockView({
   block,
   heading,
   onQuizResult,
   onAssignmentComplete,
+  protectedContent = false,
 }: {
   block: ContentBlock;
   heading?: string;
   onQuizResult?: (result: QuizAttempt | null) => void;
   onAssignmentComplete?: () => void;
+  protectedContent?: boolean;
 }) {
   if (block.block_type === "text" || block.block_type === "subtopic") {
     const title = heading ?? block.title;
@@ -60,7 +97,14 @@ export default function BlockView({
         {block.title ? <h3 className="text-lg font-semibold text-caisbe-text">{block.title}</h3> : null}
         <div className="overflow-hidden rounded-md bg-black">
           {isFile ? (
-            <video controls className="aspect-video w-full" src={src}>
+            <video
+              controls
+              controlsList={protectedContent ? "nodownload" : undefined}
+              disablePictureInPicture={protectedContent}
+              onContextMenu={protectedContent ? (event) => event.preventDefault() : undefined}
+              className="aspect-video w-full"
+              src={src}
+            >
               <track kind="captions" />
             </video>
           ) : (
@@ -98,12 +142,18 @@ export default function BlockView({
     return (
       <div className="space-y-3">
         {block.title ? <h3 className="text-lg font-semibold text-caisbe-text">{block.title}</h3> : null}
-        <ResourceChip href={src} label="Open PDF" />
-        <iframe
-          title={block.title || "PDF"}
-          src={src}
-          className="h-[480px] w-full rounded-md border border-ifma-border bg-admin-surface"
-        />
+        {protectedContent ? (
+          <ProtectedPdf src={src} title={block.title || "PDF"} />
+        ) : (
+          <>
+            <ResourceChip href={src} label="Open PDF" />
+            <iframe
+              title={block.title || "PDF"}
+              src={src}
+              className="h-[480px] w-full rounded-md border border-ifma-border bg-admin-surface"
+            />
+          </>
+        )}
       </div>
     );
   }
@@ -113,10 +163,14 @@ export default function BlockView({
     return (
       <div className="space-y-2">
         {block.title ? <h3 className="text-lg font-semibold text-caisbe-text">{block.title}</h3> : null}
-        <ResourceChip
-          href={src}
-          label={block.block_type === "epub" ? "Download EPUB" : "Download document"}
-        />
+        {protectedContent ? (
+          <p className="text-sm text-caisbe-muted">This file stays in the course and cannot be downloaded.</p>
+        ) : (
+          <ResourceChip
+            href={src}
+            label={block.block_type === "epub" ? "Download EPUB" : "Download document"}
+          />
+        )}
       </div>
     );
   }
@@ -451,9 +505,11 @@ function sortBlocks(a: ContentBlock, b: ContentBlock) {
 export function TopicSections({
   topic,
   topicOutline,
+  protectedContent = false,
 }: {
   topic: Lesson;
   topicOutline: string;
+  protectedContent?: boolean;
 }) {
   const tree = useMemo(() => {
     const sectionsByParent = new Map<number | "root", ContentBlock[]>();
@@ -497,6 +553,7 @@ export function TopicSections({
         parentOutline={topicOutline}
         sectionsByParent={tree.sectionsByParent}
         mediaByParent={tree.mediaByParent}
+        protectedContent={protectedContent}
       />
     </div>
   );
@@ -507,11 +564,13 @@ function OutlineBranch({
   parentOutline,
   sectionsByParent,
   mediaByParent,
+  protectedContent,
 }: {
   parentId: number | null;
   parentOutline: string;
   sectionsByParent: Map<number | "root", ContentBlock[]>;
   mediaByParent: Map<number, ContentBlock[]>;
+  protectedContent: boolean;
 }) {
   const sections = sectionsByParent.get(parentId ?? "root") ?? [];
   let subtopicIndex = 0;
@@ -537,9 +596,9 @@ function OutlineBranch({
                 : "space-y-4 border-b border-ifma-border-light pb-6 last:border-b-0"
             }
           >
-            <BlockView block={block} heading={heading} />
+            <BlockView block={block} heading={heading} protectedContent={protectedContent} />
             {(mediaByParent.get(block.id) ?? []).map((media) => (
-              <BlockView key={media.id} block={media} />
+              <BlockView key={media.id} block={media} protectedContent={protectedContent} />
             ))}
             {isSubtopic ? (
               <OutlineBranch
@@ -547,6 +606,7 @@ function OutlineBranch({
                 parentOutline={outline ?? parentOutline}
                 sectionsByParent={sectionsByParent}
                 mediaByParent={mediaByParent}
+                protectedContent={protectedContent}
               />
             ) : null}
           </div>

@@ -24,6 +24,7 @@ export default function LessonStage({
   onNext,
   hasPrev,
   hasNext,
+  onReviewMaterials,
 }: {
   course: CourseDetail;
   courseId: number;
@@ -40,6 +41,7 @@ export default function LessonStage({
   onNext: () => void;
   hasPrev: boolean;
   hasNext: boolean;
+  onReviewMaterials?: () => void;
 }) {
   return (
     <div className="min-w-0 space-y-4">
@@ -70,14 +72,25 @@ export default function LessonStage({
                 ) : null}
                 <p className="mt-2 text-sm text-caisbe-text">Pass mark {course.final_exam.pass_percent}%</p>
               </div>
-              {course.certificate_code ? (
-                <Link
-                  href={`/certificates/${course.certificate_code}`}
-                  className="inline-flex rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark"
-                >
-                  View certificate
-                </Link>
-              ) : null}
+              <div className="flex flex-wrap gap-3">
+                {onReviewMaterials ? (
+                  <button
+                    type="button"
+                    onClick={onReviewMaterials}
+                    className="inline-flex rounded-md border-2 border-ifma-border bg-admin-surface px-6 py-2.5 text-sm font-semibold uppercase text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+                  >
+                    Back to course materials
+                  </button>
+                ) : null}
+                {course.certificate_code ? (
+                  <Link
+                    href={`/certificates/${course.certificate_code}`}
+                    className="inline-flex rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark"
+                  >
+                    View certificate
+                  </Link>
+                ) : null}
+              </div>
             </div>
           ) : (
             <ExamPlayer
@@ -91,6 +104,7 @@ export default function LessonStage({
           <BlockView
             key={activeChapterBlock.id}
             block={activeChapterBlock}
+            protectedContent={course.content_protection !== false}
             onQuizResult={onQuizResult}
             onAssignmentComplete={() => void onReload()}
           />
@@ -103,14 +117,22 @@ export default function LessonStage({
                 {activeTopic.title}
               </h2>
             </div>
-            <TopicSections topic={activeTopic} topicOutline={activeTopicOutline} />
+            <TopicSections
+              topic={activeTopic}
+              topicOutline={activeTopicOutline}
+              protectedContent={course.content_protection !== false}
+            />
             {chapterMedia.length > 0 ? (
               <div className="space-y-4 border-t border-ifma-border-light pt-6">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-caisbe-muted">
                   Chapter files
                 </h3>
                 {chapterMedia.map((block) => (
-                  <BlockView key={block.id} block={block} />
+                  <BlockView
+                    key={block.id}
+                    block={block}
+                    protectedContent={course.content_protection !== false}
+                  />
                 ))}
               </div>
             ) : null}

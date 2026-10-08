@@ -2,6 +2,7 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_JWT_SECRET = "change-me-in-production-use-a-long-random-string"
+DEFAULT_ADMIN_PASSWORD = "adminpass123"
 
 
 def normalize_database_url(url: str) -> str:
@@ -33,7 +34,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7
     database_url: str = "postgresql+psycopg://caisbe:caisbe@127.0.0.1:5433/caisbe"
     admin_email: str = "admin@caisbe.org"
-    admin_password: str = "adminpass123"
+    admin_password: str = DEFAULT_ADMIN_PASSWORD
     admin_full_name: str = "CAISBE Admin"
     upload_dir: str = "./uploads"
     # S3-compatible object storage (Cloudflare R2, AWS S3, etc.).
@@ -94,8 +95,22 @@ settings = Settings()
 
 
 def validate_production_settings() -> None:
-    if settings.is_production and settings.jwt_secret == DEFAULT_JWT_SECRET:
+    if not settings.is_production:
+        return
+    if settings.jwt_secret == DEFAULT_JWT_SECRET:
         raise RuntimeError(
             "Refusing to start in production with the default JWT_SECRET. "
             "Set a strong JWT_SECRET in the environment."
         )
+    if settings.admin_password == DEFAULT_ADMIN_PASSWORD:
+        raise RuntimeError(
+            "Refusing to start in production with the default ADMIN_PASSWORD. "
+            "Set a strong ADMIN_PASSWORD in the environment."
+        )
+
+
+def openapi_route_urls() -> tuple[str | None, str | None, str | None]:
+    """Hide schema and docs when the API is running in production."""
+    if settings.is_production:
+        return None, None, None
+    return "/docs", "/redoc", "/openapi.json"

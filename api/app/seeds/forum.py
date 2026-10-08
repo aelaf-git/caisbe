@@ -105,8 +105,8 @@ FORUM_SEED: list[dict] = [
         "boards": [
             {
                 "slug": "events",
-                "title": "Events",
-                "description": "Discuss CAISBE events, webinars, and chapter activities.",
+                "title": "Webinars and chapter activities",
+                "description": "Discuss upcoming CAISBE events, webinars, and chapter activities.",
                 "member_can_start": True,
                 "sort_order": 10,
             },

@@ -71,7 +71,12 @@ export default function StudentCoursesPage() {
       setCartIds((current) => new Set(current).add(courseId));
       setMessage("Added to cart.");
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to add to cart.");
+      const detail = err instanceof ApiError ? err.detail : "Unable to add to cart.";
+      setError(
+        /already enrolled/i.test(detail)
+          ? "You already have this course. Other programs below are still available."
+          : detail,
+      );
     } finally {
       setAddingId(null);
     }
@@ -143,7 +148,7 @@ export default function StudentCoursesPage() {
                   progress={enrollment.progress}
                   action={{
                     href: `/courses/${enrollment.course.id}`,
-                    label: completed ? "Completed" : "Continue",
+                    label: completed ? "Review course" : "Continue",
                     tone: completed ? "complete" : "primary",
                   }}
                 />
@@ -154,7 +159,14 @@ export default function StudentCoursesPage() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Available courses</h2>
+        <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">
+          {openEnrollments.length > 0 ? "Add another course" : "Available courses"}
+        </h2>
+        {openEnrollments.length > 0 ? (
+          <p className="text-sm text-caisbe-muted">
+            You can add any other published course to your cart, or buy it on its own.
+          </p>
+        ) : null}
         {loading ? (
           <p className="border border-ifma-border bg-admin-surface px-5 py-6 text-sm text-caisbe-muted shadow-brand-card">
             Loading courses…

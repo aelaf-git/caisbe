@@ -33,8 +33,15 @@ export function isBlockedShortcut(event: KeyboardEvent): boolean {
 export type AttachProtectionOptions = {
   /** When true, also emit tab_blur on window blur / visibility hidden. */
   trackFocusLoss?: boolean;
+  /** Assignment and quiz answer fields may still receive paste. */
+  allowAnswerPaste?: boolean;
   onEvent?: (event: ProtectionEvent) => void;
 };
+
+function isAnswerField(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest("textarea, input, select, [contenteditable='true']"));
+}
 
 /**
  * Block copy/paste/context menu/shortcuts on `root` (and document key/print handlers).
@@ -44,10 +51,16 @@ export function attachContentProtection(
   options: AttachProtectionOptions = {},
 ): () => void {
   const trackFocusLoss = options.trackFocusLoss !== false;
+  const allowAnswerPaste = options.allowAnswerPaste === true;
   const onEvent = options.onEvent ?? (() => undefined);
 
+  const skipForAnswer = (event: Event) => allowAnswerPaste && isAnswerField(event.target);
+
   const prevent = (e: Event, event_type: ProtectionEventType, detail?: Record<string, unknown>) => {
+    if (event_type === "paste_attempt" && skipForAnswer(e)) return;
+    if ((event_type === "copy_attempt" || event_type === "cut_attempt") && skipForAnswer(e)) return;
     e.preventDefault();
+    e.stopPropagation();
     onEvent({ event_type, detail });
   };
 
@@ -57,14 +70,18 @@ export function attachContentProtection(
   const onContext = (e: Event) => prevent(e, "context_menu");
   const onDrag = (e: Event) => prevent(e, "drag_attempt");
   const onSelectStart = (e: Event) => {
+    if (skipForAnswer(e)) return;
     e.preventDefault();
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (!isBlockedShortcut(e)) return;
+    const key = e.key.toLowerCase();
+    if (allowAnswerPaste && isAnswerField(e.target) && (key === "v" || key === "c" || key === "x" || key === "a")) {
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
-    const key = e.key.toLowerCase();
     if (key === "c") onEvent({ event_type: "copy_attempt" });
     else if (key === "v") onEvent({ event_type: "paste_attempt" });
     else if (key === "x") onEvent({ event_type: "cut_attempt" });
@@ -103,6 +120,10 @@ export function attachContentProtection(
   root.addEventListener("contextmenu", onContext);
   root.addEventListener("dragstart", onDrag);
   root.addEventListener("selectstart", onSelectStart);
+  document.addEventListener("copy", onCopy, true);
+  document.addEventListener("cut", onCut, true);
+  document.addEventListener("paste", onPaste, true);
+  document.addEventListener("contextmenu", onContext, true);
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("visibilitychange", onVisibility);
   window.addEventListener("blur", onBlur);
@@ -116,6 +137,10 @@ export function attachContentProtection(
     root.removeEventListener("contextmenu", onContext);
     root.removeEventListener("dragstart", onDrag);
     root.removeEventListener("selectstart", onSelectStart);
+    document.removeEventListener("copy", onCopy, true);
+    document.removeEventListener("cut", onCut, true);
+    document.removeEventListener("paste", onPaste, true);
+    document.removeEventListener("contextmenu", onContext, true);
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("visibilitychange", onVisibility);
     window.removeEventListener("blur", onBlur);

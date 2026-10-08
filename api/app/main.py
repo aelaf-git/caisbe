@@ -10,7 +10,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app import models  # noqa: F401 — register SQLAlchemy models
-from app.config import settings, validate_production_settings
+from app.config import openapi_route_urls, settings, validate_production_settings
 from app.db_migrations import upgrade_to_head
 from app.db import SessionLocal
 from app.routers import admin, auth, commerce, courses, forum, health, public, support
@@ -87,11 +87,16 @@ async def lifespan(_: FastAPI):
                 pass
 
 
+_docs_url, _redoc_url, _openapi_url = openapi_route_urls()
+
 app = FastAPI(
     title="CAISBE API",
     description="Canada Africa Institute for the Sustainable Built Environment API",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
+    openapi_url=_openapi_url,
 )
 
 app.state.limiter = limiter
@@ -101,10 +106,9 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_origin_regex=r"https://.*\.onrender\.com",
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(health.router, prefix="/api")
@@ -123,4 +127,7 @@ app.mount("/api/uploads", StaticFiles(directory=str(upload_path)), name="uploads
 
 @app.get("/")
 async def root() -> dict[str, str]:
-    return {"service": "caisbe-api", "docs": "/docs"}
+    info = {"service": "caisbe-api"}
+    if not settings.is_production:
+        info["docs"] = "/docs"
+    return info

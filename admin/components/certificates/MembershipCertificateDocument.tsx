@@ -1,6 +1,7 @@
 "use client";
 
 import { QRCodeSVG } from "qrcode.react";
+import { cssPx } from "@/lib/cssLength";
 
 /** Fixed A4 landscape design size — do not fluid-scale internal layout. */
 export const CERTIFICATE_WIDTH_PX = 900;
@@ -87,8 +88,8 @@ export default function MembershipCertificateDocument({
               .certificate-document {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
-                width: ${CERTIFICATE_WIDTH_PX}px !important;
-                height: ${CERTIFICATE_HEIGHT_PX}px !important;
+                width: ${cssPx(CERTIFICATE_WIDTH_PX)}px !important;
+                height: ${cssPx(CERTIFICATE_HEIGHT_PX)}px !important;
               }
             }
           `,
