@@ -46,9 +46,9 @@ function RegisterForm() {
         />
         <div className="absolute inset-0 bg-linear-to-t from-black/75 via-caisbe-red/20 to-black/10 lg:bg-linear-to-r lg:from-black/20 lg:via-transparent lg:to-caisbe-red/35" />
         <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10 lg:p-12">
-          <p className="text-xs font-semibold uppercase tracking-wide text-white/80">CAISBE Students</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-white/80">myCAISBE</p>
           <p className="font-hopewell-display mt-2 max-w-md text-2xl font-extrabold text-white sm:text-3xl">
-            Join CAISBE as a student member and upgrade anytime
+            Create your myCAISBE account and start learning
           </p>
         </div>
       </div>

@@ -6,8 +6,8 @@ import { appearanceFontClassName } from "@/lib/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CAISBE Student Portal",
-  description: "CAISBE student course portal",
+  title: "myCAISBE",
+  description: "myCAISBE education portal for courses, exams, and certificates",
   icons: {
     icon: [{ url: "/images/favicon.png", type: "image/png" }],
     apple: [{ url: "/images/favicon.png", type: "image/png" }],

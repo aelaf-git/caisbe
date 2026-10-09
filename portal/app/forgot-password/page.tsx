@@ -61,7 +61,7 @@ function ForgotPasswordForm() {
         ) : (
           <>
             <p className="mt-3 text-sm leading-6 text-caisbe-muted">
-              Enter the email you use for the student portal. We will send a link to set a new password.
+              Enter the email you use for myCAISBE. We will send a link to set a new password.
             </p>
             <form onSubmit={handleSubmit} className="mt-8 space-y-4">
               <div>

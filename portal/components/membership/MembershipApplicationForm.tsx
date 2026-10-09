@@ -179,7 +179,7 @@ export default function MembershipApplicationForm({
   const isRenewal = kind === "renewal";
   const isRegister = variant === "register";
   const title = isRegister
-    ? "Create your CAISBE account"
+    ? "Create your myCAISBE account"
     : isRenewal
       ? "Membership Renewal"
       : "Upgrade membership";

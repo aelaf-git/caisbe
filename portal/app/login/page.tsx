@@ -84,9 +84,9 @@ function PortalLoginForm() {
         />
         <div className="absolute inset-0 bg-linear-to-t from-black/75 via-caisbe-red/20 to-black/10 lg:bg-linear-to-r lg:from-black/20 lg:via-transparent lg:to-caisbe-red/35" />
         <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10 lg:p-12">
-          <p className="text-xs font-semibold uppercase tracking-wide text-white/80">CAISBE Students</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-white/80">myCAISBE</p>
           <p className="font-hopewell-display mt-2 max-w-md text-2xl font-extrabold text-white sm:text-3xl">
-            Continue your courses and certificates with CAISBE
+            Continue your courses and certificates
           </p>
         </div>
       </div>
@@ -102,7 +102,7 @@ function PortalLoginForm() {
             className="h-20 w-auto object-contain sm:h-24"
           />
           <h1 className="font-hopewell-display mt-6 text-2xl font-extrabold tracking-tight text-caisbe-text-dark">
-            Student login
+            Sign in to myCAISBE
           </h1>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
@@ -221,7 +221,7 @@ function PortalLoginForm() {
           </form>
 
           <p className="mt-6 text-sm text-caisbe-muted">
-            New to CAISBE?{" "}
+            New to myCAISBE?{" "}
             <Link
               href={`/register?next=${encodeURIComponent(nextPath)}`}
               className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"

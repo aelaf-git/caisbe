@@ -80,7 +80,7 @@ function ResetPasswordForm() {
         ) : (
           <>
             <p className="mt-3 text-sm leading-6 text-caisbe-muted">
-              Choose a new password for your CAISBE student account.
+              Choose a new password for your myCAISBE account.
             </p>
             <form onSubmit={handleSubmit} className="mt-8 space-y-4">
               <div>

@@ -99,7 +99,7 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Student"
+        eyebrow="myCAISBE"
         title="Dashboard"
         description={`Welcome back, ${user?.full_name}. Track your courses, submissions, and credentials.`}
         actions={
@@ -119,6 +119,21 @@ export default function StudentDashboardPage() {
       ) : null}
 
       <UnreadNotificationsBanner />
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Student User Guide</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-caisbe-muted">
+              How myCAISBE works today: register, buy a course, study, submit assignments, take exams,
+              download certificates, and open a ticket.
+            </p>
+          </div>
+          <Link href="/guide" className="text-sm font-semibold text-caisbe-red hover:underline">
+            Open user guide
+          </Link>
+        </div>
+      </Card>
 
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
