@@ -38,7 +38,7 @@ export const studentGuideSections: GuideSection[] = [
       "Open My Progress in the left menu. It lists each course with course progress, learning progress, assignment progress, exam status (Eligible, Not eligible, or No exam), outstanding requirements, and certification status (Issued or Under progress).",
       "Use the Current, Completed, Submission, and Credentials tabs to switch lists.",
       "My courses lists programs you already have, plus other published courses you can add.",
-      "My Assignments, My Progress, Cart, Certificates, Discussion forum, and Membership are under Learning.",
+      "My Assignments, My Progress, Cart, Credentials, Discussion forum, and Membership are under Learning.",
       "Help and Support, Tickets, Notifications, and Manage profile are under Account. Public site, at the bottom of the menu, opens www.caisbe.org. The public site header can send you back to myCAISBE.",
       "This User Guide stays in the menu under Overview.",
     ],
@@ -110,10 +110,10 @@ export const studentGuideSections: GuideSection[] = [
   {
     title: "Download certificates",
     items: [
-      "Open Certificates.",
+      "Open Credentials.",
       "A course certificate is issued after you finish every topic, and after you pass the final exam when the course has one.",
       "Open the certificate, then view, print, or download the PDF. The program name printed on it is the wording set for that course.",
-      "Student membership includes a membership certificate. Download it from Certificates or Membership.",
+      "Student membership includes a membership certificate. Download it from Credentials or Membership.",
       "Dashboard → Credentials lists course certificates you have already earned.",
     ],
   },
