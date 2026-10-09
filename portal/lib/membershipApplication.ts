@@ -112,3 +112,26 @@ export function safeNextPath(value: string | null | undefined, fallback = "/dash
   if (!SAFE_NEXT_PATH.test(value)) return fallback;
   return value;
 }
+
+/** Portal path, or an absolute URL on the public CAISBE site. */
+export function safeReturnTarget(value: string | null | undefined, fallback = "/dashboard") {
+  if (!value) return fallback;
+  if (value.startsWith("/") && !value.startsWith("//")) {
+    return safeNextPath(value, fallback);
+  }
+  try {
+    const url = new URL(value);
+    const allowed = new URL(siteUrl("/"));
+    if (
+      url.origin === allowed.origin &&
+      (url.protocol === "https:" || url.protocol === "http:") &&
+      !url.username &&
+      !url.password
+    ) {
+      return url.toString();
+    }
+  } catch {
+    return fallback;
+  }
+  return fallback;
+}

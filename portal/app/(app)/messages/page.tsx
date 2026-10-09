@@ -85,13 +85,19 @@ function MessagesPageInner() {
 
   useEffect(() => {
     if (composeOpened.current) return;
+    const threadParam = Number(searchParams.get("thread"));
+    if (Number.isInteger(threadParam) && threadParam > 0) {
+      composeOpened.current = true;
+      void openThread(threadParam);
+      return;
+    }
     if (searchParams.get("compose") === "1") {
       composeOpened.current = true;
       setComposing(true);
       setSelectedId(null);
       setMessages([]);
     }
-  }, [searchParams]);
+  }, [searchParams, openThread]);
 
   useEffect(() => {
     if (selectedId == null) return;

@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { NavSectionData } from "@/components/layout/nav-types";
-import {
-  portalMembershipLoginUrl,
-  portalMembershipRegisterUrl,
-} from "@/lib/api";
+import AuthNav from "@/components/auth/AuthNav";
 
 type UtilityLink = {
   label: string;
@@ -192,21 +189,8 @@ export default function MobileNav({
               </ul>
             </div>
 
-            <div className="flex flex-col gap-2 border-t border-ifma-border-light px-4 py-4 sm:flex-row">
-              <a
-                href={portalMembershipLoginUrl()}
-                onClick={closeMenu}
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-full border border-ifma-border text-sm font-semibold text-caisbe-text transition-colors hover:border-caisbe-red hover:text-caisbe-red"
-              >
-                Login
-              </a>
-              <a
-                href={portalMembershipRegisterUrl()}
-                onClick={closeMenu}
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-full bg-caisbe-red text-sm font-bold text-white transition hover:bg-caisbe-red-dark"
-              >
-                Register
-              </a>
+            <div className="border-t border-ifma-border-light px-4 py-4" onClick={closeMenu}>
+              <AuthNav layout="stack" />
             </div>
           </div>
         </>

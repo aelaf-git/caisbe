@@ -131,6 +131,13 @@ export default function HelpDeskPageContent() {
             ))
           )}
         </div>
+        <p className="mt-8 text-sm leading-6 text-caisbe-muted">
+          Need help with a course, certificate, account, or a technical problem?{" "}
+          <a href="/help" className="font-semibold text-caisbe-red hover:underline">
+            Open Help and Support
+          </a>
+          .
+        </p>
       </ContentSection>
     </>
   );

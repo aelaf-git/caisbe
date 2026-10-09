@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/auth";
 import type { Cart } from "@/lib/commerce";
+import { siteUrl } from "@/lib/membershipApplication";
 
 type NavItem = {
   href: string;
@@ -38,6 +39,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Account",
     items: [
+      { href: "/support", label: "Help and Support", icon: "help", match: "prefix" },
       { href: "/messages", label: "Tickets", icon: "chat", match: "prefix" },
       { href: "/notifications", label: "Notifications", icon: "bell", match: "prefix" },
       { href: "/account", label: "Manage profile", icon: "user", match: "prefix" },
@@ -101,6 +103,13 @@ function NavIcon({ name }: { name: string }) {
     chat: (
       <>
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </>
+    ),
+    help: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .8-1 1.7" />
+        <path d="M12 17h.01" />
       </>
     ),
     forum: (
@@ -264,6 +273,12 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
             <p className="truncate text-xs text-caisbe-muted">{user?.email}</p>
           </div>
         </div>
+        <a
+          href={siteUrl("/")}
+          className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-ifma-border px-4 py-2 text-sm font-semibold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
+        >
+          Public site
+        </a>
         <button
           type="button"
           onClick={() => {

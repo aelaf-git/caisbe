@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       return;
     }
+    setToken(token);
 
     try {
       const me = await apiFetch<AuthUser>("/auth/me");

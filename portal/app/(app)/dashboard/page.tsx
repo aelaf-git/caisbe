@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { HelpSupportCard } from "@/components/portal/HelpSupportCenter";
 import MyProgressSection from "@/components/portal/MyProgressSection";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/ui/PageHeader";
@@ -245,6 +246,8 @@ export default function StudentDashboardPage() {
       <UnreadNotificationsBanner />
 
       <MyProgressSection enrollments={enrollments} />
+
+      <HelpSupportCard />
 
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">

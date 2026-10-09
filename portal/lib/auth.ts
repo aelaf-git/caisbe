@@ -1,4 +1,38 @@
 const TOKEN_KEY = "caisbe_portal_access_token";
+const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
+
+function sessionCookieDomain(): string {
+  if (typeof window === "undefined") return "";
+  const host = window.location.hostname;
+  if (host === "caisbe.org" || host.endsWith(".caisbe.org")) return "; Domain=.caisbe.org";
+  return "";
+}
+
+function writeSessionCookie(token: string): void {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)}; Path=/; Max-Age=${SESSION_MAX_AGE}; SameSite=Lax${sessionCookieDomain()}${secure}`;
+}
+
+function readSessionCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const prefix = `${TOKEN_KEY}=`;
+  for (const part of document.cookie.split("; ")) {
+    if (!part.startsWith(prefix)) continue;
+    try {
+      return decodeURIComponent(part.slice(prefix.length));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function clearSessionCookie(): void {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${TOKEN_KEY}=; Path=/; Max-Age=0; SameSite=Lax${sessionCookieDomain()}${secure}`;
+}
 
 export type AuthUser = {
   id: number;
@@ -87,15 +121,19 @@ export type RegisterPendingResponse = {
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  const stored = localStorage.getItem(TOKEN_KEY);
+  if (stored) return stored;
+  return readSessionCookie();
 }
 
 export function setToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);
+  writeSessionCookie(token);
 }
 
 export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
+  clearSessionCookie();
 }
 
 export class ApiError extends Error {

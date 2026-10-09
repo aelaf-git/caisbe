@@ -125,54 +125,54 @@ export default function MembershipCertificateDocument({
             />
             <p
               className="font-semibold uppercase text-[#7b1e3a]"
-              style={{ fontSize: 11, letterSpacing: "0.28em", lineHeight: 1.35 }}
+              style={{ fontSize: 14, letterSpacing: "0.16em", lineHeight: 1.35 }}
             >
               Canada Africa Institute for the Sustainable Built Environment
             </p>
             <h1
               className="mt-2 font-[family-name:var(--font-cinzel)] font-bold uppercase text-[#7b1e3a]"
-              style={{ fontSize: 40, letterSpacing: "0.08em", lineHeight: 1.1 }}
+              style={{ fontSize: 46, letterSpacing: "0.06em", lineHeight: 1.05 }}
             >
               {heading || "Certificate"}
             </h1>
             <p
               className="mt-1 font-[family-name:var(--font-cinzel)] font-normal uppercase text-[#c9a227]"
-              style={{ fontSize: 16, letterSpacing: "0.35em", lineHeight: 1.2 }}
+              style={{ fontSize: 20, letterSpacing: "0.22em", lineHeight: 1.2 }}
             >
               {subtitle}
             </p>
           </header>
 
-          <div className="shrink-0" style={{ marginTop: 28 }}>
-            <p className="text-[#5c5348]" style={{ fontSize: 14, lineHeight: 1.4 }}>
+          <div className="shrink-0" style={{ marginTop: 16 }}>
+            <p className="text-[#5c5348]" style={{ fontSize: 18, lineHeight: 1.4 }}>
               This certifies that
             </p>
             <p
               className="mx-auto font-[family-name:var(--font-great-vibes)] leading-tight text-[#7b1e3a]"
-              style={{ marginTop: 8, maxWidth: 640, fontSize: 52 }}
+              style={{ marginTop: 4, maxWidth: 700, fontSize: 68 }}
             >
               {studentName}
             </p>
-            <div className="mx-auto bg-[#c9a227]" style={{ marginTop: 8, height: 1, width: 280 }} />
+            <div className="mx-auto bg-[#c9a227]" style={{ marginTop: 6, height: 1, width: 320 }} />
           </div>
 
           <p
             className="mx-auto shrink-0 leading-relaxed text-[#5c5348]"
-            style={{ marginTop: 24, maxWidth: 620, fontSize: 14 }}
+            style={{ marginTop: 16, maxWidth: 680, fontSize: 18 }}
           >
             {statement}
           </p>
 
           <p
             className="shrink-0 font-semibold tracking-wide text-[#7b1e3a]"
-            style={{ marginTop: 12, fontSize: 13 }}
+            style={{ marginTop: 10, fontSize: 16 }}
           >
             Membership No. {membershipNumber}
           </p>
           {validUntilLabel ? (
             <p
               className="shrink-0 font-semibold tracking-wide text-[#7b1e3a]"
-              style={{ marginTop: 6, fontSize: 13 }}
+              style={{ marginTop: 6, fontSize: 16 }}
             >
               Valid until {validUntilLabel}
             </p>
@@ -183,18 +183,18 @@ export default function MembershipCertificateDocument({
             style={{
               gridTemplateColumns: "1fr 120px 1fr",
               columnGap: 24,
-              paddingTop: 20,
+              paddingTop: 12,
               paddingBottom: 4,
             }}
           >
             <div className="col-start-1 row-start-1 justify-self-center px-2 text-center">
-              <p className="mb-1 font-medium text-[#3d3832]" style={{ fontSize: 14 }}>
+              <p className="mb-1 font-medium text-[#3d3832]" style={{ fontSize: 17 }}>
                 {issuedLabel}
               </p>
-              <div className="mx-auto bg-[#c9a227]" style={{ height: 1, width: 112 }} />
+              <div className="mx-auto bg-[#c9a227]" style={{ height: 1, width: 140 }} />
               <p
                 className="mt-1.5 font-bold uppercase tracking-wide text-[#7b1e3a]"
-                style={{ fontSize: 12 }}
+                style={{ fontSize: 15 }}
               >
                 Member Since
               </p>
@@ -207,13 +207,13 @@ export default function MembershipCertificateDocument({
             </div>
 
             <div className="col-start-3 row-start-1 justify-self-center px-2 text-center">
-              <p className="mb-1 font-medium text-[#3d3832]" style={{ fontSize: 14 }}>
+              <p className="mb-1 font-medium text-[#3d3832]" style={{ fontSize: 17 }}>
                 {issuedBy}
               </p>
-              <div className="mx-auto bg-[#c9a227]" style={{ height: 1, width: 112 }} />
+              <div className="mx-auto bg-[#c9a227]" style={{ height: 1, width: 140 }} />
               <p
                 className="mt-1.5 font-bold uppercase tracking-wide text-[#7b1e3a]"
-                style={{ fontSize: 12 }}
+                style={{ fontSize: 15 }}
               >
                 Issued By
               </p>
@@ -222,7 +222,7 @@ export default function MembershipCertificateDocument({
             {certificateCode ? (
               <p
                 className="col-start-2 row-start-2 mt-1 w-full break-all text-center font-mono leading-tight text-[#5c5348]"
-                style={{ fontSize: 8 }}
+                style={{ fontSize: 11 }}
               >
                 {certificateCode}
               </p>

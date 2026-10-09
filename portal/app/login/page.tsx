@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ApiError, clearToken } from "@/lib/auth";
-import { safeNextPath } from "@/lib/membershipApplication";
+import { safeReturnTarget } from "@/lib/membershipApplication";
 
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001";
 
@@ -21,10 +21,23 @@ function PortalLoginForm() {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const nextPath = safeNextPath(searchParams.get("next"), "/dashboard");
+  const nextPath = safeReturnTarget(searchParams.get("next"), "/dashboard");
+  const registerNext = nextPath.startsWith("/") ? nextPath : "/dashboard";
+
+  function goNext() {
+    if (nextPath.startsWith("http://") || nextPath.startsWith("https://")) {
+      window.location.assign(nextPath);
+      return;
+    }
+    router.push(nextPath);
+  }
 
   useEffect(() => {
     if (!loading && user && user.role !== "admin") {
+      if (nextPath.startsWith("http://") || nextPath.startsWith("https://")) {
+        window.location.replace(nextPath);
+        return;
+      }
       router.replace(nextPath);
     }
   }, [loading, user, router, nextPath]);
@@ -43,7 +56,7 @@ function PortalLoginForm() {
         setError("Administrators should use the Admin portal.");
         return;
       }
-      router.push(nextPath);
+      goNext();
     } catch (err) {
       const detail =
         err instanceof ApiError ? err.detail : "Unable to log in. Please try again.";
@@ -171,7 +184,7 @@ function PortalLoginForm() {
                   <p className="mt-2 text-caisbe-muted">
                     Open the link in that email to open your account, then sign in here. Link expired?{" "}
                     <Link
-                      href={`/register?next=${encodeURIComponent(nextPath)}`}
+                      href={`/register?next=${encodeURIComponent(registerNext)}`}
                       className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
                     >
                       Register again
@@ -223,7 +236,7 @@ function PortalLoginForm() {
           <p className="mt-6 text-sm text-caisbe-muted">
             New to myCAISBE?{" "}
             <Link
-              href={`/register?next=${encodeURIComponent(nextPath)}`}
+              href={`/register?next=${encodeURIComponent(registerNext)}`}
               className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
             >
               Register

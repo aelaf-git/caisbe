@@ -43,6 +43,7 @@ export const utilityLinks: SimpleLink[] = [
   { label: "About", href: "/about" },
   { label: "Store / Bookstore", href: "/store" },
   { label: "News & Announcements", href: "/news" },
+  { label: "Help and Support", href: "/help" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -183,6 +184,10 @@ const rawNavigation: readonly RawNavSection[] = [
           {
             label: "CAISBE Help Desk",
             href: "/resources/help-desk",
+          },
+          {
+            label: "Help and Support",
+            href: "/help",
           },
           {
             label: "Tickets",
