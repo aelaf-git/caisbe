@@ -234,7 +234,67 @@ function AssignmentsWorkspace() {
             <p className="mt-2 text-sm text-caisbe-muted">{empty.body}</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ul className="divide-y divide-ifma-border-light md:hidden">
+            {visible.map((row) => {
+              const selected = row.block_id === selectedId;
+              return (
+                <li key={row.block_id}>
+                  <button
+                    type="button"
+                    onClick={() => void openDetail(row.block_id)}
+                    className={`block w-full px-5 py-4 text-left ${selected ? "bg-caisbe-red/5" : ""}`}
+                  >
+                    <p className="break-words font-semibold text-caisbe-text">{row.title}</p>
+                    <p className="text-xs text-caisbe-muted">{row.chapter_title}</p>
+                    <p className="mt-2 text-sm text-caisbe-text">
+                      <span className="font-semibold">{row.course_code}</span>
+                      <span className="mt-0.5 block text-caisbe-muted">{row.course_title}</span>
+                    </p>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Due</dt>
+                        <dd className="text-caisbe-text">
+                          {row.due_at ? formatWhen(row.due_at) : "No due date"}
+                          {isOverdue(row) ? (
+                            <span className="mt-0.5 block text-xs font-semibold uppercase tracking-wide text-caisbe-red">
+                              Overdue
+                            </span>
+                          ) : null}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Status</dt>
+                        <dd className="font-semibold text-caisbe-text">
+                          {statusLabel(row.bucket)}
+                          {!row.unlocked && row.bucket === "pending" ? (
+                            <span className="mt-0.5 block text-xs font-normal text-caisbe-muted">Finish the chapter topics first.</span>
+                          ) : null}
+                          {row.review_status === "passed" || row.review_status === "failed" ? (
+                            <span className="mt-0.5 block text-xs font-normal uppercase tracking-wide text-caisbe-muted">
+                              {row.review_status}
+                            </span>
+                          ) : null}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Score</dt>
+                        <dd className="font-semibold text-caisbe-text">{scoreText(row)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Submitted</dt>
+                        <dd className="text-caisbe-text">
+                          {formatWhen(row.submitted_at)}
+                          {row.is_late ? <span className="mt-0.5 block text-xs font-semibold text-caisbe-red">Late</span> : null}
+                        </dd>
+                      </div>
+                    </dl>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-ifma-border-light bg-admin-surface-muted/40">
@@ -302,6 +362,7 @@ function AssignmentsWorkspace() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </section>
 

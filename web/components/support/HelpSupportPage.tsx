@@ -510,54 +510,64 @@ export default function HelpSupportPage() {
             </h2>
             <p className="mt-1 text-sm text-caisbe-muted">Tickets you have already sent to CAISBE.</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-ifma-border-light">
-                  {["Request", "Status", "Number"].map((header) => (
-                    <th
-                      key={header}
-                      className="px-5 py-3 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {!user ? (
-                  <tr>
-                    <td colSpan={3} className="px-5 py-8 text-caisbe-muted">
-                      Log in to see the requests you have sent.
-                    </td>
-                  </tr>
-                ) : threads.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="px-5 py-8 text-caisbe-muted">
-                      No requests yet.
-                    </td>
-                  </tr>
-                ) : (
-                  threads.map((thread) => (
-                    <tr key={thread.id} className="border-t border-ifma-border-light">
-                      <td className="px-5 py-4 font-medium text-caisbe-text">{thread.subject}</td>
-                      <td className="px-5 py-4 capitalize text-caisbe-muted">
-                        {thread.status.replaceAll("_", " ")}
-                      </td>
-                      <td className="px-5 py-4">
-                        <a
-                          href={portalUrl(`/messages?thread=${thread.id}`)}
-                          className="font-semibold text-caisbe-red hover:underline"
+          {!user ? (
+            <p className="px-5 py-8 text-caisbe-muted">Log in to see the requests you have sent.</p>
+          ) : threads.length === 0 ? (
+            <p className="px-5 py-8 text-caisbe-muted">No requests yet.</p>
+          ) : (
+            <>
+              <ul className="divide-y divide-ifma-border-light md:hidden">
+                {threads.map((thread) => (
+                  <li key={thread.id} className="px-5 py-4">
+                    <p className="break-words font-medium text-caisbe-text">{thread.subject}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                      <span className="capitalize text-caisbe-muted">{thread.status.replaceAll("_", " ")}</span>
+                      <a
+                        href={portalUrl(`/messages?thread=${thread.id}`)}
+                        className="font-semibold text-caisbe-red hover:underline"
+                      >
+                        {ticketNumber(thread.id)}
+                      </a>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden md:block">
+                <table className="w-full table-fixed text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-ifma-border-light">
+                      {["Request", "Status", "Number"].map((header) => (
+                        <th
+                          key={header}
+                          className={`px-5 py-3 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark ${header === "Request" ? "" : "w-40 whitespace-nowrap"}`}
                         >
-                          {ticketNumber(thread.id)}
-                        </a>
-                      </td>
+                          {header}
+                        </th>
+                      ))}
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {threads.map((thread) => (
+                      <tr key={thread.id} className="border-t border-ifma-border-light">
+                        <td className="break-words px-5 py-4 font-medium text-caisbe-text">{thread.subject}</td>
+                        <td className="whitespace-nowrap px-5 py-4 capitalize text-caisbe-muted">
+                          {thread.status.replaceAll("_", " ")}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-4">
+                          <a
+                            href={portalUrl(`/messages?thread=${thread.id}`)}
+                            className="font-semibold text-caisbe-red hover:underline"
+                          >
+                            {ticketNumber(thread.id)}
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </section>
       </div>
     </>
@@ -623,30 +633,31 @@ function RequestTable({
         <p className="mt-1 max-w-2xl text-sm leading-6 text-caisbe-muted">{description}</p>
       </div>
       <form onSubmit={onSubmit}>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-ifma-border-light">
-                <th className="w-56 px-5 py-3 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark">
-                  Field
+        <table className="block w-full text-left text-sm md:table">
+          <thead className="hidden md:table-header-group">
+            <tr className="border-b border-ifma-border-light">
+              <th className="w-56 px-5 py-3 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark">
+                Field
+              </th>
+              <th className="px-5 py-3 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark">
+                Your request
+              </th>
+            </tr>
+          </thead>
+          <tbody className="block divide-y divide-ifma-border-light md:table-row-group md:divide-y-0">
+            {rows.map((row) => (
+              <tr key={row.label} className="block border-b border-ifma-border-light px-5 py-4 last:border-b-0 md:table-row md:px-0">
+                <th
+                  scope="row"
+                  className="block pb-2 text-left font-semibold text-caisbe-text md:table-cell md:w-56 md:px-5 md:py-4 md:align-top"
+                >
+                  {row.label}
                 </th>
-                <th className="px-5 py-3 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark">
-                  Your request
-                </th>
+                <td className="block min-w-0 md:table-cell md:px-5 md:py-4">{row.control}</td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-ifma-border-light">
-              {rows.map((row) => (
-                <tr key={row.label}>
-                  <th scope="row" className="px-5 py-4 align-top font-semibold text-caisbe-text">
-                    {row.label}
-                  </th>
-                  <td className="px-5 py-4">{row.control}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
         <div className="px-6 py-4">
           <SubmitButton busy={busy} signedIn={signedIn} label={submitLabel} />
           <NoticeLine notice={notice} />

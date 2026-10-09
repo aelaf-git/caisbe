@@ -4,17 +4,15 @@ export const ticketsContent = {
   slug: "tickets",
   eyebrow: "Resources",
   title: "Tickets",
-  lead: "Log in to track the status of your existing support tickets.",
-  tableHeaders: ["Ticket", "Issue", "Date submitted", "Number"] as const,
-  tableEmpty:
-    "Your open and closed tickets appear here after you log in. Use the button above to access your ticket history.",
-  submitTitle: "Submit Your Ticket",
-  submitBody: "Submit a support ticket to report an issue or resolve a question.",
-  loginCtaLabel: "Log in to view tickets",
+  lead: "Sign in to see your support tickets or submit a new one.",
+  signedInLead: "Your open and closed support tickets.",
+  emptyLead: "You don't have any support tickets yet.",
+  tableHeaders: ["Ticket", "Status", "Submitted"] as const,
+  loginCtaLabel: "Log in",
   submitCtaLabel: "Submit a ticket",
   seoTitle: "Support Tickets | CAISBE",
   metaDescription:
-    "Log in to track CAISBE support tickets, or submit a ticket for IT and technical issues affecting online students.",
+    "Sign in to see your CAISBE support tickets or submit a new one.",
 };
 
 export function ticketsPortalLoginUrl(nextPath = "/messages") {

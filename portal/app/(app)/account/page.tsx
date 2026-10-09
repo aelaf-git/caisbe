@@ -299,20 +299,33 @@ export default function ManageProfilePage() {
 
       <Card>
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">My invoices</h2>
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Invoice #</th><th className="px-3 py-2 pr-4">Bill date</th><th className="px-3 py-2 pr-4">Billing period</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2 pr-4">Balance</th><th className="px-3 py-2">Receipt</th></tr></thead>
-            <tbody>
-              {invoices.length === 0 ? (
-                <tr><td className="px-3 py-3 text-caisbe-muted" colSpan={6}>No invoices yet.</td></tr>
-              ) : invoices.map((invoice) => (
-                <tr key={invoice.id} className="border-t border-ifma-border-light">
-                  <td className="px-3 py-3 pr-4 font-mono">{invoice.number}</td>
-                  <td className="px-3 py-3 pr-4">{formatDate(invoice.bill_date)}</td>
-                  <td className="px-3 py-3 pr-4">{formatDate(invoice.period_start)} – {formatDate(invoice.period_end)}</td>
-                  <td className="px-3 py-3 pr-4">{formatMoney(invoice.amount_paid_cents)}</td>
-                  <td className="px-3 py-3 pr-4">{formatMoney(invoice.balance_cents)}</td>
-                  <td className="px-3 py-3">
+        {invoices.length === 0 ? (
+          <p className="mt-4 text-sm text-caisbe-muted">No invoices yet.</p>
+        ) : (
+          <>
+            <ul className="mt-4 divide-y divide-ifma-border-light md:hidden">
+              {invoices.map((invoice) => (
+                <li key={invoice.id} className="py-4 text-sm">
+                  <p className="break-all font-mono font-semibold text-caisbe-text-dark">{invoice.number}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Bill date</dt>
+                      <dd>{formatDate(invoice.bill_date)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Billing period</dt>
+                      <dd>{formatDate(invoice.period_start)} – {formatDate(invoice.period_end)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Amount paid</dt>
+                      <dd>{formatMoney(invoice.amount_paid_cents)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Balance</dt>
+                      <dd>{formatMoney(invoice.balance_cents)}</dd>
+                    </div>
+                  </dl>
+                  <p className="mt-2">
                     {invoice.order_number ? (
                       <Link href={`/account/receipts/${encodeURIComponent(invoice.order_number)}`} className="font-semibold text-caisbe-red hover:underline">
                         Receipt
@@ -320,39 +333,99 @@ export default function ManageProfilePage() {
                     ) : (
                       "—"
                     )}
-                  </td>
-                </tr>
+                  </p>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+            <div className="mt-4 hidden overflow-x-auto md:block">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Invoice #</th><th className="px-3 py-2 pr-4">Bill date</th><th className="px-3 py-2 pr-4">Billing period</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2 pr-4">Balance</th><th className="whitespace-nowrap px-3 py-2">Receipt</th></tr></thead>
+                <tbody>
+                  {invoices.map((invoice) => (
+                    <tr key={invoice.id} className="border-t border-ifma-border-light">
+                      <td className="px-3 py-3 pr-4 font-mono">{invoice.number}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatDate(invoice.bill_date)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatDate(invoice.period_start)} – {formatDate(invoice.period_end)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(invoice.amount_paid_cents)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(invoice.balance_cents)}</td>
+                      <td className="whitespace-nowrap px-3 py-3">
+                        {invoice.order_number ? (
+                          <Link href={`/account/receipts/${encodeURIComponent(invoice.order_number)}`} className="font-semibold text-caisbe-red hover:underline">
+                            Receipt
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </Card>
 
       <Card>
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">My orders</h2>
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Order name</th><th className="px-3 py-2 pr-4">Order date</th><th className="px-3 py-2 pr-4">Order total</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2 pr-4">Balance</th><th className="px-3 py-2">Receipt</th></tr></thead>
-            <tbody>
-              {orders.length === 0 ? (
-                <tr><td className="px-3 py-3 text-caisbe-muted" colSpan={6}>No orders yet.</td></tr>
-              ) : orders.map((order) => (
-                <tr key={order.id} className="border-t border-ifma-border-light">
-                  <td className="px-3 py-3 pr-4">{order.name} <span className="font-mono text-xs text-caisbe-muted">{order.number}</span></td>
-                  <td className="px-3 py-3 pr-4">{formatDate(order.created_at)}</td>
-                  <td className="px-3 py-3 pr-4">{formatMoney(order.total_cents, order.currency)}</td>
-                  <td className="px-3 py-3 pr-4">{formatMoney(order.amount_paid_cents, order.currency)}</td>
-                  <td className="px-3 py-3 pr-4">{formatMoney(order.balance_cents, order.currency)}</td>
-                  <td className="px-3 py-3">
+        {orders.length === 0 ? (
+          <p className="mt-4 text-sm text-caisbe-muted">No orders yet.</p>
+        ) : (
+          <>
+            <ul className="mt-4 divide-y divide-ifma-border-light md:hidden">
+              {orders.map((order) => (
+                <li key={order.id} className="py-4 text-sm">
+                  <p className="break-words font-semibold text-caisbe-text-dark">{order.name}</p>
+                  <p className="font-mono text-xs text-caisbe-muted">{order.number}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Order date</dt>
+                      <dd>{formatDate(order.created_at)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Order total</dt>
+                      <dd>{formatMoney(order.total_cents, order.currency)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Amount paid</dt>
+                      <dd>{formatMoney(order.amount_paid_cents, order.currency)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Balance</dt>
+                      <dd>{formatMoney(order.balance_cents, order.currency)}</dd>
+                    </div>
+                  </dl>
+                  <p className="mt-2">
                     <Link href={`/account/receipts/${encodeURIComponent(order.number)}`} className="font-semibold text-caisbe-red hover:underline">
                       Receipt
                     </Link>
-                  </td>
-                </tr>
+                  </p>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+            <div className="mt-4 hidden overflow-x-auto md:block">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Order name</th><th className="px-3 py-2 pr-4">Order date</th><th className="px-3 py-2 pr-4">Order total</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2 pr-4">Balance</th><th className="whitespace-nowrap px-3 py-2">Receipt</th></tr></thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id} className="border-t border-ifma-border-light">
+                      <td className="px-3 py-3 pr-4">{order.name} <span className="font-mono text-xs text-caisbe-muted">{order.number}</span></td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatDate(order.created_at)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(order.total_cents, order.currency)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(order.amount_paid_cents, order.currency)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(order.balance_cents, order.currency)}</td>
+                      <td className="whitespace-nowrap px-3 py-3">
+                        <Link href={`/account/receipts/${encodeURIComponent(order.number)}`} className="font-semibold text-caisbe-red hover:underline">
+                          Receipt
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </Card>
 
       <Card>

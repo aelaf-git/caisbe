@@ -203,7 +203,40 @@ function MessagesPageInner() {
       />
 
       <section className="overflow-hidden rounded-[20px] border border-ifma-border bg-admin-surface shadow-hopewell">
-        <div className="overflow-x-auto">
+        {threads.length === 0 ? (
+          <p className="px-5 py-10 text-caisbe-muted">
+            No tickets yet. Submit a support ticket below to report an issue or resolve a question.
+          </p>
+        ) : (
+          <ul className="divide-y divide-ifma-border-light md:hidden">
+            {threads.map((thread) => {
+              const active = thread.id === selectedId && !composing;
+              return (
+                <li key={thread.id}>
+                  <button
+                    type="button"
+                    onClick={() => void openThread(thread.id)}
+                    className={`block w-full px-5 py-4 text-left hover:bg-admin-surface-muted/50 ${
+                      active ? "bg-caisbe-red/[0.06]" : ""
+                    }`}
+                  >
+                    <p className="break-words font-semibold text-caisbe-text-dark">{thread.subject}</p>
+                    <p className="mt-0.5 text-xs text-caisbe-muted">
+                      {SUPPORT_STATUS_LABELS[thread.status]}
+                      {thread.unread_count > 0 ? ` · ${thread.unread_count} new` : ""}
+                    </p>
+                    <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-caisbe-muted">
+                      <span>{SUPPORT_KIND_LABELS[thread.kind]}</span>
+                      <span>{formatSubmittedDate(thread.created_at)}</span>
+                      <span className="font-semibold text-caisbe-text-dark">{ticketNumber(thread.id)}</span>
+                    </p>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div className={`overflow-x-auto ${threads.length === 0 ? "hidden" : "hidden md:block"}`}>
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-ifma-border-light bg-admin-surface-muted/40">
@@ -222,26 +255,18 @@ function MessagesPageInner() {
               </tr>
             </thead>
             <tbody className="divide-y divide-ifma-border-light">
-              {threads.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-5 py-10 text-caisbe-muted">
-                    No tickets yet. Submit a support ticket below to report an issue or resolve a
-                    question.
-                  </td>
-                </tr>
-              ) : (
-                threads.map((thread) => {
-                  const active = thread.id === selectedId && !composing;
-                  return (
-                    <tr
-                      key={thread.id}
-                      className={`cursor-pointer transition-colors hover:bg-admin-surface-muted/50 ${
-                        active ? "bg-caisbe-red/[0.06]" : ""
-                      }`}
-                      onClick={() => void openThread(thread.id)}
-                    >
-                      <td className="px-5 py-4">
-                        <p className="font-semibold text-caisbe-text-dark">{thread.subject}</p>
+              {threads.map((thread) => {
+                const active = thread.id === selectedId && !composing;
+                return (
+                  <tr
+                    key={thread.id}
+                    className={`cursor-pointer transition-colors hover:bg-admin-surface-muted/50 ${
+                      active ? "bg-caisbe-red/[0.06]" : ""
+                    }`}
+                    onClick={() => void openThread(thread.id)}
+                  >
+                    <td className="px-5 py-4">
+                      <p className="break-words font-semibold text-caisbe-text-dark">{thread.subject}</p>
                         <p className="mt-0.5 text-xs text-caisbe-muted">
                           {SUPPORT_STATUS_LABELS[thread.status]}
                           {thread.unread_count > 0 ? ` · ${thread.unread_count} new` : ""}
@@ -251,13 +276,12 @@ function MessagesPageInner() {
                       <td className="px-5 py-4 text-caisbe-muted">
                         {formatSubmittedDate(thread.created_at)}
                       </td>
-                      <td className="px-5 py-4 font-semibold text-caisbe-text-dark">
+                      <td className="whitespace-nowrap px-5 py-4 font-semibold text-caisbe-text-dark">
                         {ticketNumber(thread.id)}
                       </td>
                     </tr>
-                  );
-                })
-              )}
+                );
+              })}
             </tbody>
           </table>
         </div>
