@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import ExamAgreement from "@/components/portal/ExamAgreement";
 import SecureExamShell from "@/components/portal/SecureExamShell";
 import { apiFetch, ApiError } from "@/lib/auth";
 import {
@@ -118,7 +119,8 @@ export default function ExamPlayer({
 
   const bankSize = exam.question_bank_size ?? exam.questions.length;
   const appearCount = exam.questions_to_appear ?? bankSize;
-  const showBankHint = bankSize > 0 && appearCount < bankSize;
+  const [showPrecheck, setShowPrecheck] = useState(false);
+  const [agreementKey, setAgreementKey] = useState(0);
 
   function enterLive(
     startedAt: string,
@@ -402,71 +404,88 @@ export default function ExamPlayer({
 
       {phase.kind === "loading" ? <p className="text-sm text-caisbe-muted">Loading exam…</p> : null}
 
-      {phase.kind === "intro" ? (
+      {phase.kind === "intro" && !showPrecheck ? (
+        <ExamAgreement
+          key={agreementKey}
+          facts={{
+            timeLabel: limitLabel ?? "Not timed",
+            passPercent: exam.pass_percent,
+            questionCount: appearCount,
+            secureMode,
+            maxViolations,
+          }}
+          starting={submitting}
+          onComplete={() => {
+            if (secureMode) {
+              setShowPrecheck(true);
+              return;
+            }
+            void begin();
+          }}
+        />
+      ) : null}
+
+      {phase.kind === "intro" && showPrecheck ? (
         <div ref={precheckRootRef} className="space-y-4 rounded-md border border-ifma-border bg-[#fafaf8] px-4 py-4">
+          <h3 className="font-display text-lg font-semibold text-caisbe-text-dark">Secure exam pre-check</h3>
           <p className="text-sm leading-6 text-caisbe-text">
-            {limitLabel
-              ? `You have ${limitLabel}. The timer starts when you begin, and the exam is submitted when time runs out.`
-              : "This exam is not timed."}{" "}
-            Score at least {exam.pass_percent}% to pass. A lower score can be taken again. Correct answers are not shown.
-            {showBankHint
-              ? ` You will get ${appearCount} questions (from a bank of ${bankSize}), in random order with shuffled choices.`
-              : bankSize > 0
-                ? ` You will get ${appearCount} question${appearCount === 1 ? "" : "s"}, in random order with shuffled choices.`
-                : ""}
+            Identity verification is required before the timer starts. The camera check confirms you are
+            present and does not record the exam.
           </p>
-
-          {secureMode ? (
-            <div className="space-y-3 rounded-md border border-ifma-border bg-admin-surface px-4 py-4">
-              <p className="text-sm font-semibold text-caisbe-text-dark">Secure exam pre-check</p>
-              <ul className="list-disc space-y-1 pl-5 text-sm text-caisbe-text">
-                <li>Stay in fullscreen; leaving the tab or exam window is logged.</li>
-                <li>Copy, paste, print, and right-click are blocked during the exam.</li>
-                <li>Too many integrity violations ({maxViolations}) fails this attempt.</li>
-                <li>Camera permission is required for a presence check (no continuous recording).</li>
-              </ul>
-              <label className="flex items-start gap-2 text-sm text-caisbe-text">
-                <input
-                  type="checkbox"
-                  className="mt-1"
-                  checked={rulesAccepted}
-                  onChange={(e) => {
-                    setRulesAccepted(e.target.checked);
-                    setSecureReady(false);
-                  }}
-                />
-                <span>I accept these rules and will take the exam honestly.</span>
-              </label>
-              <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide">
-                <span className={fullscreenOk ? "text-admin-success" : "text-caisbe-muted"}>
-                  Fullscreen {fullscreenOk ? "ready" : "needed"}
-                </span>
-                <span className={cameraOk ? "text-admin-success" : "text-caisbe-muted"}>
-                  Camera {cameraOk ? "ready" : "needed"}
-                </span>
-                <span className={secureReady ? "text-admin-success" : "text-caisbe-muted"}>
-                  Pre-check {secureReady ? "passed" : "pending"}
-                </span>
-              </div>
-              <button
-                type="button"
-                disabled={precheckBusy || !rulesAccepted}
-                onClick={() => void runPrecheck()}
-                className="rounded-md border-2 border-ifma-border bg-admin-canvas px-5 py-2 text-sm font-semibold uppercase text-caisbe-text-dark hover:border-caisbe-red/40 disabled:opacity-60"
-              >
-                {precheckBusy ? "Checking…" : "Run secure pre-check"}
-              </button>
-            </div>
-          ) : null}
-
-          <button
-            type="button"
-            disabled={submitting || !canStart}
-            onClick={() => void begin()}
-            className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
-          >
-            {submitting ? "Starting…" : "Start exam"}
-          </button>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-caisbe-text">
+            <li>Stay in fullscreen; leaving the tab or exam window is logged.</li>
+            <li>Copy, paste, print, and right-click are blocked during the exam.</li>
+            <li>Too many integrity violations ({maxViolations}) fails this attempt.</li>
+            <li>Camera permission is required for a presence check (no continuous recording).</li>
+          </ul>
+          <label className="flex items-start gap-2 text-sm text-caisbe-text">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={rulesAccepted}
+              onChange={(event) => {
+                setRulesAccepted(event.target.checked);
+                setSecureReady(false);
+              }}
+            />
+            <span>I accept these rules and will take the exam honestly.</span>
+          </label>
+          <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide">
+            <span className={fullscreenOk ? "text-admin-success" : "text-caisbe-muted"}>
+              Fullscreen {fullscreenOk ? "ready" : "needed"}
+            </span>
+            <span className={cameraOk ? "text-admin-success" : "text-caisbe-muted"}>
+              Camera {cameraOk ? "ready" : "needed"}
+            </span>
+            <span className={secureReady ? "text-admin-success" : "text-caisbe-muted"}>
+              Pre-check {secureReady ? "passed" : "pending"}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowPrecheck(false)}
+              className="rounded-md border-2 border-ifma-border bg-admin-surface px-5 py-2 text-sm font-semibold uppercase text-caisbe-text-dark hover:border-caisbe-red/40"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              disabled={precheckBusy || !rulesAccepted}
+              onClick={() => void runPrecheck()}
+              className="rounded-md border-2 border-ifma-border bg-admin-canvas px-5 py-2 text-sm font-semibold uppercase text-caisbe-text-dark hover:border-caisbe-red/40 disabled:opacity-60"
+            >
+              {precheckBusy ? "Checking…" : "Run secure pre-check"}
+            </button>
+            <button
+              type="button"
+              disabled={submitting || !canStart}
+              onClick={() => void begin()}
+              className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            >
+              {submitting ? "Starting…" : "Start exam"}
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -518,6 +537,8 @@ export default function ExamPlayer({
                 setRulesAccepted(false);
                 setFullscreenOk(false);
                 setCameraOk(false);
+                setShowPrecheck(false);
+                setAgreementKey((current) => current + 1);
                 setPhase({ kind: "intro" });
               }}
               className="rounded-md border-2 border-caisbe-red bg-admin-surface px-6 py-2.5 text-sm font-semibold uppercase text-caisbe-red hover:bg-caisbe-red hover:text-white disabled:opacity-60"
