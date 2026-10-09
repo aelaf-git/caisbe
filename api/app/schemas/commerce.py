@@ -142,6 +142,9 @@ class PaymentOut(BaseModel):
     student_name: str
     student_email: str
     course_title: str
+    currency: str = "usd"
+    invoice_number: str | None = None
+    items: list[OrderItemOut] = Field(default_factory=list)
     receipt_printed_at: datetime | None = None
     reviewed_at: datetime | None = None
 

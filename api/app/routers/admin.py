@@ -48,7 +48,7 @@ from app.models import (
     Promotion,
     UserDocument,
 )
-from app.schemas.commerce import PaymentOut, PromotionIn, PromotionOut
+from app.schemas.commerce import OrderItemOut, PaymentOut, PromotionIn, PromotionOut
 from app.schemas.admin_ops import (
     AdminPasswordChange,
     AdminReportsOut,
@@ -2168,13 +2168,16 @@ def admin_send_newsletter(
 
 def _payment_out(row: Payment) -> PaymentOut:
     order = row.order
-    items = order.items if order and order.items else []
+    items = list(order.items) if order and order.items else []
     if not items:
         course_title = ""
     elif len(items) == 1:
         course_title = items[0].title
     else:
         course_title = f"{items[0].title} +{len(items) - 1} more"
+    invoice = row.invoice
+    if invoice is None and order is not None and order.invoices:
+        invoice = order.invoices[0]
     user = row.user
     return PaymentOut(
         id=row.id,
@@ -2186,6 +2189,18 @@ def _payment_out(row: Payment) -> PaymentOut:
         student_name=user.full_name if user else "",
         student_email=user.email if user else "",
         course_title=course_title,
+        currency=(order.currency if order and order.currency else "usd"),
+        invoice_number=invoice.number if invoice else None,
+        items=[
+            OrderItemOut(
+                course_id=item.course_id,
+                membership_type=item.membership_type,
+                title=item.title,
+                unit_price_cents=item.unit_price_cents,
+                quantity=item.quantity or 1,
+            )
+            for item in items
+        ],
         receipt_printed_at=row.receipt_printed_at,
         reviewed_at=row.reviewed_at,
     )

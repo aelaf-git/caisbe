@@ -93,6 +93,7 @@ export default function ReceiptPage() {
           <div ref={receiptRef} className="mt-6 print:mt-0">
             <ReceiptDocument
               studentName={user?.full_name || "Student"}
+              studentEmail={user?.email}
               orderNumber={order.number}
               invoiceNumber={order.invoice_number}
               issuedAt={order.created_at}
@@ -100,6 +101,7 @@ export default function ReceiptPage() {
               items={order.items ?? []}
               amountPaidCents={order.amount_paid_cents}
               balanceCents={order.balance_cents}
+              status={order.status}
             />
           </div>
           <div className="mt-6 flex flex-wrap justify-center gap-3 print:hidden">
@@ -114,7 +116,11 @@ export default function ReceiptPage() {
               type="button"
               onClick={() => void download()}
               disabled={downloading}
-              className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+              onMouseEnter={() => {
+                void import("html2canvas-pro");
+                void import("jspdf");
+              }}
+              className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
             >
               {downloading ? "Preparing PDF…" : "Download PDF"}
             </button>

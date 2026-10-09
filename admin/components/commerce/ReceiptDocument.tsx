@@ -1,6 +1,10 @@
 "use client";
 
-import { formatMoney, type OrderItemRow } from "@/lib/commerce";
+export type ReceiptLine = {
+  title: string;
+  unit_price_cents: number;
+  quantity?: number;
+};
 
 export type ReceiptDocumentProps = {
   studentName: string;
@@ -8,17 +12,30 @@ export type ReceiptDocumentProps = {
   orderNumber: string;
   invoiceNumber?: string | null;
   issuedAt: string;
-  currency: string;
-  items: OrderItemRow[];
+  currency?: string;
+  items: ReceiptLine[];
   amountPaidCents: number;
-  balanceCents: number;
   status?: string | null;
+  method?: string | null;
 };
 
 const INSTITUTE = "Canada Africa Institute for the Sustainable Built Environment";
 
-function formatIssueDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { dateStyle: "long" });
+function formatMoney(cents: number, currency = "usd") {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(cents / 100);
+  } catch {
+    return `$${(cents / 100).toFixed(2)}`;
+  }
+}
+
+function formatIssueDate(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleDateString(undefined, { dateStyle: "long" });
 }
 
 function lineTitle(title: string) {
@@ -30,7 +47,15 @@ function statusLabel(status?: string | null) {
   const value = (status || "").toLowerCase();
   if (value === "succeeded" || value === "paid") return "Paid";
   if (value === "refunded") return "Refunded";
+  if (!value) return "Recorded";
+  return value.replaceAll("_", " ");
+}
+
+function methodLabel(method?: string | null) {
+  const value = (method || "").toLowerCase();
   if (!value) return null;
+  if (value === "manual") return "Manual";
+  if (value === "stripe") return "Card";
   return value.replaceAll("_", " ");
 }
 
@@ -40,18 +65,17 @@ export default function ReceiptDocument({
   orderNumber,
   invoiceNumber,
   issuedAt,
-  currency,
+  currency = "usd",
   items,
   amountPaidCents,
-  balanceCents,
   status,
+  method,
 }: ReceiptDocumentProps) {
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.unit_price_cents * (item.quantity || 1),
-    0,
-  );
-  const label = statusLabel(status);
-  const paid = label === "Paid" || (balanceCents <= 0 && amountPaidCents > 0);
+  const lines = items.length
+    ? items
+    : [{ title: "Payment", unit_price_cents: amountPaidCents, quantity: 1 }];
+  const paid = statusLabel(status) === "Paid";
+  const methodText = methodLabel(method);
 
   return (
     <article className="receipt-document mx-auto w-full max-w-[720px] bg-white text-[#1f2937] shadow-brand-card print:shadow-none">
@@ -78,9 +102,9 @@ export default function ReceiptDocument({
               <p className="mt-3 inline-flex border-2 border-[#177245] px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-[#177245]">
                 Paid
               </p>
-            ) : label ? (
-              <p className="mt-3 text-sm font-semibold capitalize text-[#1f2937]">{label}</p>
-            ) : null}
+            ) : (
+              <p className="mt-3 text-sm font-semibold capitalize text-[#1f2937]">{statusLabel(status)}</p>
+            )}
           </div>
         </header>
 
@@ -114,32 +138,35 @@ export default function ReceiptDocument({
             </tr>
           </thead>
           <tbody>
-            {items.map((item, index) => (
-              <tr key={`${item.title}-${index}`} className="border-b border-[#e5e7eb]">
-                <td className="px-3 py-3">{lineTitle(item.title)}</td>
-                <td className="px-3 py-3 text-right tabular-nums">{item.quantity || 1}</td>
-                <td className="px-3 py-3 text-right tabular-nums">
-                  {formatMoney(item.unit_price_cents * (item.quantity || 1), currency)}
-                </td>
-              </tr>
-            ))}
+            {lines.map((item, index) => {
+              const quantity = item.quantity || 1;
+              return (
+                <tr key={`${item.title}-${index}`} className="border-b border-[#e5e7eb]">
+                  <td className="px-3 py-3">{lineTitle(item.title)}</td>
+                  <td className="px-3 py-3 text-right tabular-nums">{quantity}</td>
+                  <td className="px-3 py-3 text-right tabular-nums">
+                    {formatMoney(item.unit_price_cents * quantity, currency)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
-        <dl className="ml-auto mt-6 w-full max-w-xs space-y-2 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-[#5f6b7a]">Subtotal</dt>
-            <dd className="tabular-nums">{formatMoney(subtotal, currency)}</dd>
+        <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
+          <div className="text-sm text-[#5f6b7a]">
+            {methodText ? <p>Method: <span className="font-medium capitalize text-[#1f2937]">{methodText}</span></p> : null}
+            <p className="mt-1">Status: <span className="font-medium capitalize text-[#1f2937]">{statusLabel(status)}</span></p>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-[#5f6b7a]">Amount paid</dt>
-            <dd className="font-semibold tabular-nums">{formatMoney(amountPaidCents, currency)}</dd>
-          </div>
-          <div className="flex justify-between gap-4 border-t-2 border-[#7b1e3a] pt-2">
-            <dt className="font-semibold text-[#111827]">Balance</dt>
-            <dd className="font-semibold tabular-nums">{formatMoney(balanceCents, currency)}</dd>
-          </div>
-        </dl>
+          <dl className="w-full max-w-xs text-sm">
+            <div className="flex justify-between gap-6 border-t-2 border-[#7b1e3a] pt-3">
+              <dt className="font-semibold text-[#111827]">Amount paid</dt>
+              <dd className="font-semibold tabular-nums text-[#111827]">
+                {formatMoney(amountPaidCents, currency)}
+              </dd>
+            </div>
+          </dl>
+        </div>
 
         <footer className="mt-10 border-t border-[#e5e7eb] pt-4 text-xs leading-5 text-[#5f6b7a]">
           <p>Thank you. This receipt confirms payment received by CAISBE.</p>
