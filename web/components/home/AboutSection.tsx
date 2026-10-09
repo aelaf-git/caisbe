@@ -3,7 +3,7 @@ import { aboutContent, bestPractices } from "@/lib/data/home";
 
 const pillars = bestPractices.items.slice(0, 3);
 
-export default function AboutSection() {
+export default function AboutSection({ tagline }: { tagline?: string | null }) {
   return (
     <section className="bg-[#f8fafc] py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4">
@@ -12,7 +12,7 @@ export default function AboutSection() {
             {aboutContent.eyebrow}
           </p>
           <h2 className="font-hopewell-display mt-4 text-3xl font-extrabold leading-tight tracking-tight text-caisbe-text-dark md:text-4xl">
-            {aboutContent.title}
+            {tagline || aboutContent.title}
           </h2>
           <p className="mt-4 text-base leading-7 text-caisbe-text">
             {aboutContent.description}

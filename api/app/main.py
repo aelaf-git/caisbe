@@ -13,12 +13,13 @@ from app import models  # noqa: F401 — register SQLAlchemy models
 from app.config import openapi_route_urls, settings, validate_production_settings
 from app.db_migrations import upgrade_to_head
 from app.db import SessionLocal
-from app.routers import admin, auth, commerce, courses, forum, health, public, support
+from app.routers import admin, auth, commerce, courses, forum, health, public, site_pages, support
 from app.security.limiter import limiter
 from app.security.middleware import SecurityHeadersMiddleware
 from app.seeds.admin import seed_admin
 from app.seeds.events_cpd import seed_industry_events
 from app.seeds.forum import seed_forum
+from app.seeds.site_pages import seed_site_pages
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,7 @@ async def lifespan(_: FastAPI):
         seed_admin(db)
         seed_industry_events(db)
         seed_forum(db)
+        seed_site_pages(db)
     finally:
         db.close()
 
@@ -118,6 +120,7 @@ app.include_router(commerce.router, prefix="/api")
 app.include_router(public.router, prefix="/api")
 app.include_router(support.router, prefix="/api")
 app.include_router(forum.router, prefix="/api")
+app.include_router(site_pages.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 
 upload_path = Path(settings.upload_dir)

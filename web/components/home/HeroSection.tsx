@@ -28,7 +28,7 @@ const DEFAULT_SLIDES: HeroSlide[] = [
 
 const DEFAULT_TRANSITION_MS = 3000;
 
-export default function HeroSection() {
+export default function HeroSection({ intro }: { intro?: string | null }) {
   const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES);
   const [transitionMs, setTransitionMs] = useState(DEFAULT_TRANSITION_MS);
   const [index, setIndex] = useState(0);
@@ -89,7 +89,7 @@ export default function HeroSection() {
             {siteFullName}
           </h1>
           <p className="mt-4 max-w-xl text-base leading-7 text-caisbe-muted sm:mt-5 sm:text-xl sm:leading-8">
-            {heroIntro}
+            {intro || heroIntro}
           </p>
           <div className="mt-6 sm:mt-8 sm:inline-flex">
             <ButtonLink href={portalMembershipRegisterUrl()} variant="pill">

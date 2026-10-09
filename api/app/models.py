@@ -1115,3 +1115,40 @@ class ForumReply(Base):
 
     thread: Mapped["ForumThread"] = relationship(back_populates="replies")
     author: Mapped["User | None"] = relationship(foreign_keys=[author_id])
+
+
+class SitePage(Base):
+    """Editable public landing page. A parent makes this a subpage."""
+
+    __tablename__ = "site_pages"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("site_pages.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(255))
+    menu_label: Mapped[str] = mapped_column(String(120))
+    slug: Mapped[str] = mapped_column(String(80))
+    path: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    lead: Mapped[str] = mapped_column(Text, default="")
+    sections: Mapped[list] = mapped_column(JSON, default=list)
+    cta_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    cta_href: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    show_in_menu: Mapped[bool] = mapped_column(Boolean, default=True)
+    status: Mapped[str] = mapped_column(String(32), default="draft", index=True)
+
+    parent: Mapped["SitePage | None"] = relationship(
+        "SitePage",
+        remote_side="SitePage.id",
+        back_populates="children",
+        foreign_keys=[parent_id],
+    )
+    children: Mapped[list["SitePage"]] = relationship(
+        "SitePage",
+        back_populates="parent",
+        foreign_keys=[parent_id],
+    )

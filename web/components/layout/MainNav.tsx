@@ -7,6 +7,7 @@ import {
   type Course,
 } from "@/lib/api";
 import { mainNavigation, utilityLinks } from "@/lib/data/navigation";
+import { fetchSiteNav, mergeSiteNav } from "@/lib/sitePages";
 
 function toNavSections(courses: Course[]): NavSectionData[] {
   const courseLinks = courses.map((course) => ({
@@ -42,7 +43,7 @@ export default async function MainNav() {
   } catch {
     courses = [];
   }
-  const sections = toNavSections(courses);
+  const sections = mergeSiteNav(toNavSections(courses), await fetchSiteNav());
 
   return (
     <>

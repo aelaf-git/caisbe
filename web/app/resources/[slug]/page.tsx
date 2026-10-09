@@ -11,6 +11,7 @@ import {
   mediaSlugs,
 } from "@/lib/data/resources";
 import { getResourcePage, resourcesPages } from "@/lib/data/site-pages";
+import { fetchPublishedSitePage, topicChrome } from "@/lib/sitePages";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -41,6 +42,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  const published = await fetchPublishedSitePage(`/resources/${slug}`);
+  if (published) {
+    return {
+      title: `${published.title} | CAISBE`,
+      description: published.description,
+    };
+  }
+
   const page = getResourcePage(slug);
   if (!page) return { title: "Resources | CAISBE" };
   return {
@@ -66,6 +75,19 @@ export default async function ResourceSubpage({ params }: Props) {
 
   if (mediaSlugs.includes(slug)) {
     return <MediaItemContent slug={slug} />;
+  }
+
+  const published = await fetchPublishedSitePage(`/resources/${slug}`);
+  if (published) {
+    const chrome = topicChrome(`/resources/${slug}`);
+    return (
+      <TopicPageContent
+        eyebrow={chrome.eyebrow}
+        page={published}
+        indexHref={chrome.indexHref}
+        indexLabel={chrome.indexLabel}
+      />
+    );
   }
 
   const page = getResourcePage(slug);

@@ -46,18 +46,27 @@ def _disable_rate_limiter() -> Generator[None, None, None]:
     limiter.enabled = previous
 
 
+def _drop_tables() -> None:
+    # site_pages references itself. SQLite rejects DROP TABLE while those
+    # foreign keys are enabled and rows still exist.
+    with engine.begin() as connection:
+        connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        Base.metadata.drop_all(bind=connection)
+        connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+
+
 @pytest.fixture()
 def db() -> Generator[Session, None, None]:
     import app.models  # noqa: F401 — register metadata
 
-    Base.metadata.drop_all(bind=engine)
+    _drop_tables()
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
     try:
         yield session
     finally:
         session.close()
-        Base.metadata.drop_all(bind=engine)
+        _drop_tables()
 
 
 @pytest.fixture()
@@ -71,6 +80,7 @@ def client(db: Session) -> Generator[TestClient, None, None]:
         patch("app.main.seed_admin"),
         patch("app.main.seed_industry_events"),
         patch("app.main.seed_forum"),
+        patch("app.main.seed_site_pages"),
         patch("app.main._run_job_sync"),
         patch("app.config.settings.job_sync_enabled", False),
     ):
