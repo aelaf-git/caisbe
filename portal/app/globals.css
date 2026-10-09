@@ -42,3 +42,44 @@
   --shadow-hopewell-nav: 0 10px 24px -18px rgba(15, 23, 42, 0.45);
   --shadow-admin-float: 0 16px 40px rgba(15, 23, 42, 0.12);
 }
+
+/* Dark appearance sets near-white ink on the document. A white sheet, card, or
+   field must keep the light palette or that ink disappears. :where keeps this
+   from beating an explicit text color on the same element. */
+@layer base {
+  :where(.bg-white, .bg-white\/95, .bg-white\/90, .bg-white\/80) {
+    color: #1f2937;
+    color-scheme: light;
+    --caisbe-foreground: #1f2937;
+    --caisbe-text: #1f2937;
+    --caisbe-text-dark: #111827;
+    --caisbe-muted: #5f6b7a;
+    --color-foreground: #1f2937;
+    --color-caisbe-text: #1f2937;
+    --color-caisbe-text-dark: #111827;
+    --color-caisbe-muted: #5f6b7a;
+    --color-ifma-navy: #111827;
+    --color-ifma-text: #1f2937;
+    --color-ifma-text-dark: #111827;
+    --color-ifma-muted: #5f6b7a;
+  }
+}
+
+@media print {
+  html {
+    color-scheme: light !important;
+    color: #1f2937 !important;
+    --caisbe-foreground: #1f2937 !important;
+    --caisbe-text: #1f2937 !important;
+    --caisbe-text-dark: #111827 !important;
+    --caisbe-muted: #5f6b7a !important;
+    --color-foreground: #1f2937 !important;
+    --color-caisbe-text: #1f2937 !important;
+    --color-caisbe-text-dark: #111827 !important;
+    --color-caisbe-muted: #5f6b7a !important;
+    --color-ifma-navy: #111827 !important;
+    --color-ifma-text: #1f2937 !important;
+    --color-ifma-text-dark: #111827 !important;
+    --color-ifma-muted: #5f6b7a !important;
+  }
+}
