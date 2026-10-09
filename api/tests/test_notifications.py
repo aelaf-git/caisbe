@@ -18,11 +18,14 @@ from app.models import (
     OrderItem,
     User,
 )
+from app.config import settings
 from app.security.auth import hash_password
 from app.services.commerce import fulfill_order
 from app.services.notifications import (
     ensure_membership_expiry_reminders,
+    notification_link_for_client,
     notify_enrolled_students,
+    public_site_link,
 )
 
 STRONG_PASSWORD = "Str0ng-Password!99"
@@ -231,6 +234,47 @@ def test_ensure_membership_expiry_skips_far_future(db: Session) -> None:
     db.commit()
     created = ensure_membership_expiry_reminders(db, user)
     assert created == []
+
+
+def test_production_event_links_leave_localhost(client: TestClient, db: Session, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "web_public_url", "http://localhost:3000")
+    monkeypatch.setattr(settings, "portal_public_url", "http://localhost:3002")
+
+    assert public_site_link("/events/calendar") == "https://caisbe.org/events/calendar"
+    assert public_site_link("/events/expo") == "https://caisbe.org/events/expo"
+    assert (
+        notification_link_for_client("http://localhost:3000/events/calendar")
+        == "https://caisbe.org/events/calendar"
+    )
+    assert (
+        notification_link_for_client("http://127.0.0.1:3000/news/chapter-update")
+        == "https://caisbe.org/news/chapter-update"
+    )
+    assert notification_link_for_client("http://localhost:3002/account") == "https://portal.caisbe.org/account"
+    assert notification_link_for_client("/assignments") == "/assignments"
+    assert notification_link_for_client("https://caisbe.org/events") == "https://caisbe.org/events"
+
+    student = _student(db, "event-link@example.com")
+    db.add(
+        Notification(
+            user_id=student.id,
+            title="New event posted",
+            body="FM Summit is now on the CAISBE events calendar.",
+            kind="event",
+            link="http://localhost:3000/events/calendar",
+        )
+    )
+    db.commit()
+
+    listed = client.get(
+        "/api/me/notifications",
+        headers={"Authorization": f"Bearer {_login(client, student.email)}"},
+    )
+    assert listed.status_code == 200
+    event = next(item for item in listed.json()["items"] if item["kind"] == "event")
+    assert event["link"] == "https://caisbe.org/events/calendar"
+    assert "localhost" not in event["link"]
 
 
 def test_publishing_event_and_news_notifies_students(client: TestClient, db: Session) -> None:

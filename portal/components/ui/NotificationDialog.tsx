@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
+import { relatedPageHref } from "@/lib/notificationLink";
 
 export type NotificationDialogItem = {
   id: number;
@@ -42,7 +43,8 @@ export default function NotificationDialog({
 
   if (!item) return null;
 
-  const externalLink = Boolean(item.link && /^https?:\/\//i.test(item.link));
+  const relatedHref = item.link ? relatedPageHref(item.link) : null;
+  const externalLink = Boolean(relatedHref && /^https?:\/\//i.test(relatedHref));
   const linkClassName =
     "inline-flex h-11 items-center justify-center rounded-full border-2 border-caisbe-red bg-admin-surface px-6 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white";
 
@@ -79,9 +81,9 @@ export default function NotificationDialog({
           {item.body}
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-          {item.link && externalLink ? (
+          {relatedHref && externalLink ? (
             <a
-              href={item.link}
+              href={relatedHref}
               target="_blank"
               rel="noopener noreferrer"
               onClick={onClose}
@@ -90,8 +92,8 @@ export default function NotificationDialog({
               Open related page
             </a>
           ) : null}
-          {item.link && !externalLink ? (
-            <Link href={item.link} onClick={onClose} className={linkClassName}>
+          {relatedHref && !externalLink ? (
+            <Link href={relatedHref} onClick={onClose} className={linkClassName}>
               Open related page
             </Link>
           ) : null}

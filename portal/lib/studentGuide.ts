@@ -35,6 +35,7 @@ export const studentGuideSections: GuideSection[] = [
     ],
     items: [
       "Dashboard shows courses in progress, courses awaiting payment, completed courses, and credentials.",
+      "My Progress lists each course with course progress, learning progress, assignment progress, exam status (Eligible, Not eligible, or No exam), outstanding requirements, and certification status (Issued or Under progress).",
       "Use the Current, Completed, Submission, and Credentials tabs to switch lists.",
       "My courses lists programs you already have, plus other published courses you can add.",
       "Assignments, Cart, Certificates, Discussion forum, and Membership are under Learning.",

@@ -59,6 +59,13 @@ class EnrollmentOut(BaseModel):
     course: CourseOut
     exam_passed: bool = False
     certificate_code: str | None = None
+    topics_completed: int = 0
+    topics_total: int = 0
+    quizzes_completed: int = 0
+    quizzes_total: int = 0
+    assignments_completed: int = 0
+    assignments_total: int = 0
+    has_final_exam: bool = False
 
     model_config = {"from_attributes": True}
 

@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import Enrollment, MembershipCertificate, Notification, NotificationBroadcast, User
+
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+_PRODUCTION_WEB_URL = "https://caisbe.org"
+_PRODUCTION_PORTAL_URL = "https://portal.caisbe.org"
 
 MEMBERSHIP_EXPIRY_REMINDER_DAYS = 14
 
@@ -18,11 +23,51 @@ EVENT_TYPE_PATHS = {
 }
 
 
+def _origin_is_local(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return host in _LOCAL_HOSTS
+
+
+def _configured_base(value: str, *, production_fallback: str) -> str:
+    configured = (value or "").strip().rstrip("/")
+    if configured and not _origin_is_local(configured):
+        return configured
+    if settings.is_production:
+        return production_fallback
+    return configured or production_fallback
+
+
+def public_web_base() -> str:
+    """Marketing site origin. Production never keeps the localhost default."""
+    return _configured_base(settings.web_public_url, production_fallback=_PRODUCTION_WEB_URL)
+
+
+def public_portal_base() -> str:
+    return _configured_base(settings.portal_public_url, production_fallback=_PRODUCTION_PORTAL_URL)
+
+
 def public_site_link(path: str) -> str:
     """Absolute URL on the public marketing site for notification CTAs."""
-    base = (settings.web_public_url or "").strip().rstrip("/") or "https://caisbe.org"
     clean = "/" + (path or "").strip().lstrip("/")
-    return f"{base}{clean}"
+    return f"{public_web_base()}{clean}"
+
+
+def notification_link_for_client(link: str | None) -> str | None:
+    """Rewrite stored localhost links so Open related page stays on the public site."""
+    if link is None:
+        return None
+    value = link.strip()
+    if not value or not value.startswith(("http://", "https://")) or not _origin_is_local(value):
+        return value or None
+    parsed = urlparse(value)
+    suffix = parsed.path or "/"
+    if parsed.query:
+        suffix = f"{suffix}?{parsed.query}"
+    if parsed.fragment:
+        suffix = f"{suffix}#{parsed.fragment}"
+    if parsed.port == 3002:
+        return f"{public_portal_base()}{suffix}"
+    return public_site_link(suffix)
 
 
 def notify_users(

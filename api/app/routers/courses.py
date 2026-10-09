@@ -528,6 +528,34 @@ def get_course_detail(
     return detail
 
 
+def _progress_counts(db: Session, user: User, course: Course) -> dict[str, int | bool]:
+    lesson_ids, quiz_ids, assignment_ids = _course_progress_units(db, course.id)
+    topics_completed = 0
+    if lesson_ids:
+        topics_completed = (
+            db.query(LessonProgress)
+            .filter(LessonProgress.user_id == user.id, LessonProgress.lesson_id.in_(lesson_ids))
+            .count()
+        )
+    quizzes_completed = 0
+    if quiz_ids:
+        quizzes_completed = (
+            db.query(QuizAttempt.quiz_id)
+            .filter(QuizAttempt.user_id == user.id, QuizAttempt.quiz_id.in_(quiz_ids))
+            .distinct()
+            .count()
+        )
+    return {
+        "topics_completed": topics_completed,
+        "topics_total": len(lesson_ids),
+        "quizzes_completed": quizzes_completed,
+        "quizzes_total": len(quiz_ids),
+        "assignments_completed": len(_completed_assignment_ids(db, user.id, assignment_ids)),
+        "assignments_total": len(assignment_ids),
+        "has_final_exam": course.final_exam is not None,
+    }
+
+
 def _enrollment_to_out(db: Session, user: User, enrollment: Enrollment) -> EnrollmentOut:
     course = enrollment.course
     exam_passed = _user_passed_final_exam(db, user, course) if course else False
@@ -536,6 +564,7 @@ def _enrollment_to_out(db: Session, user: User, enrollment: Enrollment) -> Enrol
         .filter(Certificate.user_id == user.id, Certificate.course_id == enrollment.course_id)
         .first()
     )
+    counts = _progress_counts(db, user, course) if course is not None else {}
     return EnrollmentOut(
         id=enrollment.id,
         status=enrollment.status,
@@ -544,6 +573,13 @@ def _enrollment_to_out(db: Session, user: User, enrollment: Enrollment) -> Enrol
         course=CourseOut.model_validate(course),
         exam_passed=exam_passed,
         certificate_code=cert.certificate_code if cert else None,
+        topics_completed=int(counts.get("topics_completed", 0)),
+        topics_total=int(counts.get("topics_total", 0)),
+        quizzes_completed=int(counts.get("quizzes_completed", 0)),
+        quizzes_total=int(counts.get("quizzes_total", 0)),
+        assignments_completed=int(counts.get("assignments_completed", 0)),
+        assignments_total=int(counts.get("assignments_total", 0)),
+        has_final_exam=bool(counts.get("has_final_exam", False)),
     )
 
 
@@ -559,7 +595,10 @@ def list_my_enrollments(
         .order_by(Enrollment.enrolled_at.desc())
         .all()
     )
-    return [_enrollment_to_out(db, current_user, row) for row in rows]
+    items = [_enrollment_to_out(db, current_user, row) for row in rows]
+    if db.new or db.dirty:
+        db.commit()
+    return items
 
 
 @router.post("/me/enrollments", status_code=status.HTTP_400_BAD_REQUEST)
@@ -1694,6 +1733,7 @@ def list_my_notifications(
     from app.services.notifications import (
         ensure_membership_expiry_reminders,
         list_user_notifications,
+        notification_link_for_client,
         unread_notification_count,
     )
 
@@ -1701,10 +1741,13 @@ def list_my_notifications(
     if created:
         db.commit()
     items = list_user_notifications(db, current_user)
-    return NotificationListOut(
+    payload = NotificationListOut(
         unread_count=unread_notification_count(db, current_user),
         items=[NotificationOut.model_validate(row) for row in items],
-    ).model_dump()
+    )
+    for item in payload.items:
+        item.link = notification_link_for_client(item.link)
+    return payload.model_dump()
 
 
 @router.post("/me/notifications/{notification_id}/read")
@@ -1714,13 +1757,15 @@ def mark_my_notification_read(
     db: Session = Depends(get_db),
 ) -> dict:
     from app.schemas.notifications import NotificationOut
-    from app.services.notifications import mark_notification_read
+    from app.services.notifications import mark_notification_read, notification_link_for_client
 
     row = mark_notification_read(db, current_user, notification_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
     db.commit()
-    return NotificationOut.model_validate(row).model_dump()
+    payload = NotificationOut.model_validate(row)
+    payload.link = notification_link_for_client(payload.link)
+    return payload.model_dump()
 
 
 @router.post("/me/notifications/read-all")

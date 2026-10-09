@@ -7,7 +7,17 @@ from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import Certificate, Chapter, Course, Enrollment, Lesson, User
+from app.models import (
+    Certificate,
+    Chapter,
+    ContentBlock,
+    Course,
+    Enrollment,
+    FinalExam,
+    Lesson,
+    LessonProgress,
+    User,
+)
 from app.security.auth import hash_password
 
 STRONG_PASSWORD = "Str0ng-Password!99"
@@ -107,3 +117,59 @@ def test_certificate_does_not_close_course_materials(client: TestClient, db: Ses
     assert body["chapters"][0]["title"] == "Chapter EXT-C"
     assert body["chapters"][0]["lessons"][0]["title"] == "Topic EXT-C"
     assert "Lecture notes" in (body["chapters"][0]["lessons"][0]["body"] or "")
+
+
+def test_enrollment_reports_progress_counts_and_exam_eligibility(client: TestClient, db: Session) -> None:
+    student = _student(db, "progress-counts@example.com")
+    course = _course(db, "PRG-1")
+    chapter = db.query(Chapter).filter(Chapter.course_id == course.id).one()
+    lesson = db.query(Lesson).filter(Lesson.chapter_id == chapter.id).one()
+    db.add(
+        ContentBlock(
+            chapter_id=chapter.id,
+            block_type="assignment",
+            title="Assignment PRG-1",
+            body="Write a short answer.",
+            sort_order=0,
+        )
+    )
+    db.add(FinalExam(course_id=course.id, title="Final Exam"))
+    db.add(Enrollment(user_id=student.id, course_id=course.id, status="enrolled", progress=0))
+    db.commit()
+
+    headers = _login(client, student.email)
+    listed = client.get("/api/me/enrollments", headers=headers)
+    assert listed.status_code == 200
+    row = listed.json()[0]
+    assert row["topics_completed"] == 0
+    assert row["topics_total"] == 1
+    assert row["quizzes_completed"] == 0
+    assert row["quizzes_total"] == 0
+    assert row["assignments_completed"] == 0
+    assert row["assignments_total"] == 1
+    assert row["has_final_exam"] is True
+    assert row["exam_passed"] is False
+    assert row["certificate_code"] is None
+    assert row["topics_completed"] < row["topics_total"]
+
+    db.add(LessonProgress(user_id=student.id, lesson_id=lesson.id))
+    db.commit()
+    eligible = client.get("/api/me/enrollments", headers=headers)
+    assert eligible.status_code == 200
+    ready = eligible.json()[0]
+    assert ready["topics_completed"] == ready["topics_total"] == 1
+    assert ready["assignments_completed"] == 0
+    assert ready["has_final_exam"] is True
+    assert ready["exam_passed"] is False
+
+    db.add(
+        Certificate(
+            user_id=student.id,
+            course_id=course.id,
+            certificate_code="CAISBE-PRG-1-TEST",
+        )
+    )
+    db.commit()
+    issued = client.get("/api/me/enrollments", headers=headers)
+    assert issued.status_code == 200
+    assert issued.json()[0]["certificate_code"] == "CAISBE-PRG-1-TEST"

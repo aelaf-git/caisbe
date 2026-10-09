@@ -65,6 +65,13 @@ export type Enrollment = {
   course: Course;
   exam_passed?: boolean;
   certificate_code?: string | null;
+  topics_completed: number;
+  topics_total: number;
+  quizzes_completed: number;
+  quizzes_total: number;
+  assignments_completed: number;
+  assignments_total: number;
+  has_final_exam: boolean;
 };
 
 export type TokenResponse = {
