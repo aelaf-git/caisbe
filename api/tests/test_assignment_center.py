@@ -14,6 +14,8 @@ from app.models import (
     ContentBlock,
     Course,
     Enrollment,
+    Lesson,
+    LessonProgress,
     Notification,
     User,
 )
@@ -261,3 +263,63 @@ def test_withdraw_removes_submission_and_attempts(client: TestClient, db: Sessio
     assert db.query(AssignmentAttempt).filter(AssignmentAttempt.submission_id == submission.id).count() == 0
     listed = client.get("/api/me/assignments", headers=headers)
     assert listed.json()[0]["bucket"] == "pending"
+    assert listed.json()[0]["unlocked"] is True
+
+
+def test_assignment_stays_locked_until_chapter_topics_are_complete(client: TestClient, db: Session) -> None:
+    student = _user(db, "assign-lock@example.com")
+    course = Course(
+        code="ASG-L",
+        title="Course ASG-L",
+        description="Desc",
+        slug="asg-l",
+        status="published",
+        pass_percent=70,
+    )
+    db.add(course)
+    db.flush()
+    earlier = Chapter(course_id=course.id, title="Chapter 1", sort_order=0)
+    later = Chapter(course_id=course.id, title="Chapter 2", sort_order=1)
+    db.add_all([earlier, later])
+    db.flush()
+    topic = Lesson(chapter_id=earlier.id, title="Topic 1", sort_order=0)
+    db.add(topic)
+    block = ContentBlock(
+        chapter_id=later.id,
+        block_type="assignment",
+        title="Assignment ASG-L",
+        body="Write a short answer.",
+        sort_order=0,
+    )
+    db.add(block)
+    db.add(Enrollment(user_id=student.id, course_id=course.id, status="enrolled", progress=0))
+    db.commit()
+    db.refresh(block)
+    db.refresh(topic)
+
+    headers = _login(client, student.email)
+    listed = client.get("/api/me/assignments", headers=headers)
+    assert listed.status_code == 200
+    assert listed.json()[0]["unlocked"] is False
+    detail = client.get(f"/api/me/assignments/{block.id}", headers=headers)
+    assert detail.status_code == 200
+    assert detail.json()["unlocked"] is False
+    assert detail.json()["can_submit"] is False
+    rejected = client.post(
+        f"/api/me/blocks/{block.id}/submit",
+        headers=headers,
+        json={"body": "Too soon"},
+    )
+    assert rejected.status_code == 400
+
+    db.add(LessonProgress(user_id=student.id, lesson_id=topic.id))
+    db.commit()
+    opened = client.post(
+        f"/api/me/blocks/{block.id}/submit",
+        headers=headers,
+        json={"body": "Ready"},
+    )
+    assert opened.status_code == 200
+    after = client.get(f"/api/me/assignments/{block.id}", headers=headers)
+    assert after.json()["unlocked"] is True
+    assert after.json()["bucket"] == "submitted"

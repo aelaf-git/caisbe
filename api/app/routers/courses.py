@@ -75,6 +75,7 @@ from app.services.settings import get_setting
 from app.services.assignments import (
     append_attempt,
     assignment_blocks_for_courses,
+    assignment_unlock_map,
     can_resubmit,
     can_submit_new,
     can_withdraw,
@@ -491,6 +492,13 @@ def get_course_detail(
             .all()
         }
     submissions = submission_map(db, current_user.id, assignment_ids)
+    assignment_blocks = [
+        block
+        for chapter in course.chapters
+        for block in chapter.blocks
+        if block.block_type == "assignment"
+    ]
+    unlocks = assignment_unlock_map(db, current_user.id, assignment_blocks)
     if db.new or db.dirty:
         db.commit()
 
@@ -512,8 +520,9 @@ def get_course_detail(
                 block.submission_file_name = row.file_name if row else None
                 block.submission_body = row.body if row else None
                 block.submitted_at = submitted_at
-                block.can_submit = row is None and can_submit_new(block.due_at)
-                block.can_resubmit = can_resubmit(row.status, block.due_at) if row else False
+                unlocked = unlocks.get(block.id, False)
+                block.can_submit = unlocked and row is None and can_submit_new(block.due_at)
+                block.can_resubmit = unlocked and can_resubmit(row.status, block.due_at) if row else False
                 block.is_late = submission_is_late(block.due_at, submitted_at)
 
     return detail
@@ -822,7 +831,7 @@ def _assignment_file_ok(url: str | None) -> bool:
 
 
 def _student_assignment_detail(
-    block: ContentBlock, row: AssignmentSubmission | None
+    block: ContentBlock, row: AssignmentSubmission | None, *, unlocked: bool
 ) -> StudentAssignmentDetailOut:
     chapter = block.chapter
     course = chapter.course if chapter else None
@@ -851,9 +860,10 @@ def _student_assignment_detail(
         file_name=row.file_name if row else None,
         submitted_at=submitted_at,
         is_late=submission_is_late(block.due_at, submitted_at),
-        can_submit=row is None and can_submit_new(block.due_at),
-        can_resubmit=can_resubmit(row.status, block.due_at) if row else False,
+        can_submit=unlocked and row is None and can_submit_new(block.due_at),
+        can_resubmit=unlocked and can_resubmit(row.status, block.due_at) if row else False,
         can_withdraw=can_withdraw(row.status) if row else False,
+        unlocked=unlocked,
         attempts=[
             {
                 "id": attempt.id,
@@ -883,6 +893,7 @@ def list_my_assignments(
     ]
     blocks = assignment_blocks_for_courses(db, course_ids)
     rows = submission_map(db, current_user.id, [block.id for block in blocks])
+    unlocks = assignment_unlock_map(db, current_user.id, blocks)
     if db.new or db.dirty:
         db.commit()
     items: list[StudentAssignmentOut] = []
@@ -909,6 +920,7 @@ def list_my_assignments(
                 points_possible=block.points_possible,
                 submitted_at=submitted_at,
                 is_late=submission_is_late(block.due_at, submitted_at),
+                unlocked=unlocks.get(block.id, False),
             )
         )
     items.sort(
@@ -930,9 +942,10 @@ def get_my_assignment(
     block, course = _load_student_assignment(db, block_id)
     require_active_enrollment(db, current_user, course.id)
     rows = submission_map(db, current_user.id, [block.id])
+    unlocked = assignment_unlock_map(db, current_user.id, [block]).get(block.id, False)
     if db.new or db.dirty:
         db.commit()
-    return _student_assignment_detail(block, rows.get(block.id))
+    return _student_assignment_detail(block, rows.get(block.id), unlocked=unlocked)
 
 
 def _load_student_assignment(db: Session, block_id: int) -> tuple[ContentBlock, Course]:
@@ -980,6 +993,11 @@ def submit_assignment(
         )
         .first()
     )
+    if not assignment_unlock_map(db, current_user.id, [block]).get(block.id, False):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complete this chapter's topics before submitting this assignment.",
+        )
     if existing is not None and existing.status == "passed":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

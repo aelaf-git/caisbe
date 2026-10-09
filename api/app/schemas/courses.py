@@ -552,6 +552,7 @@ class StudentAssignmentOut(BaseModel):
     points_possible: int | None = None
     submitted_at: datetime | None = None
     is_late: bool = False
+    unlocked: bool = True
 
 
 class StudentAssignmentDetailOut(BaseModel):
@@ -579,6 +580,7 @@ class StudentAssignmentDetailOut(BaseModel):
     can_submit: bool = False
     can_resubmit: bool = False
     can_withdraw: bool = False
+    unlocked: bool = True
     attempts: list[AssignmentAttemptOut] = Field(default_factory=list)
 
 

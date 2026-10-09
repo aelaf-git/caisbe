@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, apiUpload, ApiError } from "@/lib/auth";
 import { resolveUploadUrl } from "@/lib/mediaUrl";
@@ -22,6 +23,7 @@ type AssignmentRow = {
   points_possible: number | null;
   submitted_at: string | null;
   is_late: boolean;
+  unlocked: boolean;
 };
 
 type Attempt = {
@@ -56,6 +58,7 @@ type AssignmentDetail = {
   can_submit: boolean;
   can_resubmit: boolean;
   can_withdraw: boolean;
+  unlocked: boolean;
   attempts: Attempt[];
 };
 
@@ -111,7 +114,23 @@ function fileHref(url: string | null) {
   return resolveUploadUrl(url) ?? url;
 }
 
+function isOverdue(row: Pick<AssignmentRow, "bucket" | "due_at">) {
+  if (row.bucket !== "pending" || !row.due_at) return false;
+  const due = new Date(row.due_at).getTime();
+  return !Number.isNaN(due) && due < Date.now();
+}
+
 export default function AssignmentsPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-caisbe-muted">Loading assignments…</p>}>
+      <AssignmentsWorkspace />
+    </Suspense>
+  );
+}
+
+function AssignmentsWorkspace() {
+  const searchParams = useSearchParams();
+  const openedFromQuery = useRef(false);
   const [rows, setRows] = useState<AssignmentRow[]>([]);
   const [filter, setFilter] = useState<Bucket>("all");
   const [loading, setLoading] = useState(true);
@@ -151,6 +170,16 @@ export default function AssignmentsPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (openedFromQuery.current || loading) return;
+    const raw = searchParams.get("block");
+    if (!raw) return;
+    const blockId = Number(raw);
+    if (!rows.some((row) => row.block_id === blockId)) return;
+    openedFromQuery.current = true;
+    void openDetail(blockId);
+  }, [loading, openDetail, rows, searchParams]);
+
   const visible = useMemo(
     () => (filter === "all" ? rows : rows.filter((row) => row.bucket === filter)),
     [filter, rows],
@@ -169,8 +198,8 @@ export default function AssignmentsPage() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Learning"
-        title="Assignments"
-        description="Pending work, submissions in review, and evaluated scores with instructor feedback."
+        title="My Assignments"
+        description="Download each assignment, submit your coursework, and review the confirmation, status, grade, and history."
       />
 
       <div className="flex flex-wrap gap-2">
@@ -222,7 +251,6 @@ export default function AssignmentsPage() {
               <tbody>
                 {visible.map((row) => {
                   const selected = row.block_id === selectedId;
-                  const courseHref = `/courses/${row.course_id}?block=${row.block_id}`;
                   return (
                     <tr
                       key={row.block_id}
@@ -231,28 +259,32 @@ export default function AssignmentsPage() {
                       }`}
                     >
                       <td className="px-5 py-4">
-                        {row.bucket === "pending" ? (
-                          <Link href={courseHref} className="font-semibold text-caisbe-text hover:text-caisbe-red">
-                            {row.title}
-                          </Link>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => void openDetail(row.block_id)}
-                            className="text-left font-semibold text-caisbe-text hover:text-caisbe-red"
-                          >
-                            {row.title}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => void openDetail(row.block_id)}
+                          className="text-left font-semibold text-caisbe-text hover:text-caisbe-red"
+                        >
+                          {row.title}
+                        </button>
                         <p className="text-xs text-caisbe-muted">{row.chapter_title}</p>
                       </td>
                       <td className="px-5 py-4 text-caisbe-text">
                         <span className="font-semibold">{row.course_code}</span>
                         <span className="mt-0.5 block text-caisbe-muted">{row.course_title}</span>
                       </td>
-                      <td className="px-5 py-4 text-caisbe-text">{formatWhen(row.due_at)}</td>
+                      <td className="px-5 py-4 text-caisbe-text">
+                        {row.due_at ? formatWhen(row.due_at) : "No due date"}
+                        {isOverdue(row) ? (
+                          <span className="mt-0.5 block text-xs font-semibold uppercase tracking-wide text-caisbe-red">
+                            Overdue
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="px-5 py-4">
                         <span className="font-semibold text-caisbe-text">{statusLabel(row.bucket)}</span>
+                        {!row.unlocked && row.bucket === "pending" ? (
+                          <span className="mt-0.5 block text-xs text-caisbe-muted">Finish the chapter topics first.</span>
+                        ) : null}
                         {row.review_status === "passed" || row.review_status === "failed" ? (
                           <span className="mt-0.5 block text-xs uppercase tracking-wide text-caisbe-muted">
                             {row.review_status}
@@ -320,6 +352,8 @@ function AssignmentDetailPanel({
             : null
       : null;
   const courseHref = `/courses/${detail.course_id}?block=${detail.block_id}`;
+  const overdue = isOverdue({ bucket: detail.bucket as AssignmentRow["bucket"], due_at: detail.due_at });
+  const instructionsHref = fileHref(detail.instructions_url);
 
   return (
     <section className="space-y-6 rounded-[20px] border border-ifma-border bg-admin-surface p-5 shadow-hopewell md:p-6">
@@ -335,14 +369,47 @@ function AssignmentDetailPanel({
         </Link>
       </div>
 
+      <dl className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-md border border-ifma-border-light px-4 py-3">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Due date</dt>
+          <dd className="mt-1 text-sm font-semibold text-caisbe-text">
+            {detail.due_at ? formatWhen(detail.due_at) : "No due date"}
+            {detail.points_possible != null ? (
+              <span className="mt-0.5 block font-normal text-caisbe-muted">{detail.points_possible} points</span>
+            ) : null}
+            {overdue ? (
+              <span className="mt-0.5 block text-xs font-semibold uppercase tracking-wide text-caisbe-red">Overdue</span>
+            ) : null}
+          </dd>
+        </div>
+        <div className="rounded-md border border-ifma-border-light px-4 py-3">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Assignment status</dt>
+          <dd className="mt-1 text-sm font-semibold text-caisbe-text">
+            {statusLabel(detail.bucket)}
+            {detail.review_status === "passed" || detail.review_status === "failed" ? (
+              <span className="mt-0.5 block text-xs uppercase tracking-wide text-caisbe-muted">{detail.review_status}</span>
+            ) : null}
+            {detail.is_late ? (
+              <span className="mt-0.5 block text-xs font-semibold uppercase tracking-wide text-caisbe-red">Late</span>
+            ) : null}
+            {!detail.unlocked && detail.bucket === "pending" ? (
+              <span className="mt-0.5 block text-xs font-normal text-caisbe-muted">Finish the chapter topics first.</span>
+            ) : null}
+          </dd>
+        </div>
+      </dl>
+
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Instructions</h3>
-        {detail.instructions_url ? (
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+          {detail.instructions_url ? "Download assignment" : "Assignment"}
+        </h3>
+        {instructionsHref ? (
           <a
-            href={fileHref(detail.instructions_url) ?? detail.instructions_url}
+            href={instructionsHref}
+            download
             className="mt-2 inline-flex font-semibold text-caisbe-red hover:underline"
           >
-            {detail.instructions_label || "Download instructions"}
+            {detail.instructions_label || "Download assignment"}
           </a>
         ) : detail.instructions_body ? (
           <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-caisbe-text">{detail.instructions_body}</p>
@@ -351,42 +418,74 @@ function AssignmentDetailPanel({
         )}
       </div>
 
+      {!detail.unlocked && detail.bucket === "pending" ? (
+        <p className="rounded-md border border-dashed border-ifma-border px-4 py-4 text-sm text-caisbe-muted">
+          Complete this chapter&apos;s topics before you can submit this assignment.
+        </p>
+      ) : null}
+      {detail.unlocked && detail.bucket === "pending" && !detail.can_submit ? (
+        <p className="rounded-md border border-dashed border-ifma-border px-4 py-4 text-sm text-caisbe-muted">
+          The due date has passed. This assignment is closed.
+        </p>
+      ) : null}
+
+      {detail.can_submit || detail.can_resubmit || detail.can_withdraw ? (
+        <ResponseForm detail={detail} onChanged={onChanged} />
+      ) : null}
+
+      {detail.bucket === "submitted" ? (
+        <div className="rounded-md border border-admin-warning/40 bg-admin-warning-soft px-4 py-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Submission confirmation</h3>
+          <p className="mt-2 font-semibold text-caisbe-text-dark">Submitted — under review</p>
+          <p className="mt-1 text-sm text-caisbe-text">{detail.title}</p>
+          <p className="text-sm text-caisbe-muted">
+            {detail.course_code} · {detail.course_title}
+          </p>
+          <p className="mt-1 text-sm text-caisbe-text">Submitted {formatWhen(detail.submitted_at)}</p>
+          {detail.file_url ? (
+            <a
+              href={fileHref(detail.file_url) ?? detail.file_url}
+              className="mt-2 inline-flex text-sm font-semibold text-caisbe-red hover:underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {detail.file_name || "Download your file"}
+            </a>
+          ) : detail.body ? (
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-caisbe-text">{detail.body}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {detail.bucket === "evaluated" ? (
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Grades &amp; feedback</h3>
+          {score ? <p className="mt-2 text-lg font-semibold text-caisbe-text-dark">{score}</p> : null}
+          {detail.feedback ? (
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-caisbe-text">{detail.feedback}</p>
+          ) : (
+            <p className="mt-2 text-sm text-caisbe-muted">No written feedback was added.</p>
+          )}
+          {detail.file_url ? (
+            <a
+              href={fileHref(detail.file_url) ?? detail.file_url}
+              className="mt-2 inline-flex text-sm font-semibold text-caisbe-red hover:underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {detail.file_name || "Download your file"}
+            </a>
+          ) : detail.body ? (
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-caisbe-text">{detail.body}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Your submission</h3>
-        {detail.file_url ? (
-          <a
-            href={fileHref(detail.file_url) ?? detail.file_url}
-            className="mt-2 inline-flex font-semibold text-caisbe-red hover:underline"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {detail.file_name || "Download your file"}
-          </a>
-        ) : detail.body ? (
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-caisbe-text">{detail.body}</p>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Assignment history</h3>
+        {detail.attempts.length === 0 ? (
+          <p className="mt-2 text-sm text-caisbe-muted">No submissions yet.</p>
         ) : (
-          <p className="mt-2 text-sm text-caisbe-muted">Nothing submitted yet.</p>
-        )}
-        {detail.is_late ? <p className="mt-2 text-sm font-semibold text-caisbe-red">Submitted after the due date.</p> : null}
-      </div>
-
-      {score ? (
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Score</h3>
-          <p className="mt-2 text-lg font-semibold text-caisbe-text-dark">{score}</p>
-        </div>
-      ) : null}
-
-      {detail.feedback ? (
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Instructor feedback</h3>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-caisbe-text">{detail.feedback}</p>
-        </div>
-      ) : null}
-
-      {detail.attempts.length > 0 ? (
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Submission history</h3>
           <ol className="mt-2 space-y-2">
             {detail.attempts.map((attempt, index) => (
               <li key={attempt.id} className="rounded-md border border-ifma-border-light px-3 py-2 text-sm">
@@ -409,12 +508,18 @@ function AssignmentDetailPanel({
               </li>
             ))}
           </ol>
-        </div>
-      ) : null}
+        )}
+      </div>
 
-      {detail.can_resubmit || detail.can_withdraw ? (
-        <ResponseForm detail={detail} onChanged={onChanged} />
-      ) : null}
+      <div className="border-t border-ifma-border-light pt-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Technical support</h3>
+        <p className="mt-2 text-sm text-caisbe-muted">
+          If a file will not upload or a due date looks wrong, open a ticket and CAISBE will follow up.
+        </p>
+        <Link href="/messages" className="mt-2 inline-flex text-sm font-semibold text-caisbe-red hover:underline">
+          Open a ticket
+        </Link>
+      </div>
     </section>
   );
 }
@@ -426,7 +531,7 @@ function ResponseForm({
   detail: AssignmentDetail;
   onChanged: () => Promise<void>;
 }) {
-  const [source, setSource] = useState<"file" | "written">("written");
+  const [source, setSource] = useState<"file" | "written">("file");
   const [file, setFile] = useState<File | null>(null);
   const [written, setWritten] = useState("");
   const [busy, setBusy] = useState(false);
@@ -484,9 +589,11 @@ function ResponseForm({
 
   return (
     <div className="space-y-4 border-t border-ifma-border-light pt-6">
-      {detail.can_resubmit ? (
+      {detail.can_submit || detail.can_resubmit ? (
         <form onSubmit={(event) => void submit(event)} className="space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Resubmit</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+            {detail.can_submit ? "Submit coursework" : "Resubmit"}
+          </h3>
           <div className="flex w-full max-w-md rounded-md border border-ifma-border bg-admin-surface p-1">
             <button
               type="button"
@@ -536,7 +643,7 @@ function ResponseForm({
             disabled={busy}
             className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-5 py-2.5 text-sm font-semibold uppercase text-white disabled:opacity-60"
           >
-            {busy ? "Submitting…" : "Resubmit"}
+            {busy ? "Submitting…" : detail.can_submit ? "Submit for review" : "Resubmit"}
           </button>
         </form>
       ) : null}

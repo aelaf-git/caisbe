@@ -6,7 +6,15 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from app.models import AssignmentAttempt, AssignmentSubmission, BlockCompletion, Chapter, ContentBlock, Course
+from app.models import (
+    AssignmentAttempt,
+    AssignmentSubmission,
+    BlockCompletion,
+    Chapter,
+    ContentBlock,
+    Course,
+    LessonProgress,
+)
 
 
 def as_utc(value: datetime) -> datetime:
@@ -160,6 +168,50 @@ def submission_map(
         .all()
     )
     return {row.content_block_id: row for row in rows}
+
+
+def assignment_unlock_map(db: Session, user_id: int, blocks: list[ContentBlock]) -> dict[int, bool]:
+    """Chapter assignments open after that chapter's topics, and every earlier chapter's topics, are done."""
+    course_ids = {
+        block.chapter.course_id
+        for block in blocks
+        if block.chapter is not None
+    }
+    if not course_ids:
+        return {block.id: False for block in blocks}
+
+    chapters = (
+        db.query(Chapter)
+        .options(selectinload(Chapter.lessons))
+        .filter(Chapter.course_id.in_(course_ids))
+        .all()
+    )
+    lesson_ids = [lesson.id for chapter in chapters for lesson in chapter.lessons]
+    done: set[int] = set()
+    if lesson_ids:
+        done = {
+            row[0]
+            for row in db.query(LessonProgress.lesson_id)
+            .filter(LessonProgress.user_id == user_id, LessonProgress.lesson_id.in_(lesson_ids))
+            .all()
+        }
+
+    unlocked_chapters: set[int] = set()
+    by_course: dict[int, list[Chapter]] = {}
+    for chapter in chapters:
+        by_course.setdefault(chapter.course_id, []).append(chapter)
+    for course_chapters in by_course.values():
+        prior_complete = True
+        for chapter in sorted(course_chapters, key=lambda item: (item.sort_order, item.id)):
+            topics_done = all(lesson.id in done for lesson in chapter.lessons)
+            if prior_complete and topics_done:
+                unlocked_chapters.add(chapter.id)
+            prior_complete = prior_complete and topics_done
+
+    return {
+        block.id: block.chapter is not None and block.chapter.id in unlocked_chapters
+        for block in blocks
+    }
 
 
 def assignment_blocks_for_courses(db: Session, course_ids: list[int]) -> list[ContentBlock]:

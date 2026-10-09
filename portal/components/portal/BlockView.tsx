@@ -486,7 +486,9 @@ function AssignmentView({ block, onComplete }: { block: ContentBlock; onComplete
           </form>
         ) : !status ? (
           <p className="rounded-md border border-dashed border-ifma-border px-4 py-6 text-sm text-caisbe-muted">
-            The due date has passed. This assignment is closed.
+            {block.due_at && new Date(block.due_at).getTime() < Date.now()
+              ? "The due date has passed. This assignment is closed."
+              : "Complete this chapter's topics before you can submit this assignment."}
           </p>
         ) : null}
         {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}

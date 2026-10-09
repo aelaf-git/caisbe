@@ -27,7 +27,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Learning",
     items: [
       { href: "/courses", label: "My courses", icon: "book", match: "prefix" },
-      { href: "/assignments", label: "Assignments", icon: "clipboard", match: "prefix" },
+      { href: "/assignments", label: "My Assignments", icon: "clipboard", match: "prefix" },
       { href: "/cart", label: "Cart", icon: "cart", match: "exact" },
       { href: "/certificates", label: "Certificates", icon: "award", match: "prefix" },
       { href: "/forum", label: "Discussion forum", icon: "forum", match: "prefix" },
