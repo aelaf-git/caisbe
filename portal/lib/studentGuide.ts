@@ -35,10 +35,10 @@ export const studentGuideSections: GuideSection[] = [
     ],
     items: [
       "Dashboard shows courses in progress, courses awaiting payment, completed courses, and credentials.",
-      "My Progress lists each course with course progress, learning progress, assignment progress, exam status (Eligible, Not eligible, or No exam), outstanding requirements, and certification status (Issued or Under progress).",
+      "Open My Progress in the left menu. It lists each course with course progress, learning progress, assignment progress, exam status (Eligible, Not eligible, or No exam), outstanding requirements, and certification status (Issued or Under progress).",
       "Use the Current, Completed, Submission, and Credentials tabs to switch lists.",
       "My courses lists programs you already have, plus other published courses you can add.",
-      "Assignments, Cart, Certificates, Discussion forum, and Membership are under Learning.",
+      "My Assignments, My Progress, Cart, Certificates, Discussion forum, and Membership are under Learning.",
       "Tickets, Notifications, and Manage profile are under Account.",
       "This User Guide stays in the menu under Overview.",
     ],

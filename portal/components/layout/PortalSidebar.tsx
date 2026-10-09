@@ -28,6 +28,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/courses", label: "My courses", icon: "book", match: "prefix" },
       { href: "/assignments", label: "My Assignments", icon: "clipboard", match: "prefix" },
+      { href: "/progress", label: "My Progress", icon: "chart", match: "prefix" },
       { href: "/cart", label: "Cart", icon: "cart", match: "exact" },
       { href: "/certificates", label: "Certificates", icon: "award", match: "prefix" },
       { href: "/forum", label: "Discussion forum", icon: "forum", match: "prefix" },
@@ -107,6 +108,15 @@ function NavIcon({ name }: { name: string }) {
         <path d="M4 6h16" />
         <path d="M4 12h16" />
         <path d="M4 18h10" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M4 19V5" />
+        <path d="M4 19h16" />
+        <path d="M8 16v-4" />
+        <path d="M12 16V8" />
+        <path d="M16 16v-6" />
       </>
     ),
     clipboard: (
