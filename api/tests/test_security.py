@@ -1,6 +1,7 @@
 """Production defaults, OpenAPI exposure, and credentialed CORS."""
 
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from app.config import (
     DEFAULT_ADMIN_PASSWORD,
@@ -10,9 +11,11 @@ from app.config import (
     validate_production_settings,
 )
 from app.main import app
+from app.models import User
+from app.seeds.admin import seed_admin
 
 
-def test_production_refuses_default_secrets(monkeypatch) -> None:
+def test_production_refuses_default_jwt_secret(monkeypatch) -> None:
     monkeypatch.setattr(settings, "app_env", "production")
     monkeypatch.setattr(settings, "jwt_secret", DEFAULT_JWT_SECRET)
     monkeypatch.setattr(settings, "admin_password", "unique-admin-password")
@@ -24,11 +27,28 @@ def test_production_refuses_default_secrets(monkeypatch) -> None:
 
     monkeypatch.setattr(settings, "jwt_secret", "unique-jwt-secret")
     monkeypatch.setattr(settings, "admin_password", DEFAULT_ADMIN_PASSWORD)
-    try:
-        validate_production_settings()
-        raise AssertionError("default admin password was accepted")
-    except RuntimeError as exc:
-        assert "ADMIN_PASSWORD" in str(exc)
+    validate_production_settings()
+
+
+def test_production_skips_admin_seed_when_password_is_default(db: Session, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "admin_email", "bootstrap-admin@example.com")
+    monkeypatch.setattr(settings, "admin_password", DEFAULT_ADMIN_PASSWORD)
+
+    seed_admin(db)
+
+    assert db.query(User).filter(User.email == "bootstrap-admin@example.com").first() is None
+
+
+def test_production_creates_admin_when_password_is_set(db: Session, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "admin_email", "bootstrap-admin@example.com")
+    monkeypatch.setattr(settings, "admin_password", "a-real-password-99")
+
+    seed_admin(db)
+
+    user = db.query(User).filter(User.email == "bootstrap-admin@example.com").one()
+    assert user.role == "admin"
 
 
 def test_development_allows_placeholder_secrets(monkeypatch) -> None:

@@ -102,11 +102,6 @@ def validate_production_settings() -> None:
             "Refusing to start in production with the default JWT_SECRET. "
             "Set a strong JWT_SECRET in the environment."
         )
-    if settings.admin_password == DEFAULT_ADMIN_PASSWORD:
-        raise RuntimeError(
-            "Refusing to start in production with the default ADMIN_PASSWORD. "
-            "Set a strong ADMIN_PASSWORD in the environment."
-        )
 
 
 def openapi_route_urls() -> tuple[str | None, str | None, str | None]:
