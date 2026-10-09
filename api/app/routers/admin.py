@@ -2282,6 +2282,13 @@ def admin_refund_payment(
     return _payment_out(row)
 
 
+def _promotion_kind(value: str | None) -> str:
+    kind = (value or "discount").strip().lower()
+    if kind not in {"discount", "scholarship"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Kind must be discount or scholarship.")
+    return kind
+
+
 @router.get("/promotions", response_model=list[PromotionOut])
 def admin_list_promotions(
     _: User = Depends(require_admin),
@@ -2299,9 +2306,11 @@ def admin_create_promotion(
     code = payload.code.strip().upper()
     if db.query(Promotion).filter(Promotion.code == code).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code already exists")
+    kind = _promotion_kind(payload.kind)
     promo = Promotion(
         code=code,
         description=payload.description.strip(),
+        kind=kind,
         percent_off=payload.percent_off,
         amount_off_cents=payload.amount_off_cents,
         complimentary=payload.complimentary or (payload.percent_off or 0) >= 100,
@@ -2332,6 +2341,7 @@ def admin_update_promotion(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code already exists")
     promo.code = code
     promo.description = payload.description.strip()
+    promo.kind = _promotion_kind(payload.kind)
     promo.percent_off = payload.percent_off
     promo.amount_off_cents = payload.amount_off_cents
     promo.complimentary = payload.complimentary or (payload.percent_off or 0) >= 100

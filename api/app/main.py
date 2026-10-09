@@ -16,6 +16,7 @@ from app.db import SessionLocal
 from app.routers import (
     access_control,
     admin,
+    fees,
     auth,
     commerce,
     courses,
@@ -133,6 +134,7 @@ app.include_router(support.router, prefix="/api")
 app.include_router(forum.router, prefix="/api")
 app.include_router(site_pages.router, prefix="/api")
 app.include_router(access_control.router, prefix="/api")
+app.include_router(fees.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 
 upload_path = Path(settings.upload_dir)

@@ -43,7 +43,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/site-activity", label: "Site activity", icon: "activity" },
       { href: "/reports", label: "Reports", icon: "chart" },
       { href: "/payments", label: "Payments", icon: "card" },
-      { href: "/promotions", label: "Promotions", icon: "tag" },
+      { href: "/fees", label: "Payment & Fees", icon: "tag" },
     ],
   },
   {

@@ -139,17 +139,20 @@ export function clearToken(): void {
 export class ApiError extends Error {
   status: number;
   detail: string;
+  orderId?: number;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, orderId?: number) {
     super(detail);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
+    this.orderId = orderId;
   }
 }
 
 async function parseError(response: Response): Promise<ApiError> {
   let detail = `Request failed (${response.status})`;
+  let orderId: number | undefined;
   try {
     const text = await response.text();
     const contentType = (response.headers.get("content-type") || "").toLowerCase();
@@ -159,16 +162,21 @@ async function parseError(response: Response): Promise<ApiError> {
         "Unable to reach the server. Please try again in a moment.",
       );
     }
-    const data = JSON.parse(text) as { detail?: string | { msg?: string }[] };
+    const data = JSON.parse(text) as {
+      detail?: string | { msg?: string }[] | { message?: string; order_id?: number };
+    };
     if (typeof data.detail === "string") {
       detail = data.detail;
     } else if (Array.isArray(data.detail) && data.detail[0]?.msg) {
       detail = data.detail[0].msg;
+    } else if (data.detail && typeof data.detail === "object" && "message" in data.detail) {
+      if (typeof data.detail.message === "string") detail = data.detail.message;
+      if (typeof data.detail.order_id === "number") orderId = data.detail.order_id;
     }
   } catch {
     // keep default
   }
-  return new ApiError(response.status, detail);
+  return new ApiError(response.status, detail, orderId);
 }
 
 export async function apiFetch<T>(

@@ -102,6 +102,7 @@ export default function ExamPlayer({
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
+  const [feeOrderId, setFeeOrderId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [rulesAccepted, setRulesAccepted] = useState(false);
@@ -238,8 +239,19 @@ export default function ExamPlayer({
     }
   }
 
+  function rememberStartError(err: unknown) {
+    if (err instanceof ApiError && err.status === 402 && err.orderId) {
+      setFeeOrderId(err.orderId);
+      setError(err.detail);
+      return;
+    }
+    setFeeOrderId(null);
+    setError(err instanceof ApiError ? err.detail : "Unable to start the exam.");
+  }
+
   async function begin() {
     setError(null);
+    setFeeOrderId(null);
     setSubmitting(true);
     try {
       if (secureMode && !secureReady) {
@@ -251,7 +263,28 @@ export default function ExamPlayer({
       });
       applySession(state, null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to start the exam.");
+      rememberStartError(err);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function payFee() {
+    if (feeOrderId == null) return;
+    setSubmitting(true);
+    try {
+      await apiFetch("/me/checkout", {
+        method: "POST",
+        body: JSON.stringify({ order_id: feeOrderId }),
+      });
+      setFeeOrderId(null);
+      setError(null);
+      const state = await apiFetch<ExamSessionState>(`/me/courses/${courseId}/final-exam/start`, {
+        method: "POST",
+      });
+      applySession(state, null);
+    } catch (err) {
+      rememberStartError(err);
     } finally {
       setSubmitting(false);
     }
@@ -404,7 +437,7 @@ export default function ExamPlayer({
 
       {phase.kind === "loading" ? <p className="text-sm text-caisbe-muted">Loading exam…</p> : null}
 
-      {phase.kind === "intro" && !showPrecheck && !error?.toLowerCase().includes("restricted") ? (
+      {phase.kind === "intro" && !showPrecheck && feeOrderId == null && !error?.toLowerCase().includes("restricted") ? (
         <ExamAgreement
           key={agreementKey}
           facts={{
@@ -425,7 +458,7 @@ export default function ExamPlayer({
         />
       ) : null}
 
-      {phase.kind === "intro" && showPrecheck ? (
+      {phase.kind === "intro" && showPrecheck && feeOrderId == null ? (
         <div ref={precheckRootRef} className="space-y-4 rounded-md border border-ifma-border bg-[#fafaf8] px-4 py-4">
           <h3 className="font-display text-lg font-semibold text-caisbe-text-dark">Secure exam pre-check</h3>
           <p className="text-sm leading-6 text-caisbe-text">
@@ -549,7 +582,21 @@ export default function ExamPlayer({
         </div>
       ) : null}
 
-      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+      {error ? (
+        <div className="space-y-3">
+          <p className="text-sm text-caisbe-red">{error}</p>
+          {feeOrderId != null ? (
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => void payFee()}
+              className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            >
+              {submitting ? "Paying…" : "Pay"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

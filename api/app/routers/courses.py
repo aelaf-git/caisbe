@@ -1571,6 +1571,10 @@ def start_final_exam(
             detail="Complete the secure exam pre-check before starting.",
         )
 
+    from app.services.commerce import ensure_attempt_paid
+
+    ensure_attempt_paid(db, current_user, course)
+
     if session is None:
         session = ExamSession(
             user_id=current_user.id,

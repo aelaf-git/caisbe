@@ -140,6 +140,8 @@ class Course(Base):
     cover_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     pass_percent: Mapped[int] = mapped_column(Integer, default=70)
     price_cents: Mapped[int] = mapped_column(Integer, default=9900)
+    exam_fee_cents: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    retake_fee_cents: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     currency: Mapped[str] = mapped_column(String(8), default="usd")
     # Block copy/paste in the student portal; soft hide when tab is inactive.
     content_protection: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -646,6 +648,7 @@ class Promotion(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String(40), unique=True, index=True)
     description: Mapped[str] = mapped_column(String(255), default="")
+    kind: Mapped[str] = mapped_column(String(16), default="discount", server_default="discount")
     percent_off: Mapped[int | None] = mapped_column(Integer, nullable=True)
     amount_off_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
     complimentary: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -693,6 +696,7 @@ class OrderItem(Base):
     membership_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
     membership_kind: Mapped[str | None] = mapped_column(String(20), nullable=True)
     title: Mapped[str] = mapped_column(String(255))
+    item_kind: Mapped[str] = mapped_column(String(16), default="course", server_default="course")
     unit_price_cents: Mapped[int] = mapped_column(Integer)
     quantity: Mapped[int] = mapped_column(Integer, default=1)
 

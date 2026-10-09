@@ -27,6 +27,7 @@ from app.services.commerce import (
     add_to_cart,
     cart_courses_for_user,
     clear_cart,
+    confirm_pending_order,
     create_checkout_order,
     create_membership_checkout_order,
     create_stripe_session,
@@ -35,6 +36,7 @@ from app.services.commerce import (
     load_published_courses,
     mark_manual_unlock,
     quote_courses,
+    resolve_checkout_promotion,
 )
 
 router = APIRouter(tags=["commerce"])
@@ -221,8 +223,24 @@ def start_checkout(
 ) -> CheckoutOut:
     from app.models import Enrollment
 
+    if payload.order_id:
+        order = confirm_pending_order(db, current_user, payload.order_id)
+        return CheckoutOut(
+            order_id=order.id,
+            order_number=order.number,
+            enrollment_id=None,
+            enrollment_ids=[],
+            total_cents=order.total_cents,
+            currency=order.currency,
+            complimentary=order.total_cents == 0,
+            checkout_url=None,
+            publishable_key=settings.stripe_publishable_key or None,
+            status=order.status,
+        )
+
     courses = _resolve_checkout_courses(db, current_user, payload)
-    order, enrollments, complimentary = create_checkout_order(db, current_user, courses)
+    promo = resolve_checkout_promotion(db, payload.promo_code, courses)
+    order, enrollments, complimentary = create_checkout_order(db, current_user, courses, promo)
     enrollment_ids = [row.id for row in enrollments]
     # Course Stripe Checkout is not wired yet. Confirming purchase activates enrollments immediately.
     if not complimentary:

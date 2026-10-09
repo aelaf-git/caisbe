@@ -58,16 +58,20 @@ class CheckoutIn(BaseModel):
     course_id: int | None = Field(default=None, gt=0)
     course_ids: list[int] | None = None
     from_cart: bool = False
+    promo_code: str | None = Field(default=None, max_length=40)
+    order_id: int | None = Field(default=None, gt=0)
 
     @model_validator(mode="after")
     def require_source(self) -> "CheckoutIn":
+        if self.order_id:
+            return self
         if self.from_cart:
             return self
         if self.course_id:
             return self
         if self.course_ids:
             return self
-        raise ValueError("Provide course_id, course_ids, or from_cart=true")
+        raise ValueError("Provide course_id, course_ids, from_cart=true, or order_id")
 
 
 class CheckoutOut(BaseModel):
@@ -147,6 +151,7 @@ class PaymentOut(BaseModel):
 class PromotionIn(BaseModel):
     code: str = Field(min_length=3, max_length=40)
     description: str = Field(default="", max_length=255)
+    kind: str = "discount"
     percent_off: int | None = Field(default=None, ge=1, le=100)
     amount_off_cents: int | None = Field(default=None, ge=1)
     complimentary: bool = False
@@ -160,6 +165,7 @@ class PromotionOut(BaseModel):
     id: int
     code: str
     description: str
+    kind: str = "discount"
     percent_off: int | None = None
     amount_off_cents: int | None = None
     complimentary: bool
@@ -170,6 +176,41 @@ class PromotionOut(BaseModel):
     active: bool
 
     model_config = {"from_attributes": True}
+
+
+class CourseFeeOut(BaseModel):
+    id: int
+    code: str
+    title: str
+    status: str
+    currency: str
+    price_cents: int
+    exam_fee_cents: int
+    retake_fee_cents: int
+
+
+class CourseFeeUpdate(BaseModel):
+    price_cents: int | None = Field(default=None, ge=0)
+    exam_fee_cents: int | None = Field(default=None, ge=0)
+    retake_fee_cents: int | None = Field(default=None, ge=0)
+
+
+class OutstandingPaymentOut(BaseModel):
+    order_id: int
+    order_number: str
+    student_name: str
+    student_email: str
+    description: str
+    item_kind: str
+    amount_due_cents: int
+    currency: str
+    created_at: datetime
+
+
+class FeesOverviewOut(BaseModel):
+    courses: list[CourseFeeOut]
+    promotions: list[PromotionOut]
+    outstanding: list[OutstandingPaymentOut]
 
 
 PromoPreviewOut.model_rebuild()
