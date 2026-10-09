@@ -254,3 +254,26 @@ def test_scholarship_code_reduces_the_course_total(client: TestClient, db: Sessi
     assert bought.json()["status"] == "paid"
     promo = db.query(Promotion).filter(Promotion.code == "HALF-OFF").one()
     assert promo.redemption_count == 1
+
+
+def test_student_sees_only_their_own_payments(client: TestClient, db: Session) -> None:
+    buyer = _user(db, email="pay-buyer@example.com", name="Buyer")
+    other = _user(db, email="pay-other@example.com", name="Other")
+    course = _course(db, code="PAY-OWN", price_cents=2500)
+    buyer_headers = _login(client, buyer.email)
+
+    bought = client.post("/api/me/checkout", headers=buyer_headers, json={"course_id": course.id})
+    assert bought.status_code == 200, bought.text
+
+    mine = client.get("/api/me/payments", headers=buyer_headers)
+    assert mine.status_code == 200, mine.text
+    rows = mine.json()
+    assert len(rows) == 1
+    assert rows[0]["description"] == course.title
+    assert rows[0]["amount_cents"] == 2500
+    assert rows[0]["order_number"]
+    assert "student_email" not in rows[0]
+
+    theirs = client.get("/api/me/payments", headers=_login(client, other.email))
+    assert theirs.status_code == 200, theirs.text
+    assert theirs.json() == []

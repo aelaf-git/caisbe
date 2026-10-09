@@ -103,6 +103,17 @@ export type OrderRow = {
   items?: OrderItemRow[];
 };
 
+export type StudentPayment = {
+  id: number;
+  description: string;
+  amount_cents: number;
+  currency: string;
+  status: string;
+  method: string;
+  created_at: string;
+  order_number: string;
+};
+
 export type InvoiceRow = {
   id: number;
   number: string;

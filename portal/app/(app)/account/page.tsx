@@ -18,6 +18,7 @@ import {
   type OrderRow,
   type SavedCard,
   type SecurityQuestion,
+  type StudentPayment,
 } from "@/lib/commerce";
 import PasswordCriteriaList from "@/components/ui/PasswordCriteriaList";
 import { MIN_PASSWORD_LENGTH, passwordStrengthError } from "@/lib/password";
@@ -39,6 +40,7 @@ const EMPTY_CARD = {
 
 export default function ManageProfilePage() {
   const { user, refreshUser } = useAuth();
+  const [payments, setPayments] = useState<StudentPayment[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [cards, setCards] = useState<SavedCard[]>([]);
@@ -81,13 +83,15 @@ export default function ManageProfilePage() {
     let active = true;
     async function load() {
       try {
-        const [invoiceData, orderData, cardData, questionData] = await Promise.all([
+        const [paymentData, invoiceData, orderData, cardData, questionData] = await Promise.all([
+          apiFetch<StudentPayment[]>("/me/payments"),
           apiFetch<InvoiceRow[]>("/me/invoices"),
           apiFetch<OrderRow[]>("/me/orders"),
           apiFetch<SavedCard[]>("/me/cards"),
           apiFetch<SecurityQuestion[]>("/auth/me/security-questions"),
         ]);
         if (!active) return;
+        setPayments(paymentData);
         setInvoices(invoiceData);
         setOrders(orderData);
         setCards(cardData);
@@ -295,6 +299,84 @@ export default function ManageProfilePage() {
             {passwordBusy ? "Updating…" : "Change password"}
           </button>
         </form>
+      </Card>
+
+      <Card>
+        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">My payments</h2>
+        {payments.length === 0 ? (
+          <p className="mt-4 text-sm text-caisbe-muted">No payments yet.</p>
+        ) : (
+          <>
+            <ul className="mt-4 divide-y divide-ifma-border-light md:hidden">
+              {payments.map((payment) => (
+                <li key={payment.id} className="py-4 text-sm">
+                  <p className="break-words font-semibold text-caisbe-text-dark">{payment.description}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Date</dt>
+                      <dd>{formatDate(payment.created_at)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Amount</dt>
+                      <dd>{formatMoney(payment.amount_cents, payment.currency)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Method</dt>
+                      <dd className="capitalize">{payment.method.replaceAll("_", " ")}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Status</dt>
+                      <dd className="capitalize">{payment.status.replaceAll("_", " ")}</dd>
+                    </div>
+                  </dl>
+                  <p className="mt-2">
+                    {payment.order_number ? (
+                      <Link href={`/account/receipts/${encodeURIComponent(payment.order_number)}`} className="font-semibold text-caisbe-red hover:underline">
+                        Receipt
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 hidden overflow-x-auto md:block">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-admin-surface-muted/60">
+                  <tr className="text-caisbe-muted">
+                    <th className="px-3 py-2 pr-4">For</th>
+                    <th className="px-3 py-2 pr-4">Date</th>
+                    <th className="px-3 py-2 pr-4">Amount</th>
+                    <th className="px-3 py-2 pr-4">Method</th>
+                    <th className="px-3 py-2 pr-4">Status</th>
+                    <th className="whitespace-nowrap px-3 py-2">Receipt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.map((payment) => (
+                    <tr key={payment.id} className="border-t border-ifma-border-light">
+                      <td className="px-3 py-3 pr-4">{payment.description}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatDate(payment.created_at)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(payment.amount_cents, payment.currency)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4 capitalize">{payment.method.replaceAll("_", " ")}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4 capitalize">{payment.status.replaceAll("_", " ")}</td>
+                      <td className="whitespace-nowrap px-3 py-3">
+                        {payment.order_number ? (
+                          <Link href={`/account/receipts/${encodeURIComponent(payment.order_number)}`} className="font-semibold text-caisbe-red hover:underline">
+                            Receipt
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </Card>
 
       <Card>

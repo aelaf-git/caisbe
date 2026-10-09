@@ -132,6 +132,17 @@ class InvoiceOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class StudentPaymentOut(BaseModel):
+    id: int
+    description: str
+    amount_cents: int
+    currency: str
+    status: str
+    method: str
+    created_at: datetime
+    order_number: str
+
+
 class PaymentOut(BaseModel):
     id: int
     status: str

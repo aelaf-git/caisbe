@@ -52,7 +52,7 @@ export const studentGuideSections: GuideSection[] = [
       "Change my password: enter your current password and a new one.",
       "Security questions: save answers you can use if you need to recover the account.",
       "Supporting documents: upload files requested for your membership or enrollment.",
-      "My invoices and My orders: open a receipt, then print it or download the PDF.",
+      "My payments, My invoices, and My orders: open a receipt, then print it or download the PDF.",
     ],
   },
   {

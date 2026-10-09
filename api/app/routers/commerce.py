@@ -16,6 +16,7 @@ from app.schemas.commerce import (
     MembershipCheckoutIn,
     OrderItemOut,
     OrderOut,
+    StudentPaymentOut,
     PromoPreviewIn,
     PromoPreviewOut,
 )
@@ -337,6 +338,42 @@ def start_membership_checkout(
         publishable_key=settings.stripe_publishable_key or None,
         status=order.status,
     )
+
+
+def _student_payment(row: Payment) -> StudentPaymentOut:
+    order = row.order
+    items = list(order.items) if order and order.items else []
+    if not items:
+        description = "Payment"
+    elif len(items) == 1:
+        description = items[0].title
+    else:
+        description = f"{items[0].title} +{len(items) - 1} more"
+    return StudentPaymentOut(
+        id=row.id,
+        description=description,
+        amount_cents=row.amount_cents,
+        currency=(order.currency if order and order.currency else "usd"),
+        status=row.status,
+        method=row.provider,
+        created_at=row.created_at,
+        order_number=order.number if order else "",
+    )
+
+
+@router.get("/me/payments", response_model=list[StudentPaymentOut])
+def list_my_payments(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[StudentPaymentOut]:
+    rows = (
+        db.query(Payment)
+        .options(joinedload(Payment.order).selectinload(Order.items))
+        .filter(Payment.user_id == current_user.id)
+        .order_by(Payment.created_at.desc())
+        .all()
+    )
+    return [_student_payment(row) for row in rows]
 
 
 @router.get("/me/orders", response_model=list[OrderOut])
