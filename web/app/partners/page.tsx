@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import PartnersPageContent from "@/components/partners/PartnersPageContent";
 import { partnersContent } from "@/lib/data/partners";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
-export const metadata: Metadata = {
-  title: partnersContent.seoTitle,
-  description: partnersContent.metaDescription,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return (
+    (await cmsTopicMetadata("/partners", partnersContent.metaDescription)) ?? {
+      title: partnersContent.seoTitle,
+      description: partnersContent.metaDescription,
+    }
+  );
+}
 
-export default function PartnersPage() {
-  return <PartnersPageContent />;
+export default async function PartnersPage() {
+  return (await cmsTopicPage("/partners")) ?? <PartnersPageContent />;
 }

@@ -101,12 +101,19 @@ def test_published_subpage_is_public_and_draft_is_hidden(client: TestClient, db:
 def test_seeding_the_same_paths_twice_does_not_duplicate(db: Session) -> None:
     seed_site_pages(db)
     first = db.query(SitePage).count()
-    assert first >= 11
+    assert first >= 30
     staff = db.query(SitePage).filter(SitePage.path == "/about/staff").one()
     assert staff.status == "published"
     assert staff.show_in_menu is True
+    built = db.query(SitePage).filter(SitePage.path == "/about/what-is-built-environment").one()
+    assert built.status == "published"
+    partners = db.query(SitePage).filter(SitePage.path == "/partners").one()
+    assert partners.lead
+    membership = db.query(SitePage).filter(SitePage.path == "/membership/overview").one()
+    assert membership.parent_id is not None
 
     seed_site_pages(db)
     assert db.query(SitePage).count() == first
     assert db.query(SitePage).filter(SitePage.path == "/about/staff").count() == 1
-    assert db.query(SitePage).filter(SitePage.path == "/about/what-is-built-environment").count() == 0
+    assert db.query(SitePage).filter(SitePage.path == "/about/what-is-built-environment").count() == 1
+    assert db.query(SitePage).filter(SitePage.path == "/partners").count() == 1

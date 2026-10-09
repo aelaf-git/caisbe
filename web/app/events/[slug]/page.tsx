@@ -6,10 +6,12 @@ import {
   getEventsPage,
   type EventsSlug,
 } from "@/lib/data/events";
-import { fetchPublishedSitePage, topicChrome } from "@/lib/sitePages";
-import TopicPageContent from "@/components/pages/TopicPageContent";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
 type Props = { params: Promise<{ slug: string }> };
+
+/** Live calendar UI stays coded; other event pages prefer Admin Pages content. */
+const SPECIAL_EVENT_SLUGS = new Set(["calendar"]);
 
 export function generateStaticParams() {
   return eventsSlugs().map((slug) => ({ slug }));
@@ -17,6 +19,11 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  if (!SPECIAL_EVENT_SLUGS.has(slug)) {
+    const published = await cmsTopicMetadata(`/events/${slug}`, "Events | CAISBE");
+    if (published) return published;
+  }
+
   const page = getEventsPage(slug);
   if (page) {
     return {
@@ -25,34 +32,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const published = await fetchPublishedSitePage(`/events/${slug}`);
-  if (published) {
-    return {
-      title: `${published.title} | CAISBE`,
-      description: published.description,
-    };
-  }
+  const published = await cmsTopicMetadata(`/events/${slug}`, "Events | CAISBE");
+  if (published) return published;
   return { title: "Events | CAISBE" };
-  return {
-    title: `${page.title} | CAISBE`,
-    description: page.description,
-  };
 }
 
 export default async function EventsSubpage({ params }: Props) {
   const { slug } = await params;
+
+  if (!SPECIAL_EVENT_SLUGS.has(slug)) {
+    const cms = await cmsTopicPage(`/events/${slug}`);
+    if (cms) return cms;
+  }
+
   const page = getEventsPage(slug);
   if (page) return <EventsSubpageContent slug={slug as EventsSlug} />;
 
-  const published = await fetchPublishedSitePage(`/events/${slug}`);
-  if (!published) notFound();
-  const chrome = topicChrome(`/events/${slug}`);
-  return (
-    <TopicPageContent
-      eyebrow={chrome.eyebrow}
-      page={published}
-      indexHref={chrome.indexHref}
-      indexLabel={chrome.indexLabel}
-    />
-  );
+  const cms = await cmsTopicPage(`/events/${slug}`);
+  if (!cms) notFound();
+  return cms;
 }

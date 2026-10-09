@@ -5,6 +5,7 @@ import {
   getLearningFormatBySlug,
   professionalDevelopmentContent,
 } from "@/lib/data/professional-development";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
 type LearningFormatPageProps = {
   params: Promise<{ format: string }>;
@@ -20,8 +21,13 @@ export async function generateMetadata({
   params,
 }: LearningFormatPageProps): Promise<Metadata> {
   const { format: formatSlug } = await params;
-  const format = getLearningFormatBySlug(formatSlug);
+  const published = await cmsTopicMetadata(
+    `/professional-development/learning-formats/${formatSlug}`,
+    "Learning Format | CAISBE",
+  );
+  if (published) return published;
 
+  const format = getLearningFormatBySlug(formatSlug);
   if (!format) {
     return { title: "Learning Format | CAISBE" };
   }
@@ -36,8 +42,12 @@ export default async function LearningFormatPage({
   params,
 }: LearningFormatPageProps) {
   const { format: formatSlug } = await params;
-  const format = getLearningFormatBySlug(formatSlug);
+  const cms = await cmsTopicPage(
+    `/professional-development/learning-formats/${formatSlug}`,
+  );
+  if (cms) return cms;
 
+  const format = getLearningFormatBySlug(formatSlug);
   if (!format) {
     notFound();
   }

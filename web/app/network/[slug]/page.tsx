@@ -6,10 +6,12 @@ import {
   networkSlugs,
   type NetworkSlug,
 } from "@/lib/data/network";
-import TopicPageContent from "@/components/pages/TopicPageContent";
-import { fetchPublishedSitePage, topicChrome } from "@/lib/sitePages";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
 type Props = { params: Promise<{ slug: string }> };
+
+/** Discussion forum keeps its interactive boards. */
+const SPECIAL_NETWORK_SLUGS = new Set(["discussion-forum"]);
 
 export function generateStaticParams() {
   return networkSlugs().map((slug) => ({ slug }));
@@ -17,6 +19,11 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  if (!SPECIAL_NETWORK_SLUGS.has(slug)) {
+    const published = await cmsTopicMetadata(`/network/${slug}`, "Network | CAISBE");
+    if (published) return published;
+  }
+
   const page = getNetworkPage(slug);
   if (page) {
     return {
@@ -25,30 +32,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const published = await fetchPublishedSitePage(`/network/${slug}`);
-  if (published) {
-    return {
-      title: `${published.title} | CAISBE`,
-      description: published.description,
-    };
-  }
+  const published = await cmsTopicMetadata(`/network/${slug}`, "Network | CAISBE");
+  if (published) return published;
   return { title: "Network | CAISBE" };
 }
 
 export default async function NetworkSubpage({ params }: Props) {
   const { slug } = await params;
+
+  if (!SPECIAL_NETWORK_SLUGS.has(slug)) {
+    const cms = await cmsTopicPage(`/network/${slug}`);
+    if (cms) return cms;
+  }
+
   const page = getNetworkPage(slug);
   if (page) return <NetworkSubpageContent slug={slug as NetworkSlug} />;
 
-  const published = await fetchPublishedSitePage(`/network/${slug}`);
-  if (!published) notFound();
-  const chrome = topicChrome(`/network/${slug}`);
-  return (
-    <TopicPageContent
-      eyebrow={chrome.eyebrow}
-      page={published}
-      indexHref={chrome.indexHref}
-      indexLabel={chrome.indexLabel}
-    />
-  );
+  const cms = await cmsTopicPage(`/network/${slug}`);
+  if (!cms) notFound();
+  return cms;
 }

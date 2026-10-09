@@ -83,6 +83,37 @@ export function topicChrome(path: string) {
   if (path.startsWith("/resources/") || path === "/resources") {
     return { eyebrow: "Resources", indexHref: "/resources", indexLabel: "All Resources" };
   }
+  if (path.startsWith("/membership/") || path === "/membership") {
+    return { eyebrow: "Membership", indexHref: "/membership", indexLabel: "Membership Overview" };
+  }
+  if (path.startsWith("/events/") || path === "/events") {
+    return { eyebrow: "Events", indexHref: "/events", indexLabel: "Events Overview" };
+  }
+  if (path.startsWith("/network/") || path === "/network") {
+    return { eyebrow: "Network", indexHref: "/network", indexLabel: "Network Overview" };
+  }
+  if (path.startsWith("/professional-development/") || path === "/professional-development") {
+    return {
+      eyebrow: "Professional Development",
+      indexHref: "/professional-development",
+      indexLabel: "Programs Overview",
+    };
+  }
+  if (path === "/partners") {
+    return { eyebrow: "Partnerships", indexHref: "/", indexLabel: "Home" };
+  }
+  if (path === "/careers" || path.startsWith("/careers/")) {
+    return { eyebrow: "Resources", indexHref: "/resources", indexLabel: "All Resources" };
+  }
+  if (path === "/projects") {
+    return { eyebrow: "Programs", indexHref: "/", indexLabel: "Home" };
+  }
+  if (path === "/store") {
+    return { eyebrow: "Store", indexHref: "/", indexLabel: "Home" };
+  }
+  if (path === "/privacy-policy") {
+    return { eyebrow: "Legal", indexHref: "/", indexLabel: "Home" };
+  }
   const parts = path.split("/").filter(Boolean);
   if (parts.length > 1) {
     return {

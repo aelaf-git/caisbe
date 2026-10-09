@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
 import { EventsIndexContent } from "@/components/events/EventsPageContent";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
-export const metadata: Metadata = {
-  title: "Events | CAISBE",
-  description:
-    "Explore CAISBE events, the Africa–Canada Built Environment Expo & Forum, conferences, webinars, and awards.",
-};
+const fallbackDescription =
+  "Explore CAISBE events, the Africa–Canada Built Environment Expo & Forum, conferences, webinars, and awards.";
 
-export default function EventsPage() {
-  return <EventsIndexContent />;
+export async function generateMetadata(): Promise<Metadata> {
+  return (
+    (await cmsTopicMetadata("/events", fallbackDescription)) ?? {
+      title: "Events | CAISBE",
+      description: fallbackDescription,
+    }
+  );
+}
+
+export default async function EventsPage() {
+  return (await cmsTopicPage("/events")) ?? <EventsIndexContent />;
 }

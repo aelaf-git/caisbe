@@ -6,8 +6,7 @@ import {
   membershipSlugs,
   type MembershipSlug,
 } from "@/lib/data/membership";
-import TopicPageContent from "@/components/pages/TopicPageContent";
-import { fetchPublishedSitePage, topicChrome } from "@/lib/sitePages";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -17,19 +16,14 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const published = await cmsTopicMetadata(`/membership/${slug}`, "Membership | CAISBE");
+  if (published) return published;
+
   const page = getMembershipPage(slug);
   if (page) {
     return {
       title: `${page.title} | CAISBE`,
-      description: page.title,
-    };
-  }
-
-  const published = await fetchPublishedSitePage(`/membership/${slug}`);
-  if (published) {
-    return {
-      title: `${published.title} | CAISBE`,
-      description: published.description,
+      description: page.description,
     };
   }
   return { title: "Membership | CAISBE" };
@@ -37,18 +31,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function MembershipSubpage({ params }: Props) {
   const { slug } = await params;
-  const page = getMembershipPage(slug);
-  if (page) return <MembershipSubpageContent slug={slug as MembershipSlug} />;
+  const cms = await cmsTopicPage(`/membership/${slug}`);
+  if (cms) return cms;
 
-  const published = await fetchPublishedSitePage(`/membership/${slug}`);
-  if (!published) notFound();
-  const chrome = topicChrome(`/membership/${slug}`);
-  return (
-    <TopicPageContent
-      eyebrow={chrome.eyebrow}
-      page={published}
-      indexHref={chrome.indexHref}
-      indexLabel={chrome.indexLabel}
-    />
-  );
+  const page = getMembershipPage(slug);
+  if (!page) notFound();
+  return <MembershipSubpageContent slug={slug as MembershipSlug} />;
 }

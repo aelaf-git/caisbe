@@ -4,7 +4,7 @@ import BuiltEnvironmentPageContent from "@/components/about/BuiltEnvironmentPage
 import TopicPageContent from "@/components/pages/TopicPageContent";
 import { aboutContent } from "@/lib/data/about";
 import { aboutPages, getAboutPage } from "@/lib/data/site-pages";
-import { fetchPublishedSitePage, topicChrome } from "@/lib/sitePages";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -15,13 +15,8 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
 
-  const published = await fetchPublishedSitePage(`/about/${slug}`);
-  if (published) {
-    return {
-      title: `${published.title} | CAISBE`,
-      description: published.description,
-    };
-  }
+  const published = await cmsTopicMetadata(`/about/${slug}`, "About CAISBE");
+  if (published) return published;
 
   if (slug === aboutContent.builtEnvironment.slug) {
     return {
@@ -41,18 +36,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function AboutSubpage({ params }: Props) {
   const { slug } = await params;
 
-  const published = await fetchPublishedSitePage(`/about/${slug}`);
-  if (published) {
-    const chrome = topicChrome(`/about/${slug}`);
-    return (
-      <TopicPageContent
-        eyebrow={chrome.eyebrow}
-        page={published}
-        indexHref={chrome.indexHref}
-        indexLabel={chrome.indexLabel}
-      />
-    );
-  }
+  const cms = await cmsTopicPage(`/about/${slug}`);
+  if (cms) return cms;
 
   if (slug === aboutContent.builtEnvironment.slug) {
     return <BuiltEnvironmentPageContent />;

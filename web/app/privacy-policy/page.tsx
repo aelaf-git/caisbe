@@ -2,11 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHero, ContentSection } from "@/components/pages/ContentPage";
 import { siteFullName, siteName } from "@/lib/data/home";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
-export const metadata: Metadata = {
-  title: `Privacy Policy | ${siteName}`,
-  description: `Privacy policy for the ${siteFullName} website.`,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return (
+    (await cmsTopicMetadata(
+      "/privacy-policy",
+      `Privacy policy for the ${siteFullName} website.`,
+    )) ?? {
+      title: `Privacy Policy | ${siteName}`,
+      description: `Privacy policy for the ${siteFullName} website.`,
+    }
+  );
+}
 
 const lastUpdated = "June 1, 2025";
 
@@ -145,7 +153,10 @@ const sections: {
   },
 ];
 
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
+  const cms = await cmsTopicPage("/privacy-policy");
+  if (cms) return cms;
+
   return (
     <>
       <PageHero

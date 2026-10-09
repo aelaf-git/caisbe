@@ -8,12 +8,19 @@ import { helpDeskContent } from "@/lib/data/helpDesk";
 import { advocacyContent, mediaContent } from "@/lib/data/resources";
 import { resourcesPages } from "@/lib/data/site-pages";
 import { ticketsContent } from "@/lib/data/tickets";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
-export const metadata: Metadata = {
-  title: "Resources | CAISBE",
-  description:
-    "Explore CAISBE resources including careers, advocacy, knowledge tools, and media.",
-};
+const fallbackDescription =
+  "Explore CAISBE resources including careers, advocacy, knowledge tools, and media.";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return (
+    (await cmsTopicMetadata("/resources", fallbackDescription)) ?? {
+      title: "Resources | CAISBE",
+      description: fallbackDescription,
+    }
+  );
+}
 
 const featuredResources = [
   {
@@ -45,7 +52,10 @@ const featuredResources = [
   },
 ];
 
-export default function ResourcesPage() {
+export default async function ResourcesPage() {
+  const cms = await cmsTopicPage("/resources");
+  if (cms) return cms;
+
   return (
     <>
       <SubsectionIndex
