@@ -202,6 +202,9 @@ def require_active_enrollment(db: Session, user: User, course_id: int) -> Enroll
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Course access unlocks after payment.",
         )
+    from app.services.access_control import require_course_open
+
+    require_course_open(enrollment)
     return enrollment
 
 
@@ -316,6 +319,7 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
         user.membership_status = "active"
         if not user.membership_date:
             user.membership_date = now
+    granted_titles: list[str] = []
     for item in order.items:
         if item.membership_type:
             renew = (item.membership_kind or "").strip().lower() == "renewal"
@@ -326,8 +330,9 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
             continue
         course = item.course or db.query(Course).filter(Course.id == item.course_id).one()
         _ensure_enrollment(db, user, course, "enrolled")
+        granted_titles.append(course.title)
 
-    from app.services.notifications import notify_payment_received
+    from app.services.notifications import notify_payment_received, notify_users
 
     item_titles = [item.title for item in order.items if (item.title or "").strip()]
     order_label = ", ".join(item_titles[:3]) if item_titles else order.number
@@ -339,6 +344,21 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
         order_name=order_label,
         receipt_path=receipt_path,
     )
+    if granted_titles:
+        admin_ids = [row[0] for row in db.query(User.id).filter(User.role == "admin").all()]
+        if admin_ids:
+            names = ", ".join(granted_titles[:3])
+            notify_users(
+                db,
+                admin_ids,
+                title="Course access granted",
+                body=(
+                    f"{user.full_name} paid and now has access to {names}. "
+                    "Review or restrict this in Access Control."
+                ),
+                kind="access",
+                link="/access-control",
+            )
     if (user.email or "").strip():
         try:
             from app.services.receipt_email import send_receipt_email

@@ -91,6 +91,11 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Please verify your email before signing in.",
         )
+    if user.suspended_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account is suspended. Contact CAISBE.",
+        )
     return user
 
 

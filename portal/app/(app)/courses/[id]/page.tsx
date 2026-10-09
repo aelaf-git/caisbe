@@ -84,6 +84,10 @@ export default function CoursePlayerPage() {
       });
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
+        if (err.detail.toLowerCase().includes("restricted")) {
+          setError(err.detail);
+          return;
+        }
         router.replace(`/courses/${courseId}/checkout`);
         return;
       }

@@ -48,7 +48,10 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "System",
-    items: [{ href: "/settings", label: "Settings", icon: "settings" }],
+    items: [
+      { href: "/access-control", label: "Access Control", icon: "shield" },
+      { href: "/settings", label: "Settings", icon: "settings" },
+    ],
   },
 ];
 
@@ -89,6 +92,7 @@ function NavIcon({ name }: { name: string }) {
     chart: <><path d="M3 3v18h18" /><path d="m7 16 4-5 4 3 5-7" /></>,
     card: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></>,
     tag: <><path d="M12 2 2 12l8 8 10-10V2h-8Z" /><circle cx="7.5" cy="7.5" r="1.5" /></>,
+    shield: <><path d="M12 3 5 6v6c0 4.2 2.8 7.4 7 9 4.2-1.6 7-4.8 7-9V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></>,
     settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06-2.83 2.83-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21h-4v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06-2.83-2.83.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3v-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06 2.83-2.83.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3h4v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06 2.83 2.83-.06.06A1.65 1.65 0 0 0 19.4 9c.12.6.65 1.02 1.26 1H21v4h-.34c-.61 0-1.14.42-1.26 1Z" /></>,
   };
   return <svg aria-hidden viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;

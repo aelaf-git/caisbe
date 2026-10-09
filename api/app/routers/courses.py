@@ -432,16 +432,7 @@ def get_course_detail(
     db: Session = Depends(get_db),
 ) -> CourseDetailStudentOut:
     course = _load_published_course(db, course_id)
-    enrollment = (
-        db.query(Enrollment)
-        .filter(Enrollment.user_id == current_user.id, Enrollment.course_id == course_id)
-        .first()
-    )
-    if enrollment is None or enrollment.status not in {"enrolled", "completed"}:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Course access unlocks after payment.",
-        )
+    enrollment = require_active_enrollment(db, current_user, course_id)
 
     completed_ids = {
         row.lesson_id
@@ -1383,7 +1374,10 @@ def _exam_session_state(db: Session, user: User, exam: FinalExam, now: datetime)
 
 
 def _require_open_exam(db: Session, user: User, course: Course) -> FinalExam:
-    require_active_enrollment(db, user, course.id)
+    from app.services.access_control import require_exam_open
+
+    enrollment = require_active_enrollment(db, user, course.id)
+    require_exam_open(enrollment)
     _require_course_topics_complete(db, user, course)
     exam = course.final_exam
     if exam is None or not exam.questions:

@@ -404,7 +404,7 @@ export default function ExamPlayer({
 
       {phase.kind === "loading" ? <p className="text-sm text-caisbe-muted">Loading exam…</p> : null}
 
-      {phase.kind === "intro" && !showPrecheck ? (
+      {phase.kind === "intro" && !showPrecheck && !error?.toLowerCase().includes("restricted") ? (
         <ExamAgreement
           key={agreementKey}
           facts={{

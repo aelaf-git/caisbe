@@ -40,6 +40,7 @@ from app.security.auth import (
     verify_password_or_dummy,
 )
 from app.security.client_ip import get_client_ip
+from app.services.access_control import ACCOUNT_SUSPENDED_DETAIL, record_login_event
 from app.security.limiter import limiter
 from app.services.commerce import apply_profile_fields, normalize_membership_type, profile_is_complete
 from app.services.membership import (
@@ -375,19 +376,61 @@ def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -
 
     if locked:
         _log_login_failure(email, client_ip, "locked")
+        record_login_event(
+            db,
+            email=email,
+            success=False,
+            reason="locked",
+            ip_address=client_ip,
+            user_id=user.id if user is not None else None,
+        )
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_CREDENTIALS)
 
     if user is not None:
         if not password_ok:
             _record_failed_login(db, user)
             _log_login_failure(email, client_ip, "bad_credentials")
+            record_login_event(
+                db,
+                email=email,
+                success=False,
+                reason="bad_credentials",
+                ip_address=client_ip,
+                user_id=user.id,
+            )
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_CREDENTIALS)
         if user.email_verified_at is None:
             _log_login_failure(email, client_ip, "unverified")
+            record_login_event(
+                db,
+                email=email,
+                success=False,
+                reason="unverified",
+                ip_address=client_ip,
+                user_id=user.id,
+            )
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_CREDENTIALS)
+        if user.suspended_at is not None:
+            _log_login_failure(email, client_ip, "suspended")
+            record_login_event(
+                db,
+                email=email,
+                success=False,
+                reason="suspended",
+                ip_address=client_ip,
+                user_id=user.id,
+            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ACCOUNT_SUSPENDED_DETAIL)
         user.failed_login_count = 0
         user.login_locked_until = None
-        db.commit()
+        record_login_event(
+            db,
+            email=email,
+            success=True,
+            reason="success",
+            ip_address=client_ip,
+            user_id=user.id,
+        )
         token = create_access_token(user.email)
         return TokenResponse(access_token=token, user=user_to_out(user, db))
 
@@ -403,6 +446,14 @@ def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -
         except Exception:
             pass
         _log_login_failure(email, client_ip, "unverified_pending")
+        record_login_event(
+            db,
+            email=email,
+            success=False,
+            reason="unverified_pending",
+            ip_address=client_ip,
+            user_id=None,
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(
@@ -412,6 +463,14 @@ def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -
         )
 
     _log_login_failure(email, client_ip, "bad_credentials")
+    record_login_event(
+        db,
+        email=email,
+        success=False,
+        reason="bad_credentials",
+        ip_address=client_ip,
+        user_id=user.id if user is not None else None,
+    )
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_CREDENTIALS)
 
 

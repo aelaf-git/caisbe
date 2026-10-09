@@ -40,6 +40,7 @@ class User(Base):
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     failed_login_count: Mapped[int] = mapped_column(Integer, default=0)
     login_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Portal appearance — per student only (not global AppSetting / admin theme).
     ui_theme: Mapped[str] = mapped_column(String(16), default="light")
     ui_font_size: Mapped[str] = mapped_column(String(8), default="md")
@@ -180,6 +181,8 @@ class Enrollment(Base):
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
     status: Mapped[str] = mapped_column(String(32), default="enrolled")
     progress: Mapped[int] = mapped_column(Integer, default=0)
+    course_access: Mapped[str] = mapped_column(String(16), default="allowed", server_default="allowed")
+    exam_access: Mapped[str] = mapped_column(String(16), default="allowed", server_default="allowed")
     enrolled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped[User] = relationship(back_populates="enrollments")
@@ -1152,3 +1155,23 @@ class SitePage(Base):
         back_populates="parent",
         foreign_keys=[parent_id],
     )
+
+
+class LoginEvent(Base):
+    """Sign-in success or failure, for the admin Access Control activity list."""
+
+    __tablename__ = "login_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    success: Mapped[bool] = mapped_column(Boolean, default=False)
+    reason: Mapped[str] = mapped_column(String(64), default="")
+    ip_address: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    user: Mapped["User | None"] = relationship(foreign_keys=[user_id])

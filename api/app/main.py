@@ -13,7 +13,18 @@ from app import models  # noqa: F401 — register SQLAlchemy models
 from app.config import openapi_route_urls, settings, validate_production_settings
 from app.db_migrations import upgrade_to_head
 from app.db import SessionLocal
-from app.routers import admin, auth, commerce, courses, forum, health, public, site_pages, support
+from app.routers import (
+    access_control,
+    admin,
+    auth,
+    commerce,
+    courses,
+    forum,
+    health,
+    public,
+    site_pages,
+    support,
+)
 from app.security.limiter import limiter
 from app.security.middleware import SecurityHeadersMiddleware
 from app.seeds.admin import seed_admin
@@ -121,6 +132,7 @@ app.include_router(public.router, prefix="/api")
 app.include_router(support.router, prefix="/api")
 app.include_router(forum.router, prefix="/api")
 app.include_router(site_pages.router, prefix="/api")
+app.include_router(access_control.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 
 upload_path = Path(settings.upload_dir)
