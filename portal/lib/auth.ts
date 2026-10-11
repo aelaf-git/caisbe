@@ -1,5 +1,4 @@
 const TOKEN_KEY = "caisbe_portal_access_token";
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 
 function sessionCookieDomain(): string {
   if (typeof window === "undefined") return "";
@@ -8,27 +7,7 @@ function sessionCookieDomain(): string {
   return "";
 }
 
-function writeSessionCookie(token: string): void {
-  if (typeof document === "undefined") return;
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)}; Path=/; Max-Age=${SESSION_MAX_AGE}; SameSite=Lax${sessionCookieDomain()}${secure}`;
-}
-
-function readSessionCookie(): string | null {
-  if (typeof document === "undefined") return null;
-  const prefix = `${TOKEN_KEY}=`;
-  for (const part of document.cookie.split("; ")) {
-    if (!part.startsWith(prefix)) continue;
-    try {
-      return decodeURIComponent(part.slice(prefix.length));
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
-
-function clearSessionCookie(): void {
+function clearLegacyCookie(): void {
   if (typeof document === "undefined") return;
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
   document.cookie = `${TOKEN_KEY}=; Path=/; Max-Age=0; SameSite=Lax${sessionCookieDomain()}${secure}`;
@@ -109,7 +88,7 @@ export type Enrollment = {
 };
 
 export type TokenResponse = {
-  access_token: string;
+  access_token?: string;
   token_type: string;
   user: AuthUser;
 };
@@ -119,21 +98,25 @@ export type RegisterPendingResponse = {
   email: string;
 };
 
+/** Legacy localStorage token, used once so an existing sign-in can move into the HttpOnly cookie. */
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  const stored = localStorage.getItem(TOKEN_KEY);
-  if (stored) return stored;
-  return readSessionCookie();
+  return localStorage.getItem(TOKEN_KEY);
 }
 
-export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
-  writeSessionCookie(token);
+export function setToken(_token: string): void {
+  // The API proxy stores the session in an HttpOnly cookie. The page does not keep the token.
 }
 
-export function clearToken(): void {
+export function dropReadableToken(): void {
+  if (typeof window === "undefined") return;
   localStorage.removeItem(TOKEN_KEY);
-  clearSessionCookie();
+  clearLegacyCookie();
+}
+
+export async function clearToken(): Promise<void> {
+  dropReadableToken();
+  await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
 }
 
 export class ApiError extends Error {

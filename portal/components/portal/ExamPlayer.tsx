@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ExamAgreement from "@/components/portal/ExamAgreement";
 import SecureExamShell from "@/components/portal/SecureExamShell";
 import { apiFetch, ApiError } from "@/lib/auth";
+import { followCheckout, type CheckoutResult } from "@/lib/commerce";
 import {
   buildPrecheckCapabilities,
   exitFullscreenSafe,
@@ -273,10 +274,11 @@ export default function ExamPlayer({
     if (feeOrderId == null) return;
     setSubmitting(true);
     try {
-      await apiFetch("/me/checkout", {
+      const paid = await apiFetch<CheckoutResult>("/me/checkout", {
         method: "POST",
         body: JSON.stringify({ order_id: feeOrderId }),
       });
+      if (followCheckout(paid)) return;
       setFeeOrderId(null);
       setError(null);
       const state = await apiFetch<ExamSessionState>(`/me/courses/${courseId}/final-exam/start`, {

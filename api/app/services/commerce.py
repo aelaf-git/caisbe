@@ -909,7 +909,44 @@ def ensure_attempt_paid(db: Session, user: User, course: Course) -> None:
     )
 
 
-def confirm_pending_order(db: Session, user: User, order_id: int) -> Order:
+def settle_checkout(db: Session, order: Order, *, cancel_url: str) -> str | None:
+    """Use Stripe Checkout when a secret key is configured.
+
+    Returns the hosted checkout URL and leaves the order pending. With no Stripe
+    key, record a manual payment and fulfill immediately, matching the current
+    enroll-on-confirm behavior. Returns None once the order is fulfilled.
+    """
+    order = (
+        db.query(Order)
+        .options(
+            joinedload(Order.items),
+            joinedload(Order.invoices),
+            joinedload(Order.payments),
+            joinedload(Order.user),
+        )
+        .filter(Order.id == order.id)
+        .one()
+    )
+    if order.status == "paid":
+        return None
+    if settings.stripe_secret_key:
+        session_id, url = create_stripe_session(order, cancel_url=cancel_url)
+        payment = order.payments[0] if order.payments else None
+        if payment is None:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Order has no payment.")
+        payment.provider = "stripe"
+        payment.status = "pending"
+        payment.stripe_session_id = session_id
+        db.commit()
+        return url
+    payment = order.payments[0] if order.payments else None
+    mark_manual_unlock(order, payment)
+    fulfill_order(db, order)
+    db.commit()
+    return None
+
+
+def confirm_pending_order(db: Session, user: User, order_id: int) -> tuple[Order, str | None]:
     order = (
         db.query(Order)
         .options(joinedload(Order.items), joinedload(Order.invoices), joinedload(Order.payments), joinedload(Order.user))
@@ -919,16 +956,18 @@ def confirm_pending_order(db: Session, user: User, order_id: int) -> Order:
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     if order.status == "paid":
-        return order
+        return order, None
     if order.status != "pending":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This order cannot be paid.")
-    payment = order.payments[0] if order.payments else None
-    mark_manual_unlock(order, payment)
-    fulfill_order(db, order)
-    db.commit()
-    return (
+    checkout_url = settle_checkout(
+        db,
+        order,
+        cancel_url=f"{settings.portal_public_url.rstrip('/')}/cart",
+    )
+    order = (
         db.query(Order)
         .options(joinedload(Order.items), joinedload(Order.payments))
         .filter(Order.id == order.id)
         .one()
     )
+    return order, checkout_url

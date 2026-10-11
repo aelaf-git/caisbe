@@ -2,12 +2,12 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.orm.attributes import flag_modified
 
 from app.db import get_db
 from app.models import Course, Order, Promotion, User
 from app.schemas.commerce import CourseFeeOut, CourseFeeUpdate, FeesOverviewOut, OutstandingPaymentOut, PromotionOut
 from app.security.auth import require_admin
+from app.services.course_price import set_live_course_price
 
 router = APIRouter(prefix="/admin/fees", tags=["fees"])
 
@@ -96,12 +96,7 @@ def update_course_fees(
     if not data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fee changes were sent.")
     if "price_cents" in data:
-        course.price_cents = data["price_cents"]
-        if course.draft_meta:
-            draft = dict(course.draft_meta)
-            draft["price_cents"] = data["price_cents"]
-            course.draft_meta = draft
-            flag_modified(course, "draft_meta")
+        set_live_course_price(course, data["price_cents"])
     if "exam_fee_cents" in data:
         course.exam_fee_cents = data["exam_fee_cents"]
     if "retake_fee_cents" in data:

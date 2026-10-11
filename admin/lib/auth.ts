@@ -306,22 +306,29 @@ export type SiteVisitStats = {
 };
 
 export type TokenResponse = {
-  access_token: string;
+  access_token?: string;
   token_type: string;
   user: AuthUser;
 };
 
+/** Legacy localStorage token, used once so an existing sign-in can move into the HttpOnly cookie. */
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(TOKEN_KEY);
 }
 
-export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
+export function setToken(_token: string): void {
+  // The API proxy stores the session in an HttpOnly cookie. The page does not keep the token.
 }
 
-export function clearToken(): void {
+export function dropReadableToken(): void {
+  if (typeof window === "undefined") return;
   localStorage.removeItem(TOKEN_KEY);
+}
+
+export async function clearToken(): Promise<void> {
+  dropReadableToken();
+  await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
 }
 
 export class ApiError extends Error {

@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import BackButton from "@/components/ui/BackButton";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError, type Course } from "@/lib/auth";
-import { formatMoney, type CheckoutPreview, type CheckoutResult } from "@/lib/commerce";
+import { followCheckout, formatMoney, type CheckoutPreview, type CheckoutResult } from "@/lib/commerce";
 
 export default function CourseCheckoutPage() {
   return (
@@ -64,6 +64,7 @@ function CourseCheckoutInner() {
         method: "POST",
         body: JSON.stringify({ course_id: course.id }),
       });
+      if (followCheckout(result)) return;
       await refreshUser();
       router.push(`/checkout/success?order=${result.order_number}`);
     } catch (err) {

@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import Alert from "@/components/ui/Alert";
 import Button from "@/components/ui/Button";
 import FormField, { fieldClassName } from "@/components/ui/FormField";
-import { ApiError, clearToken } from "@/lib/auth";
+import { ApiError } from "@/lib/auth";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -31,8 +31,7 @@ export default function AdminLoginPage() {
     try {
       const loggedIn = await login(email, password);
       if (loggedIn.role !== "admin") {
-        logout();
-        clearToken();
+        await logout();
         setError("This portal is for administrators only. Students should use the student portal.");
         return;
       }

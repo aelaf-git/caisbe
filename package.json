@@ -4,7 +4,8 @@
   "workspaces": [
     "web",
     "admin",
-    "portal"
+    "portal",
+    "packages/platform"
   ],
   "scripts": {
     "dev:web": "npm run dev -w web",

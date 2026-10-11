@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { apiFetch, ApiError, setToken, type TokenResponse } from "@/lib/auth";
+import { apiFetch, ApiError, type TokenResponse } from "@/lib/auth";
 import { safeNextPath } from "@/lib/membershipApplication";
 
 function VerifyEmailHandler() {
@@ -28,7 +28,7 @@ function VerifyEmailHandler() {
           body: JSON.stringify({ token }),
         });
         if (cancelled) return;
-        setToken(data.access_token);
+        if (!data.user) return;
         window.location.assign(nextPath);
       } catch (err) {
         if (cancelled) return;

@@ -11,9 +11,14 @@ function LogoutInner() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    logout();
     const next = safeReturnTarget(searchParams.get("next"), siteUrl("/"));
-    window.location.replace(next);
+    let active = true;
+    void logout().then(() => {
+      if (active) window.location.replace(next);
+    });
+    return () => {
+      active = false;
+    };
   }, [logout, searchParams]);
 
   return (

@@ -282,8 +282,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
         <button
           type="button"
           onClick={() => {
-            logout();
-            router.push("/login");
+            void logout().then(() => router.push("/login"));
           }}
           className="mt-3 inline-flex w-full items-center justify-center rounded-full border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
         >

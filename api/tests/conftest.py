@@ -11,6 +11,10 @@ os.environ["DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
 os.environ["APP_ENV"] = "development"
 os.environ["JWT_SECRET"] = "test-secret-key-for-pytest-only-not-for-prod"
 os.environ["RESEND_API_KEY"] = ""
+# A developer Stripe key must not turn the suite into hosted checkout.
+os.environ["STRIPE_SECRET_KEY"] = ""
+os.environ["STRIPE_WEBHOOK_SECRET"] = ""
+os.environ["STRIPE_PUBLISHABLE_KEY"] = ""
 
 import pytest
 from fastapi.testclient import TestClient

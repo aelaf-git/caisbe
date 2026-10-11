@@ -1,0 +1,11 @@
+{
+  "name": "@caisbe/platform",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./apiUpstream": "./src/apiUpstream.ts",
+    "./apiProxy": "./src/apiProxy.ts",
+    "./receiptPdf": "./src/receiptPdf.ts",
+    "./appearance": "./src/appearance.ts"
+  }
+}

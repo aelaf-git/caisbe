@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  clearStudentToken,
-  readStudentToken,
-  studentFetch,
-  type StudentUser,
-} from "@/lib/studentSession";
+import { clearStudentToken, studentFetch, type StudentUser } from "@/lib/studentSession";
 
 export function useStudentSession() {
   const [user, setUser] = useState<StudentUser | null>(null);
@@ -14,12 +9,6 @@ export function useStudentSession() {
 
   useEffect(() => {
     let active = true;
-    const token = readStudentToken();
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
     void studentFetch<StudentUser>("/auth/me")
       .then((me) => {
         if (!active) return;

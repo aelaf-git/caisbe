@@ -13,6 +13,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@caisbe/platform"],
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, ".."),
   turbopack: {

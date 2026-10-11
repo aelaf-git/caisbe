@@ -1,11 +1,4 @@
-const TOKEN_KEY = "caisbe_portal_access_token";
-
-export type StudentUser = {
-  id: number;
-  full_name: string;
-  email: string;
-  role: string;
-};
+const LEGACY_TOKEN_KEY = "caisbe_portal_access_token";
 
 function sessionCookieDomain(): string {
   if (typeof window === "undefined") return "";
@@ -14,24 +7,19 @@ function sessionCookieDomain(): string {
   return "";
 }
 
-export function readStudentToken(): string | null {
-  if (typeof document === "undefined") return null;
-  const prefix = `${TOKEN_KEY}=`;
-  for (const part of document.cookie.split("; ")) {
-    if (!part.startsWith(prefix)) continue;
-    try {
-      return decodeURIComponent(part.slice(prefix.length));
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
+export type StudentUser = {
+  id: number;
+  full_name: string;
+  email: string;
+  role: string;
+};
 
 export function clearStudentToken(): void {
-  if (typeof document === "undefined") return;
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${TOKEN_KEY}=; Path=/; Max-Age=0; SameSite=Lax${sessionCookieDomain()}${secure}`;
+  if (typeof document !== "undefined") {
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${LEGACY_TOKEN_KEY}=; Path=/; Max-Age=0; SameSite=Lax${sessionCookieDomain()}${secure}`;
+  }
+  void fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
 }
 
 export class StudentApiError extends Error {
@@ -46,8 +34,6 @@ export class StudentApiError extends Error {
 
 export async function studentFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
-  const token = readStudentToken();
-  if (token) headers.set("Authorization", `Bearer ${token}`);
   if (!headers.has("Content-Type") && init?.body && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }

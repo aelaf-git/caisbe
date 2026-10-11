@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -13,6 +13,9 @@ from app.db import get_db
 from app.models import User
 
 security = HTTPBearer(auto_error=False)
+
+PORTAL_SESSION_COOKIE = "caisbe_portal_session"
+ADMIN_SESSION_COOKIE = "caisbe_admin_session"
 
 EMAIL_VERIFY_HOURS = 72
 PASSWORD_RESET_HOURS = 1
@@ -59,18 +62,31 @@ new_password_reset_token = new_secure_token
 hash_password_reset_token = hash_secure_token
 
 
+def _session_token(
+    credentials: HTTPAuthorizationCredentials | None,
+    request: Request,
+) -> str | None:
+    if credentials is not None and credentials.scheme.lower() == "bearer" and credentials.credentials:
+        return credentials.credentials
+    for name in (PORTAL_SESSION_COOKIE, ADMIN_SESSION_COOKIE):
+        value = request.cookies.get(name)
+        if value:
+            return value
+    return None
+
+
 def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
-    if credentials is None or credentials.scheme.lower() != "bearer":
+    token = _session_token(credentials, request)
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
         email = payload.get("sub")

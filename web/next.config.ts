@@ -13,6 +13,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@caisbe/platform"],
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, ".."),
   // API calls go through app/api/[...path] so API_URL is read at runtime

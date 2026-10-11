@@ -11,7 +11,7 @@ import { certificatePdfFileName } from "@/lib/certificatePdf";
 import { certificateVerifyUrl } from "@/lib/certificateVerifyUrl";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
-import { formatMoney, membershipTypeLabel, type CheckoutResult } from "@/lib/commerce";
+import { followCheckout, formatMoney, membershipTypeLabel, type CheckoutResult } from "@/lib/commerce";
 import type { MembershipCertificate } from "@/lib/lms";
 
 function MemberPathCard({
@@ -107,13 +107,14 @@ function MembershipPageInner() {
     setPaying(true);
     setPayError(null);
     try {
-      await apiFetch<CheckoutResult>("/me/membership/checkout", {
+      const paid = await apiFetch<CheckoutResult>("/me/membership/checkout", {
         method: "POST",
         body: JSON.stringify({
           membership_type: pendingType,
           kind: pendingKind,
         }),
       });
+      if (followCheckout(paid)) return;
       await refreshUser();
       await loadCertificate();
       window.scrollTo({ top: 0, behavior: "smooth" });

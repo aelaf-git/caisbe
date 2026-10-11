@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { ApiError, clearToken } from "@/lib/auth";
+import { ApiError } from "@/lib/auth";
 import { safeReturnTarget } from "@/lib/membershipApplication";
 
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001";
@@ -51,8 +51,7 @@ function PortalLoginForm() {
     try {
       const loggedIn = await login(email, password);
       if (loggedIn.role === "admin") {
-        logout();
-        clearToken();
+        await logout();
         setError("Administrators should use the Admin portal.");
         return;
       }

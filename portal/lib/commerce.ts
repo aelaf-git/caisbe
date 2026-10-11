@@ -68,6 +68,13 @@ export type CheckoutPreview = {
   items?: CheckoutPreviewItem[];
 };
 
+/** Send the browser to Stripe when the API opened a card checkout. */
+export function followCheckout(result: { checkout_url?: string | null }): boolean {
+  if (typeof window === "undefined" || !result.checkout_url) return false;
+  window.location.assign(result.checkout_url);
+  return true;
+}
+
 export type CheckoutResult = {
   order_id: number;
   order_number: string;

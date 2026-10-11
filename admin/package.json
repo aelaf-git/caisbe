@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@caisbe/platform": "*",
     "@tiptap/core": "^2.27.2",
     "@tiptap/extension-color": "^2.27.2",
     "@tiptap/extension-highlight": "^2.27.2",

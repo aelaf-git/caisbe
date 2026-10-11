@@ -13,6 +13,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@caisbe/platform"],
   output: "standalone",
   // Monorepo: trace files from the repo root so standalone includes hoisted deps.
   outputFileTracingRoot: path.join(__dirname, ".."),
