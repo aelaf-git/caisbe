@@ -66,7 +66,7 @@ class NewsletterCampaign(Base):
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     sent_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
-    sent_by: Mapped[User | None] = relationship()
+    sent_by: Mapped["User | None"] = relationship()
 
 
 class SiteVisit(Base):
@@ -103,7 +103,7 @@ class MembershipApplication(Base):
     membership_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user: Mapped[User | None] = relationship()
+    user: Mapped["User | None"] = relationship()
 
 
 class UserDocument(Base):
@@ -297,7 +297,7 @@ class NotificationBroadcast(Base):
     sent_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    sent_by: Mapped[User | None] = relationship()
+    sent_by: Mapped["User | None"] = relationship()
 
 
 class JobPosting(Base):

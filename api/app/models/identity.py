@@ -138,7 +138,7 @@ class SecurityQuestion(Base):
     answer_hash: Mapped[str] = mapped_column(String(255))
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
-    user: Mapped[User] = relationship(back_populates="security_questions")
+    user: Mapped["User"] = relationship(back_populates="security_questions")
 
 
 class LoginEvent(Base):

@@ -27,7 +27,7 @@ class CartItem(Base):
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user: Mapped[User] = relationship(back_populates="cart_items")
+    user: Mapped["User"] = relationship(back_populates="cart_items")
     course: Mapped["Course"] = relationship()
 
 
@@ -69,8 +69,8 @@ class Order(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    user: Mapped[User] = relationship(back_populates="orders")
-    promotion: Mapped[Promotion | None] = relationship(back_populates="orders")
+    user: Mapped["User"] = relationship(back_populates="orders")
+    promotion: Mapped["Promotion | None"] = relationship(back_populates="orders")
     items: Mapped[list["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
     invoices: Mapped[list["Invoice"]] = relationship(back_populates="order", cascade="all, delete-orphan")
     payments: Mapped[list["Payment"]] = relationship(back_populates="order", cascade="all, delete-orphan")
@@ -89,8 +89,8 @@ class OrderItem(Base):
     unit_price_cents: Mapped[int] = mapped_column(Integer)
     quantity: Mapped[int] = mapped_column(Integer, default=1)
 
-    order: Mapped[Order] = relationship(back_populates="items")
-    course: Mapped[Course | None] = relationship()
+    order: Mapped["Order"] = relationship(back_populates="items")
+    course: Mapped["Course | None"] = relationship()
 
 
 class Invoice(Base):
@@ -108,8 +108,8 @@ class Invoice(Base):
     balance_cents: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(32), default="open")
 
-    order: Mapped[Order] = relationship(back_populates="invoices")
-    user: Mapped[User] = relationship(back_populates="invoices")
+    order: Mapped["Order"] = relationship(back_populates="invoices")
+    user: Mapped["User"] = relationship(back_populates="invoices")
     payments: Mapped[list["Payment"]] = relationship(back_populates="invoice")
 
 
@@ -130,10 +130,10 @@ class Payment(Base):
     reviewed_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    order: Mapped[Order] = relationship(back_populates="payments")
-    invoice: Mapped[Invoice | None] = relationship(back_populates="payments")
-    user: Mapped[User] = relationship(back_populates="payments", foreign_keys=[user_id])
-    reviewed_by: Mapped[User | None] = relationship(foreign_keys=[reviewed_by_id])
+    order: Mapped["Order"] = relationship(back_populates="payments")
+    invoice: Mapped["Invoice | None"] = relationship(back_populates="payments")
+    user: Mapped["User"] = relationship(back_populates="payments", foreign_keys=[user_id])
+    reviewed_by: Mapped["User | None"] = relationship(foreign_keys=[reviewed_by_id])
 
 
 class SavedCard(Base):
@@ -151,6 +151,6 @@ class SavedCard(Base):
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user: Mapped[User] = relationship(back_populates="saved_cards")
+    user: Mapped["User"] = relationship(back_populates="saved_cards")
 
 

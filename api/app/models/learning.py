@@ -77,8 +77,8 @@ class Enrollment(Base):
     exam_access: Mapped[str] = mapped_column(String(16), default="allowed", server_default="allowed")
     enrolled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user: Mapped[User] = relationship(back_populates="enrollments")
-    course: Mapped[Course] = relationship(back_populates="enrollments")
+    user: Mapped["User"] = relationship(back_populates="enrollments")
+    course: Mapped["Course"] = relationship(back_populates="enrollments")
 
 
 class Chapter(Base):
@@ -89,7 +89,7 @@ class Chapter(Base):
     title: Mapped[str] = mapped_column(String(255))
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
-    course: Mapped[Course] = relationship(back_populates="chapters")
+    course: Mapped["Course"] = relationship(back_populates="chapters")
     lessons: Mapped[list["Lesson"]] = relationship(
         back_populates="chapter",
         cascade="all, delete-orphan",
@@ -112,7 +112,7 @@ class Lesson(Base):
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
-    chapter: Mapped[Chapter] = relationship(back_populates="lessons")
+    chapter: Mapped["Chapter"] = relationship(back_populates="lessons")
     blocks: Mapped[list["ContentBlock"]] = relationship(
         back_populates="lesson",
         cascade="all, delete-orphan",
@@ -167,13 +167,13 @@ class ContentBlock(Base):
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
-    lesson: Mapped[Lesson | None] = relationship(
+    lesson: Mapped["Lesson | None"] = relationship(
         back_populates="blocks", foreign_keys=[lesson_id]
     )
-    chapter: Mapped[Chapter | None] = relationship(
+    chapter: Mapped["Chapter | None"] = relationship(
         back_populates="blocks", foreign_keys=[chapter_id]
     )
-    quiz: Mapped[Quiz | None] = relationship(back_populates="blocks")
+    quiz: Mapped["Quiz | None"] = relationship(back_populates="blocks")
     parent: Mapped["ContentBlock | None"] = relationship(
         remote_side=[id],
         back_populates="children",
@@ -201,7 +201,7 @@ class FinalExam(Base):
     secure_mode: Mapped[bool] = mapped_column(Boolean, default=True)
     max_integrity_violations: Mapped[int] = mapped_column(Integer, default=3)
 
-    course: Mapped[Course] = relationship(back_populates="final_exam")
+    course: Mapped["Course"] = relationship(back_populates="final_exam")
     questions: Mapped[list["QuizQuestion"]] = relationship(
         back_populates="final_exam",
         cascade="all, delete-orphan",
@@ -232,7 +232,7 @@ class ExamSession(Base):
     violation_count: Mapped[int] = mapped_column(Integer, default=0)
     locked_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    final_exam: Mapped[FinalExam] = relationship(back_populates="sessions")
+    final_exam: Mapped["FinalExam"] = relationship(back_populates="sessions")
     integrity_events: Mapped[list["ExamIntegrityEvent"]] = relationship(back_populates="exam_session")
 
 
@@ -252,8 +252,8 @@ class ExamIntegrityEvent(Base):
     detail_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    final_exam: Mapped[FinalExam] = relationship(back_populates="integrity_events")
-    exam_session: Mapped[ExamSession | None] = relationship(back_populates="integrity_events")
+    final_exam: Mapped["FinalExam"] = relationship(back_populates="integrity_events")
+    exam_session: Mapped["ExamSession | None"] = relationship(back_populates="integrity_events")
 
 
 class QuizQuestion(Base):
@@ -269,8 +269,8 @@ class QuizQuestion(Base):
     prompt: Mapped[str] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
-    quiz: Mapped[Quiz | None] = relationship(back_populates="questions")
-    final_exam: Mapped[FinalExam | None] = relationship(back_populates="questions")
+    quiz: Mapped["Quiz | None"] = relationship(back_populates="questions")
+    final_exam: Mapped["FinalExam | None"] = relationship(back_populates="questions")
     choices: Mapped[list["QuizChoice"]] = relationship(
         back_populates="question",
         cascade="all, delete-orphan",
@@ -287,7 +287,7 @@ class QuizChoice(Base):
     is_correct: Mapped[bool] = mapped_column(Boolean, default=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
-    question: Mapped[QuizQuestion] = relationship(back_populates="choices")
+    question: Mapped["QuizQuestion"] = relationship(back_populates="choices")
 
 
 class CertificateTemplate(Base):
@@ -303,7 +303,7 @@ class CertificateTemplate(Base):
     # Empty means the certificate prints the live course title.
     program_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    course: Mapped[Course] = relationship(back_populates="certificate_template")
+    course: Mapped["Course"] = relationship(back_populates="certificate_template")
 
 
 class LessonProgress(Base):
@@ -315,8 +315,8 @@ class LessonProgress(Base):
     lesson_id: Mapped[int] = mapped_column(ForeignKey("lessons.id", ondelete="CASCADE"), index=True)
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user: Mapped[User] = relationship(back_populates="lesson_progress")
-    lesson: Mapped[Lesson] = relationship(back_populates="progress_records")
+    user: Mapped["User"] = relationship(back_populates="lesson_progress")
+    lesson: Mapped["Lesson"] = relationship(back_populates="progress_records")
 
 
 class BlockCompletion(Base):
@@ -330,7 +330,7 @@ class BlockCompletion(Base):
     )
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user: Mapped[User] = relationship()
+    user: Mapped["User"] = relationship()
     block: Mapped["ContentBlock"] = relationship()
 
 
@@ -356,8 +356,8 @@ class AssignmentSubmission(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user: Mapped[User] = relationship(foreign_keys=[user_id])
-    graded_by: Mapped[User | None] = relationship(foreign_keys=[graded_by_id])
+    user: Mapped["User"] = relationship(foreign_keys=[user_id])
+    graded_by: Mapped["User | None"] = relationship(foreign_keys=[graded_by_id])
     block: Mapped["ContentBlock"] = relationship()
     attempts: Mapped[list["AssignmentAttempt"]] = relationship(
         back_populates="submission",
@@ -396,9 +396,9 @@ class QuizAttempt(Base):
     answers_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user: Mapped[User] = relationship(back_populates="quiz_attempts")
-    quiz: Mapped[Quiz | None] = relationship(back_populates="attempts")
-    final_exam: Mapped[FinalExam | None] = relationship(back_populates="attempts")
+    user: Mapped["User"] = relationship(back_populates="quiz_attempts")
+    quiz: Mapped["Quiz | None"] = relationship(back_populates="attempts")
+    final_exam: Mapped["FinalExam | None"] = relationship(back_populates="attempts")
 
 
 class Certificate(Base):
@@ -411,8 +411,8 @@ class Certificate(Base):
     certificate_code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user: Mapped[User] = relationship(back_populates="certificates")
-    course: Mapped[Course] = relationship(back_populates="certificates")
+    user: Mapped["User"] = relationship(back_populates="certificates")
+    course: Mapped["Course"] = relationship(back_populates="certificates")
 
 
 class MembershipCertificate(Base):
@@ -426,7 +426,7 @@ class MembershipCertificate(Base):
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    user: Mapped[User] = relationship(back_populates="membership_certificate")
+    user: Mapped["User"] = relationship(back_populates="membership_certificate")
 
 
 class MembershipCertificateType(Base):
