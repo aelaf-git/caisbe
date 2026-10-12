@@ -277,7 +277,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
           href={siteUrl("/")}
           className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-ifma-border px-4 py-2 text-sm font-semibold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
         >
-          Public site
+          Main page
         </a>
         <button
           type="button"

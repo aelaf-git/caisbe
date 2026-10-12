@@ -433,7 +433,10 @@ function AdminCourseEditorInner() {
             onBlur={() => void metaAutosave.flush()}
           />
         </FormField>
-        <FormField label="Description" hint="A concise overview shown to learners before they begin.">
+        <FormField
+          label="Description"
+          hint="Public short summary visitors see before they sign in and buy. Keep it to a few sentences."
+        >
           <textarea
             className={textAreaClassName}
             rows={4}

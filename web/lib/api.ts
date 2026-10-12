@@ -223,10 +223,14 @@ export function courseProgramPath(slug: string) {
 }
 
 export function courseEnrollUrl(courseId: number) {
-  const portal = (
-    process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3002"
-  ).replace(/\/$/, "");
-  return `${portal}/courses/${courseId}/checkout`;
+  return portalUrl(`/courses/${courseId}/checkout`);
+}
+
+/** Portal login that returns the visitor to course checkout after they sign in. */
+export function courseRegisterLoginUrl(courseId: number) {
+  return portalUrl(
+    `/login?next=${encodeURIComponent(`/courses/${courseId}/checkout`)}`,
+  );
 }
 
 export function portalUrl(path = "") {

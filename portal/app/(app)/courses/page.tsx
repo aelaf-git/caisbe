@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import CourseCard from "@/components/portal/CourseCard";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError, type Course, type Enrollment } from "@/lib/auth";
-import { formatMoney, type Cart } from "@/lib/commerce";
+import { courseShortSummary } from "@/lib/courseSummary";
 
 function isActive(status: string) {
   return status === "enrolled" || status === "completed";
@@ -14,11 +14,8 @@ function isActive(status: string) {
 export default function StudentCoursesPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [cartIds, setCartIds] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [addingId, setAddingId] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -26,15 +23,13 @@ export default function StudentCoursesPage() {
       setLoading(true);
       setError(null);
       try {
-        const [enrollmentData, courseData, cartData] = await Promise.all([
+        const [enrollmentData, courseData] = await Promise.all([
           apiFetch<Enrollment[]>("/me/enrollments"),
           apiFetch<Course[]>("/courses", { auth: false }),
-          apiFetch<Cart>("/me/cart").catch(() => ({ items: [], count: 0, subtotal_cents: 0, currency: "usd" })),
         ]);
         if (!active) return;
         setEnrollments(enrollmentData);
         setCourses(courseData);
-        setCartIds(new Set(cartData.items.map((item) => item.course_id)));
       } catch (err) {
         if (!active) return;
         setError(err instanceof ApiError ? err.detail : "Unable to load courses.");
@@ -59,35 +54,12 @@ export default function StudentCoursesPage() {
   const openEnrollments = enrollments.filter((item) => isActive(item.status));
   const pendingEnrollments = enrollments.filter((item) => item.status === "pending_payment");
 
-  async function addToCart(courseId: number) {
-    setAddingId(courseId);
-    setError(null);
-    setMessage(null);
-    try {
-      await apiFetch("/me/cart", {
-        method: "POST",
-        body: JSON.stringify({ course_id: courseId }),
-      });
-      setCartIds((current) => new Set(current).add(courseId));
-      setMessage("Added to cart.");
-    } catch (err) {
-      const detail = err instanceof ApiError ? err.detail : "Unable to add to cart.";
-      setError(
-        /already enrolled/i.test(detail)
-          ? "You already have this course. Other programs below are still available."
-          : detail,
-      );
-    } finally {
-      setAddingId(null);
-    }
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Learning"
         title="My courses"
-        description="Add courses to your cart and buy them together, or buy a single course now."
+        description="Open a published program for a short summary, then buy it or add it to your cart."
         actions={
           <Link
             href="/cart"
@@ -103,15 +75,6 @@ export default function StudentCoursesPage() {
           {error}
         </div>
       ) : null}
-      {message ? (
-        <p className="text-sm text-caisbe-text">
-          {message}{" "}
-          <Link href="/cart" className="font-semibold text-caisbe-red hover:underline">
-            View cart
-          </Link>
-        </p>
-      ) : null}
-
       {pendingEnrollments.length > 0 ? (
         <section className="space-y-4">
           <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Awaiting payment</h2>
@@ -164,7 +127,7 @@ export default function StudentCoursesPage() {
         </h2>
         {openEnrollments.length > 0 ? (
           <p className="text-sm text-caisbe-muted">
-            You can add any other published course to your cart, or buy it on its own.
+            Open a program for a short summary, then buy it or add it to your cart.
           </p>
         ) : null}
         {loading ? (
@@ -179,28 +142,19 @@ export default function StudentCoursesPage() {
           </p>
         ) : (
           <div className="space-y-4">
-            {availableCourses.map((course) => {
-              const inCart = cartIds.has(course.id);
-              return (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  action={
-                    inCart
-                      ? { href: "/cart", label: "In cart · View" }
-                      : {
-                          onClick: () => void addToCart(course.id),
-                          label: addingId === course.id ? "Adding…" : "Add to cart",
-                          busy: addingId === course.id,
-                        }
-                  }
-                  secondaryAction={{
-                    href: `/courses/${course.id}/checkout`,
-                    label: `Buy now · ${formatMoney(course.price_cents ?? 0, course.currency)}`,
-                  }}
-                />
-              );
-            })}
+            {availableCourses.map((course) => (
+              <CourseCard
+                key={course.id}
+                course={{
+                  ...course,
+                  description: courseShortSummary(course.description),
+                }}
+                action={{
+                  href: `/courses/${course.id}/summary`,
+                  label: "View summary",
+                }}
+              />
+            ))}
           </div>
         )}
       </section>

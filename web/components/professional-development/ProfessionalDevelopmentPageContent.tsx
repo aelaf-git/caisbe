@@ -8,6 +8,7 @@ import {
   courseProgramPath,
   fetchPublishedCourses,
 } from "@/lib/api";
+import { courseShortSummary } from "@/lib/courseSummary";
 import {
   learningFormatsPath,
   professionalDevelopmentContent,
@@ -58,7 +59,7 @@ export default async function ProfessionalDevelopmentPageContent() {
                 key={course.id}
                 title={course.title}
                 meta={course.code}
-                description={course.description || undefined}
+                description={courseShortSummary(course.description)}
                 href={courseProgramPath(course.slug)}
                 hrefLabel="View Program"
                 style={{ animationDelay: `${index * 70}ms` }}

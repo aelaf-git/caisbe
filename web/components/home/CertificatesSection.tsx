@@ -4,6 +4,7 @@ import {
   courseProgramPath,
   fetchPublishedCourses,
 } from "@/lib/api";
+import { courseShortSummary } from "@/lib/courseSummary";
 import { certificatesIntro } from "@/lib/data/home";
 
 export default async function CertificatesSection() {
@@ -83,7 +84,7 @@ export default async function CertificatesSection() {
                   {course.title}
                 </h3>
                 <p className="mt-2 line-clamp-3 flex-1 text-base leading-7 text-caisbe-muted">
-                  {course.description}
+                  {courseShortSummary(course.description)}
                 </p>
                 <span className="mt-4 text-base font-bold text-caisbe-red">
                   View Program
