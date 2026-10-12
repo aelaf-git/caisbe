@@ -14,10 +14,13 @@ import {
   learningFormatsPath,
   professionalDevelopmentContent,
 } from "@/lib/data/professional-development";
+import { fetchPublishedSitePage } from "@/lib/sitePages";
 
 export default async function ProfessionalDevelopmentPageContent() {
   const { certificatesTitle, certificatesIntro, seminars: fallbackSeminars, formats } =
     professionalDevelopmentContent;
+  const page = await fetchPublishedSitePage("/professional-development");
+  const [coursesSection, seminarsSection, formatsSection] = page?.sections ?? [];
 
   let courses: Awaited<ReturnType<typeof fetchPublishedCourses>> = [];
   try {
@@ -37,12 +40,12 @@ export default async function ProfessionalDevelopmentPageContent() {
     <>
       <PageHero
         eyebrow={professionalDevelopmentContent.eyebrow}
-        title={certificatesTitle}
-        lead={certificatesIntro}
+        title={page?.title?.trim() || certificatesTitle}
+        lead={page?.lead?.trim() || certificatesIntro}
         actions={
           <>
-            <ButtonLink href={learningFormatsPath()} variant="primary">
-              Learning Formats
+            <ButtonLink href={page?.ctaHref || learningFormatsPath()} variant="primary">
+              {page?.ctaLabel?.trim() || "Learning Formats"}
             </ButtonLink>
             <ButtonLink href="/events/calendar" variant="secondary">
               Events Calendar
@@ -52,8 +55,11 @@ export default async function ProfessionalDevelopmentPageContent() {
       />
 
       <ContentSection
-        title="Certificate courses"
-        description="Published CAISBE certificate programs for facility, property, and built-environment professionals."
+        title={coursesSection?.title?.trim() || "Certificate courses"}
+        description={
+          coursesSection?.body?.trim() ||
+          "Published CAISBE certificate programs for facility, property, and built-environment professionals."
+        }
         wide
       >
         {courses.length === 0 ? (
@@ -78,8 +84,11 @@ export default async function ProfessionalDevelopmentPageContent() {
       </ContentSection>
 
       <ContentSection
-        title="Seminars"
-        description="Professional seminars that complement certificate pathways and support continuing development."
+        title={seminarsSection?.title?.trim() || "Seminars"}
+        description={
+          seminarsSection?.body?.trim() ||
+          "Professional seminars that complement certificate pathways and support continuing development."
+        }
         wide
       >
         {seminars.length === 0 ? (
@@ -103,7 +112,10 @@ export default async function ProfessionalDevelopmentPageContent() {
         )}
       </ContentSection>
 
-      <ContentSection title={formats.title} description={formats.description}>
+      <ContentSection
+        title={formatsSection?.title?.trim() || formats.title}
+        description={formatsSection?.body?.trim() || formats.description}
+      >
         <ButtonLink href={learningFormatsPath()} variant="secondary">
           Explore Learning Formats
         </ButtonLink>

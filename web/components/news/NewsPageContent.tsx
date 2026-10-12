@@ -6,9 +6,12 @@ import {
 } from "@/components/pages/ContentPage";
 import { fetchPublishedNews, type NewsPost } from "@/lib/api";
 import { formatNewsDate, newsContent } from "@/lib/data/news";
+import { fetchPublishedSitePage } from "@/lib/sitePages";
 
 export default async function NewsPageContent() {
   const { eyebrow, title, lead, intro } = newsContent;
+  const page = await fetchPublishedSitePage("/news");
+  const updates = page?.sections?.[0];
 
   let posts: NewsPost[] = [];
   try {
@@ -23,13 +26,13 @@ export default async function NewsPageContent() {
     <>
       <PageHero
         eyebrow={eyebrow}
-        title={title}
-        lead={lead}
+        title={page?.title?.trim() || title}
+        lead={page?.lead?.trim() || lead}
         actions={
           hasPosts ? (
             <>
-              <ButtonLink href="/contact" variant="primary">
-                Media Inquiries
+              <ButtonLink href={page?.ctaHref || "/contact"} variant="primary">
+                {page?.ctaLabel?.trim() || "Media Inquiries"}
               </ButtonLink>
               <ButtonLink href="/events" variant="secondary">
                 Upcoming Events
@@ -38,12 +41,17 @@ export default async function NewsPageContent() {
           ) : undefined
         }
       >
-        <p className="mt-6 text-base leading-7 text-caisbe-muted">{intro}</p>
+        <p className="mt-6 text-base leading-7 text-caisbe-muted">
+          {page?.description?.trim() || intro}
+        </p>
       </PageHero>
 
       <ContentSection
-        title="Latest updates"
-        description="Announcements are listed newest first as published by the CAISBE team."
+        title={updates?.title?.trim() || "Latest updates"}
+        description={
+          updates?.body?.trim() ||
+          "Announcements are listed newest first as published by the CAISBE team."
+        }
         wide
       >
         {!hasPosts ? (

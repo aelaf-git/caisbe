@@ -12,6 +12,7 @@ import {
   eventsPages,
   type EventsSlug,
 } from "@/lib/data/events";
+import { fetchPublishedSitePage } from "@/lib/sitePages";
 
 export function EventsIndexContent() {
   return (
@@ -59,14 +60,15 @@ function ThinEventsPage({
   );
 }
 
-function CalendarPage() {
+async function CalendarPage() {
   const page = eventsPages.calendar;
+  const published = await fetchPublishedSitePage("/events/calendar");
   return (
     <>
       <PageHero
         eyebrow="Events"
-        title={page.title}
-        lead={page.lead}
+        title={published?.title?.trim() || page.title}
+        lead={published?.lead?.trim() || page.lead}
         actions={
           <>
             <ButtonLink href="/events" variant="primary">
@@ -78,7 +80,7 @@ function CalendarPage() {
           </>
         }
       >
-        <p className={heroNoteClassName}>{page.description}</p>
+        <p className={heroNoteClassName}>{published?.description?.trim() || page.description}</p>
       </PageHero>
       <EventCalendarList />
     </>

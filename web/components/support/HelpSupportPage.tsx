@@ -45,7 +45,13 @@ function NoticeLine({ notice }: { notice: Notice | null }) {
   );
 }
 
-export default function HelpSupportPage() {
+export default function HelpSupportPage({
+  title = "Help and Support",
+  lead = "FAQs, technical tickets, and requests for courses, certificates, your account, and problems to report.",
+}: {
+  title?: string;
+  lead?: string;
+}) {
   const { user } = useStudentSession();
   const [courses, setCourses] = useState<string[]>([]);
   const [threads, setThreads] = useState<SupportThread[]>([]);
@@ -140,11 +146,10 @@ export default function HelpSupportPage() {
             Support
           </p>
           <h1 className="font-hopewell-display mt-4 text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
-            Help and Support
+            {title}
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-caisbe-text sm:text-lg">
-            FAQs, technical tickets, and requests for courses, certificates, your account, and
-            problems to report.
+            {lead}
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             {user ? (

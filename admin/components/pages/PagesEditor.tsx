@@ -208,8 +208,9 @@ export default function PagesEditor() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-caisbe-muted">
-        Change menu labels, page text, and subpages. The homepage itself is edited under Landing page.
-        Photos stay in Media.
+        Edit headings, introductions, extra sections, and the button for each public page.
+        Course cards stay in Courses, seminar cards in Seminars, news posts in News, job listings in
+        Jobs, and magazine files, videos, and photos in Media. The homepage is edited under Landing page.
       </p>
       {error ? <Alert tone="error">{error}</Alert> : null}
       {loading ? (

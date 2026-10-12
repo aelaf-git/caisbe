@@ -29,7 +29,17 @@ const CHANNEL_META: Record<
   },
 };
 
-export default function MediaChannelPageContent({ channel }: { channel: Channel }) {
+export default function MediaChannelPageContent({
+  channel,
+  title,
+  lead,
+  sectionTitle,
+}: {
+  channel: Channel;
+  title?: string;
+  lead?: string;
+  sectionTitle?: string;
+}) {
   const item = getMediaItem(channel);
   const meta = CHANNEL_META[channel];
   const [rows, setRows] = useState<MediaAsset[]>([]);
@@ -52,12 +62,16 @@ export default function MediaChannelPageContent({ channel }: { channel: Channel 
 
   return (
     <>
-      <PageHero eyebrow="Media" title={item.title} lead={item.lead} />
+      <PageHero
+        eyebrow="Media"
+        title={title?.trim() || item.title}
+        lead={lead?.trim() || item.lead}
+      />
 
       <section className={`bg-transparent ${sectionSpacingClassName}`}>
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
-            {meta.sectionTitle}
+            {sectionTitle?.trim() || meta.sectionTitle}
           </h2>
           {loading ? (
             <p className="mt-6 text-sm text-caisbe-muted">Loading…</p>

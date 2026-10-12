@@ -19,10 +19,8 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  if (!SPECIAL_EVENT_SLUGS.has(slug)) {
-    const published = await cmsTopicMetadata(`/events/${slug}`, "Events | CAISBE");
-    if (published) return published;
-  }
+  const published = await cmsTopicMetadata(`/events/${slug}`, "Events | CAISBE");
+  if (published) return published;
 
   const page = getEventsPage(slug);
   if (page) {
@@ -32,8 +30,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const published = await cmsTopicMetadata(`/events/${slug}`, "Events | CAISBE");
-  if (published) return published;
   return { title: "Events | CAISBE" };
 }
 

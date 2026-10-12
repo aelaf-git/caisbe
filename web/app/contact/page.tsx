@@ -2,11 +2,17 @@ import type { Metadata } from "next";
 import ContactSection from "@/components/home/ContactSection";
 import { fetchHomeLanding } from "@/lib/sitePages";
 
-export const metadata: Metadata = {
-  title: "Contact Us | CAISBE",
-  description:
-    "Get in touch with the Canada Africa Institute for the Sustainable Built Environment.",
-};
+const fallbackDescription =
+  "Get in touch with the Canada Africa Institute for the Sustainable Built Environment.";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const landing = await fetchHomeLanding();
+  const title = landing?.contact_title?.trim() || "Contact Us";
+  return {
+    title: `${title} | CAISBE`,
+    description: landing?.contact_lead?.trim() || fallbackDescription,
+  };
+}
 
 export default async function ContactPage() {
   const landing = await fetchHomeLanding();

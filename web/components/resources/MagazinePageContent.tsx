@@ -5,7 +5,15 @@ import { PageHero, sectionSpacingClassName } from "@/components/pages/ContentPag
 import { fetchPublishedMagazines, type MediaAsset } from "@/lib/api";
 import { mediaContent } from "@/lib/data/resources";
 
-export default function MagazinePageContent() {
+export default function MagazinePageContent({
+  title,
+  lead,
+  sectionTitle = "Latest issues",
+}: {
+  title?: string;
+  lead?: string;
+  sectionTitle?: string;
+}) {
   const item = mediaContent.items.find((row) => row.slug === "magazine");
   const [issues, setIssues] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,14 +37,14 @@ export default function MagazinePageContent() {
     <>
       <PageHero
         eyebrow="Resources"
-        title={item.title}
-        lead={item.lead}
+        title={title?.trim() || item.title}
+        lead={lead?.trim() || item.lead}
       />
 
       <section className={`bg-transparent ${sectionSpacingClassName}`}>
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
-            Latest issues
+            {sectionTitle}
           </h2>
           {loading ? (
             <p className="mt-6 text-sm text-caisbe-muted">Loading…</p>

@@ -5,13 +5,15 @@ import {
   SubsectionIndex,
 } from "@/components/pages/ContentPage";
 import { getMediaItem, mediaContent } from "@/lib/data/resources";
+import { fetchPublishedSitePage } from "@/lib/sitePages";
 
-export function MediaIndexContent() {
+export async function MediaIndexContent() {
+  const page = await fetchPublishedSitePage("/resources/media");
   return (
     <SubsectionIndex
       eyebrow="Resources"
-      title={mediaContent.title}
-      description={mediaContent.description}
+      title={page?.title?.trim() || mediaContent.title}
+      description={page?.lead?.trim() || mediaContent.description}
       items={mediaContent.items.map((item) => ({
         title: item.title,
         description: item.description,

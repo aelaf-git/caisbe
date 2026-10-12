@@ -29,24 +29,36 @@ function matchesQuery(question: string, answer: string[], query: string) {
     .every((token) => haystack.includes(token));
 }
 
-export default function HelpDeskPageContent() {
+export default function HelpDeskPageContent({
+  title = helpDeskContent.title,
+  lead = helpDeskContent.lead,
+  ctaLabel = helpDeskContent.contactLabel,
+  ctaHref = helpDeskContent.contactHref,
+  faqs: faqItems = faqs,
+}: {
+  title?: string;
+  lead?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+  faqs?: { question: string; answer: string[] }[];
+}) {
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query.trim());
 
   const filtered = useMemo(() => {
-    if (!deferredQuery) return faqs;
-    return faqs.filter((faq) => matchesQuery(faq.question, faq.answer, deferredQuery));
-  }, [deferredQuery]);
+    if (!deferredQuery) return faqItems;
+    return faqItems.filter((faq) => matchesQuery(faq.question, faq.answer, deferredQuery));
+  }, [deferredQuery, faqItems]);
 
   return (
     <>
       <PageHero
         eyebrow={helpDeskContent.eyebrow}
-        title={helpDeskContent.title}
-        lead={helpDeskContent.lead}
+        title={title}
+        lead={lead}
         actions={
-          <ButtonLink href={helpDeskContent.contactHref} variant="secondary">
-            {helpDeskContent.contactLabel}
+          <ButtonLink href={ctaHref} variant="secondary">
+            {ctaLabel}
           </ButtonLink>
         }
       />
@@ -88,8 +100,8 @@ export default function HelpDeskPageContent() {
                 {helpDeskContent.emptyResults}
               </p>
               <div className="mt-6">
-                <ButtonLink href={helpDeskContent.contactHref} variant="primary">
-                  {helpDeskContent.contactLabel}
+                <ButtonLink href={ctaHref} variant="primary">
+                  {ctaLabel}
                 </ButtonLink>
               </div>
             </div>

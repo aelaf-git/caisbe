@@ -46,7 +46,13 @@ function statusLabel(ticket: TicketRow) {
   return ticket.unread_count ? `${label} · ${ticket.unread_count} new` : label;
 }
 
-export default function TicketsPageContent() {
+export default function TicketsPageContent({
+  title,
+  intro,
+}: {
+  title?: string;
+  intro?: string;
+}) {
   const { user, loading } = useStudentSession();
   const [tickets, setTickets] = useState<TicketRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,8 +76,10 @@ export default function TicketsPageContent() {
 
   const signedIn = Boolean(user);
   const hasTickets = Boolean(tickets && tickets.length > 0);
+  const heading = title?.trim() || ticketsContent.title;
+  const publicLead = intro?.trim() || ticketsContent.lead;
   const lead = !signedIn
-    ? ticketsContent.lead
+    ? publicLead
     : tickets && tickets.length === 0 && !error
       ? ticketsContent.emptyLead
       : ticketsContent.signedInLead;
@@ -80,7 +88,7 @@ export default function TicketsPageContent() {
     <>
       <PageHero
         eyebrow={ticketsContent.eyebrow}
-        title={ticketsContent.title}
+        title={heading}
         lead={lead}
         actions={
           loading ? null : signedIn ? (
