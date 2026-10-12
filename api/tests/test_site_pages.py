@@ -117,3 +117,38 @@ def test_seeding_the_same_paths_twice_does_not_duplicate(db: Session) -> None:
     assert db.query(SitePage).filter(SitePage.path == "/about/staff").count() == 1
     assert db.query(SitePage).filter(SitePage.path == "/about/what-is-built-environment").count() == 1
     assert db.query(SitePage).filter(SitePage.path == "/partners").count() == 1
+
+
+def test_seed_removes_mistaken_professional_development_pages(db: Session) -> None:
+    seed_site_pages(db)
+    professional = db.query(SitePage).filter(SitePage.path == "/professional-development").one()
+    mistaken = SitePage(
+        parent_id=professional.id,
+        title="ESG + Facility Management",
+        menu_label="ESG + Facility Management",
+        slug="esg-facility-management",
+        path="/professional-development/esg-facility-management",
+        description="Mistaken under PD.",
+        lead="Should not stay in the menu.",
+        sections=[],
+        sort_order=99,
+        show_in_menu=True,
+        status="published",
+    )
+    db.add(mistaken)
+    db.commit()
+    assert (
+        db.query(SitePage)
+        .filter(SitePage.path == "/professional-development/esg-facility-management")
+        .count()
+        == 1
+    )
+
+    seed_site_pages(db)
+    assert (
+        db.query(SitePage)
+        .filter(SitePage.path == "/professional-development/esg-facility-management")
+        .count()
+        == 0
+    )
+    assert db.query(SitePage).filter(SitePage.path == "/resources/esg-facility-management").count() == 1

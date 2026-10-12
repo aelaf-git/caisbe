@@ -157,6 +157,7 @@ class NewsPost(Base):
     slug: Mapped[str] = mapped_column(String(280), unique=True, index=True)
     short_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     long_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    external_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     cover_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     image_urls: Mapped[list | None] = mapped_column(JSON, nullable=True)
     video_urls: Mapped[list | None] = mapped_column(JSON, nullable=True)

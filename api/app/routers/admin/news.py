@@ -180,6 +180,7 @@ def admin_create_news(
         slug=_unique_news_slug(db, slug_base),
         short_description=(payload.short_description or "").strip() or None,
         long_description=(payload.long_description or "").strip() or None,
+        external_url=payload.external_url,
         cover_url=payload.cover_url,
         image_urls=image_urls or None,
         video_urls=video_urls or None,

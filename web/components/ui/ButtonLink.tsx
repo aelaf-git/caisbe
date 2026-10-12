@@ -37,8 +37,16 @@ export default function ButtonLink({
     href.startsWith("mailto:") ||
     href.startsWith("tel:");
   if (isExternal) {
+    const opensAway =
+      href.startsWith("http://") || href.startsWith("https://");
     return (
-      <a href={href} className={classNameFull}>
+      <a
+        href={href}
+        className={classNameFull}
+        {...(opensAway
+          ? { target: "_blank", rel: "noopener noreferrer" }
+          : {})}
+      >
         {children}
       </a>
     );

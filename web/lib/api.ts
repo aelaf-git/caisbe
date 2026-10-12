@@ -60,6 +60,7 @@ export type NewsPost = {
   slug: string;
   short_description: string | null;
   long_description: string | null;
+  external_url: string | null;
   cover_url: string | null;
   image_urls: string[];
   video_urls: string[];

@@ -91,12 +91,23 @@ export default async function NewsPageContent() {
                     ) : (
                       <div className="flex-1" />
                     )}
-                    <Link
-                      href={`/news/${post.slug}`}
-                      className="mt-5 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
-                    >
-                      Read more
-                    </Link>
+                    {post.external_url ? (
+                      <a
+                        href={post.external_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-5 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
+                      >
+                        Open article
+                      </a>
+                    ) : (
+                      <Link
+                        href={`/news/${post.slug}`}
+                        className="mt-5 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
+                      >
+                        Read more
+                      </Link>
+                    )}
                   </div>
                 </div>
               </article>

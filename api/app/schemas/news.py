@@ -9,12 +9,24 @@ def slugify_title(title: str) -> str:
     return slug.strip("-")[:240] or "news"
 
 
+def normalize_external_url(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if not (text.startswith("http://") or text.startswith("https://")):
+        raise ValueError("External link must start with http:// or https://")
+    return text[:1024]
+
+
 class NewsPostOut(BaseModel):
     id: int
     title: str
     slug: str
     short_description: str | None = None
     long_description: str | None = None
+    external_url: str | None = None
     cover_url: str | None = None
     image_urls: list[str] = Field(default_factory=list)
     video_urls: list[str] = Field(default_factory=list)
@@ -43,6 +55,7 @@ class NewsPostCreateIn(BaseModel):
     slug: str | None = Field(default=None, max_length=280)
     short_description: str | None = Field(default=None, max_length=2000)
     long_description: str | None = Field(default=None, max_length=50000)
+    external_url: str | None = Field(default=None, max_length=1024)
     cover_url: str | None = Field(default=None, max_length=1024)
     image_urls: list[str] = Field(default_factory=list)
     video_urls: list[str] = Field(default_factory=list)
@@ -52,12 +65,18 @@ class NewsPostCreateIn(BaseModel):
     featured: bool = False
     sort_order: int = 0
 
+    @field_validator("external_url", mode="before")
+    @classmethod
+    def _external_url(cls, value: object) -> str | None:
+        return normalize_external_url(value)
+
 
 class NewsPostUpdateIn(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     slug: str | None = Field(default=None, max_length=280)
     short_description: str | None = Field(default=None, max_length=2000)
     long_description: str | None = Field(default=None, max_length=50000)
+    external_url: str | None = Field(default=None, max_length=1024)
     cover_url: str | None = Field(default=None, max_length=1024)
     image_urls: list[str] | None = None
     video_urls: list[str] | None = None
@@ -66,3 +85,8 @@ class NewsPostUpdateIn(BaseModel):
     published: bool | None = None
     featured: bool | None = None
     sort_order: int | None = None
+
+    @field_validator("external_url", mode="before")
+    @classmethod
+    def _external_url(cls, value: object) -> str | None:
+        return normalize_external_url(value)

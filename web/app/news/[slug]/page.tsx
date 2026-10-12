@@ -42,12 +42,19 @@ export default async function NewsDetailPage({ params }: PageProps) {
         lead={post.short_description ?? undefined}
         actions={
           <>
-            <ButtonLink href="/news" variant="primary">
+            {post.external_url ? (
+              <ButtonLink href={post.external_url} variant="primary">
+                Open article
+              </ButtonLink>
+            ) : null}
+            <ButtonLink href="/news" variant={post.external_url ? "secondary" : "primary"}>
               All News
             </ButtonLink>
-            <ButtonLink href="/contact" variant="secondary">
-              Contact Us
-            </ButtonLink>
+            {!post.external_url ? (
+              <ButtonLink href="/contact" variant="secondary">
+                Contact Us
+              </ButtonLink>
+            ) : null}
           </>
         }
       >

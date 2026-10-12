@@ -1085,7 +1085,39 @@ def _top_level(db: Session, spec: dict, sort_order: int) -> None:
     db.flush()
 
 
+# Mistakenly added under Professional Development; keep Resources copies if present.
+_MISTAKEN_PD_SLUGS = (
+    "esg-facility-management",
+    "crisis-resource-center",
+    "leader-tools",
+    "component-reports",
+)
+
+
+def _remove_mistaken_professional_development_pages(db: Session) -> None:
+    professional = db.query(SitePage).filter(SitePage.path == "/professional-development").first()
+    if professional is not None:
+        rows = (
+            db.query(SitePage)
+            .filter(
+                SitePage.parent_id == professional.id,
+                SitePage.slug.in_(_MISTAKEN_PD_SLUGS),
+            )
+            .all()
+        )
+        for row in rows:
+            db.delete(row)
+    for slug in _MISTAKEN_PD_SLUGS:
+        path = f"/professional-development/{slug}"
+        row = db.query(SitePage).filter(SitePage.path == path).first()
+        if row is not None:
+            db.delete(row)
+    db.flush()
+
+
 def seed_site_pages(db: Session) -> None:
+    _remove_mistaken_professional_development_pages(db)
+
     about = _anchor(db, "about", ABOUT_INDEX)
     resources = _anchor(db, "resources", RESOURCES_INDEX)
     membership = _anchor(db, "membership", MEMBERSHIP_INDEX)
