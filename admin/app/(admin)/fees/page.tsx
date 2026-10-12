@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/auth";
 import Alert from "@/components/ui/Alert";
-import Button from "@/components/ui/Button";
+import Button, { buttonStyles } from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { fieldClassName } from "@/components/ui/FormField";
 import PageHeader from "@/components/ui/PageHeader";
@@ -225,14 +226,24 @@ export default function FeesPage() {
       {loadError ? <Alert tone="error">{loadError}</Alert> : null}
 
       <section id="pricing" className="scroll-mt-24 space-y-3">
-        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Fees & Pricing</h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="max-w-3xl space-y-1">
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Fees & Pricing</h2>
+            <p className="text-sm text-caisbe-muted">
+              Each course has its own price. Set a price when you create a course, or update it here anytime.
+            </p>
+          </div>
+          <Link href="/courses/new" className={buttonStyles({ variant: "secondary", size: "sm" })}>
+            Create course
+          </Link>
+        </div>
         <Card padding="none" className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-admin-surface-muted/70">
               <tr>
                 <th className="px-4 py-3">Course</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Price</th>
+                <th className="px-4 py-3">Price (USD)</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -270,7 +281,11 @@ export default function FeesPage() {
               {courses.length === 0 ? (
                 <tr>
                   <td className="px-4 py-6 text-caisbe-muted" colSpan={4}>
-                    No courses yet.
+                    No courses yet.{" "}
+                    <Link href="/courses/new" className="font-semibold text-caisbe-red hover:underline">
+                      Create a course
+                    </Link>{" "}
+                    and set its price.
                   </td>
                 </tr>
               ) : null}

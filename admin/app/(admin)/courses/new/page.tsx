@@ -22,10 +22,20 @@ export default function AdminCreateCoursePage() {
   const [slug, setSlug] = useState("");
   const [slugManual, setSlugManual] = useState(false);
   const [passPercent, setPassPercent] = useState(70);
+  const [priceDollars, setPriceDollars] = useState("99.00");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
+    const priceAmount = Number(priceDollars);
+    if (!Number.isFinite(priceAmount) || priceAmount < 0) {
+      await notice({
+        tone: "error",
+        title: "Check the price",
+        description: "Enter a course price of zero or more.",
+      });
+      return;
+    }
     setSubmitting(true);
     try {
       const created = await apiFetch<Course>("/admin/courses", {
@@ -36,6 +46,7 @@ export default function AdminCreateCoursePage() {
           description,
           slug: slug || slugify(code),
           pass_percent: passPercent,
+          price_cents: Math.max(0, Math.round(priceAmount * 100)),
         }),
       });
       router.replace(`/courses/${created.id}`);
@@ -116,6 +127,21 @@ export default function AdminCreateCoursePage() {
             onCommit={() => undefined}
             description="Minimum score required to complete the course and earn a certificate."
           />
+
+          <FormField
+            label="Course price (USD)"
+            hint="Students pay this at checkout. You can change it later under Payment & Fees."
+          >
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              required
+              value={priceDollars}
+              onChange={(e) => setPriceDollars(e.target.value)}
+              className={fieldClassName}
+            />
+          </FormField>
 
           <div className="flex flex-wrap justify-end gap-3 border-t border-ifma-border-light pt-5">
           <Link

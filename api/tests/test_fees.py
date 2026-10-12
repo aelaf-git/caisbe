@@ -119,6 +119,29 @@ def _fail_attempt(client: TestClient, db: Session, course: Course, headers: dict
     assert submitted.json()["passed"] is False
 
 
+def test_create_course_stores_custom_price(client: TestClient, db: Session) -> None:
+    admin = _user(db, email="fees-create-price@example.com", role="admin", name="Create Price Admin")
+    headers = _login(client, admin.email)
+
+    created = client.post(
+        "/api/admin/courses",
+        headers=headers,
+        json={
+            "code": "FEE-NEW",
+            "title": "New Priced Course",
+            "description": "Created with a custom price.",
+            "slug": "fee-new",
+            "pass_percent": 70,
+            "price_cents": 4500,
+        },
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["price_cents"] == 4500
+
+    course = db.query(Course).filter(Course.code == "FEE-NEW").one()
+    assert course.price_cents == 4500
+
+
 def test_course_price_change_is_what_checkout_charges(client: TestClient, db: Session) -> None:
     admin = _user(db, email="fees-admin@example.com", role="admin", name="Fees Admin")
     student = _user(db, email="fees-buyer@example.com")
