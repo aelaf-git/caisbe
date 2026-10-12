@@ -1,3 +1,4 @@
+import { sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { fetchPublishedTestimonials } from "@/lib/api";
 import { testimonials, testimonialsIntro } from "@/lib/data/home";
 
@@ -18,7 +19,7 @@ export default async function Testimonials() {
   if (items.length === 0) return null;
 
   return (
-    <section className="bg-[#f8fafc] py-16 md:py-24">
+    <section className={`bg-[#f8fafc] ${sectionSpacingClassName}`}>
       <div className="mx-auto max-w-7xl px-4">
         <div className="mb-10 motion-safe:animate-page-fade-in">
           <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">

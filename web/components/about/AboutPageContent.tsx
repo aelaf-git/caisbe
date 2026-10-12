@@ -34,7 +34,6 @@ export default function AboutPageContent() {
       <ContentSection
         id="mission"
         title={mission.title}
-        className="!py-20 md:!py-24"
       >
         <p className="max-w-3xl text-base leading-8 text-caisbe-text md:text-lg">
           {mission.body}
@@ -44,7 +43,7 @@ export default function AboutPageContent() {
       <ContentSection
         id="vision"
         title={vision.title}
-        className="!py-20 md:!py-24 bg-[#fafafa]"
+        className="bg-[#fafafa]"
       >
         <p className="max-w-3xl text-base leading-8 text-caisbe-text md:text-lg">
           {vision.body}
@@ -54,7 +53,6 @@ export default function AboutPageContent() {
       <ContentSection
         id="what-we-do"
         title={whatWeDo.title}
-        className="!py-20 md:!py-24"
       >
         <ul className="grid gap-4 sm:grid-cols-2">
           {whatWeDo.items.map((item) => (
@@ -74,7 +72,6 @@ export default function AboutPageContent() {
         title={leadership.title}
         description={leadership.intro}
         wide
-        className="!py-20 md:!py-24"
       >
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {leadership.people.map((person, index) => (
@@ -108,7 +105,7 @@ export default function AboutPageContent() {
         title={advisoryCouncil.title}
         description={advisoryCouncil.intro}
         wide
-        className="!py-20 md:!py-24 bg-[#fafafa]"
+        className="bg-[#fafafa]"
       >
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {advisoryCouncil.members.map((member, index) => (
@@ -145,7 +142,7 @@ export default function AboutPageContent() {
         </div>
       </ContentSection>
 
-      <ContentSection className="!py-20 md:!py-24 text-center">
+      <ContentSection className="text-center">
         <div className="mx-auto max-w-2xl">
           <h2 className="font-hopewell-display text-caisbe-text-dark text-2xl font-extrabold tracking-tight md:text-3xl">
             {builtEnvironment.title}

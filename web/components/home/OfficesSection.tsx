@@ -1,8 +1,9 @@
+import { sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { officeDirectionsUrl, officeEmbedUrl, offices } from "@/lib/data/home";
 
 export default function OfficesSection() {
   return (
-    <section className="bg-white py-16 md:py-24">
+    <section className={`bg-white ${sectionSpacingClassName}`}>
       <div className="mx-auto max-w-7xl px-4">
         <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark motion-safe:animate-page-fade-in md:text-4xl">
           Offices

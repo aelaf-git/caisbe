@@ -22,7 +22,7 @@ export default function AdvocacyPageContent() {
         }
       />
 
-      <ContentSection className="!py-20 md:!py-24">
+      <ContentSection>
         <div className="max-w-3xl space-y-6">
           {bodyParagraphs.map((paragraph) => (
             <p
@@ -38,7 +38,7 @@ export default function AdvocacyPageContent() {
       <ContentSection
         title="Strategic consultancy"
         description={advocacyContent.servicesIntro}
-        className="!py-20 md:!py-24 bg-[#fafafa]"
+        className="bg-[#fafafa]"
       >
         <div className="grid gap-6 md:grid-cols-2">
           {advocacyContent.services.map((service, index) => (

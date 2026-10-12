@@ -23,7 +23,7 @@ export function PageHero({
   className = "",
 }: PageHeroProps) {
   return (
-    <section className={`relative overflow-hidden bg-[#f8fafc] py-12 sm:py-16 md:py-24 ${className}`}>
+    <section className={`relative overflow-hidden bg-[#f8fafc] pt-12 pb-8 sm:pt-14 md:pt-16 md:pb-10 ${className}`}>
       <div className="relative mx-auto max-w-7xl px-4 motion-safe:animate-page-fade-in">
         {backHref ? (
           <div className="mb-6 sm:mb-8">
@@ -50,6 +50,8 @@ export function PageHero({
   );
 }
 
+export const sectionSpacingClassName = "py-8 md:py-10";
+
 type ContentSectionProps = {
   id?: string;
   title?: string;
@@ -72,7 +74,7 @@ export function ContentSection({
   return (
     <section
       id={id}
-      className={`scroll-mt-28 bg-transparent py-16 md:py-24 ${className}`}
+      className={`scroll-mt-28 bg-transparent ${sectionSpacingClassName} ${className}`}
     >
       <div className="mx-auto max-w-7xl px-4">
         {title ? (

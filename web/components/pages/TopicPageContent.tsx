@@ -53,6 +53,13 @@ export default function TopicPageContent({
               <FeatureList items={section.items} />
             </div>
           ) : null}
+          {section.title === "Connect with leadership" ? (
+            <div className="mt-6">
+              <ButtonLink href="/contact" variant="primary">
+                Contact us
+              </ButtonLink>
+            </div>
+          ) : null}
         </ContentSection>
       ))}
     </>

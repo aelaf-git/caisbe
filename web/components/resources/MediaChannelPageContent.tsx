@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { PageHero } from "@/components/pages/ContentPage";
+import { PageHero, sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { fetchPublishedMedia, type MediaAsset } from "@/lib/api";
 import { getMediaItem } from "@/lib/data/resources";
 
@@ -54,7 +54,7 @@ export default function MediaChannelPageContent({ channel }: { channel: Channel 
     <>
       <PageHero eyebrow="Media" title={item.title} lead={item.lead} />
 
-      <section className="bg-transparent py-16 md:py-24">
+      <section className={`bg-transparent ${sectionSpacingClassName}`}>
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
             {meta.sectionTitle}

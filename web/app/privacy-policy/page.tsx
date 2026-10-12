@@ -169,7 +169,7 @@ export default async function PrivacyPolicyPage() {
         </p>
       </PageHero>
 
-      <ContentSection className="!py-10 md:!py-14">
+      <ContentSection>
         <div className="max-w-3xl space-y-5">
           {sections.map((section) => (
             <section key={section.number} id={`section-${section.number}`}>

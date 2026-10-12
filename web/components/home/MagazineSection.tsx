@@ -1,3 +1,4 @@
+import { sectionSpacingClassName } from "@/components/pages/ContentPage";
 import ButtonLink from "@/components/ui/ButtonLink";
 import { fetchPublishedMagazines, type MediaAsset } from "@/lib/api";
 
@@ -14,7 +15,7 @@ export default async function MagazineSection() {
   }
 
   return (
-    <section className="bg-white py-16 md:py-24">
+    <section className={`bg-white ${sectionSpacingClassName}`}>
       <div className="mx-auto max-w-7xl px-4">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>

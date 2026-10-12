@@ -1117,6 +1117,23 @@ def _apply_editorial_updates(db: Session) -> None:
         if changed:
             network.sections = sections
 
+    board = db.query(SitePage).filter(SitePage.path == "/about/board-of-directors").first()
+    if board is not None:
+        leadership_title = "Connect with leadership"
+        leadership_body = (
+            "For board correspondence, nominations, or governance questions, contact the institute office."
+        )
+        next_sections = []
+        found = False
+        for section in board.sections or []:
+            if (section.get("title") or "").strip().lower() == leadership_title.lower():
+                found = True
+                section = {**section, "title": leadership_title, "body": section.get("body") or leadership_body}
+            next_sections.append(section)
+        if not found:
+            next_sections.append({"title": leadership_title, "body": leadership_body, "items": []})
+        board.sections = next_sections
+
     corporate = db.query(SitePage).filter(SitePage.path == _CORPORATE_PATH).first()
     if corporate is not None:
         corporate.description = _CORPORATE_NOTE

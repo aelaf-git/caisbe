@@ -51,7 +51,7 @@ export default function HelpDeskPageContent() {
         }
       />
 
-      <ContentSection className="!pt-6 md:!pt-8 !pb-20 md:!pb-24">
+      <ContentSection>
         <label className="block max-w-2xl">
           <span className="sr-only">Search FAQs</span>
           <div className="relative">

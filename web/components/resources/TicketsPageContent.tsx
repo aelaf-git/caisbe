@@ -96,7 +96,7 @@ export default function TicketsPageContent() {
       />
 
       {signedIn && (error || hasTickets || tickets === null) ? (
-        <ContentSection className="!py-12 md:!py-16">
+        <ContentSection>
           {error ? (
             <p className="max-w-2xl leading-7 text-caisbe-red">{error}</p>
           ) : tickets === null ? (

@@ -1,5 +1,5 @@
 import ContactForm from "@/components/contact/ContactForm";
-import { PageHero, ContentSection } from "@/components/pages/ContentPage";
+import { PageHero, ContentSection, sectionSpacingClassName } from "@/components/pages/ContentPage";
 import {
   contactContent,
   officeDirectionsUrl,
@@ -55,7 +55,7 @@ export default function ContactSection({
 }: ContactSectionProps) {
   if (variant === "home") {
     return (
-      <section className="bg-white py-16 md:py-24">
+      <section className={`bg-white ${sectionSpacingClassName}`}>
         <div className="mx-auto grid max-w-7xl items-start gap-10 px-4 lg:grid-cols-[0.85fr_1.15fr]">
           <div className="motion-safe:animate-page-fade-in">
             <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">

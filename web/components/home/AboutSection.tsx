@@ -1,3 +1,4 @@
+import { sectionSpacingClassName } from "@/components/pages/ContentPage";
 import ButtonLink from "@/components/ui/ButtonLink";
 import { aboutContent, bestPractices } from "@/lib/data/home";
 
@@ -5,7 +6,7 @@ const pillars = bestPractices.items.slice(0, 3);
 
 export default function AboutSection({ tagline }: { tagline?: string | null }) {
   return (
-    <section className="bg-[#f8fafc] py-16 md:py-24">
+    <section className={`bg-[#f8fafc] ${sectionSpacingClassName}`}>
       <div className="mx-auto max-w-7xl px-4">
         <div className="max-w-3xl">
           <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">

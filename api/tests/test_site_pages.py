@@ -193,3 +193,11 @@ def test_seed_refreshes_network_label_and_corporate_copy(db: Session) -> None:
     assert "Corporate delivery" not in {section["title"] for section in corporate.sections}
     assert corporate.description.startswith("Our corporate programmes are fully tailored")
     assert corporate.cta_label == "Contact us for details"
+
+    board = db.query(SitePage).filter(SitePage.path == "/about/board-of-directors").one()
+    board.sections = [section for section in board.sections if section["title"] != "Connect with leadership"]
+    db.commit()
+    seed_site_pages(db)
+    db.refresh(board)
+    titles = [section["title"] for section in board.sections]
+    assert "Connect with leadership" in titles

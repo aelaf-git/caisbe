@@ -1,3 +1,4 @@
+import { sectionSpacingClassName } from "@/components/pages/ContentPage";
 import Link from "next/link";
 import ButtonLink from "@/components/ui/ButtonLink";
 import {
@@ -17,7 +18,7 @@ export default async function CertificatesSection() {
 
   if (courses.length === 0) {
     return (
-      <section className="bg-white py-16 md:py-24">
+      <section className={`bg-white ${sectionSpacingClassName}`}>
         <div className="mx-auto max-w-7xl px-4">
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
@@ -41,7 +42,7 @@ export default async function CertificatesSection() {
   }
 
   return (
-    <section className="bg-[#f8fafc] py-16 md:py-24">
+    <section className={`bg-[#f8fafc] ${sectionSpacingClassName}`}>
       <div className="mx-auto max-w-7xl px-4">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHero } from "@/components/pages/ContentPage";
+import { PageHero, sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { fetchPublishedMagazines, type MediaAsset } from "@/lib/api";
 import { mediaContent } from "@/lib/data/resources";
 
@@ -33,7 +33,7 @@ export default function MagazinePageContent() {
         lead={item.lead}
       />
 
-      <section className="bg-transparent py-16 md:py-24">
+      <section className={`bg-transparent ${sectionSpacingClassName}`}>
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
             Latest issues

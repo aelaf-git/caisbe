@@ -1,8 +1,9 @@
+import { sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { bestPractices } from "@/lib/data/home";
 
 export default function SustainabilitySection() {
   return (
-    <section className="bg-[#f8fafc] py-16 md:py-24">
+    <section className={`bg-[#f8fafc] ${sectionSpacingClassName}`}>
       <div className="mx-auto max-w-7xl px-4">
         <div className="flex max-w-2xl flex-col gap-3 motion-safe:animate-page-fade-in">
           <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">

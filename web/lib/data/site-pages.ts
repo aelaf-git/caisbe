@@ -159,6 +159,7 @@ export const aboutPages: TopicPage[] = [
       {
         title: "Connect with leadership",
         body: "For board correspondence, nominations, or governance questions, contact the institute office.",
+        items: [],
       },
     ],
     { label: "Contact the Board Office", href: "/contact" },
