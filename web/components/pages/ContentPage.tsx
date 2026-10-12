@@ -93,6 +93,31 @@ export function ContentSection({
   );
 }
 
+export const heroNoteClassName =
+  "mt-4 max-w-2xl text-base leading-7 text-caisbe-text sm:text-lg sm:leading-8";
+
+export function FeatureList({
+  items,
+  tone = "text",
+}: {
+  items: readonly string[];
+  tone?: "text" | "accent";
+}) {
+  const color = tone === "accent" ? "text-caisbe-red" : "text-caisbe-text";
+  return (
+    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {items.map((item) => (
+        <li
+          key={item}
+          className={`flex min-h-14 w-full items-center rounded-[20px] border border-black/5 bg-white px-5 py-4 text-base font-medium leading-7 shadow-hopewell sm:[&:last-child:nth-child(odd)]:col-span-2 sm:text-lg sm:leading-8 ${color}`}
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 type ContentCardProps = {
   title: string;
   description?: string;

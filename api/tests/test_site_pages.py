@@ -152,3 +152,44 @@ def test_seed_removes_mistaken_professional_development_pages(db: Session) -> No
         == 0
     )
     assert db.query(SitePage).filter(SitePage.path == "/resources/esg-facility-management").count() == 1
+
+
+def test_seed_refreshes_network_label_and_corporate_copy(db: Session) -> None:
+    seed_site_pages(db)
+    overview = db.query(SitePage).filter(SitePage.path == "/network/overview").one()
+    overview.title = "Overview / Networking Groups"
+    overview.menu_label = "Overview / Networking Groups"
+    network = db.query(SitePage).filter(SitePage.path == "/network").one()
+    network.cta_label = "Networking Groups"
+    network.sections = [
+        {
+            "title": "Network options",
+            "body": "",
+            "items": ["Overview / Networking Groups", "Discussion Forum"],
+        }
+    ]
+    corporate = db.query(SitePage).filter(
+        SitePage.path == "/professional-development/learning-formats/on-site-corporate-training"
+    ).one()
+    corporate.description = "Old corporate blurb."
+    corporate.sections = [
+        {
+            "title": "Corporate delivery",
+            "body": "Content and scheduling are shaped around your team’s goals and operating context.",
+            "items": [],
+        }
+    ]
+    db.commit()
+
+    seed_site_pages(db)
+    db.refresh(overview)
+    db.refresh(network)
+    db.refresh(corporate)
+
+    assert overview.title == "Overview"
+    assert overview.menu_label == "Overview"
+    assert network.cta_label == "Overview"
+    assert network.sections[0]["items"][0] == "Overview"
+    assert "Corporate delivery" not in {section["title"] for section in corporate.sections}
+    assert corporate.description.startswith("Our corporate programmes are fully tailored")
+    assert corporate.cta_label == "Contact us for details"

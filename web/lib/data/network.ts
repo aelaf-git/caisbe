@@ -3,7 +3,7 @@ import { portalUrl } from "@/lib/api";
 export const networkPages = {
   overview: {
     slug: "overview",
-    title: "Overview / Networking Groups",
+    title: "Overview",
     description:
       "Our Networking Groups connect facility management professionals, students, industry partners, and organizations.",
     lead: "Connect with peers, students, and partners through CAISBE networking groups.",

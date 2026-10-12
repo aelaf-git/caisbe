@@ -83,7 +83,7 @@ const rawNavigation: readonly RawNavSection[] = [
         href: "/network",
         links: [
           {
-            label: "Overview / Networking Groups",
+            label: "Overview",
             href: "/network/overview",
           },
           {

@@ -693,7 +693,7 @@ EVENTS_INDEX = {
 NETWORK_PAGES = [
     {
         "slug": "overview",
-        "title": "Overview / Networking Groups",
+        "title": "Overview",
         "description": (
             "Our Networking Groups connect facility management professionals, students, industry partners, "
             "and organizations."
@@ -728,12 +728,19 @@ NETWORK_INDEX = {
         (
             "Network options",
             "",
-            ["Overview / Networking Groups", "Discussion Forum"],
+            ["Overview", "Discussion Forum"],
         ),
     ),
-    "cta_label": "Networking Groups",
+    "cta_label": "Overview",
     "cta_href": "/network/overview",
 }
+
+_OLD_NETWORK_LABEL = "Overview / Networking Groups"
+_CORPORATE_PATH = "/professional-development/learning-formats/on-site-corporate-training"
+_CORPORATE_NOTE = (
+    "Our corporate programmes are fully tailored: both the content and the scheduling are shaped around "
+    "your team's goals and operating context to ensure maximum relevance and minimal disruption."
+)
 
 LEARNING_FORMAT_PAGES = [
     {
@@ -788,18 +795,9 @@ LEARNING_FORMAT_PAGES = [
     {
         "slug": "on-site-corporate-training",
         "title": "On-Site Corporate Training",
-        "description": (
-            "Customized training at your company’s location—tailored content, flexible scheduling, and team-focused "
-            "learning without travel."
-        ),
+        "description": _CORPORATE_NOTE,
         "lead": "Bring CAISBE training to your workplace.",
-        "sections": _sections(
-            (
-                "Corporate delivery",
-                "Content and scheduling are shaped around your team’s goals and operating context.",
-                [],
-            ),
-        ),
+        "sections": [],
         "cta_label": "Contact us for details",
         "cta_href": "/contact",
     },
@@ -1094,6 +1092,42 @@ _MISTAKEN_PD_SLUGS = (
 )
 
 
+def _apply_editorial_updates(db: Session) -> None:
+    """Refresh labels and corporate copy on pages that seed will not overwrite."""
+    overview = db.query(SitePage).filter(SitePage.path == "/network/overview").first()
+    if overview is not None:
+        if overview.title == _OLD_NETWORK_LABEL:
+            overview.title = "Overview"
+        if overview.menu_label == _OLD_NETWORK_LABEL:
+            overview.menu_label = "Overview"
+
+    network = db.query(SitePage).filter(SitePage.path == "/network").first()
+    if network is not None:
+        if network.cta_label == "Networking Groups":
+            network.cta_label = "Overview"
+        sections = []
+        changed = False
+        for section in network.sections or []:
+            items = list(section.get("items") or [])
+            new_items = ["Overview" if item == _OLD_NETWORK_LABEL else item for item in items]
+            if new_items != items:
+                changed = True
+                section = {**section, "items": new_items}
+            sections.append(section)
+        if changed:
+            network.sections = sections
+
+    corporate = db.query(SitePage).filter(SitePage.path == _CORPORATE_PATH).first()
+    if corporate is not None:
+        corporate.description = _CORPORATE_NOTE
+        corporate.sections = [
+            section
+            for section in (corporate.sections or [])
+            if (section.get("title") or "").strip().lower() != "corporate delivery"
+        ]
+    db.flush()
+
+
 def _remove_mistaken_professional_development_pages(db: Session) -> None:
     professional = db.query(SitePage).filter(SitePage.path == "/professional-development").first()
     if professional is not None:
@@ -1169,5 +1203,6 @@ def seed_site_pages(db: Session) -> None:
     for index, spec in enumerate(STANDALONE_PAGES):
         _top_level(db, spec, (index + 1) * 10)
 
+    _apply_editorial_updates(db)
     _assign_paths(_pages(db))
     db.commit()

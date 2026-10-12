@@ -1,7 +1,9 @@
 import ButtonLink from "@/components/ui/ButtonLink";
 import {
   ContentSection,
+  FeatureList,
   PageHero,
+  heroNoteClassName,
 } from "@/components/pages/ContentPage";
 import type { TopicPage } from "@/lib/data/site-pages";
 
@@ -34,29 +36,22 @@ export default function TopicPageContent({
           ) : undefined
         }
       >
-        <p className="mt-6 text-base leading-7 text-caisbe-muted">
-          {page.description}
-        </p>
+        {page.description ? (
+          <p className={heroNoteClassName}>{page.description}</p>
+        ) : null}
       </PageHero>
 
       {page.sections.map((section) => (
         <ContentSection key={section.title} title={section.title}>
           {section.body ? (
-            <p className="text-base leading-7 text-caisbe-muted">{section.body}</p>
+            <p className="text-base leading-7 text-caisbe-text sm:text-lg sm:leading-8">
+              {section.body}
+            </p>
           ) : null}
           {section.items?.length ? (
-            <ul
-              className={`grid gap-3 sm:grid-cols-2 ${section.body ? "mt-6" : ""}`}
-            >
-              {section.items.map((item) => (
-                <li
-                  key={item}
-                  className="rounded-[20px] bg-white px-4 py-3 text-sm font-medium text-caisbe-text shadow-hopewell"
-                >
-                  {item}
-                </li>
-              ))}
-            </ul>
+            <div className={section.body ? "mt-6" : undefined}>
+              <FeatureList items={section.items} />
+            </div>
           ) : null}
         </ContentSection>
       ))}

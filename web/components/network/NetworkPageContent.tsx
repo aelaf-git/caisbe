@@ -2,8 +2,10 @@ import DiscussionForumHome from "@/components/network/DiscussionForumHome";
 import ButtonLink from "@/components/ui/ButtonLink";
 import {
   ContentSection,
+  FeatureList,
   PageHero,
   SubsectionIndex,
+  heroNoteClassName,
 } from "@/components/pages/ContentPage";
 import {
   networkIndexItems,
@@ -43,10 +45,7 @@ export function NetworkSubpageContent({ slug }: { slug: NetworkSlug }) {
         }
       >
         {page.paragraphs.map((paragraph) => (
-          <p
-            key={paragraph.slice(0, 40)}
-            className="mt-6 text-base leading-7 text-caisbe-muted"
-          >
+          <p key={paragraph.slice(0, 40)} className={heroNoteClassName}>
             {paragraph}
           </p>
         ))}
@@ -54,16 +53,7 @@ export function NetworkSubpageContent({ slug }: { slug: NetworkSlug }) {
       {slug === "discussion-forum" ? <DiscussionForumHome /> : null}
       {page.benefits.length > 0 ? (
         <ContentSection title="Benefits of joining">
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {page.benefits.map((benefit) => (
-              <li
-                key={benefit}
-                className="rounded-[20px] bg-white px-4 py-3 text-sm font-medium text-caisbe-text shadow-hopewell"
-              >
-                {benefit}
-              </li>
-            ))}
-          </ul>
+          <FeatureList items={page.benefits} />
         </ContentSection>
       ) : null}
     </>

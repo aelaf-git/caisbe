@@ -60,7 +60,7 @@ export default function AboutPageContent() {
           {whatWeDo.items.map((item) => (
             <li
               key={item}
-              className="rounded-[20px] bg-white px-5 py-4 shadow-hopewell text-sm font-semibold leading-6 text-caisbe-text-dark"
+              className="flex min-h-14 w-full items-center rounded-[20px] border border-black/5 bg-white px-5 py-4 text-base font-semibold leading-7 text-caisbe-text-dark shadow-hopewell sm:text-lg sm:leading-8 sm:[&:last-child:nth-child(odd)]:col-span-2"
             >
               <span className="mr-2 inline-block h-2 w-2 rounded-full bg-caisbe-red align-middle" />
               {item}
