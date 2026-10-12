@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   "/careers",
   "/contact",
   "/partners",
+  "/partners/become-a-sponsor",
   "/faq",
   "/help",
 ];

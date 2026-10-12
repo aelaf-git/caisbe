@@ -7,6 +7,7 @@ import {
 import {
   courseProgramPath,
   fetchPublishedCourses,
+  fetchPublishedSeminars,
 } from "@/lib/api";
 import { courseShortSummary } from "@/lib/courseSummary";
 import {
@@ -15,7 +16,7 @@ import {
 } from "@/lib/data/professional-development";
 
 export default async function ProfessionalDevelopmentPageContent() {
-  const { certificatesTitle, certificatesIntro, seminars, formats } =
+  const { certificatesTitle, certificatesIntro, seminars: fallbackSeminars, formats } =
     professionalDevelopmentContent;
 
   let courses: Awaited<ReturnType<typeof fetchPublishedCourses>> = [];
@@ -23,6 +24,13 @@ export default async function ProfessionalDevelopmentPageContent() {
     courses = await fetchPublishedCourses();
   } catch {
     courses = [];
+  }
+
+  let seminars: { title: string; description: string }[] = [...fallbackSeminars];
+  try {
+    seminars = await fetchPublishedSeminars();
+  } catch {
+    seminars = [...fallbackSeminars];
   }
 
   return (
@@ -74,19 +82,25 @@ export default async function ProfessionalDevelopmentPageContent() {
         description="Professional seminars that complement certificate pathways and support continuing development."
         wide
       >
-        <div className="grid gap-6 md:grid-cols-2">
-          {seminars.map((seminar, index) => (
-            <ContentCard
-              key={seminar.title}
-              title={seminar.title}
-              meta="Seminar"
-              description={seminar.description}
-              href="/contact"
-              hrefLabel="Inquire"
-              style={{ animationDelay: `${index * 70}ms` }}
-            />
-          ))}
-        </div>
+        {seminars.length === 0 ? (
+          <p className="text-base leading-7 text-caisbe-muted">
+            No seminars are published yet. Check back soon.
+          </p>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {seminars.map((seminar, index) => (
+              <ContentCard
+                key={seminar.title}
+                title={seminar.title}
+                meta="Seminar"
+                description={seminar.description}
+                href="/contact"
+                hrefLabel="Inquire"
+                style={{ animationDelay: `${index * 70}ms` }}
+              />
+            ))}
+          </div>
+        )}
       </ContentSection>
 
       <ContentSection title={formats.title} description={formats.description}>

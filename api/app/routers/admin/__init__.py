@@ -15,6 +15,7 @@ from app.routers.admin import (  # noqa: F401
     operations,
     payments,
     publishing,
+    seminars,
     students,
     testimonials,
 )

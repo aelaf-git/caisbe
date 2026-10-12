@@ -109,6 +109,13 @@ def test_seeding_the_same_paths_twice_does_not_duplicate(db: Session) -> None:
     assert built.status == "published"
     partners = db.query(SitePage).filter(SitePage.path == "/partners").one()
     assert partners.lead
+    sponsor = db.query(SitePage).filter(SitePage.path == "/partners/become-a-sponsor").one()
+    assert sponsor.parent_id == partners.id
+    assert sponsor.menu_label == "Become a Sponsor"
+    assert sponsor.title == "Sponsor, Advertise, or Exhibit with CAISBE"
+    assert sponsor.show_in_menu is True
+    assert sponsor.cta_href == "/contact"
+    assert "Built environment community" in (sponsor.lead or "")
     membership = db.query(SitePage).filter(SitePage.path == "/membership/overview").one()
     assert membership.parent_id is not None
 
@@ -117,6 +124,7 @@ def test_seeding_the_same_paths_twice_does_not_duplicate(db: Session) -> None:
     assert db.query(SitePage).filter(SitePage.path == "/about/staff").count() == 1
     assert db.query(SitePage).filter(SitePage.path == "/about/what-is-built-environment").count() == 1
     assert db.query(SitePage).filter(SitePage.path == "/partners").count() == 1
+    assert db.query(SitePage).filter(SitePage.path == "/partners/become-a-sponsor").count() == 1
 
 
 def test_seed_removes_mistaken_professional_development_pages(db: Session) -> None:

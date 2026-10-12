@@ -172,6 +172,22 @@ class NewsPost(Base):
     )
 
 
+class Seminar(Base):
+    """Seminars listed under certificate programs on the public site."""
+
+    __tablename__ = "seminars"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str] = mapped_column(Text)
+    published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class Testimonial(Base):
     """Quotes shown on the public homepage."""
 

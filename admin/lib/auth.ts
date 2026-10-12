@@ -142,6 +142,16 @@ export type JobPosting = {
   is_expired: boolean;
 };
 
+export type Seminar = {
+  id: number;
+  title: string;
+  description: string;
+  published: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Testimonial = {
   id: number;
   quote: string;

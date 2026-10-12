@@ -19,13 +19,43 @@ type SitePageApi = {
   cta_href: string | null;
 };
 
-export type HomeLanding = {
-  tagline: string | null;
-  hero_intro: string | null;
-  stats: { value: string; label: string }[];
-};
+export type HomeCard = { title: string; description: string };
 
-const EMPTY_HOME: HomeLanding = { tagline: null, hero_intro: null, stats: [] };
+export type HomeOffice = { region: string; address: string; map_query: string };
+
+export type HomeLanding = {
+  tagline: string;
+  hero_intro: string;
+  hero_button: string;
+  stats: { value: string; label: string }[];
+  about_eyebrow: string;
+  about_body: string;
+  about_cta: string;
+  about_highlights: HomeCard[];
+  certificates_title: string;
+  certificates_subtitle: string;
+  certificates_cta: string;
+  magazine_title: string;
+  magazine_subtitle: string;
+  magazine_cta: string;
+  practice_eyebrow: string;
+  practice_title: string;
+  practice_body: string;
+  practice_items: HomeCard[];
+  offices_title: string;
+  offices: HomeOffice[];
+  testimonials_eyebrow: string;
+  testimonials_title: string;
+  contact_eyebrow: string;
+  contact_title: string;
+  contact_lead: string;
+  contact_address: string;
+  contact_phone: string;
+  contact_email: string;
+  contact_hours: string;
+  contact_form_heading: string;
+  contact_cta: string;
+};
 
 function toTopicPage(page: SitePageApi): TopicPage {
   return {
@@ -63,16 +93,11 @@ export async function fetchSiteNav(): Promise<SiteNavItem[]> {
   }
 }
 
-export async function fetchHomeLanding(): Promise<HomeLanding> {
+export async function fetchHomeLanding(): Promise<HomeLanding | null> {
   try {
-    const data = await apiFetch<HomeLanding>("/site-pages/home");
-    return {
-      tagline: data.tagline || null,
-      hero_intro: data.hero_intro || null,
-      stats: data.stats ?? [],
-    };
+    return await apiFetch<HomeLanding>("/site-pages/home");
   } catch {
-    return EMPTY_HOME;
+    return null;
   }
 }
 
@@ -98,6 +123,9 @@ export function topicChrome(path: string) {
       indexHref: "/professional-development",
       indexLabel: "Programs Overview",
     };
+  }
+  if (path.startsWith("/partners/")) {
+    return { eyebrow: "Partnerships", indexHref: "/partners", indexLabel: "Become a Partner" };
   }
   if (path === "/partners") {
     return { eyebrow: "Partnerships", indexHref: "/", indexLabel: "Home" };

@@ -1,24 +1,36 @@
 import { sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { bestPractices } from "@/lib/data/home";
+import type { HomeCard } from "@/lib/sitePages";
 
-export default function SustainabilitySection() {
+export default function SustainabilitySection({
+  eyebrow = "Practice",
+  title,
+  body,
+  items,
+}: {
+  eyebrow?: string;
+  title?: string;
+  body?: string;
+  items?: HomeCard[];
+}) {
+  const cards = items ?? bestPractices.items;
   return (
     <section className={`bg-[#f8fafc] ${sectionSpacingClassName}`}>
       <div className="mx-auto max-w-7xl px-4">
         <div className="flex max-w-2xl flex-col gap-3 motion-safe:animate-page-fade-in">
-          <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">
-            Practice
-          </p>
+          {eyebrow ? (
+            <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">
+              {eyebrow}
+            </p>
+          ) : null}
           <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
-            {bestPractices.title}
+            {title ?? bestPractices.title}
           </h2>
-          <p className="text-base leading-7 text-caisbe-muted">
-            {bestPractices.description}
-          </p>
+          <p className="text-base leading-7 text-caisbe-muted">{body ?? bestPractices.description}</p>
         </div>
 
         <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {bestPractices.items.map((item, index) => (
+          {cards.map((item, index) => (
             <article
               key={item.title}
               className="rounded-[20px] bg-white p-6 text-left shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in"

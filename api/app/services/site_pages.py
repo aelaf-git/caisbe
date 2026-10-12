@@ -6,30 +6,27 @@ import json
 import re
 
 from fastapi import HTTPException, status
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.models import AppSetting, SitePage
-from app.schemas.site_pages import HomeLandingIn, HomeLandingOut, SiteNavItem, SitePageIn, SitePageOut, SiteSection
+from app.schemas.site_pages import (
+    HomeCard,
+    HomeLandingIn,
+    HomeLandingOut,
+    HomeOffice,
+    SiteNavItem,
+    SitePageIn,
+    SitePageOut,
+    SiteSection,
+)
 from app.security.html_sanitize import strip_plain_text
 
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HOME_KEY = "home_landing"
 
-DEFAULT_HOME = HomeLandingIn(
-    tagline="Transforming Buildings. Empowering Communities.",
-    hero_intro=(
-        "CAISBE prepares the next generation of facility and property management professionals "
-        "to lead sustainable transformation across buildings and infrastructure in Africa — "
-        "leveraging Canadian expertise, global standards, and green innovation. Join for "
-        "world-class education, industry standards, and professional membership."
-    ),
-    stats=[
-        {"value": "12+", "label": "Certified courses"},
-        {"value": "25+", "label": "Aggregate years of experience in the field"},
-        {"value": "120+", "label": "African based trade and professionals associations"},
-        {"value": "1520+", "label": "Members & counting more daily"},
-    ],
-)
+DEFAULT_HOME = HomeLandingIn()
+
 
 
 def _clean(value: str | None, *, limit: int) -> str:
@@ -257,6 +254,88 @@ def delete_page(db: Session, page: SitePage) -> None:
     db.commit()
 
 
+def _cards(items: list[HomeCard]) -> list[dict]:
+    cleaned = []
+    for item in items:
+        title = _clean(item.title, limit=200)
+        description = _clean(item.description, limit=4000)
+        if title or description:
+            if not title or not description:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Each card needs a title and a description.",
+                )
+            cleaned.append({"title": title, "description": description})
+    return cleaned
+
+
+def _offices(items: list[HomeOffice]) -> list[dict]:
+    cleaned = []
+    for item in items:
+        region = _clean(item.region, limit=80)
+        address = _clean(item.address, limit=400)
+        map_query = _clean(item.map_query, limit=300) or address.replace("\n", " ")
+        if region or address:
+            if not region or not address:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Each office needs a region and an address.",
+                )
+            cleaned.append({"region": region, "address": address, "map_query": map_query})
+    return cleaned
+
+
+def _landing_from(payload: HomeLandingIn) -> HomeLandingOut:
+    cleaned = payload
+    text_fields = {
+        "tagline": 200,
+        "hero_intro": 2000,
+        "hero_button": 80,
+        "about_eyebrow": 120,
+        "about_body": 4000,
+        "about_cta": 80,
+        "certificates_title": 160,
+        "certificates_subtitle": 240,
+        "certificates_cta": 80,
+        "magazine_title": 160,
+        "magazine_subtitle": 300,
+        "magazine_cta": 80,
+        "practice_eyebrow": 80,
+        "practice_title": 200,
+        "practice_body": 500,
+        "offices_title": 80,
+        "testimonials_eyebrow": 80,
+        "testimonials_title": 200,
+        "contact_eyebrow": 80,
+        "contact_title": 120,
+        "contact_lead": 500,
+        "contact_address": 400,
+        "contact_phone": 120,
+        "contact_email": 160,
+        "contact_hours": 160,
+        "contact_form_heading": 120,
+        "contact_cta": 80,
+    }
+    stored = cleaned.model_dump()
+    for key, limit in text_fields.items():
+        stored[key] = _clean(stored[key], limit=limit)
+    stored["stats"] = [
+        {"value": _clean(item["value"], limit=40), "label": _clean(item["label"], limit=160)}
+        for item in stored["stats"]
+    ]
+    stored["about_highlights"] = _cards([HomeCard.model_validate(item) for item in stored["about_highlights"]])
+    stored["practice_items"] = _cards([HomeCard.model_validate(item) for item in stored["practice_items"]])
+    stored["offices"] = _offices([HomeOffice.model_validate(item) for item in stored["offices"]])
+    if not stored["tagline"] or not stored["hero_intro"] or any(
+        not item["value"] or not item["label"] for item in stored["stats"]
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Fill in the tagline, intro, and each statistic.",
+        )
+    return HomeLandingOut.model_validate(stored)
+
+
 def read_home(db: Session) -> HomeLandingOut | None:
     row = db.query(AppSetting).filter(AppSetting.key == HOME_KEY).first()
     if row is None or not (row.value or "").strip():
@@ -265,33 +344,26 @@ def read_home(db: Session) -> HomeLandingOut | None:
         data = json.loads(row.value)
     except json.JSONDecodeError:
         return None
-    return HomeLandingOut.model_validate(data)
+    if not isinstance(data, dict):
+        return None
+    merged = {**DEFAULT_HOME.model_dump(), **data}
+    try:
+        return HomeLandingOut.model_validate(merged)
+    except ValidationError:
+        return HomeLandingOut.model_validate(DEFAULT_HOME.model_dump())
 
 
 def write_home(db: Session, payload: HomeLandingIn) -> HomeLandingOut:
-    cleaned = HomeLandingIn(
-        tagline=_clean(payload.tagline, limit=200),
-        hero_intro=_clean(payload.hero_intro, limit=2000),
-        stats=[
-            {"value": _clean(item.value, limit=40), "label": _clean(item.label, limit=160)}
-            for item in payload.stats
-        ],
-    )
-    if not cleaned.tagline or not cleaned.hero_intro or any(not item.value or not item.label for item in cleaned.stats):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Fill in the tagline, intro, and each statistic.")
-    stored = cleaned.model_dump()
+    stored = _landing_from(payload)
     row = db.query(AppSetting).filter(AppSetting.key == HOME_KEY).first()
-    encoded = json.dumps(stored)
+    encoded = json.dumps(stored.model_dump())
     if row is None:
         db.add(AppSetting(key=HOME_KEY, value=encoded))
     else:
         row.value = encoded
     db.commit()
-    return HomeLandingOut.model_validate(stored)
+    return stored
 
 
 def home_for_admin(db: Session) -> HomeLandingOut:
-    saved = read_home(db)
-    if saved and saved.tagline and saved.hero_intro and saved.stats:
-        return saved
-    return HomeLandingOut.model_validate(DEFAULT_HOME.model_dump())
+    return read_home(db) or HomeLandingOut.model_validate(DEFAULT_HOME.model_dump())

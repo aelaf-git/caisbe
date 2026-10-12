@@ -8,7 +8,18 @@ import {
 import { courseShortSummary } from "@/lib/courseSummary";
 import { certificatesIntro } from "@/lib/data/home";
 
-export default async function CertificatesSection() {
+export default async function CertificatesSection({
+  title,
+  subtitle,
+  cta,
+}: {
+  title?: string;
+  subtitle?: string;
+  cta?: string;
+}) {
+  const heading = title ?? certificatesIntro.title;
+  const line = subtitle ?? certificatesIntro.subtitle;
+  const linkLabel = cta ?? certificatesIntro.cta;
   let courses: Awaited<ReturnType<typeof fetchPublishedCourses>> = [];
   try {
     courses = await fetchPublishedCourses();
@@ -23,15 +34,17 @@ export default async function CertificatesSection() {
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
-                {certificatesIntro.title}
+                {heading}
               </h2>
               <p className="mt-2 text-base text-caisbe-muted">
-                {certificatesIntro.subtitle}
+                {line}
               </p>
             </div>
-            <ButtonLink href="/professional-development" variant="text">
-              {certificatesIntro.cta}
-            </ButtonLink>
+            {linkLabel ? (
+              <ButtonLink href="/professional-development" variant="text">
+                {linkLabel}
+              </ButtonLink>
+            ) : null}
           </div>
           <p className="text-base leading-7 text-caisbe-muted">
             Certificate programs will appear here once published by CAISBE.
@@ -47,15 +60,17 @@ export default async function CertificatesSection() {
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
-              {certificatesIntro.title}
+              {heading}
             </h2>
             <p className="mt-2 text-base text-caisbe-muted">
-              {certificatesIntro.subtitle}
+              {line}
             </p>
           </div>
-          <ButtonLink href="/professional-development" variant="text">
-            {certificatesIntro.cta}
-          </ButtonLink>
+          {linkLabel ? (
+            <ButtonLink href="/professional-development" variant="text">
+              {linkLabel}
+            </ButtonLink>
+          ) : null}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

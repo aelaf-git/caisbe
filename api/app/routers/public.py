@@ -20,6 +20,7 @@ from app.models import (
     MembershipCertificateType,
     NewsPost,
     NewsletterSubscriber,
+    Seminar,
     Testimonial,
     User,
 )
@@ -31,6 +32,7 @@ from app.schemas.events import IndustryEventOut
 from app.schemas.jobs import JobPostingOut
 from app.schemas.membership_certificates import MembershipCertificateTypePublicOut
 from app.schemas.news import NewsPostOut
+from app.schemas.seminars import SeminarOut
 from app.schemas.testimonials import TestimonialOut
 from app.services.analytics import record_site_visit
 from app.services.commerce import apply_profile_fields, normalize_membership_type
@@ -145,6 +147,19 @@ def list_active_jobs(
         item.is_expired = False
         out.append(item)
     return out
+
+
+@router.get("/seminars", response_model=list[SeminarOut])
+def list_published_seminars(
+    db: Session = Depends(get_db),
+) -> list[SeminarOut]:
+    rows = (
+        db.query(Seminar)
+        .filter(Seminar.published.is_(True))
+        .order_by(Seminar.sort_order.asc(), Seminar.id.asc())
+        .all()
+    )
+    return [SeminarOut.model_validate(row) for row in rows]
 
 
 @router.get("/testimonials", response_model=list[TestimonialOut])

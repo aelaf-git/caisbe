@@ -93,6 +93,14 @@ export type HeroSlide = {
   media_type: "image" | "video" | string;
 };
 
+export type Seminar = {
+  id: number;
+  title: string;
+  description: string;
+  published: boolean;
+  sort_order: number;
+};
+
 export type Testimonial = {
   id: number;
   quote: string;
@@ -192,6 +200,10 @@ export async function fetchActiveJobs(options?: {
   if (options?.featured) params.set("featured", "true");
   const query = params.toString();
   return apiFetch<JobPosting[]>(`/jobs${query ? `?${query}` : ""}`);
+}
+
+export async function fetchPublishedSeminars(): Promise<Seminar[]> {
+  return apiFetch<Seminar[]>("/seminars");
 }
 
 export async function fetchPublishedTestimonials(): Promise<Testimonial[]> {

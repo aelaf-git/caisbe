@@ -52,3 +52,14 @@ export const partnersContent = {
   metaDescription:
     "Partner with CAISBE for group enrollment, dedicated support, and respected credentials across Africa and Canada.",
 };
+
+export const sponsorContent = {
+  eyebrow: "Partnerships",
+  title: "Sponsor, Advertise, or Exhibit with CAISBE",
+  menuLabel: "Become a Sponsor",
+  lead:
+    "Connect with Built environment community, professionals, educational institutions, and organizations shaping the future of the built environment in Canada and Africa. Partner with CAISBE to showcase your products and services, promote your brand, support professional education, and build valuable networks across the facilities management, real estate, construction, and sustainability sectors.",
+  ctaLabel: "Become a Sponsor",
+  ctaHref: "/contact",
+  seoTitle: "Become a Sponsor | CAISBE",
+};

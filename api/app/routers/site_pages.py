@@ -16,7 +16,6 @@ from app.services.site_pages import (
     nav_items,
     page_out,
     published_page,
-    read_home,
     save_page,
     write_home,
 )
@@ -39,7 +38,7 @@ def public_site_page(
 
 @router.get("/site-pages/home", response_model=HomeLandingOut)
 def public_home_landing(db: Session = Depends(get_db)) -> HomeLandingOut:
-    return read_home(db) or HomeLandingOut()
+    return home_for_admin(db)
 
 
 @router.get("/admin/site-pages", response_model=list[SitePageOut])

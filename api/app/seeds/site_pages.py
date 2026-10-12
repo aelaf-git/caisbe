@@ -972,6 +972,21 @@ STANDALONE_PAGES = [
     },
 ]
 
+SPONSOR_PAGE = {
+    "slug": "become-a-sponsor",
+    "title": "Sponsor, Advertise, or Exhibit with CAISBE",
+    "menu_label": "Become a Sponsor",
+    "lead": (
+        "Connect with Built environment community, professionals, educational institutions, and organizations shaping "
+        "the future of the built environment in Canada and Africa. Partner with CAISBE to showcase your products and "
+        "services, promote your brand, support professional education, and build valuable networks across the "
+        "facilities management, real estate, construction, and sustainability sectors."
+    ),
+    "sections": [],
+    "cta_label": "Become a Sponsor",
+    "cta_href": "/contact",
+}
+
 
 def _is_blank(page: SitePage) -> bool:
     return (
@@ -1219,6 +1234,10 @@ def seed_site_pages(db: Session) -> None:
         _child(db, learning_formats, spec, (index + 1) * 10)
     for index, spec in enumerate(STANDALONE_PAGES):
         _top_level(db, spec, (index + 1) * 10)
+
+    partners_page = db.query(SitePage).filter(SitePage.path == "/partners").first()
+    if partners_page is not None:
+        _child(db, partners_page, SPONSOR_PAGE, 10)
 
     _apply_editorial_updates(db)
     _assign_paths(_pages(db))
