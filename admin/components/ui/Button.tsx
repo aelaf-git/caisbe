@@ -16,9 +16,9 @@ export function buttonStyles({
     primary:
       "border-2 border-caisbe-red bg-caisbe-red text-white hover:border-caisbe-red-dark hover:bg-caisbe-red-dark focus-visible:ring-caisbe-red/25",
     secondary:
-      "border-2 border-caisbe-red bg-white text-caisbe-red hover:bg-caisbe-red hover:text-white focus-visible:ring-caisbe-red/15",
+      "border-2 border-caisbe-red bg-admin-surface text-caisbe-red hover:bg-caisbe-red hover:text-white focus-visible:ring-caisbe-red/15",
     ghost:
-      "text-caisbe-muted hover:bg-[#f1f5f9] hover:text-caisbe-text focus-visible:ring-ifma-border",
+      "text-caisbe-muted hover:bg-admin-surface-muted hover:text-caisbe-text focus-visible:ring-ifma-border",
     danger:
       "border-2 border-caisbe-red bg-caisbe-red text-white hover:border-caisbe-red-dark hover:bg-caisbe-red-dark focus-visible:ring-caisbe-red/25",
   };

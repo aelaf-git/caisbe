@@ -34,7 +34,6 @@ export default function AboutPageContent() {
       <ContentSection
         id="mission"
         title={mission.title}
-        className="!py-20 md:!py-24"
       >
         <p className="max-w-3xl text-base leading-8 text-caisbe-text md:text-lg">
           {mission.body}
@@ -44,7 +43,7 @@ export default function AboutPageContent() {
       <ContentSection
         id="vision"
         title={vision.title}
-        className="!py-20 md:!py-24 bg-[#fafafa]"
+        className="bg-[#fafafa]"
       >
         <p className="max-w-3xl text-base leading-8 text-caisbe-text md:text-lg">
           {vision.body}
@@ -54,13 +53,12 @@ export default function AboutPageContent() {
       <ContentSection
         id="what-we-do"
         title={whatWeDo.title}
-        className="!py-20 md:!py-24"
       >
         <ul className="grid gap-4 sm:grid-cols-2">
           {whatWeDo.items.map((item) => (
             <li
               key={item}
-              className="rounded-[20px] bg-white px-5 py-4 shadow-hopewell text-sm font-semibold leading-6 text-caisbe-text-dark"
+              className="flex min-h-14 w-full items-center rounded-[20px] border border-black/5 bg-white px-5 py-4 text-base font-semibold leading-7 text-caisbe-text-dark shadow-hopewell sm:text-lg sm:leading-8 sm:[&:last-child:nth-child(odd)]:col-span-2"
             >
               <span className="mr-2 inline-block h-2 w-2 rounded-full bg-caisbe-red align-middle" />
               {item}
@@ -74,7 +72,6 @@ export default function AboutPageContent() {
         title={leadership.title}
         description={leadership.intro}
         wide
-        className="!py-20 md:!py-24"
       >
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {leadership.people.map((person, index) => (
@@ -86,7 +83,7 @@ export default function AboutPageContent() {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-caisbe-red">
                 {person.role}
               </p>
-              <h3 className="font-display mt-3 text-xl font-semibold text-caisbe-text-dark">
+              <h3 className="font-hopewell-display mt-3 text-xl font-bold tracking-tight text-caisbe-text-dark">
                 {person.name}
               </h3>
               <p className="mt-2 text-sm font-medium leading-6 text-caisbe-text">
@@ -108,7 +105,7 @@ export default function AboutPageContent() {
         title={advisoryCouncil.title}
         description={advisoryCouncil.intro}
         wide
-        className="!py-20 md:!py-24 bg-[#fafafa]"
+        className="bg-[#fafafa]"
       >
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {advisoryCouncil.members.map((member, index) => (
@@ -129,12 +126,12 @@ export default function AboutPageContent() {
                     className="h-full w-full object-contain p-2"
                   />
                 ) : (
-                  <span className="font-display text-sm font-bold tracking-wide text-caisbe-red">
+                  <span className="font-hopewell-display text-sm font-bold tracking-wide text-caisbe-red">
                     {member.shortName}
                   </span>
                 )}
               </div>
-              <h3 className="font-display mt-4 text-base font-semibold leading-snug text-caisbe-text-dark">
+              <h3 className="font-hopewell-display mt-4 text-base font-bold leading-snug tracking-tight text-caisbe-text-dark">
                 {member.name}
               </h3>
               <p className="mt-2 text-sm leading-6 text-caisbe-text">
@@ -145,9 +142,9 @@ export default function AboutPageContent() {
         </div>
       </ContentSection>
 
-      <ContentSection className="!py-20 md:!py-24 text-center">
+      <ContentSection className="text-center">
         <div className="mx-auto max-w-2xl">
-          <h2 className="font-display text-caisbe-text-dark text-2xl font-semibold md:text-3xl">
+          <h2 className="font-hopewell-display text-caisbe-text-dark text-2xl font-extrabold tracking-tight md:text-3xl">
             {builtEnvironment.title}
           </h2>
           <p className="mt-4 text-base leading-8 text-caisbe-text">

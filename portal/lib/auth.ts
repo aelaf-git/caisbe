@@ -1,5 +1,18 @@
 const TOKEN_KEY = "caisbe_portal_access_token";
 
+function sessionCookieDomain(): string {
+  if (typeof window === "undefined") return "";
+  const host = window.location.hostname;
+  if (host === "caisbe.org" || host.endsWith(".caisbe.org")) return "; Domain=.caisbe.org";
+  return "";
+}
+
+function clearLegacyCookie(): void {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${TOKEN_KEY}=; Path=/; Max-Age=0; SameSite=Lax${sessionCookieDomain()}${secure}`;
+}
+
 export type AuthUser = {
   id: number;
   full_name: string;
@@ -22,6 +35,10 @@ export type AuthUser = {
   pending_membership_price_cents?: number | null;
   pending_membership_currency?: string | null;
   pending_membership_label?: string | null;
+  ui_theme?: string;
+  ui_font_size?: string;
+  ui_font_body?: string;
+  ui_font_display?: string;
 };
 
 export type RegisterPayload = {
@@ -61,52 +78,88 @@ export type Enrollment = {
   course: Course;
   exam_passed?: boolean;
   certificate_code?: string | null;
+  topics_completed: number;
+  topics_total: number;
+  quizzes_completed: number;
+  quizzes_total: number;
+  assignments_completed: number;
+  assignments_total: number;
+  has_final_exam: boolean;
 };
 
 export type TokenResponse = {
-  access_token: string;
+  access_token?: string;
   token_type: string;
   user: AuthUser;
 };
 
+export type RegisterPendingResponse = {
+  message: string;
+  email: string;
+};
+
+/** Legacy localStorage token, used once so an existing sign-in can move into the HttpOnly cookie. */
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(TOKEN_KEY);
 }
 
-export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
+export function setToken(_token: string): void {
+  // The API proxy stores the session in an HttpOnly cookie. The page does not keep the token.
 }
 
-export function clearToken(): void {
+export function dropReadableToken(): void {
+  if (typeof window === "undefined") return;
   localStorage.removeItem(TOKEN_KEY);
+  clearLegacyCookie();
+}
+
+export async function clearToken(): Promise<void> {
+  dropReadableToken();
+  await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
 }
 
 export class ApiError extends Error {
   status: number;
   detail: string;
+  orderId?: number;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, orderId?: number) {
     super(detail);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
+    this.orderId = orderId;
   }
 }
 
 async function parseError(response: Response): Promise<ApiError> {
   let detail = `Request failed (${response.status})`;
+  let orderId: number | undefined;
   try {
-    const data = (await response.json()) as { detail?: string | { msg?: string }[] };
+    const text = await response.text();
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    if (contentType.includes("text/html") || text.trimStart().startsWith("<!")) {
+      return new ApiError(
+        response.status,
+        "Unable to reach the server. Please try again in a moment.",
+      );
+    }
+    const data = JSON.parse(text) as {
+      detail?: string | { msg?: string }[] | { message?: string; order_id?: number };
+    };
     if (typeof data.detail === "string") {
       detail = data.detail;
     } else if (Array.isArray(data.detail) && data.detail[0]?.msg) {
       detail = data.detail[0].msg;
+    } else if (data.detail && typeof data.detail === "object" && "message" in data.detail) {
+      if (typeof data.detail.message === "string") detail = data.detail.message;
+      if (typeof data.detail.order_id === "number") orderId = data.detail.order_id;
     }
   } catch {
     // keep default
   }
-  return new ApiError(response.status, detail);
+  return new ApiError(response.status, detail, orderId);
 }
 
 export async function apiFetch<T>(

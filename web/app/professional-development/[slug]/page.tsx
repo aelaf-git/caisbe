@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import CertificateProgramPageContent from "@/components/professional-development/CertificateProgramPageContent";
 import { fetchPublishedCourses } from "@/lib/api";
+import { courseShortSummary } from "@/lib/courseSummary";
 
 type CertificatePageProps = {
   params: Promise<{ slug: string }>;
@@ -19,7 +20,7 @@ export async function generateMetadata({
     }
     return {
       title: `${course.title} | CAISBE`,
-      description: course.description || undefined,
+      description: courseShortSummary(course.description),
     };
   } catch {
     return { title: "Certificate Program | CAISBE" };

@@ -41,6 +41,17 @@ export type ContentBlock = {
   sort_order: number;
   completed?: boolean;
   review_status?: string | null;
+  points_possible?: number | null;
+  due_at?: string | null;
+  submission_score?: number | null;
+  submission_feedback?: string | null;
+  submission_file_url?: string | null;
+  submission_file_name?: string | null;
+  submission_body?: string | null;
+  submitted_at?: string | null;
+  can_submit?: boolean;
+  can_resubmit?: boolean;
+  is_late?: boolean;
   quiz: Quiz | null;
 };
 
@@ -68,6 +79,8 @@ export type FinalExam = {
   time_limit_minutes: number | null;
   questions_to_appear?: number | null;
   question_bank_size?: number;
+  secure_mode?: boolean;
+  max_integrity_violations?: number;
   questions: QuizQuestion[];
 };
 
@@ -85,6 +98,17 @@ export type ExamSessionState = {
   latest_passed: boolean | null;
   order: ExamOrder | null;
   questions?: QuizQuestion[];
+  secure_mode?: boolean;
+  secure_ok?: boolean;
+  violation_count?: number;
+  max_integrity_violations?: number;
+  locked_out?: boolean;
+};
+
+export type ExamPrecheckResult = {
+  allowed: boolean;
+  reasons: string[];
+  secure_ok: boolean;
 };
 
 export type CertificateTemplate = {
@@ -102,6 +126,7 @@ export type CourseDetail = {
   status: string;
   cover_url: string | null;
   pass_percent: number;
+  content_protection?: boolean;
   chapters: Chapter[];
   final_exam: FinalExam | null;
   certificate_template?: CertificateTemplate | null;
@@ -124,6 +149,8 @@ export type QuizAttempt = {
   passed: boolean;
   certificate_code: string | null;
   reviews?: QuizAnswerReview[];
+  integrity_violations?: number;
+  locked_out?: boolean;
 };
 
 export type Certificate = {
@@ -140,6 +167,7 @@ export type Certificate = {
   student_name: string;
   title: string;
   body: string;
+  program_name?: string;
   verify_url?: string | null;
   issued_by?: string;
 };

@@ -649,6 +649,8 @@ function AssignmentsPanel({
   const [source, setSource] = useState<"file" | "instructions">("file");
   const [file, setFile] = useState<File | null>(null);
   const [instructions, setInstructions] = useState("");
+  const [points, setPoints] = useState("");
+  const [due, setDue] = useState("");
   const [saving, setSaving] = useState(false);
 
   function resetAssignmentForm() {
@@ -656,6 +658,8 @@ function AssignmentsPanel({
     setSource("file");
     setFile(null);
     setInstructions("");
+    setPoints("");
+    setDue("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -700,6 +704,8 @@ function AssignmentsPanel({
           label,
           url,
           body,
+          points_possible: points.trim() ? Number(points) : null,
+          due_at: due ? new Date(due).toISOString() : null,
           sort_order: (chapter.blocks ?? []).length,
         }),
       });
@@ -752,6 +758,8 @@ function AssignmentsPanel({
               key={block.id}
               block={block}
               onDelete={() => void deleteAssignment(block)}
+              onChanged={onChanged}
+              onError={onError}
             />
           ))}
         </ul>
@@ -817,6 +825,29 @@ function AssignmentsPanel({
             />
           </label>
           )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium text-caisbe-text">Points (optional)</span>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={points}
+                onChange={(event) => setPoints(event.target.value)}
+                placeholder="Leave blank for pass / fail"
+                className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium text-caisbe-text">Due date (optional)</span>
+              <input
+                type="datetime-local"
+                value={due}
+                onChange={(event) => setDue(event.target.value)}
+                className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+              />
+            </label>
+          </div>
           <Button
             type="submit"
             disabled={saving}
@@ -829,14 +860,60 @@ function AssignmentsPanel({
   );
 }
 
+function toLocalInput(iso: string | null | undefined) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 function AssignmentListItem({
   block,
   onDelete,
+  onChanged,
+  onError,
 }: {
   block: ContentBlock;
   onDelete: () => void;
+  onChanged: () => Promise<void>;
+  onError: (message: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [points, setPoints] = useState(block.points_possible == null ? "" : String(block.points_possible));
+  const [due, setDue] = useState(toLocalInput(block.due_at));
+  const [saving, setSaving] = useState(false);
+  const meta = [
+    block.url ? block.label || "Uploaded file" : "Written instructions",
+    block.points_possible != null ? `${block.points_possible} points` : "Pass / fail",
+    block.due_at ? `Due ${new Date(block.due_at).toLocaleString()}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  async function saveGrading(event: FormEvent) {
+    event.preventDefault();
+    const parsed = points.trim() ? Number(points) : null;
+    if (parsed != null && (!Number.isInteger(parsed) || parsed < 1)) {
+      onError("Points must be a whole number of at least 1.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await apiFetch(`/admin/blocks/${block.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          points_possible: parsed,
+          due_at: due ? new Date(due).toISOString() : null,
+        }),
+      });
+      await onChanged();
+    } catch (err) {
+      onError(err instanceof ApiError ? err.detail : "Unable to update assignment.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <li className="border border-ifma-border-light">
@@ -848,9 +925,7 @@ function AssignmentListItem({
         />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-caisbe-text">{block.title || "Assignment"}</p>
-          <p className="truncate text-xs text-caisbe-muted">
-            {block.url ? block.label || "Uploaded file" : "Written instructions"}
-          </p>
+          <p className="truncate text-xs text-caisbe-muted">{meta}</p>
         </div>
         <DeleteIconButton
           label={`Delete assignment ${block.title || ""}`.trim()}
@@ -858,8 +933,36 @@ function AssignmentListItem({
         />
       </div>
       {expanded ? (
-        <div className="border-t border-ifma-border-light px-4 py-3">
+        <div className="space-y-4 border-t border-ifma-border-light px-4 py-3">
           <AssignmentFilePreview block={block} />
+          <form onSubmit={(event) => void saveGrading(event)} className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium text-caisbe-text">Points</span>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={points}
+                onChange={(event) => setPoints(event.target.value)}
+                placeholder="Pass / fail"
+                className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium text-caisbe-text">Due date</span>
+              <input
+                type="datetime-local"
+                value={due}
+                onChange={(event) => setDue(event.target.value)}
+                className="h-11 w-full rounded-md border border-ifma-border px-3 text-sm outline-none focus:border-caisbe-green"
+              />
+            </label>
+            <div className="sm:col-span-2">
+              <Button type="submit" size="sm" disabled={saving}>
+                {saving ? "Saving…" : "Save points and due date"}
+              </Button>
+            </div>
+          </form>
         </div>
       ) : null}
     </li>

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch, ApiError, type AuthUser } from "@/lib/auth";
 import {
@@ -125,15 +125,18 @@ export default function MembershipApplicationForm({
   variant = "account",
   user = null,
   onRegistered,
+  onPendingVerification,
   onSuccess,
 }: {
   kind: Kind;
   variant?: Variant;
   user?: AuthUser | null;
   onRegistered?: () => void;
+  onPendingVerification?: (email: string) => void;
   onSuccess?: () => void;
 }) {
   const { register } = useAuth();
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
   const names = splitName(user?.full_name || user?.given_name);
   const [mode, setMode] = useState<Mode>("online");
   const [firstName, setFirstName] = useState(user?.given_name || names.first);
@@ -176,7 +179,7 @@ export default function MembershipApplicationForm({
   const isRenewal = kind === "renewal";
   const isRegister = variant === "register";
   const title = isRegister
-    ? "Create your CAISBE account"
+    ? "Create your myCAISBE account"
     : isRenewal
       ? "Membership Renewal"
       : "Upgrade membership";
@@ -215,6 +218,11 @@ export default function MembershipApplicationForm({
   useEffect(() => {
     setSupportingDocument(null);
   }, [selectedType]);
+
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   function toggle<T extends string>(
     current: FlagMap<T>,
@@ -322,25 +330,31 @@ export default function MembershipApplicationForm({
       const selectedIsStudent = (selectedType || "student") === "student";
 
       if (isRegister) {
-        await register({
-          full_name: fullName,
-          email,
-          phone,
-          country,
-          city,
-          password,
-          given_name: firstName.trim() || null,
-          family_name: lastName.trim() || null,
-          address: address.trim() || null,
-          organization: organization.trim().slice(0, 160) || null,
-          job_title: position.trim().slice(0, 120) || null,
-          membership_type: selectedType,
-          details,
-        });
+        const body = new FormData();
+        body.append("full_name", fullName);
+        body.append("email", email);
+        body.append("phone", phone);
+        body.append("country", country);
+        body.append("city", city);
+        body.append("password", password);
+        if (firstName.trim()) body.append("given_name", firstName.trim());
+        if (lastName.trim()) body.append("family_name", lastName.trim());
+        if (address.trim()) body.append("address", address.trim());
+        if (organization.trim()) body.append("organization", organization.trim().slice(0, 160));
+        if (position.trim()) body.append("job_title", position.trim().slice(0, 120));
+        body.append("membership_type", selectedType || "student");
+        body.append("details", details);
         if (supportingDocument) {
-          await uploadSupportingDocument(supportingDocument, supportingLabel);
+          body.append("supporting_document", supportingDocument);
+          body.append("supporting_document_label", supportingLabel);
         }
-        onRegistered?.();
+        const pending = await register(body);
+        setMessage(
+          pending.message ||
+            "Check your email to verify and open your account. Your account is created only after you verify.",
+        );
+        setSupportingDocument(null);
+        onPendingVerification?.(pending.email);
         return;
       }
 
@@ -374,6 +388,9 @@ export default function MembershipApplicationForm({
       onSuccess?.();
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : err instanceof Error ? err.message : "Unable to submit.");
+      requestAnimationFrame(() => {
+        errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
     } finally {
       setBusy(false);
     }
@@ -435,13 +452,22 @@ export default function MembershipApplicationForm({
           </p>
           <div className="mt-3 flex flex-wrap gap-4">
             {isRenewal ? null : (
-              <a
-                href={siteUrl("/forms/caisbe-membership-registration.docx")}
-                download="CAISBE-Membership-Registration.docx"
-                className="inline-flex text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
-              >
-                Download Word form
-              </a>
+              <>
+                <a
+                  href={siteUrl("/forms/caisbe-membership-registration.pdf")}
+                  download="CAISBE-Membership-Registration.pdf"
+                  className="inline-flex text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                >
+                  Download PDF form
+                </a>
+                <a
+                  href={siteUrl("/forms/caisbe-membership-registration.docx")}
+                  download="CAISBE-Membership-Registration.docx"
+                  className="inline-flex text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                >
+                  Download Word form
+                </a>
+              </>
             )}
             <a
               href={printHref}
@@ -468,7 +494,6 @@ export default function MembershipApplicationForm({
         </div>
       ) : null}
 
-      {error ? <p className="mt-4 text-sm text-caisbe-red">{error}</p> : null}
       {message ? <p className="mt-4 text-sm text-caisbe-text">{message}</p> : null}
 
       {mode === "online" || isRegister ? (
@@ -749,11 +774,20 @@ export default function MembershipApplicationForm({
       </label>
       ) : null}
 
-      <div className="mt-6">
+      <div className="mt-6 space-y-3">
+        {error ? (
+          <p
+            ref={errorRef}
+            role="alert"
+            className="rounded-lg border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red"
+          >
+            {error}
+          </p>
+        ) : null}
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+          className="inline-flex h-11 w-full items-center justify-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
         >
           {busy
             ? "Submitting…"

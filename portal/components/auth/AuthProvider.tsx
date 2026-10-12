@@ -11,19 +11,27 @@ import {
 import {
   apiFetch,
   clearToken,
+  dropReadableToken,
   getToken,
-  setToken,
-  type AuthUser,
+    type AuthUser,
   type RegisterPayload,
+  type RegisterPendingResponse,
   type TokenResponse,
 } from "@/lib/auth";
+import {
+  appearanceFromUser,
+  applyAppearance,
+  clearActiveAppearance,
+  setActiveAppearanceUserId,
+  writeStoredAppearance,
+} from "@/lib/appearance";
 
 type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
-  register: (payload: RegisterPayload) => Promise<AuthUser>;
-  logout: () => void;
+  register: (payload: RegisterPayload | FormData) => Promise<RegisterPendingResponse>;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 };
 
@@ -34,17 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
-    const token = getToken();
-    if (!token) {
-      setUser(null);
-      return;
-    }
-
     try {
       const me = await apiFetch<AuthUser>("/auth/me");
+      if (getToken()) dropReadableToken();
       setUser(me);
     } catch {
-      clearToken();
+      await clearToken();
       setUser(null);
     }
   }, []);
@@ -72,25 +75,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       auth: false,
       body: JSON.stringify({ email, password }),
     });
-    setToken(data.access_token);
     setUser(data.user);
+    const appearance = appearanceFromUser(data.user);
+    writeStoredAppearance(data.user.id, appearance);
+    applyAppearance(appearance);
     return data.user;
   }, []);
 
-  const register = useCallback(async (payload: RegisterPayload) => {
-    const data = await apiFetch<TokenResponse>("/auth/register", {
+  const register = useCallback(async (payload: RegisterPayload | FormData) => {
+    const body = payload instanceof FormData ? payload : JSON.stringify(payload);
+    return apiFetch<RegisterPendingResponse>("/auth/register", {
       method: "POST",
       auth: false,
-      body: JSON.stringify(payload),
+      body,
     });
-    setToken(data.access_token);
-    setUser(data.user);
-    return data.user;
   }, []);
 
-  const logout = useCallback(() => {
-    clearToken();
+  const logout = useCallback(async () => {
+    await clearToken();
     setUser(null);
+    clearActiveAppearance();
+    setActiveAppearanceUserId(null);
   }, []);
 
   return (

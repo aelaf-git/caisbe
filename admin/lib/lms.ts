@@ -39,6 +39,8 @@ export type ContentBlock = {
   label: string | null;
   parent_id?: number | null;
   sort_order: number;
+  points_possible?: number | null;
+  due_at?: string | null;
   quiz: Quiz | null;
 };
 
@@ -65,6 +67,8 @@ export type FinalExam = {
   pass_percent: number;
   time_limit_minutes?: number | null;
   questions_to_appear?: number | null;
+  secure_mode?: boolean;
+  max_integrity_violations?: number;
   questions: QuizQuestion[];
 };
 
@@ -72,6 +76,7 @@ export type CertificateTemplate = {
   id: number;
   title: string;
   body: string;
+  program_name?: string | null;
 };
 
 export type CourseDetail = {
@@ -84,6 +89,7 @@ export type CourseDetail = {
   cover_url: string | null;
   pass_percent: number;
   price_cents?: number;
+  content_protection?: boolean;
   has_unpublished_changes?: boolean;
   chapters: Chapter[];
   final_exam: FinalExam | null;

@@ -13,9 +13,16 @@ export default function MembershipApplicationFormPage() {
           </Link>
           <div className="flex flex-wrap gap-3">
             <a
+              href="/forms/caisbe-membership-registration.pdf"
+              download="CAISBE-Membership-Registration.pdf"
+              className="rounded-full bg-caisbe-red px-4 py-2 text-sm font-semibold text-white"
+            >
+              Download PDF form
+            </a>
+            <a
               href="/forms/caisbe-membership-registration.docx"
               download="CAISBE-Membership-Registration.docx"
-              className="rounded-full bg-caisbe-red px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-full border-2 border-caisbe-red bg-white px-4 py-2 text-sm font-semibold text-caisbe-red"
             >
               Download Word form
             </a>

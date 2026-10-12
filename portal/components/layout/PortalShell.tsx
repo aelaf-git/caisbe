@@ -40,7 +40,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
   if (loading || !user || user.role === "admin") {
     return (
       <div className="flex flex-1 items-center justify-center px-4 py-16 text-sm text-caisbe-muted">
-        Loading portal…
+        Loading myCAISBE…
       </div>
     );
   }
@@ -87,7 +87,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
               <span className="block h-0.5 w-5 bg-current" />
             </span>
           </button>
-          <p className="text-sm font-bold uppercase tracking-[0.12em] text-caisbe-red">CAISBE Student</p>
+          <p className="text-sm font-bold uppercase tracking-[0.12em] text-caisbe-red">myCAISBE</p>
         </header>
 
         <main className="min-w-0 flex-1 px-4 py-6 print:p-0 md:px-8 md:py-8">

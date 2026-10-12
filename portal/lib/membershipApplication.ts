@@ -93,8 +93,45 @@ export function siteUrl(path = "") {
   return `${base}${suffix}`;
 }
 
+const SAFE_NEXT_PATH =
+  /^\/(?:[A-Za-z0-9._~-]+(?:\/[A-Za-z0-9._~-]+)*)?\/?(?:\?[A-Za-z0-9._~%=&+-]*)?(?:#[A-Za-z0-9._~%-]*)?$/;
+
 export function safeNextPath(value: string | null | undefined, fallback = "/dashboard") {
   if (!value) return fallback;
-  if (!value.startsWith("/") || value.startsWith("//") || value.includes("://")) return fallback;
+  if (value !== value.trim()) return fallback;
+  if (
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\") ||
+    value.includes("://") ||
+    /[\u0000-\u001f\u007f]/.test(value) ||
+    /%(?:2f|5c|00)/i.test(value)
+  ) {
+    return fallback;
+  }
+  if (!SAFE_NEXT_PATH.test(value)) return fallback;
   return value;
+}
+
+/** Portal path, or an absolute URL on the public CAISBE site. */
+export function safeReturnTarget(value: string | null | undefined, fallback = "/dashboard") {
+  if (!value) return fallback;
+  if (value.startsWith("/") && !value.startsWith("//")) {
+    return safeNextPath(value, fallback);
+  }
+  try {
+    const url = new URL(value);
+    const allowed = new URL(siteUrl("/"));
+    if (
+      url.origin === allowed.origin &&
+      (url.protocol === "https:" || url.protocol === "http:") &&
+      !url.username &&
+      !url.password
+    ) {
+      return url.toString();
+    }
+  } catch {
+    return fallback;
+  }
+  return fallback;
 }

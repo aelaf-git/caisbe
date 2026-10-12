@@ -222,7 +222,7 @@ export default function ContactMessagesManager({
               <span>{label}</span>
               <span
                 className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
-                  active ? "bg-white/20 text-white" : "bg-white text-caisbe-muted"
+                  active ? "bg-white/20 text-white" : "bg-admin-surface text-caisbe-muted"
                 }`}
               >
                 {count}
@@ -348,7 +348,7 @@ export default function ContactMessagesManager({
 
               <div>
                 <p className="text-sm font-semibold text-caisbe-text-dark">Message</p>
-                <p className="mt-2 whitespace-pre-wrap rounded-[16px] border border-ifma-border-light bg-white px-4 py-3 text-sm leading-6 text-caisbe-text">
+                <p className="mt-2 whitespace-pre-wrap rounded-[16px] border border-ifma-border-light bg-admin-surface-muted px-4 py-3 text-sm leading-6 text-caisbe-text">
                   {selected.comments}
                 </p>
               </div>

@@ -69,7 +69,7 @@ export default function StorePageContent() {
         <ol className="space-y-4">
           {howToOrder.steps.map((step, index) => (
             <li key={step} className="flex gap-4 text-base leading-7 text-caisbe-muted">
-              <span className="font-display text-caisbe-red mt-0.5 text-lg font-semibold">
+              <span className="font-hopewell-display text-caisbe-red mt-0.5 text-lg font-bold">
                 {index + 1}.
               </span>
               <span>{step}</span>

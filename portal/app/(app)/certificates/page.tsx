@@ -88,7 +88,7 @@ export default function StudentCertificatesPage() {
               href="/certificates/membership"
               className="text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:text-caisbe-red-dark"
             >
-              View / Print
+              View
             </Link>
           </div>
         ) : membershipLocked ? (

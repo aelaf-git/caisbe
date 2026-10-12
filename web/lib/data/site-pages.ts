@@ -159,6 +159,7 @@ export const aboutPages: TopicPage[] = [
       {
         title: "Connect with leadership",
         body: "For board correspondence, nominations, or governance questions, contact the institute office.",
+        items: [],
       },
     ],
     { label: "Contact the Board Office", href: "/contact" },
@@ -224,10 +225,13 @@ export const aboutPages: TopicPage[] = [
       },
       {
         title: "Get started",
-        body: "Tell us your interests and availability—we will match you with opportunities that fit your skills.",
+        body: "Tell us your interests and availability—we will match you with opportunities that fit your skills. Email info@caisbe.org to begin.",
       },
     ],
-    { label: "Volunteer With CAISBE", href: "/contact" },
+    {
+      label: "Get started",
+      href: "mailto:info@caisbe.org?subject=Volunteer%20inquiry",
+    },
   ),
   topic(
     "brand-assets",

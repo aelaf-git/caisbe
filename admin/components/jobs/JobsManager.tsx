@@ -66,6 +66,7 @@ export default function JobsManager({
   const formRef = useRef<HTMLDivElement>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [title, setTitle] = useState("");
@@ -252,8 +253,34 @@ export default function JobsManager({
     }
   }
 
+  async function syncJobs() {
+    setSyncing(true);
+    try {
+      const result = await apiFetch<{ message: string }>("/admin/jobs/sync", { method: "POST" });
+      await onRefresh();
+      onSuccess(result.message || "Job board synced.");
+    } catch (err) {
+      onError(err instanceof ApiError ? err.detail : "Unable to sync jobs.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
+      <Card className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Automatic sync</h2>
+          <p className="mt-1 text-sm text-caisbe-muted">
+            Pull facility management openings from the CAISBE feed and connected job sources.
+            Sync also runs in the background on a schedule.
+          </p>
+        </div>
+        <Button type="button" disabled={syncing || loading} onClick={() => void syncJobs()}>
+          {syncing ? "Syncing…" : "Sync jobs now"}
+        </Button>
+      </Card>
+
       <div ref={formRef}>
         <Card className="space-y-4">
           <div>
@@ -453,6 +480,9 @@ export default function JobsManager({
                     ) : (
                       <Badge tone="info">Active</Badge>
                     )}
+                    {job.source_label ? (
+                      <Badge tone="neutral">{job.source_label.replaceAll("_", " ")}</Badge>
+                    ) : null}
                   </div>
                   <p className="mt-1 text-sm text-caisbe-muted">
                     Posted {toInputDate(job.posted_on)} · Expires{" "}

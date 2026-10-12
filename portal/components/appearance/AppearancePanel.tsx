@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import SaveButton from "@/components/ui/SaveButton";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
+import { apiFetch, ApiError, type AuthUser } from "@/lib/auth";
 import {
   DEFAULT_APPEARANCE,
   FONT_OPTIONS,
   FONT_SIZE_OPTIONS,
   THEME_OPTIONS,
-  applyAppearance,
   appearanceFromUnknown,
+  appearanceFromUser,
+  appearanceToApiPayload,
+  applyAppearance,
   markAppearanceAdjusted,
   readStoredAppearance,
   writeStoredAppearance,
@@ -42,16 +46,26 @@ function OptionButton({
 }
 
 export default function AppearancePanel() {
+  const { user, refreshUser } = useAuth();
   const [appearance, setAppearance] = useState<Appearance>(DEFAULT_APPEARANCE);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const formValues = useMemo(() => appearance, [appearance]);
   const { dirty, markSaved, resetBaseline } = useDirtyForm(formValues);
 
   useEffect(() => {
-    const loaded = readStoredAppearance() ?? DEFAULT_APPEARANCE;
+    if (!user) {
+      setAppearance(DEFAULT_APPEARANCE);
+      resetBaseline(DEFAULT_APPEARANCE);
+      return;
+    }
+    const loaded =
+      appearanceFromUser(user) ?? readStoredAppearance(user.id) ?? DEFAULT_APPEARANCE;
     setAppearance(loaded);
     resetBaseline(loaded);
-  }, [resetBaseline]);
+    applyAppearance(loaded);
+  }, [user, resetBaseline]);
 
   function update(patch: Partial<Appearance>) {
     const next = appearanceFromUnknown({ ...appearance, ...patch });
@@ -59,14 +73,36 @@ export default function AppearancePanel() {
     markAppearanceAdjusted();
     applyAppearance(next);
     setSaved(false);
+    setError(null);
   }
 
-  function save() {
-    if (!dirty) return;
-    writeStoredAppearance(appearance);
-    applyAppearance(appearance);
-    markSaved(appearance);
-    setSaved(true);
+  async function save() {
+    if (!dirty || !user || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await apiFetch<AuthUser>("/auth/me/appearance", {
+        method: "PATCH",
+        body: JSON.stringify(appearanceToApiPayload(appearance)),
+      });
+      const next = appearanceFromUser(updated);
+      writeStoredAppearance(user.id, next);
+      applyAppearance(next);
+      setAppearance(next);
+      markSaved(next);
+      setSaved(true);
+      await refreshUser();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Unable to save appearance.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!user) {
+    return (
+      <p className="text-sm text-caisbe-muted">Sign in to manage your appearance settings.</p>
+    );
   }
 
   return (
@@ -74,7 +110,8 @@ export default function AppearancePanel() {
       <div>
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Appearance</h2>
         <p className="mt-1 text-sm text-caisbe-muted">
-          Theme, font size, and typefaces apply as you change them. Save to keep them for your next visit.
+          Theme, font size, and typefaces apply only to your account. Other students keep their own
+          settings.
         </p>
       </div>
 
@@ -138,13 +175,15 @@ export default function AppearancePanel() {
         </div>
       </fieldset>
 
+      {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
+
       <div className="flex flex-wrap items-center gap-3">
         <SaveButton
           dirty={dirty}
-          idleLabel="Save appearance"
-          onClick={save}
+          idleLabel={saving ? "Saving…" : "Save appearance"}
+          onClick={() => void save()}
         />
-        {saved ? <p className="text-sm text-admin-success">Saved for this browser.</p> : null}
+        {saved ? <p className="text-sm text-admin-success">Saved for your account only.</p> : null}
       </div>
     </div>
   );

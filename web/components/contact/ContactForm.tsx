@@ -135,7 +135,7 @@ export default function ContactForm({ cta, heading }: ContactFormProps) {
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex min-w-[180px] items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-8 py-3 text-base font-semibold uppercase tracking-wide text-white transition-colors hover:bg-caisbe-red-dark disabled:opacity-60"
+          className="inline-flex w-full min-w-0 items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-base font-semibold uppercase tracking-wide text-white transition-colors hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto sm:min-w-[180px] sm:px-8"
         >
           {submitting ? "Sending…" : cta}
         </button>

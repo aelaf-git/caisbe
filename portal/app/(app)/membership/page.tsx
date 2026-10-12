@@ -8,9 +8,10 @@ import DownloadCertificateButton from "@/components/certificates/DownloadCertifi
 import MembershipCertificateDocument from "@/components/certificates/MembershipCertificateDocument";
 import MembershipApplicationForm from "@/components/membership/MembershipApplicationForm";
 import { certificatePdfFileName } from "@/lib/certificatePdf";
+import { certificateVerifyUrl } from "@/lib/certificateVerifyUrl";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
-import { formatMoney, membershipTypeLabel, type CheckoutResult } from "@/lib/commerce";
+import { followCheckout, formatMoney, membershipTypeLabel, type CheckoutResult } from "@/lib/commerce";
 import type { MembershipCertificate } from "@/lib/lms";
 
 function MemberPathCard({
@@ -31,12 +32,14 @@ function MemberPathCard({
       type="button"
       onClick={onSelect}
       className={`rounded-[20px] p-6 text-left shadow-hopewell transition duration-300 hover:-translate-y-1 ${
-        selected ? "bg-caisbe-red/5 ring-2 ring-caisbe-red" : "bg-white"
+        selected
+          ? "bg-admin-surface-muted ring-2 ring-caisbe-red"
+          : "bg-admin-surface"
       }`}
     >
       <span
         className={`inline-flex h-12 w-12 items-center justify-center rounded-md text-lg font-bold ${
-          selected ? "bg-caisbe-red text-white" : "bg-[#fafafa] text-caisbe-red"
+          selected ? "bg-caisbe-red text-white" : "bg-admin-surface-muted text-caisbe-red"
         }`}
       >
         {mark}
@@ -94,26 +97,24 @@ function MembershipPageInner() {
     }
   }, [searchParams]);
 
-  const verifyUrl = useMemo(() => {
-    if (!cert) return "";
-    if (typeof window !== "undefined") {
-      return `${window.location.origin}/certificates/verify/${cert.certificate_code}`;
-    }
-    return cert.verify_url || "";
-  }, [cert]);
+  const verifyUrl = useMemo(
+    () => (cert ? certificateVerifyUrl(cert.certificate_code, cert.verify_url) : ""),
+    [cert],
+  );
 
   async function startMembershipPayment() {
     if (!pendingType) return;
     setPaying(true);
     setPayError(null);
     try {
-      await apiFetch<CheckoutResult>("/me/membership/checkout", {
+      const paid = await apiFetch<CheckoutResult>("/me/membership/checkout", {
         method: "POST",
         body: JSON.stringify({
           membership_type: pendingType,
           kind: pendingKind,
         }),
       });
+      if (followCheckout(paid)) return;
       await refreshUser();
       await loadCertificate();
       window.scrollTo({ top: 0, behavior: "smooth" });

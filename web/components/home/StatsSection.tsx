@@ -1,10 +1,15 @@
 import { stats } from "@/lib/data/home";
 
-export default function StatsSection() {
+export default function StatsSection({
+  items,
+}: {
+  items?: { value: string; label: string }[];
+}) {
+  const shown = items?.length ? items : stats;
   return (
     <section className="border-b border-ifma-border-light bg-[#f7f9fa]">
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-8 lg:grid-cols-4 lg:py-10">
-        {stats.map((item, index) => (
+        {shown.map((item, index) => (
           <div
             key={item.label}
             className="text-center motion-safe:animate-page-fade-in"

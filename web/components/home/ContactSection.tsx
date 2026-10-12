@@ -1,5 +1,5 @@
 import ContactForm from "@/components/contact/ContactForm";
-import { PageHero, ContentSection } from "@/components/pages/ContentPage";
+import { PageHero, ContentSection, sectionSpacingClassName } from "@/components/pages/ContentPage";
 import {
   contactContent,
   officeDirectionsUrl,
@@ -7,14 +7,34 @@ import {
   offices,
 } from "@/lib/data/home";
 
+type OfficeCard = { region: string; address: string; mapQuery: string };
+
 type ContactSectionProps = {
   title?: string;
   eyebrow?: string;
+  lead?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  hours?: string;
+  formHeading?: string;
+  cta?: string;
+  officeItems?: OfficeCard[];
   showOffices?: boolean;
   variant?: "page" | "home";
 };
 
-function ContactDetails() {
+function ContactDetails({
+  address,
+  phone,
+  email,
+  hours,
+}: {
+  address: string;
+  phone: string;
+  email: string;
+  hours: string;
+}) {
   return (
     <div className="mt-8 space-y-5">
       <h3 className="font-hopewell-display text-lg font-extrabold uppercase tracking-wide text-caisbe-text-dark">
@@ -22,58 +42,77 @@ function ContactDetails() {
       </h3>
       <div>
         <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.addressLabel}</p>
-        <p className="mt-1 whitespace-pre-line text-base leading-7 text-caisbe-muted">
-          {contactContent.address}
-        </p>
+        <p className="mt-1 whitespace-pre-line text-base leading-7 text-caisbe-muted">{address}</p>
       </div>
       <div>
         <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.phoneLabel}</p>
-        <p className="mt-1 text-base leading-7 text-caisbe-muted">{contactContent.phone}</p>
+        <p className="mt-1 text-base leading-7 text-caisbe-muted">{phone}</p>
       </div>
       <div>
         <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.emailLabel}</p>
-        <a
-          href={`mailto:${contactContent.email}`}
-          className="mt-1 inline-block text-base leading-7 text-caisbe-red transition-colors hover:text-caisbe-red-dark"
-        >
-          {contactContent.email}
-        </a>
+        {email ? (
+          <a
+            href={`mailto:${email}`}
+            className="mt-1 inline-block text-base leading-7 text-caisbe-red transition-colors hover:text-caisbe-red-dark"
+          >
+            {email}
+          </a>
+        ) : null}
       </div>
       <div>
         <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.hoursLabel}</p>
-        <p className="mt-1 text-base leading-7 text-caisbe-muted">{contactContent.hours}</p>
+        <p className="mt-1 text-base leading-7 text-caisbe-muted">{hours}</p>
       </div>
     </div>
   );
 }
 
 export default function ContactSection({
-  title = contactContent.title,
-  eyebrow = contactContent.eyebrow,
+  title,
+  eyebrow,
+  lead,
+  address,
+  phone,
+  email,
+  hours,
+  formHeading,
+  cta,
+  officeItems,
   showOffices = false,
   variant = "page",
 }: ContactSectionProps) {
+  const shownTitle = title ?? contactContent.title;
+  const shownEyebrow = eyebrow ?? contactContent.eyebrow;
+  const shownLead = lead ?? contactContent.lead;
+  const shownAddress = address ?? contactContent.address;
+  const shownPhone = phone ?? contactContent.phone;
+  const shownEmail = email ?? contactContent.email;
+  const shownHours = hours ?? contactContent.hours;
+  const shownFormHeading = formHeading ?? contactContent.formHeading;
+  const shownCta = cta ?? contactContent.cta;
+  const shownOffices = officeItems ?? offices;
+
   if (variant === "home") {
     return (
-      <section className="bg-white py-16 md:py-24">
+      <section className={`bg-white ${sectionSpacingClassName}`}>
         <div className="mx-auto grid max-w-7xl items-start gap-10 px-4 lg:grid-cols-[0.85fr_1.15fr]">
           <div className="motion-safe:animate-page-fade-in">
-            <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">
-              {eyebrow}
-            </p>
+            {shownEyebrow ? (
+              <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">
+                {shownEyebrow}
+              </p>
+            ) : null}
             <h2 className="font-hopewell-display mt-4 text-3xl font-extrabold leading-tight tracking-tight text-caisbe-text-dark md:text-4xl">
-              {title}
+              {shownTitle}
             </h2>
-            <p className="mt-4 text-base leading-7 text-caisbe-muted">
-              {contactContent.lead}
-            </p>
-            <ContactDetails />
+            <p className="mt-4 text-base leading-7 text-caisbe-muted">{shownLead}</p>
+            <ContactDetails address={shownAddress} phone={shownPhone} email={shownEmail} hours={shownHours} />
           </div>
           <div
             className="rounded-[20px] bg-white p-5 shadow-hopewell motion-safe:animate-page-fade-in md:p-8"
             style={{ animationDelay: "120ms" }}
           >
-            <ContactForm cta={contactContent.cta} heading={contactContent.formHeading} />
+            <ContactForm cta={shownCta} heading={shownFormHeading} />
           </div>
         </div>
       </section>
@@ -82,17 +121,17 @@ export default function ContactSection({
 
   return (
     <>
-      <PageHero eyebrow={eyebrow} title={title} lead={contactContent.lead}>
+      <PageHero eyebrow={shownEyebrow} title={shownTitle} lead={shownLead}>
         <div className="mt-10 grid max-w-5xl gap-10 lg:grid-cols-[0.85fr_1.15fr]">
-          <ContactDetails />
-          <ContactForm cta={contactContent.cta} heading={contactContent.formHeading} />
+          <ContactDetails address={shownAddress} phone={shownPhone} email={shownEmail} hours={shownHours} />
+          <ContactForm cta={shownCta} heading={shownFormHeading} />
         </div>
       </PageHero>
 
       {showOffices ? (
         <ContentSection title="Our Offices" wide>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {offices.map((office, index) => (
+            {shownOffices.map((office, index) => (
               <div
                 key={office.region}
                 className="overflow-hidden rounded-[20px] bg-white shadow-hopewell motion-safe:animate-page-fade-in"

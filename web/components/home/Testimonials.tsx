@@ -1,7 +1,14 @@
+import { sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { fetchPublishedTestimonials } from "@/lib/api";
 import { testimonials, testimonialsIntro } from "@/lib/data/home";
 
-export default async function Testimonials() {
+export default async function Testimonials({
+  eyebrow,
+  title,
+}: {
+  eyebrow?: string;
+  title?: string;
+}) {
   let items = testimonials.map((item, index) => ({ ...item, id: index }));
   try {
     const published = await fetchPublishedTestimonials();
@@ -17,15 +24,19 @@ export default async function Testimonials() {
 
   if (items.length === 0) return null;
 
+  const shownEyebrow = eyebrow ?? testimonialsIntro.eyebrow;
+
   return (
-    <section className="bg-[#f8fafc] py-16 md:py-24">
+    <section className={`bg-[#f8fafc] ${sectionSpacingClassName}`}>
       <div className="mx-auto max-w-7xl px-4">
         <div className="mb-10 motion-safe:animate-page-fade-in">
-          <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">
-            {testimonialsIntro.eyebrow}
-          </p>
+          {shownEyebrow ? (
+            <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">
+              {shownEyebrow}
+            </p>
+          ) : null}
           <h2 className="font-hopewell-display mt-4 text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
-            {testimonialsIntro.title}
+            {title ?? testimonialsIntro.title}
           </h2>
         </div>
 

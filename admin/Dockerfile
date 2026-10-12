@@ -6,9 +6,11 @@ COPY package.json package-lock.json ./
 COPY web/package.json ./web/
 COPY admin/package.json ./admin/
 COPY portal/package.json ./portal/
+COPY packages/platform ./packages/platform
 
 RUN npm ci
 
+COPY packages/platform ./packages/platform
 COPY admin ./admin
 
 WORKDIR /app/admin

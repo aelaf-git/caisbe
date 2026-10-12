@@ -13,6 +13,8 @@ export type ExamDraft = {
   pass_percent: number;
   time_limit_minutes: number | null;
   questions_to_appear: number | null;
+  secure_mode: boolean;
+  max_integrity_violations: number;
   questions: QuizQuestion[];
 };
 
@@ -79,6 +81,8 @@ export default function FinalExamEditor({
             pass_percent: next.pass_percent,
             time_limit_minutes: next.time_limit_minutes,
             questions_to_appear: next.questions_to_appear,
+            secure_mode: next.secure_mode,
+            max_integrity_violations: next.max_integrity_violations,
             questions: serializeQuestions(next.questions),
           }),
         });
@@ -149,6 +153,43 @@ export default function FinalExamEditor({
           className={fieldClassName}
         />
       </FormField>
+      <FormField
+        label="Secure exam mode"
+        hint="Requires fullscreen, camera presence check, blocks copy/paste, and logs tab switches. After too many integrity flags the attempt is failed."
+      >
+        <label className="mt-1 flex items-center gap-2 text-sm text-caisbe-text">
+          <input
+            type="checkbox"
+            checked={exam.secure_mode}
+            onChange={(e) => onChange({ ...exam, secure_mode: e.target.checked })}
+            onBlur={() => void autosave.flush()}
+          />
+          Enable secure exam lockdown for this final exam
+        </label>
+      </FormField>
+      {exam.secure_mode ? (
+        <FormField
+          label="Max integrity violations"
+          hint="Leaving fullscreen/tab or copy/paste attempts count as violations. At this limit the attempt is locked and scored as failed."
+        >
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={exam.max_integrity_violations}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              if (!Number.isFinite(next)) return;
+              onChange({
+                ...exam,
+                max_integrity_violations: Math.min(20, Math.max(1, Math.trunc(next))),
+              });
+            }}
+            onBlur={() => void autosave.flush()}
+            className={fieldClassName}
+          />
+        </FormField>
+      ) : null}
       <FormField
         label="Questions to appear"
         hint="How many questions each student sees per attempt. Leave blank to show the full bank. Each attempt draws a random subset with shuffled question and choice order."

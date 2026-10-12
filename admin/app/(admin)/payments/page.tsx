@@ -79,7 +79,7 @@ export default function PaymentsPage() {
       <PageHeader
         eyebrow="Commerce"
         title="Payments"
-        description="Review Stripe and complimentary enrollments, print receipts, and refund."
+        description="Review payments, download receipts, and refund."
       />
       {error ? <Alert tone="error">{error}</Alert> : null}
       <Card padding="none" className="overflow-hidden">
@@ -125,7 +125,7 @@ export default function PaymentsPage() {
                           href={`/payments/${row.id}/receipt`}
                           className="text-sm font-semibold text-caisbe-red"
                         >
-                          Print receipt
+                          Receipt
                         </Link>
                         {row.status === "succeeded" || row.status === "pending" ? (
                           <Button

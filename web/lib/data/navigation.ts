@@ -43,6 +43,7 @@ export const utilityLinks: SimpleLink[] = [
   { label: "About", href: "/about" },
   { label: "Store / Bookstore", href: "/store" },
   { label: "News & Announcements", href: "/news" },
+  { label: "Help and Support", href: "/help" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -82,7 +83,7 @@ const rawNavigation: readonly RawNavSection[] = [
         href: "/network",
         links: [
           {
-            label: "Overview / Networking Groups",
+            label: "Overview",
             href: "/network/overview",
           },
           {
@@ -157,6 +158,20 @@ const rawNavigation: readonly RawNavSection[] = [
     ],
   },
   {
+    label: "Partners",
+    href: "/partners",
+    groups: [
+      {
+        title: "Partnerships",
+        href: "/partners",
+        links: [
+          { label: "Become a Partner", href: "/partners" },
+          { label: "Become a Sponsor", href: "/partners/become-a-sponsor" },
+        ],
+      },
+    ],
+  },
+  {
     label: "Resources",
     href: "/resources",
     groups: [
@@ -168,6 +183,18 @@ const rawNavigation: readonly RawNavSection[] = [
           {
             label: "Advocacy and Government",
             href: "/resources/advocacy-government-affairs",
+          },
+          {
+            label: "CAISBE Help Desk",
+            href: "/resources/help-desk",
+          },
+          {
+            label: "Help and Support",
+            href: "/help",
+          },
+          {
+            label: "Tickets",
+            href: "/resources/tickets",
           },
         ],
       },

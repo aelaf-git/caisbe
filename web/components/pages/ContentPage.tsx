@@ -23,38 +23,40 @@ export function PageHero({
   className = "",
 }: PageHeroProps) {
   return (
-    <section className={`relative overflow-hidden bg-[#f8fafc] py-16 md:py-24 ${className}`}>
+    <section className={`relative overflow-hidden bg-[#f8fafc] pt-12 pb-8 sm:pt-14 md:pt-16 md:pb-10 ${className}`}>
       <div className="relative mx-auto max-w-7xl px-4 motion-safe:animate-page-fade-in">
         {backHref ? (
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <BackButton href={backHref} label={backLabel} />
           </div>
         ) : null}
-        <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark">
+        <p className="inline-flex max-w-full rounded-full bg-caisbe-red/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark sm:px-4">
           {eyebrow}
         </p>
-        <h1 className="font-hopewell-display mt-4 max-w-3xl text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
+        <h1 className="font-hopewell-display mt-4 max-w-3xl text-2xl font-extrabold tracking-tight text-caisbe-text-dark sm:text-3xl md:text-4xl">
           {title}
         </h1>
         {lead ? (
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-caisbe-text">
+          <p className="mt-4 max-w-2xl text-base leading-7 text-caisbe-text sm:mt-6 sm:text-lg sm:leading-8">
             {lead}
           </p>
         ) : null}
         {children}
         {actions ? (
-          <div className="mt-10 flex flex-wrap items-center gap-4">{actions}</div>
+          <div className="mt-8 flex flex-wrap items-center gap-3 sm:mt-10 sm:gap-4">{actions}</div>
         ) : null}
       </div>
     </section>
   );
 }
 
+export const sectionSpacingClassName = "py-8 md:py-10";
+
 type ContentSectionProps = {
   id?: string;
   title?: string;
   description?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   /** @deprecated All sections use the shared max-w-7xl site shell. Kept for call-site compatibility. */
   wide?: boolean;
   className?: string;
@@ -72,7 +74,7 @@ export function ContentSection({
   return (
     <section
       id={id}
-      className={`scroll-mt-28 bg-transparent py-16 md:py-24 ${className}`}
+      className={`scroll-mt-28 bg-transparent ${sectionSpacingClassName} ${className}`}
     >
       <div className="mx-auto max-w-7xl px-4">
         {title ? (
@@ -90,6 +92,31 @@ export function ContentSection({
         </div>
       </div>
     </section>
+  );
+}
+
+export const heroNoteClassName =
+  "mt-4 max-w-2xl text-base leading-7 text-caisbe-text sm:text-lg sm:leading-8";
+
+export function FeatureList({
+  items,
+  tone = "text",
+}: {
+  items: readonly string[];
+  tone?: "text" | "accent";
+}) {
+  const color = tone === "accent" ? "text-caisbe-red" : "text-caisbe-text";
+  return (
+    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {items.map((item) => (
+        <li
+          key={item}
+          className={`flex min-h-14 w-full items-center rounded-[20px] border border-black/5 bg-white px-5 py-4 text-base font-medium leading-7 shadow-hopewell sm:[&:last-child:nth-child(odd)]:col-span-2 sm:text-lg sm:leading-8 ${color}`}
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
   );
 }
 

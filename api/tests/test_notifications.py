@@ -1,0 +1,351 @@
+"""In-app notifications: admin broadcasts and automatic student triggers."""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
+
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from app.models import (
+    Course,
+    Enrollment,
+    MembershipCertificate,
+    Notification,
+    NotificationBroadcast,
+    Order,
+    OrderItem,
+    User,
+)
+from app.config import settings
+from app.security.auth import hash_password
+from app.services.commerce import fulfill_order
+from app.services.notifications import (
+    ensure_membership_expiry_reminders,
+    notification_link_for_client,
+    notify_enrolled_students,
+    public_site_link,
+)
+
+STRONG_PASSWORD = "Str0ng-Password!99"
+
+
+def _student(db: Session, email: str = "member@example.com") -> User:
+    user = User(
+        full_name="Member One",
+        email=email,
+        phone="+15555550100",
+        country="Canada",
+        city="Toronto",
+        hashed_password=hash_password(STRONG_PASSWORD),
+        role="student",
+        membership_type="professional",
+        membership_status="active",
+        membership_date=datetime.now(timezone.utc),
+        email_verified_at=datetime.now(timezone.utc),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def _admin(db: Session) -> User:
+    admin = User(
+        full_name="Admin One",
+        email="admin-notify@example.com",
+        phone="+15555550999",
+        country="Canada",
+        city="Toronto",
+        hashed_password=hash_password(STRONG_PASSWORD),
+        role="admin",
+        membership_status="active",
+        email_verified_at=datetime.now(timezone.utc),
+    )
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+    return admin
+
+
+def _login(client: TestClient, email: str) -> str:
+    response = client.post("/api/auth/login", json={"email": email, "password": STRONG_PASSWORD})
+    assert response.status_code == 200
+    return response.json()["access_token"]
+
+
+def test_admin_can_broadcast_announcement_to_all_students(client: TestClient, db: Session) -> None:
+    student_a = _student(db, "a@example.com")
+    student_b = _student(db, "b@example.com")
+    admin = _admin(db)
+    token = _login(client, admin.email)
+
+    response = client.post(
+        "/api/admin/notifications/send",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Holiday closure",
+            "body": "CAISBE offices are closed for the holiday.",
+            "kind": "holiday",
+            "link": "/dashboard",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["recipient_count"] == 2
+    assert db.query(NotificationBroadcast).count() == 1
+
+    for user in (student_a, student_b):
+        rows = db.query(Notification).filter(Notification.user_id == user.id).all()
+        assert len(rows) == 1
+        assert rows[0].kind == "holiday"
+        assert rows[0].title == "Holiday closure"
+
+    listed = client.get(
+        "/api/admin/notifications/broadcasts",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert listed.status_code == 200
+    assert listed.json()[0]["title"] == "Holiday closure"
+
+
+def test_payment_fulfillment_creates_payment_notification(db: Session) -> None:
+    user = _student(db)
+    order = Order(
+        user_id=user.id,
+        number="ORD-TEST-1",
+        status="pending",
+        currency="CAD",
+        subtotal_cents=10000,
+        discount_cents=0,
+        total_cents=10000,
+        amount_paid_cents=0,
+    )
+    db.add(order)
+    db.flush()
+    db.add(
+        OrderItem(
+            order_id=order.id,
+            membership_type="professional",
+            membership_kind="application",
+            title="Professional membership",
+            unit_price_cents=10000,
+            quantity=1,
+        )
+    )
+    db.commit()
+    db.refresh(order)
+
+    with patch("app.services.receipt_email.send_email") as send_email:
+        fulfill_order(db, order)
+        db.commit()
+        fulfill_order(db, order)
+
+    assert send_email.call_count == 1
+    assert "/account/receipts/ORD-TEST-1" in send_email.call_args.kwargs["html_body"]
+    assert send_email.call_args.kwargs["to"] == user.email
+
+    rows = db.query(Notification).filter(Notification.user_id == user.id, Notification.kind == "payment").all()
+    assert len(rows) == 1
+    assert "Payment received" in rows[0].title
+    assert "$100.00" in rows[0].body
+    assert rows[0].link == "/account/receipts/ORD-TEST-1"
+
+
+def test_course_update_notifies_enrolled_students(db: Session) -> None:
+    student = _student(db)
+    other = _student(db, "other@example.com")
+    course = Course(
+        code="FM101",
+        slug="fm101",
+        title="Facility Basics",
+        description="Intro",
+        status="published",
+        price_cents=0,
+    )
+    db.add(course)
+    db.flush()
+    db.add(Enrollment(user_id=student.id, course_id=course.id, status="enrolled", progress=10))
+    db.commit()
+
+    notify_enrolled_students(
+        db,
+        course.id,
+        title="Course updated",
+        body="New reading added.",
+        kind="course_update",
+        link=f"/courses/{course.id}",
+    )
+    db.commit()
+
+    assert (
+        db.query(Notification)
+        .filter(Notification.user_id == student.id, Notification.kind == "course_update")
+        .count()
+        == 1
+    )
+    assert (
+        db.query(Notification)
+        .filter(Notification.user_id == other.id, Notification.kind == "course_update")
+        .count()
+        == 0
+    )
+
+
+def test_membership_expiry_reminder_created_once(client: TestClient, db: Session) -> None:
+    user = _student(db)
+    expires = datetime.now(timezone.utc) + timedelta(days=5)
+    db.add(
+        MembershipCertificate(
+            user_id=user.id,
+            membership_type="professional",
+            membership_number="CAISBE-M-000001",
+            certificate_code="CAISBE-MEM-TEST01",
+            issued_at=datetime.now(timezone.utc) - timedelta(days=360),
+            expires_at=expires,
+        )
+    )
+    db.commit()
+
+    token = _login(client, user.email)
+    first = client.get("/api/me/notifications", headers={"Authorization": f"Bearer {token}"})
+    assert first.status_code == 200
+    assert any(item["kind"] == "membership_expiry" for item in first.json()["items"])
+
+    second = client.get("/api/me/notifications", headers={"Authorization": f"Bearer {token}"})
+    assert second.status_code == 200
+    expiry_items = [item for item in second.json()["items"] if item["kind"] == "membership_expiry"]
+    assert len(expiry_items) == 1
+
+
+def test_ensure_membership_expiry_skips_far_future(db: Session) -> None:
+    user = _student(db)
+    db.add(
+        MembershipCertificate(
+            user_id=user.id,
+            membership_type="professional",
+            membership_number="CAISBE-M-000002",
+            certificate_code="CAISBE-MEM-TEST02",
+            issued_at=datetime.now(timezone.utc),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=90),
+        )
+    )
+    db.commit()
+    created = ensure_membership_expiry_reminders(db, user)
+    assert created == []
+
+
+def test_production_event_links_leave_localhost(client: TestClient, db: Session, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "web_public_url", "http://localhost:3000")
+    monkeypatch.setattr(settings, "portal_public_url", "http://localhost:3002")
+
+    assert public_site_link("/events/calendar") == "https://caisbe.org/events/calendar"
+    assert public_site_link("/events/expo") == "https://caisbe.org/events/expo"
+    assert (
+        notification_link_for_client("http://localhost:3000/events/calendar")
+        == "https://caisbe.org/events/calendar"
+    )
+    assert (
+        notification_link_for_client("http://127.0.0.1:3000/news/chapter-update")
+        == "https://caisbe.org/news/chapter-update"
+    )
+    assert notification_link_for_client("http://localhost:3002/account") == "https://portal.caisbe.org/account"
+    assert notification_link_for_client("/assignments") == "/assignments"
+    assert notification_link_for_client("https://caisbe.org/events") == "https://caisbe.org/events"
+
+    student = _student(db, "event-link@example.com")
+    db.add(
+        Notification(
+            user_id=student.id,
+            title="New event posted",
+            body="FM Summit is now on the CAISBE events calendar.",
+            kind="event",
+            link="http://localhost:3000/events/calendar",
+        )
+    )
+    db.commit()
+
+    listed = client.get(
+        "/api/me/notifications",
+        headers={"Authorization": f"Bearer {_login(client, student.email)}"},
+    )
+    assert listed.status_code == 200
+    event = next(item for item in listed.json()["items"] if item["kind"] == "event")
+    assert event["link"] == "https://caisbe.org/events/calendar"
+    assert "localhost" not in event["link"]
+
+
+def test_publishing_event_and_news_notifies_students(client: TestClient, db: Session) -> None:
+    student = _student(db, "pub-student@example.com")
+    admin = _admin(db)
+    token = _login(client, admin.email)
+    starts = datetime.now(timezone.utc) + timedelta(days=14)
+
+    draft_event = client.post(
+        "/api/admin/events",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "FM Summit Draft",
+            "event_type": "calendar",
+            "starts_on": starts.isoformat(),
+            "published": False,
+        },
+    )
+    assert draft_event.status_code == 201, draft_event.text
+    assert (
+        db.query(Notification)
+        .filter(Notification.user_id == student.id, Notification.kind == "event")
+        .count()
+        == 0
+    )
+
+    published = client.patch(
+        f"/api/admin/events/{draft_event.json()['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"published": True},
+    )
+    assert published.status_code == 200, published.text
+    event_notes = (
+        db.query(Notification)
+        .filter(Notification.user_id == student.id, Notification.kind == "event")
+        .all()
+    )
+    assert len(event_notes) == 1
+    assert "FM Summit Draft" in event_notes[0].body
+    assert event_notes[0].link and "/events/calendar" in event_notes[0].link
+
+    news = client.post(
+        "/api/admin/news",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Chapter update",
+            "short_description": "New chapter office hours.",
+            "posted_on": datetime.now(timezone.utc).isoformat(),
+            "published": True,
+        },
+    )
+    assert news.status_code == 201, news.text
+    news_notes = (
+        db.query(Notification)
+        .filter(Notification.user_id == student.id, Notification.kind == "announcement")
+        .all()
+    )
+    assert len(news_notes) == 1
+    assert news_notes[0].title == "New announcement"
+    assert news_notes[0].link and "/news/" in news_notes[0].link
+
+    # Republishing edits should not spam another notification
+    again = client.patch(
+        f"/api/admin/news/{news.json()['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"short_description": "Updated hours."},
+    )
+    assert again.status_code == 200
+    assert (
+        db.query(Notification)
+        .filter(Notification.user_id == student.id, Notification.kind == "announcement")
+        .count()
+        == 1
+    )

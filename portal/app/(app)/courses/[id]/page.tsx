@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import ContentProtectionShell from "@/components/portal/ContentProtectionShell";
 import CourseOutline from "@/components/portal/CourseOutline";
 import CoursePlayerHeader from "@/components/portal/CoursePlayerHeader";
 import LessonStage from "@/components/portal/LessonStage";
@@ -57,6 +58,18 @@ export default function CoursePlayerPage() {
       setCourse(data);
       setSelection((prev) => {
         if (prev) return prev;
+        const requested =
+          typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("block")) : NaN;
+        if (Number.isFinite(requested) && requested > 0) {
+          const match = data.chapters
+            .flatMap((chapter) => chapter.blocks ?? [])
+            .find(
+              (block) =>
+                block.id === requested &&
+                (block.block_type === "assignment" || block.block_type === "quiz"),
+            );
+          if (match) return { kind: "chapter-block", blockId: match.id };
+        }
         const firstTopic =
           data.chapters.flatMap((c) => c.lessons).find((l) => !l.completed) ??
           data.chapters[0]?.lessons[0] ??
@@ -71,6 +84,10 @@ export default function CoursePlayerPage() {
       });
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
+        if (err.detail.toLowerCase().includes("restricted")) {
+          setError(err.detail);
+          return;
+        }
         router.replace(`/courses/${courseId}/checkout`);
         return;
       }
@@ -170,14 +187,24 @@ export default function CoursePlayerPage() {
     return { kind: "chapter-block", blockId: assignment.id };
   }, [activeChapterBlock, course, selection]);
 
-  async function markComplete() {
+  async function toggleTopicComplete() {
     if (!activeTopic) return;
     setBusy(true);
     try {
-      await apiFetch(`/me/lessons/${activeTopic.id}/complete`, { method: "POST" });
+      if (activeTopic.completed) {
+        await apiFetch(`/me/lessons/${activeTopic.id}/complete`, { method: "DELETE" });
+      } else {
+        await apiFetch(`/me/lessons/${activeTopic.id}/complete`, { method: "POST" });
+      }
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to mark complete.");
+      setError(
+        err instanceof ApiError
+          ? err.detail
+          : activeTopic.completed
+            ? "Unable to mark incomplete."
+            : "Unable to mark complete.",
+      );
     } finally {
       setBusy(false);
     }
@@ -253,56 +280,64 @@ export default function CoursePlayerPage() {
 
         <div className="min-w-0 flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-6">
           <div className={`mx-auto w-full transition-[max-width] duration-200 ${outlineOpen ? "max-w-4xl" : "max-w-5xl"}`}>
-            <LessonStage
-              course={course}
-              courseId={courseId}
-              selection={selection}
-              activeTopic={activeTopic}
-              activeTopicOutline={activeTopicOutline}
-              activeChapterBlock={activeChapterBlock}
-              chapterMedia={chapterMedia}
-              busy={busy}
-              onMarkComplete={() => void markComplete()}
-              onReload={load}
-              onQuizResult={(result: QuizAttempt | null) => {
-                setQuizPassed(result != null);
-                if (result) void load();
-              }}
-              hasPrev={playlistIndex > 0}
-              hasNext={
-                activeChapterBlock?.block_type === "quiz"
-                  ? quizPassed &&
-                    ((assignmentAfterQuiz != null && selectionUnlocked(course, assignmentAfterQuiz)) ||
-                      (assignmentAfterQuiz == null &&
-                        playlistIndex >= 0 &&
-                        playlistIndex < playlist.length - 1 &&
-                        selectionUnlocked(course, playlist[playlistIndex + 1])))
-                  : playlistIndex >= 0 &&
-                    playlistIndex < playlist.length - 1 &&
-                    selectionUnlocked(course, playlist[playlistIndex + 1])
-              }
-              onPrev={() => {
-                setQuizPassed(false);
-                if (playlistIndex > 0) setSelection(playlist[playlistIndex - 1]);
-              }}
-              onNext={() => {
-                if (activeChapterBlock?.block_type === "quiz") {
-                  if (
-                    quizPassed &&
-                    assignmentAfterQuiz &&
-                    selectionUnlocked(course, assignmentAfterQuiz)
-                  ) {
-                    setSelection(assignmentAfterQuiz);
+            <ContentProtectionShell
+              enabled={course.content_protection !== false && selection?.kind !== "exam"}
+            >
+              <LessonStage
+                course={course}
+                courseId={courseId}
+                selection={selection}
+                activeTopic={activeTopic}
+                activeTopicOutline={activeTopicOutline}
+                activeChapterBlock={activeChapterBlock}
+                chapterMedia={chapterMedia}
+                busy={busy}
+                onToggleTopicComplete={() => void toggleTopicComplete()}
+                onReload={load}
+                onQuizResult={(result: QuizAttempt | null) => {
+                  setQuizPassed(result != null);
+                  if (result) void load();
+                }}
+                hasPrev={playlistIndex > 0}
+                hasNext={
+                  activeChapterBlock?.block_type === "quiz"
+                    ? quizPassed &&
+                      ((assignmentAfterQuiz != null && selectionUnlocked(course, assignmentAfterQuiz)) ||
+                        (assignmentAfterQuiz == null &&
+                          playlistIndex >= 0 &&
+                          playlistIndex < playlist.length - 1 &&
+                          selectionUnlocked(course, playlist[playlistIndex + 1])))
+                    : playlistIndex >= 0 &&
+                      playlistIndex < playlist.length - 1 &&
+                      selectionUnlocked(course, playlist[playlistIndex + 1])
+                }
+                onReviewMaterials={() => {
+                  const firstTopic = course.chapters.flatMap((chapter) => chapter.lessons)[0];
+                  if (firstTopic) setSelection({ kind: "topic", topicId: firstTopic.id });
+                }}
+                onPrev={() => {
+                  setQuizPassed(false);
+                  if (playlistIndex > 0) setSelection(playlist[playlistIndex - 1]);
+                }}
+                onNext={() => {
+                  if (activeChapterBlock?.block_type === "quiz") {
+                    if (
+                      quizPassed &&
+                      assignmentAfterQuiz &&
+                      selectionUnlocked(course, assignmentAfterQuiz)
+                    ) {
+                      setSelection(assignmentAfterQuiz);
+                      return;
+                    }
+                    const next = playlist[playlistIndex + 1];
+                    if (quizPassed && next && selectionUnlocked(course, next)) setSelection(next);
                     return;
                   }
                   const next = playlist[playlistIndex + 1];
-                  if (quizPassed && next && selectionUnlocked(course, next)) setSelection(next);
-                  return;
-                }
-                const next = playlist[playlistIndex + 1];
-                if (next && selectionUnlocked(course, next)) setSelection(next);
-              }}
-            />
+                  if (next && selectionUnlocked(course, next)) setSelection(next);
+                }}
+              />
+            </ContentProtectionShell>
           </div>
         </div>
       </div>

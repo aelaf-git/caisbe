@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/pages/ContentPage";
+import { PageHero, heroNoteClassName } from "@/components/pages/ContentPage";
 import { aboutContent } from "@/lib/data/about";
 
 export default function BuiltEnvironmentPageContent() {
@@ -12,10 +12,7 @@ export default function BuiltEnvironmentPageContent() {
       backLabel="Back to about"
     >
       {builtEnvironment.paragraphs.map((paragraph) => (
-        <p
-          key={paragraph.slice(0, 48)}
-          className="mt-6 text-base leading-7 text-caisbe-muted"
-        >
+        <p key={paragraph.slice(0, 48)} className={heroNoteClassName}>
           {paragraph}
         </p>
       ))}

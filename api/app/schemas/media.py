@@ -7,8 +7,10 @@ class MediaAssetOut(BaseModel):
     id: int
     title: str
     description: str | None = None
-    file_url: str
+    file_url: str | None = None
     cover_url: str | None = None
+    external_url: str | None = None
+    body: str | None = None
     category: str
     published: bool
     featured: bool
@@ -20,9 +22,11 @@ class MediaAssetOut(BaseModel):
 
 class MediaAssetCreateIn(BaseModel):
     title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=4000)
-    file_url: str = Field(min_length=1, max_length=1024)
+    description: str | None = Field(default=None, max_length=8000)
+    file_url: str | None = Field(default=None, max_length=1024)
     cover_url: str | None = Field(default=None, max_length=1024)
+    external_url: str | None = Field(default=None, max_length=1024)
+    body: str | None = Field(default=None, max_length=100_000)
     category: str = Field(default="magazine", max_length=32)
     published: bool = False
     featured: bool = False
@@ -31,9 +35,12 @@ class MediaAssetCreateIn(BaseModel):
 
 class MediaAssetUpdateIn(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=4000)
-    file_url: str | None = Field(default=None, min_length=1, max_length=1024)
+    description: str | None = Field(default=None, max_length=8000)
+    file_url: str | None = Field(default=None, max_length=1024)
     cover_url: str | None = Field(default=None, max_length=1024)
+    external_url: str | None = Field(default=None, max_length=1024)
+    body: str | None = Field(default=None, max_length=100_000)
+    category: str | None = Field(default=None, max_length=32)
     published: bool | None = None
     featured: bool | None = None
     sort_order: int | None = None

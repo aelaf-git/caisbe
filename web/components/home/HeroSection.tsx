@@ -28,7 +28,13 @@ const DEFAULT_SLIDES: HeroSlide[] = [
 
 const DEFAULT_TRANSITION_MS = 3000;
 
-export default function HeroSection() {
+export default function HeroSection({
+  intro,
+  buttonLabel,
+}: {
+  intro?: string | null;
+  buttonLabel?: string | null;
+}) {
   const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES);
   const [transitionMs, setTransitionMs] = useState(DEFAULT_TRANSITION_MS);
   const [index, setIndex] = useState(0);
@@ -83,19 +89,21 @@ export default function HeroSection() {
 
   return (
     <section className="relative overflow-hidden bg-[#f8fafc]">
-      <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 md:py-20 lg:grid-cols-2 lg:gap-16 lg:py-24">
-        <div>
-          <h1 className="font-hopewell-display text-4xl font-extrabold leading-[1.08] tracking-tight text-caisbe-text-dark md:text-5xl">
+      <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 py-12 sm:gap-10 sm:py-16 md:py-20 lg:grid-cols-2 lg:gap-16 lg:py-24">
+        <div className="min-w-0">
+          <h1 className="font-hopewell-display text-3xl font-extrabold leading-[1.08] tracking-tight text-caisbe-text-dark sm:text-4xl md:text-5xl">
             {siteFullName}
           </h1>
-          <p className="mt-5 max-w-xl text-xl leading-8 text-caisbe-muted">
-            {heroIntro}
+          <p className="mt-4 max-w-xl text-base leading-7 text-caisbe-muted sm:mt-5 sm:text-xl sm:leading-8">
+            {intro || heroIntro}
           </p>
-          <div className="mt-8">
-            <ButtonLink href={portalMembershipRegisterUrl()} variant="pill">
-              Join {siteName}
-            </ButtonLink>
-          </div>
+          {buttonLabel === "" ? null : (
+            <div className="mt-6 sm:mt-8 sm:inline-flex">
+              <ButtonLink href={portalMembershipRegisterUrl()} variant="pill">
+                {buttonLabel || `Join ${siteName}`}
+              </ButtonLink>
+            </div>
+          )}
         </div>
 
         <div className="relative mx-auto w-full max-w-lg lg:max-w-none">

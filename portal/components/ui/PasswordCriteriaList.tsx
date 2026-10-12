@@ -13,7 +13,7 @@ function CriteriaTick({ ok, label }: { ok: boolean; label: string }) {
         className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
           ok
             ? "border-caisbe-red bg-caisbe-red text-white"
-            : "border-ifma-border bg-white text-transparent"
+            : "border-ifma-border bg-admin-surface text-transparent"
         }`}
         aria-hidden
       >
@@ -52,7 +52,7 @@ export default function PasswordCriteriaList({
     Boolean(confirmPassword && confirmPassword.length > 0 && password === confirmPassword);
 
   return (
-    <ul className={`space-y-2 rounded-md bg-[#f8fafc] px-4 py-3 text-xs ${className}`} aria-live="polite">
+    <ul className={`space-y-2 rounded-md bg-admin-surface-muted px-4 py-3 text-xs ${className}`} aria-live="polite">
       {mode === "rules"
         ? PASSWORD_REQUIREMENTS.map((item) => (
             <CriteriaTick key={item.key} ok={checks[item.key]} label={item.label} />

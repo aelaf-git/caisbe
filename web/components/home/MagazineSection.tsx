@@ -1,7 +1,16 @@
+import { sectionSpacingClassName } from "@/components/pages/ContentPage";
 import ButtonLink from "@/components/ui/ButtonLink";
 import { fetchPublishedMagazines, type MediaAsset } from "@/lib/api";
 
-export default async function MagazineSection() {
+export default async function MagazineSection({
+  title = "CAISBE Magazine",
+  subtitle = "Read the latest features and insights from across the CAISBE community.",
+  cta = "View all issues",
+}: {
+  title?: string;
+  subtitle?: string;
+  cta?: string;
+}) {
   let issues: MediaAsset[] = [];
   try {
     let featured = await fetchPublishedMagazines({ featured: true });
@@ -14,20 +23,20 @@ export default async function MagazineSection() {
   }
 
   return (
-    <section className="bg-white py-16 md:py-24">
+    <section className={`bg-white ${sectionSpacingClassName}`}>
       <div className="mx-auto max-w-7xl px-4">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
-              CAISBE Magazine
+              {title}
             </h2>
-            <p className="mt-2 text-base text-caisbe-muted">
-              Read the latest features and insights from across the CAISBE community.
-            </p>
+            <p className="mt-2 text-base text-caisbe-muted">{subtitle}</p>
           </div>
-          <ButtonLink href="/resources/magazine" variant="text">
-            View all issues
-          </ButtonLink>
+          {cta ? (
+            <ButtonLink href="/resources/magazine" variant="text">
+              {cta}
+            </ButtonLink>
+          ) : null}
         </div>
 
         {issues.length === 0 ? (
@@ -66,14 +75,16 @@ export default async function MagazineSection() {
                   ) : (
                     <div className="flex-1" />
                   )}
-                  <a
-                    href={issue.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 text-base font-bold text-caisbe-red hover:underline"
-                  >
-                    Read issue
-                  </a>
+                  {issue.file_url ? (
+                    <a
+                      href={issue.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 text-base font-bold text-caisbe-red hover:underline"
+                    >
+                      Read issue
+                    </a>
+                  ) : null}
                 </div>
               </article>
             ))}

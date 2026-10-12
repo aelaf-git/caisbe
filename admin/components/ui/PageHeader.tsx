@@ -26,7 +26,7 @@ export default function PageHeader({
           </p>
         ) : null}
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
+          <h1 className="font-hopewell-display text-2xl font-extrabold tracking-tight text-caisbe-text-dark sm:text-3xl">
             {title}
           </h1>
           {titleAccessory}

@@ -37,7 +37,7 @@ export default function NewsAdminPage() {
       <PageHeader
         eyebrow="Publishing"
         title="News & Announcements"
-        description="Post institute news with a cover image, gallery images, videos, and short and long descriptions."
+        description="Post institute news, or share an external article link. Use the Links tab when you only need a URL to share."
       />
 
       {error ? <Alert tone="error">{error}</Alert> : null}

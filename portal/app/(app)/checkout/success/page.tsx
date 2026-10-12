@@ -90,6 +90,14 @@ function SuccessInner() {
         )}
 
         <div className="mt-6 flex flex-wrap gap-3">
+          {order ? (
+            <Link
+              href={`/account/receipts/${encodeURIComponent(order.number)}`}
+              className="inline-flex h-11 items-center rounded-full border-2 border-ifma-border bg-white px-6 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+            >
+              View receipt
+            </Link>
+          ) : null}
           {isMembership ? (
             <Link
               href="/membership"

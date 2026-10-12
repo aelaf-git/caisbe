@@ -67,6 +67,17 @@ export async function downloadCertificatePdf(source: HTMLElement, filename: stri
   document.body.appendChild(host);
 
   try {
+    // html2canvas often drops inline SVGs (QR codes). Rasterize them to <img> first.
+    clone.querySelectorAll(".certificate-qr svg").forEach((svg) => {
+      const xml = new XMLSerializer().serializeToString(svg);
+      const img = document.createElement("img");
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
+      img.width = Number(svg.getAttribute("width")) || 96;
+      img.height = Number(svg.getAttribute("height")) || 96;
+      img.alt = "";
+      svg.replaceWith(img);
+    });
+
     await waitForImages(clone);
     const canvas = await html2canvas(clone, {
       backgroundColor: "#ffffff",

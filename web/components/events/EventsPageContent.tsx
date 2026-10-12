@@ -1,8 +1,10 @@
 import ButtonLink from "@/components/ui/ButtonLink";
 import {
   ContentSection,
+  FeatureList,
   PageHero,
   SubsectionIndex,
+  heroNoteClassName,
 } from "@/components/pages/ContentPage";
 import EventCalendarList from "@/components/events/EventCalendarList";
 import {
@@ -45,21 +47,10 @@ function ThinEventsPage({
           </>
         }
       >
-        <p className="mt-6 text-base leading-7 text-caisbe-muted">
-          {page.description}
-        </p>
+        <p className={heroNoteClassName}>{page.description}</p>
       </PageHero>
       <ContentSection title="What you will find">
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {page.highlights.map((item) => (
-            <li
-              key={item}
-              className="rounded-[20px] bg-white px-4 py-3 text-sm font-medium text-caisbe-text shadow-hopewell"
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
+        <FeatureList items={page.highlights} />
         <p className="mt-8 text-base leading-7 text-caisbe-muted">
           {page.nextSteps}
         </p>
@@ -87,9 +78,7 @@ function CalendarPage() {
           </>
         }
       >
-        <p className="mt-6 text-base leading-7 text-caisbe-muted">
-          {page.description}
-        </p>
+        <p className={heroNoteClassName}>{page.description}</p>
       </PageHero>
       <EventCalendarList />
     </>
@@ -106,9 +95,7 @@ function SponsorComingSoon() {
       backHref="/events"
       backLabel="Back to events"
     >
-      <p className="mt-6 text-base leading-7 text-caisbe-muted">
-        {page.description}
-      </p>
+      <p className={heroNoteClassName}>{page.description}</p>
     </PageHero>
   );
 }
@@ -136,9 +123,7 @@ export function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
             </ButtonLink>
           }
         >
-          <p className="mt-6 text-base leading-7 text-caisbe-muted">
-            {page.intro}
-          </p>
+          <p className={heroNoteClassName}>{page.intro}</p>
         </PageHero>
         <ContentSection title={page.objectivesTitle}>
           <ul className="list-disc space-y-2 pl-5 text-base leading-7 text-caisbe-muted">
@@ -170,21 +155,10 @@ export function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
             </ButtonLink>
           }
         >
-          <p className="mt-6 text-base leading-7 text-caisbe-muted">
-            {page.intro}
-          </p>
+          <p className={heroNoteClassName}>{page.intro}</p>
         </PageHero>
         <ContentSection title="Award categories">
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {page.categories.map((category) => (
-              <li
-                key={category}
-                className="rounded-[20px] bg-white px-4 py-3 text-sm font-medium text-caisbe-red shadow-hopewell"
-              >
-                {category}
-              </li>
-            ))}
-          </ul>
+          <FeatureList items={page.categories} tone="accent" />
           <p className="mt-8 text-base leading-7 text-caisbe-muted">
             {page.nominate}
           </p>

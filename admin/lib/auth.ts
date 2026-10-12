@@ -89,8 +89,10 @@ export type MediaAsset = {
   id: number;
   title: string;
   description: string | null;
-  file_url: string;
+  file_url: string | null;
   cover_url: string | null;
+  external_url: string | null;
+  body: string | null;
   category: string;
   published: boolean;
   featured: boolean;
@@ -129,6 +131,7 @@ export type JobPosting = {
   apply_url: string | null;
   attachment_url: string | null;
   source_label: string | null;
+  external_id?: string | null;
   posted_on: string;
   expires_on: string;
   published: boolean;
@@ -137,6 +140,16 @@ export type JobPosting = {
   created_at: string;
   updated_at: string;
   is_expired: boolean;
+};
+
+export type Seminar = {
+  id: number;
+  title: string;
+  description: string;
+  published: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Testimonial = {
@@ -189,6 +202,7 @@ export type NewsPost = {
   slug: string;
   short_description: string | null;
   long_description: string | null;
+  external_url: string | null;
   cover_url: string | null;
   image_urls: string[];
   video_urls: string[];
@@ -214,6 +228,18 @@ export type NewsletterCampaign = {
   subject: string;
   recipient_count: number;
   sent_at: string;
+};
+
+export type NotificationBroadcast = {
+  id: number;
+  title: string;
+  body: string;
+  kind: "announcement" | "message" | "holiday" | string;
+  link?: string | null;
+  audience: string;
+  recipient_count: number;
+  created_at: string;
+  sent_by_name?: string | null;
 };
 
 export type AdminDashboard = {
@@ -291,22 +317,29 @@ export type SiteVisitStats = {
 };
 
 export type TokenResponse = {
-  access_token: string;
+  access_token?: string;
   token_type: string;
   user: AuthUser;
 };
 
+/** Legacy localStorage token, used once so an existing sign-in can move into the HttpOnly cookie. */
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(TOKEN_KEY);
 }
 
-export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
+export function setToken(_token: string): void {
+  // The API proxy stores the session in an HttpOnly cookie. The page does not keep the token.
 }
 
-export function clearToken(): void {
+export function dropReadableToken(): void {
+  if (typeof window === "undefined") return;
   localStorage.removeItem(TOKEN_KEY);
+}
+
+export async function clearToken(): Promise<void> {
+  dropReadableToken();
+  await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
 }
 
 export class ApiError extends Error {
@@ -339,6 +372,13 @@ function parseErrorDetail(status: number, text: string): ApiError {
 async function parseError(response: Response): Promise<ApiError> {
   try {
     const text = await response.text();
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    if (contentType.includes("text/html") || text.trimStart().startsWith("<!")) {
+      return new ApiError(
+        response.status,
+        "Unable to reach the server. Please try again in a moment.",
+      );
+    }
     return parseErrorDetail(response.status, text);
   } catch {
     return new ApiError(response.status, `Request failed (${response.status})`);

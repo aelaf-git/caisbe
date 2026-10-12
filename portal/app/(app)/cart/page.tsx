@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
-import { formatMoney, type Cart, type CheckoutResult } from "@/lib/commerce";
+import { followCheckout, formatMoney, type Cart, type CheckoutResult } from "@/lib/commerce";
 
 export default function CartPage() {
   return (
@@ -62,10 +62,16 @@ function CartInner() {
         method: "POST",
         body: JSON.stringify({ from_cart: true }),
       });
+      if (followCheckout(result)) return;
       await refreshUser();
       router.push(`/checkout/success?order=${result.order_number}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to complete purchase.");
+      const detail = err instanceof ApiError ? err.detail : "Unable to complete purchase.";
+      setError(
+        /already enrolled/i.test(detail)
+          ? "You already have one of these courses. Remove it and buy the others."
+          : detail,
+      );
       try {
         await loadCart();
       } catch {

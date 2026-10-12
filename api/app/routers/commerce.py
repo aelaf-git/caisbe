@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.config import settings
 from app.db import get_db
@@ -16,6 +16,7 @@ from app.schemas.commerce import (
     MembershipCheckoutIn,
     OrderItemOut,
     OrderOut,
+    StudentPaymentOut,
     PromoPreviewIn,
     PromoPreviewOut,
 )
@@ -27,14 +28,14 @@ from app.services.commerce import (
     add_to_cart,
     cart_courses_for_user,
     clear_cart,
+    confirm_pending_order,
     create_checkout_order,
     create_membership_checkout_order,
-    create_stripe_session,
-    fulfill_order,
     fulfill_stripe_session,
     load_published_courses,
-    mark_manual_unlock,
     quote_courses,
+    settle_checkout,
+    resolve_checkout_promotion,
 )
 
 router = APIRouter(tags=["commerce"])
@@ -60,6 +61,7 @@ def _order_out(order: Order) -> OrderOut:
         balance_cents=max(0, order.total_cents - order.amount_paid_cents),
         currency=order.currency,
         promo_code=order.promo_code,
+        invoice_number=order.invoices[0].number if order.invoices else None,
         items=[
             OrderItemOut(
                 course_id=item.course_id,
@@ -220,35 +222,43 @@ def start_checkout(
 ) -> CheckoutOut:
     from app.models import Enrollment
 
+    if payload.order_id:
+        order, checkout_url = confirm_pending_order(db, current_user, payload.order_id)
+        return CheckoutOut(
+            order_id=order.id,
+            order_number=order.number,
+            enrollment_id=None,
+            enrollment_ids=[],
+            total_cents=order.total_cents,
+            currency=order.currency,
+            complimentary=order.total_cents == 0,
+            checkout_url=checkout_url,
+            publishable_key=settings.stripe_publishable_key or None,
+            status=order.status,
+        )
+
     courses = _resolve_checkout_courses(db, current_user, payload)
-    order, enrollments, complimentary = create_checkout_order(db, current_user, courses)
+    promo = resolve_checkout_promotion(db, payload.promo_code, courses)
+    order, enrollments, complimentary = create_checkout_order(db, current_user, courses, promo)
     enrollment_ids = [row.id for row in enrollments]
-    # Course Stripe Checkout is not wired yet. Confirming purchase activates enrollments immediately.
+    checkout_url = None
     if not complimentary:
-        order = (
-            db.query(Order)
-            .options(
-                joinedload(Order.items),
-                joinedload(Order.invoices),
-                joinedload(Order.payments),
-                joinedload(Order.user),
+        checkout_url = settle_checkout(
+            db,
+            order,
+            cancel_url=f"{settings.portal_public_url.rstrip('/')}/cart",
+        )
+        if checkout_url is None:
+            clear_cart(db, current_user.id, [course.id for course in courses])
+            db.commit()
+            enrollments = (
+                db.query(Enrollment)
+                .options(joinedload(Enrollment.course))
+                .filter(Enrollment.id.in_(enrollment_ids))
+                .all()
             )
-            .filter(Order.id == order.id)
-            .one()
-        )
-        payment = order.payments[0] if order.payments else None
-        mark_manual_unlock(order, payment)
-        fulfill_order(db, order)
-        clear_cart(db, current_user.id, [course.id for course in courses])
-        db.commit()
+            enrollment_ids = [row.id for row in enrollments]
         order = db.query(Order).options(joinedload(Order.items)).filter(Order.id == order.id).one()
-        enrollments = (
-            db.query(Enrollment)
-            .options(joinedload(Enrollment.course))
-            .filter(Enrollment.id.in_(enrollment_ids))
-            .all()
-        )
-        enrollment_ids = [row.id for row in enrollments]
     else:
         clear_cart(db, current_user.id, [course.id for course in courses])
         db.commit()
@@ -260,7 +270,7 @@ def start_checkout(
         total_cents=order.total_cents,
         currency=order.currency,
         complimentary=False,
-        checkout_url=None,
+        checkout_url=checkout_url,
         publishable_key=settings.stripe_publishable_key or None,
         status=order.status,
     )
@@ -282,24 +292,13 @@ def start_membership_checkout(
         payload.membership_type,
         kind=payload.kind or "application",
     )
-    # Membership Stripe Checkout is not wired yet. Confirming payment here activates
-    # the selected type and issues the membership certificate immediately.
+    checkout_url = None
     if not complimentary:
-        order = (
-            db.query(Order)
-            .options(
-                joinedload(Order.items),
-                joinedload(Order.invoices),
-                joinedload(Order.payments),
-                joinedload(Order.user),
-            )
-            .filter(Order.id == order.id)
-            .one()
+        checkout_url = settle_checkout(
+            db,
+            order,
+            cancel_url=f"{settings.portal_public_url.rstrip('/')}/membership?cancelled=1",
         )
-        payment = order.payments[0] if order.payments else None
-        mark_manual_unlock(order, payment)
-        fulfill_order(db, order)
-        db.commit()
         order = (
             db.query(Order)
             .options(joinedload(Order.items), joinedload(Order.payments))
@@ -314,10 +313,46 @@ def start_membership_checkout(
         total_cents=order.total_cents,
         currency=order.currency,
         complimentary=False,
-        checkout_url=None,
+        checkout_url=checkout_url,
         publishable_key=settings.stripe_publishable_key or None,
         status=order.status,
     )
+
+
+def _student_payment(row: Payment) -> StudentPaymentOut:
+    order = row.order
+    items = list(order.items) if order and order.items else []
+    if not items:
+        description = "Payment"
+    elif len(items) == 1:
+        description = items[0].title
+    else:
+        description = f"{items[0].title} +{len(items) - 1} more"
+    return StudentPaymentOut(
+        id=row.id,
+        description=description,
+        amount_cents=row.amount_cents,
+        currency=(order.currency if order and order.currency else "usd"),
+        status=row.status,
+        method=row.provider,
+        created_at=row.created_at,
+        order_number=order.number if order else "",
+    )
+
+
+@router.get("/me/payments", response_model=list[StudentPaymentOut])
+def list_my_payments(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[StudentPaymentOut]:
+    rows = (
+        db.query(Payment)
+        .options(joinedload(Payment.order).selectinload(Order.items))
+        .filter(Payment.user_id == current_user.id)
+        .order_by(Payment.created_at.desc())
+        .all()
+    )
+    return [_student_payment(row) for row in rows]
 
 
 @router.get("/me/orders", response_model=list[OrderOut])
@@ -327,7 +362,7 @@ def list_my_orders(
 ) -> list[OrderOut]:
     rows = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(joinedload(Order.items), selectinload(Order.invoices))
         .filter(Order.user_id == current_user.id)
         .order_by(Order.created_at.desc())
         .all()
@@ -432,7 +467,7 @@ def confirm_checkout(
             )
     order = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(joinedload(Order.items), selectinload(Order.invoices))
         .filter(Order.id == payment.order_id)
         .one()
     )
@@ -447,7 +482,7 @@ def get_my_order(
 ) -> OrderOut:
     order = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(joinedload(Order.items), selectinload(Order.invoices))
         .filter(Order.number == number, Order.user_id == current_user.id)
         .first()
     )

@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import BackButton from "@/components/ui/BackButton";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError, type Course } from "@/lib/auth";
-import { formatMoney, type CheckoutPreview, type CheckoutResult } from "@/lib/commerce";
+import { followCheckout, formatMoney, type CheckoutPreview, type CheckoutResult } from "@/lib/commerce";
 
 export default function CourseCheckoutPage() {
   return (
@@ -64,10 +64,16 @@ function CourseCheckoutInner() {
         method: "POST",
         body: JSON.stringify({ course_id: course.id }),
       });
+      if (followCheckout(result)) return;
       await refreshUser();
       router.push(`/checkout/success?order=${result.order_number}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to complete purchase.");
+      const detail = err instanceof ApiError ? err.detail : "Unable to complete purchase.";
+      setError(
+        /already enrolled/i.test(detail)
+          ? "You already have this course. Other programs are still available on My courses."
+          : detail,
+      );
     } finally {
       setBusy(false);
     }
@@ -99,7 +105,12 @@ function CourseCheckoutInner() {
       ) : null}
       {error ? (
         <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
-          {error}
+          <p>{error}</p>
+          {/already have this course/i.test(error) ? (
+            <Link href="/courses" className="mt-2 inline-flex font-semibold underline">
+              Browse other courses
+            </Link>
+          ) : null}
         </div>
       ) : null}
 

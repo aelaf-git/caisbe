@@ -30,11 +30,13 @@ function formatWhen(iso: string): string {
 }
 
 function formatDayHeading(isoDate: string): string {
-  return new Date(`${isoDate}T00:00:00`).toLocaleDateString(undefined, {
+  // Noon UTC avoids off-by-one when the host timezone shifts midnight dates.
+  return new Date(`${isoDate}T12:00:00.000Z`).toLocaleDateString(undefined, {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -60,40 +62,42 @@ function groupVisits(visits: SiteVisit[]): DayGroup[] {
     byDate.set(day, list);
   }
 
-  return [...byDate.entries()].map(([day, rows]) => {
-    const byCountry = new Map<string, SiteVisit[]>();
-    for (const row of rows) {
-      const name = row.location_country || row.country || "Unknown";
-      const list = byCountry.get(name) ?? [];
-      list.push(row);
-      byCountry.set(name, list);
-    }
+  return [...byDate.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([day, rows]) => {
+      const byCountry = new Map<string, SiteVisit[]>();
+      for (const row of rows) {
+        const name = row.location_country || row.country || "Unknown";
+        const list = byCountry.get(name) ?? [];
+        list.push(row);
+        byCountry.set(name, list);
+      }
 
-    const countries = [...byCountry.entries()]
-      .sort((a, b) => b[1].length - a[1].length)
-      .map(([country, countryRows]) => {
-        const byCity = new Map<string, SiteVisit[]>();
-        for (const row of countryRows) {
-          const name = cityName(row);
-          const list = byCity.get(name) ?? [];
-          list.push(row);
-          byCity.set(name, list);
-        }
-        const cities = [...byCity.entries()]
-          .sort((a, b) => b[1].length - a[1].length)
-          .map(([city, cityRows]) => ({ city, visits: cityRows }));
-        return { country, visits: countryRows.length, cities };
-      });
+      const countries = [...byCountry.entries()]
+        .sort((a, b) => b[1].length - a[1].length)
+        .map(([country, countryRows]) => {
+          const byCity = new Map<string, SiteVisit[]>();
+          for (const row of countryRows) {
+            const name = cityName(row);
+            const list = byCity.get(name) ?? [];
+            list.push(row);
+            byCity.set(name, list);
+          }
+          const cities = [...byCity.entries()]
+            .sort((a, b) => b[1].length - a[1].length)
+            .map(([city, cityRows]) => ({ city, visits: cityRows }));
+          return { country, visits: countryRows.length, cities };
+        });
 
-    const cityCount = countries.reduce((sum, country) => sum + country.cities.length, 0);
-    return {
-      day,
-      total: rows.length,
-      countryCount: countries.length,
-      cityCount,
-      countries,
-    };
-  });
+      const cityCount = countries.reduce((sum, country) => sum + country.cities.length, 0);
+      return {
+        day,
+        total: rows.length,
+        countryCount: countries.length,
+        cityCount,
+        countries,
+      };
+    });
 }
 
 function Chevron({ open }: { open: boolean }) {

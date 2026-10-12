@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import AppearancePanel from "@/components/appearance/AppearancePanel";
 import ProfileForm, { profileFromUser } from "@/components/portal/ProfileForm";
+import SupportingDocumentsPanel from "@/components/portal/SupportingDocumentsPanel";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/ui/PageHeader";
 import SaveButton from "@/components/ui/SaveButton";
@@ -16,6 +18,7 @@ import {
   type OrderRow,
   type SavedCard,
   type SecurityQuestion,
+  type StudentPayment,
 } from "@/lib/commerce";
 import PasswordCriteriaList from "@/components/ui/PasswordCriteriaList";
 import { MIN_PASSWORD_LENGTH, passwordStrengthError } from "@/lib/password";
@@ -37,6 +40,7 @@ const EMPTY_CARD = {
 
 export default function ManageProfilePage() {
   const { user, refreshUser } = useAuth();
+  const [payments, setPayments] = useState<StudentPayment[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [cards, setCards] = useState<SavedCard[]>([]);
@@ -79,13 +83,15 @@ export default function ManageProfilePage() {
     let active = true;
     async function load() {
       try {
-        const [invoiceData, orderData, cardData, questionData] = await Promise.all([
+        const [paymentData, invoiceData, orderData, cardData, questionData] = await Promise.all([
+          apiFetch<StudentPayment[]>("/me/payments"),
           apiFetch<InvoiceRow[]>("/me/invoices"),
           apiFetch<OrderRow[]>("/me/orders"),
           apiFetch<SavedCard[]>("/me/cards"),
           apiFetch<SecurityQuestion[]>("/auth/me/security-questions"),
         ]);
         if (!active) return;
+        setPayments(paymentData);
         setInvoices(invoiceData);
         setOrders(orderData);
         setCards(cardData);
@@ -208,12 +214,27 @@ export default function ManageProfilePage() {
   const inputClass =
     "mt-1 h-11 w-full rounded-md border border-ifma-border bg-admin-surface px-3 text-sm outline-none focus:border-caisbe-red";
 
+  const profileInitial = useMemo(() => profileFromUser(user), [
+    user?.id,
+    user?.email,
+    user?.full_name,
+    user?.given_name,
+    user?.family_name,
+    user?.phone,
+    user?.country,
+    user?.city,
+    user?.address,
+    user?.organization,
+    user?.job_title,
+    user?.membership_type,
+  ]);
+
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Account"
         title="Manage your profile"
-        description="Password, billing history, security questions, saved cards, and appearance."
+        description="Update the personal and contact details from your CAISBE registration, plus password, billing, and security."
       />
       {error ? (
         <div className="border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">{error}</div>
@@ -221,8 +242,14 @@ export default function ManageProfilePage() {
 
       <Card>
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Profile details</h2>
-        <p className="mt-1 mb-4 text-sm text-caisbe-muted">Same fields used for JOIN CAISBE membership applications.</p>
-        <ProfileForm initial={profileFromUser(user)} onSaved={() => void refreshUser()} />
+        <p className="mt-1 mb-4 text-sm text-caisbe-muted">
+          Same personal and contact fields as registration. Membership changes stay on the Membership page.
+        </p>
+        <ProfileForm initial={profileInitial} onSaved={() => void refreshUser()} />
+      </Card>
+
+      <Card>
+        <SupportingDocumentsPanel />
       </Card>
 
       <Card>
@@ -275,47 +302,212 @@ export default function ManageProfilePage() {
       </Card>
 
       <Card>
-        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">My invoices</h2>
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Invoice #</th><th className="px-3 py-2 pr-4">Bill date</th><th className="px-3 py-2 pr-4">Billing period</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2">Balance</th></tr></thead>
-            <tbody>
-              {invoices.length === 0 ? (
-                <tr><td className="px-3 py-3 text-caisbe-muted" colSpan={5}>No invoices yet.</td></tr>
-              ) : invoices.map((invoice) => (
-                <tr key={invoice.id} className="border-t border-ifma-border-light">
-                  <td className="px-3 py-3 pr-4 font-mono">{invoice.number}</td>
-                  <td className="px-3 py-3 pr-4">{formatDate(invoice.bill_date)}</td>
-                  <td className="px-3 py-3 pr-4">{formatDate(invoice.period_start)} – {formatDate(invoice.period_end)}</td>
-                  <td className="px-3 py-3 pr-4">{formatMoney(invoice.amount_paid_cents)}</td>
-                  <td className="px-3 py-3">{formatMoney(invoice.balance_cents)}</td>
-                </tr>
+        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">My payments</h2>
+        {payments.length === 0 ? (
+          <p className="mt-4 text-sm text-caisbe-muted">No payments yet.</p>
+        ) : (
+          <>
+            <ul className="mt-4 divide-y divide-ifma-border-light md:hidden">
+              {payments.map((payment) => (
+                <li key={payment.id} className="py-4 text-sm">
+                  <p className="break-words font-semibold text-caisbe-text-dark">{payment.description}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Date</dt>
+                      <dd>{formatDate(payment.created_at)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Amount</dt>
+                      <dd>{formatMoney(payment.amount_cents, payment.currency)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Method</dt>
+                      <dd className="capitalize">{payment.method.replaceAll("_", " ")}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Status</dt>
+                      <dd className="capitalize">{payment.status.replaceAll("_", " ")}</dd>
+                    </div>
+                  </dl>
+                  <p className="mt-2">
+                    {payment.order_number ? (
+                      <Link href={`/account/receipts/${encodeURIComponent(payment.order_number)}`} className="font-semibold text-caisbe-red hover:underline">
+                        Receipt
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </p>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+            <div className="mt-4 hidden overflow-x-auto md:block">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-admin-surface-muted/60">
+                  <tr className="text-caisbe-muted">
+                    <th className="px-3 py-2 pr-4">For</th>
+                    <th className="px-3 py-2 pr-4">Date</th>
+                    <th className="px-3 py-2 pr-4">Amount</th>
+                    <th className="px-3 py-2 pr-4">Method</th>
+                    <th className="px-3 py-2 pr-4">Status</th>
+                    <th className="whitespace-nowrap px-3 py-2">Receipt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.map((payment) => (
+                    <tr key={payment.id} className="border-t border-ifma-border-light">
+                      <td className="px-3 py-3 pr-4">{payment.description}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatDate(payment.created_at)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(payment.amount_cents, payment.currency)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4 capitalize">{payment.method.replaceAll("_", " ")}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4 capitalize">{payment.status.replaceAll("_", " ")}</td>
+                      <td className="whitespace-nowrap px-3 py-3">
+                        {payment.order_number ? (
+                          <Link href={`/account/receipts/${encodeURIComponent(payment.order_number)}`} className="font-semibold text-caisbe-red hover:underline">
+                            Receipt
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </Card>
+
+      <Card>
+        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">My invoices</h2>
+        {invoices.length === 0 ? (
+          <p className="mt-4 text-sm text-caisbe-muted">No invoices yet.</p>
+        ) : (
+          <>
+            <ul className="mt-4 divide-y divide-ifma-border-light md:hidden">
+              {invoices.map((invoice) => (
+                <li key={invoice.id} className="py-4 text-sm">
+                  <p className="break-all font-mono font-semibold text-caisbe-text-dark">{invoice.number}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Bill date</dt>
+                      <dd>{formatDate(invoice.bill_date)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Billing period</dt>
+                      <dd>{formatDate(invoice.period_start)} – {formatDate(invoice.period_end)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Amount paid</dt>
+                      <dd>{formatMoney(invoice.amount_paid_cents)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Balance</dt>
+                      <dd>{formatMoney(invoice.balance_cents)}</dd>
+                    </div>
+                  </dl>
+                  <p className="mt-2">
+                    {invoice.order_number ? (
+                      <Link href={`/account/receipts/${encodeURIComponent(invoice.order_number)}`} className="font-semibold text-caisbe-red hover:underline">
+                        Receipt
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 hidden overflow-x-auto md:block">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Invoice #</th><th className="px-3 py-2 pr-4">Bill date</th><th className="px-3 py-2 pr-4">Billing period</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2 pr-4">Balance</th><th className="whitespace-nowrap px-3 py-2">Receipt</th></tr></thead>
+                <tbody>
+                  {invoices.map((invoice) => (
+                    <tr key={invoice.id} className="border-t border-ifma-border-light">
+                      <td className="px-3 py-3 pr-4 font-mono">{invoice.number}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatDate(invoice.bill_date)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatDate(invoice.period_start)} – {formatDate(invoice.period_end)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(invoice.amount_paid_cents)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(invoice.balance_cents)}</td>
+                      <td className="whitespace-nowrap px-3 py-3">
+                        {invoice.order_number ? (
+                          <Link href={`/account/receipts/${encodeURIComponent(invoice.order_number)}`} className="font-semibold text-caisbe-red hover:underline">
+                            Receipt
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </Card>
 
       <Card>
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">My orders</h2>
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Order name</th><th className="px-3 py-2 pr-4">Order date</th><th className="px-3 py-2 pr-4">Order total</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2">Balance</th></tr></thead>
-            <tbody>
-              {orders.length === 0 ? (
-                <tr><td className="px-3 py-3 text-caisbe-muted" colSpan={5}>No orders yet.</td></tr>
-              ) : orders.map((order) => (
-                <tr key={order.id} className="border-t border-ifma-border-light">
-                  <td className="px-3 py-3 pr-4">{order.name} <span className="font-mono text-xs text-caisbe-muted">{order.number}</span></td>
-                  <td className="px-3 py-3 pr-4">{formatDate(order.created_at)}</td>
-                  <td className="px-3 py-3 pr-4">{formatMoney(order.total_cents, order.currency)}</td>
-                  <td className="px-3 py-3 pr-4">{formatMoney(order.amount_paid_cents, order.currency)}</td>
-                  <td className="px-3 py-3">{formatMoney(order.balance_cents, order.currency)}</td>
-                </tr>
+        {orders.length === 0 ? (
+          <p className="mt-4 text-sm text-caisbe-muted">No orders yet.</p>
+        ) : (
+          <>
+            <ul className="mt-4 divide-y divide-ifma-border-light md:hidden">
+              {orders.map((order) => (
+                <li key={order.id} className="py-4 text-sm">
+                  <p className="break-words font-semibold text-caisbe-text-dark">{order.name}</p>
+                  <p className="font-mono text-xs text-caisbe-muted">{order.number}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Order date</dt>
+                      <dd>{formatDate(order.created_at)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Order total</dt>
+                      <dd>{formatMoney(order.total_cents, order.currency)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Amount paid</dt>
+                      <dd>{formatMoney(order.amount_paid_cents, order.currency)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Balance</dt>
+                      <dd>{formatMoney(order.balance_cents, order.currency)}</dd>
+                    </div>
+                  </dl>
+                  <p className="mt-2">
+                    <Link href={`/account/receipts/${encodeURIComponent(order.number)}`} className="font-semibold text-caisbe-red hover:underline">
+                      Receipt
+                    </Link>
+                  </p>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+            <div className="mt-4 hidden overflow-x-auto md:block">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-admin-surface-muted/60"><tr className="text-caisbe-muted"><th className="px-3 py-2 pr-4">Order name</th><th className="px-3 py-2 pr-4">Order date</th><th className="px-3 py-2 pr-4">Order total</th><th className="px-3 py-2 pr-4">Amount paid</th><th className="px-3 py-2 pr-4">Balance</th><th className="whitespace-nowrap px-3 py-2">Receipt</th></tr></thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id} className="border-t border-ifma-border-light">
+                      <td className="px-3 py-3 pr-4">{order.name} <span className="font-mono text-xs text-caisbe-muted">{order.number}</span></td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatDate(order.created_at)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(order.total_cents, order.currency)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(order.amount_paid_cents, order.currency)}</td>
+                      <td className="whitespace-nowrap px-3 py-3 pr-4">{formatMoney(order.balance_cents, order.currency)}</td>
+                      <td className="whitespace-nowrap px-3 py-3">
+                        <Link href={`/account/receipts/${encodeURIComponent(order.number)}`} className="font-semibold text-caisbe-red hover:underline">
+                          Receipt
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </Card>
 
       <Card>

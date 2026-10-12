@@ -6,6 +6,7 @@ import {
   ContentSection,
   PageHero,
   SubsectionIndex,
+  heroNoteClassName,
 } from "@/components/pages/ContentPage";
 import {
   membershipIndexItems,
@@ -89,10 +90,7 @@ export function MembershipSubpageContent({ slug }: { slug: MembershipSlug }) {
         }
       >
         {page.paragraphs.slice(1).map((paragraph) => (
-          <p
-            key={paragraph.slice(0, 40)}
-            className="mt-6 text-base leading-7 text-caisbe-muted"
-          >
+          <p key={paragraph.slice(0, 40)} className={heroNoteClassName}>
             {paragraph}
           </p>
         ))}

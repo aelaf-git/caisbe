@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -18,6 +19,7 @@ from app.models import (
     OrderItem,
     Payment,
     Promotion,
+    QuizAttempt,
     User,
 )
 from app.schemas.auth import MEMBERSHIP_TYPES
@@ -29,6 +31,8 @@ from app.services.membership import (
     mark_pending_membership_applications_active,
     revert_membership_to_student,
 )
+
+logger = logging.getLogger(__name__)
 
 MANUAL_UNLOCK_MARKER = "MANUAL_UNLOCK"
 STALE_PENDING_HOURS = 24
@@ -83,6 +87,8 @@ def normalize_membership_type(value: str | None) -> str | None:
 def apply_profile_fields(user: User, data: dict) -> None:
     if "membership_type" in data and data["membership_type"] is not None:
         data["membership_type"] = normalize_membership_type(data["membership_type"])
+    # Optional strings may be cleared with null or "" from the profile editor.
+    clearable = {"address", "organization", "job_title", "given_name", "family_name"}
     for key in (
         "full_name",
         "given_name",
@@ -95,9 +101,16 @@ def apply_profile_fields(user: User, data: dict) -> None:
         "job_title",
         "membership_type",
     ):
-        if key in data and data[key] is not None:
-            value = data[key]
-            setattr(user, key, value.strip() if isinstance(value, str) else value)
+        if key not in data:
+            continue
+        value = data[key]
+        if value is None:
+            if key in clearable:
+                setattr(user, key, None)
+            continue
+        setattr(user, key, value.strip() if isinstance(value, str) else value)
+        if key in clearable and isinstance(value, str) and not value.strip():
+            setattr(user, key, None)
     if not user.membership_date:
         user.membership_date = datetime.now(timezone.utc)
     if profile_is_complete(user) and not user.profile_completed_at:
@@ -154,7 +167,22 @@ def quote_course(course: Course, promo: Promotion | None = None) -> tuple[int, i
     return subtotal, discount, total, complimentary
 
 
-def quote_courses(courses: list[Course]) -> tuple[int, int, int, bool, str]:
+def resolve_checkout_promotion(db: Session, code: str | None, courses: list[Course]) -> Promotion | None:
+    if not code or not code.strip():
+        return None
+    promo = db.query(Promotion).filter(Promotion.code == code.strip().upper()).first()
+    if promo is None or not promo.active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Promotion code is not valid.")
+    if promo.expires_at and promo.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This promotion has expired.")
+    if promo.course_id and promo.course_id not in {course.id for course in courses}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This code does not apply to this course.")
+    if promo.max_redemptions is not None and promo.redemption_count >= promo.max_redemptions:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This promotion has been fully used.")
+    return promo
+
+
+def quote_courses(courses: list[Course], promo: Promotion | None = None) -> tuple[int, int, int, bool, str]:
     if not courses:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Select at least one course.")
     currency = (courses[0].currency or "usd").lower()
@@ -164,10 +192,16 @@ def quote_courses(courses: list[Course]) -> tuple[int, int, int, bool, str]:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="All courses in one checkout must use the same currency.",
             )
-    subtotal = sum(max(0, course.price_cents or 0) for course in courses)
-    total = subtotal
+    subtotal = 0
+    discount = 0
+    for course in courses:
+        applicable = promo if promo and (promo.course_id is None or promo.course_id == course.id) else None
+        part_subtotal, part_discount, _, _ = quote_course(course, applicable)
+        subtotal += part_subtotal
+        discount += part_discount
+    total = max(0, subtotal - discount)
     complimentary = total == 0
-    return subtotal, 0, total, complimentary, currency
+    return subtotal, discount, total, complimentary, currency
 
 
 def active_enrollment(db: Session, user_id: int, course_id: int) -> Enrollment | None:
@@ -190,6 +224,9 @@ def require_active_enrollment(db: Session, user: User, course_id: int) -> Enroll
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Course access unlocks after payment.",
         )
+    from app.services.access_control import require_course_open
+
+    require_course_open(enrollment)
     return enrollment
 
 
@@ -304,16 +341,59 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
         user.membership_status = "active"
         if not user.membership_date:
             user.membership_date = now
+    granted_titles: list[str] = []
     for item in order.items:
         if item.membership_type:
             renew = (item.membership_kind or "").strip().lower() == "renewal"
             activate_membership(db, user, item.membership_type, renew=renew)
             mark_pending_membership_applications_active(db, user, item.membership_type)
             continue
-        if item.course_id is None:
+        if (item.item_kind or "course") != "course" or item.course_id is None:
             continue
         course = item.course or db.query(Course).filter(Course.id == item.course_id).one()
         _ensure_enrollment(db, user, course, "enrolled")
+        granted_titles.append(course.title)
+
+    from app.services.notifications import notify_payment_received, notify_users
+
+    item_titles = [item.title for item in order.items if (item.title or "").strip()]
+    order_label = ", ".join(item_titles[:3]) if item_titles else order.number
+    receipt_path = f"/account/receipts/{order.number}"
+    notify_payment_received(
+        db,
+        user,
+        amount_cents=paid,
+        order_name=order_label,
+        receipt_path=receipt_path,
+    )
+    if granted_titles:
+        admin_ids = [row[0] for row in db.query(User.id).filter(User.role == "admin").all()]
+        if admin_ids:
+            names = ", ".join(granted_titles[:3])
+            notify_users(
+                db,
+                admin_ids,
+                title="Course access granted",
+                body=(
+                    f"{user.full_name} paid and now has access to {names}. "
+                    "Review or restrict this in Access Control."
+                ),
+                kind="access",
+                link="/access-control",
+            )
+    if (user.email or "").strip():
+        try:
+            from app.services.receipt_email import send_receipt_email
+
+            send_receipt_email(
+                to=user.email,
+                full_name=user.full_name,
+                order_number=order.number,
+                amount_cents=paid,
+                currency=order.currency,
+            )
+        except Exception:
+            logger.exception("Receipt email failed for order %s", order.number)
 
 
 def _cancel_stale_pending_course_checkouts(db: Session, user: User, course_ids: list[int]) -> None:
@@ -343,7 +423,9 @@ def _cancel_stale_pending_course_checkouts(db: Session, user: User, course_ids: 
         .all()
     )
     for order in pending_orders:
-        if not any(item.course_id in course_ids for item in order.items):
+        if not any(
+            item.course_id in course_ids and (item.item_kind or "course") == "course" for item in order.items
+        ):
             continue
         created = order.created_at
         if created and created.tzinfo is None:
@@ -372,6 +454,7 @@ def create_checkout_order(
     db: Session,
     user: User,
     courses: list[Course],
+    promo: Promotion | None = None,
 ) -> tuple[Order, list[Enrollment], bool]:
     if not courses:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Select at least one course.")
@@ -400,7 +483,7 @@ def create_checkout_order(
                 detail=f"Payment already started for {course.title}. Try again shortly, or contact CAISBE support.",
             )
 
-    subtotal, discount, total, complimentary, currency = quote_courses(courses)
+    subtotal, discount, total, complimentary, currency = quote_courses(courses, promo)
     order = Order(
         number=_next_number(db, Order, "ORD"),
         user_id=user.id,
@@ -410,8 +493,8 @@ def create_checkout_order(
         total_cents=total,
         amount_paid_cents=0,
         currency=currency,
-        promotion_id=None,
-        promo_code=None,
+        promotion_id=promo.id if promo else None,
+        promo_code=promo.code if promo else None,
     )
     db.add(order)
     db.flush()
@@ -421,6 +504,7 @@ def create_checkout_order(
                 order_id=order.id,
                 course_id=course.id,
                 title=course.title,
+                item_kind="course",
                 unit_price_cents=max(0, course.price_cents or 0),
                 quantity=1,
             )
@@ -688,7 +772,7 @@ def refund_payment(db: Session, payment: Payment, admin: User) -> None:
         if item.membership_type:
             membership_refunded = True
             continue
-        if item.course_id is None:
+        if (item.item_kind or "course") != "course" or item.course_id is None:
             continue
         enrollment = (
             db.query(Enrollment)
@@ -699,3 +783,191 @@ def refund_payment(db: Session, payment: Payment, admin: User) -> None:
             enrollment.status = "revoked"
     if membership_refunded:
         revert_membership_to_student(db, user)
+
+
+def _paid_attempt_fees(db: Session, user: User, course: Course, kind: str) -> int:
+    return (
+        db.query(OrderItem)
+        .join(Order, OrderItem.order_id == Order.id)
+        .filter(
+            Order.user_id == user.id,
+            Order.status == "paid",
+            OrderItem.course_id == course.id,
+            OrderItem.item_kind == kind,
+        )
+        .count()
+    )
+
+
+def _pending_attempt_fee(db: Session, user: User, course: Course, kind: str) -> Order | None:
+    orders = (
+        db.query(Order)
+        .options(joinedload(Order.items), joinedload(Order.invoices), joinedload(Order.payments), joinedload(Order.user))
+        .filter(Order.user_id == user.id, Order.status == "pending")
+        .all()
+    )
+    for order in orders:
+        if any(item.course_id == course.id and item.item_kind == kind for item in order.items):
+            return order
+    return None
+
+
+def _open_attempt_fee_order(db: Session, user: User, course: Course, kind: str, amount: int) -> Order:
+    existing = _pending_attempt_fee(db, user, course, kind)
+    if existing is not None:
+        return existing
+    label = "exam fee" if kind == "exam" else "retake fee"
+    order = Order(
+        number=_next_number(db, Order, "ORD"),
+        user_id=user.id,
+        status="pending",
+        subtotal_cents=amount,
+        discount_cents=0,
+        total_cents=amount,
+        amount_paid_cents=0,
+        currency=(course.currency or "usd").lower(),
+    )
+    db.add(order)
+    db.flush()
+    db.add(
+        OrderItem(
+            order_id=order.id,
+            course_id=course.id,
+            title=f"{course.title} {label}",
+            item_kind=kind,
+            unit_price_cents=amount,
+            quantity=1,
+        )
+    )
+    now = datetime.now(timezone.utc)
+    invoice = Invoice(
+        number=_next_number(db, Invoice, "INV"),
+        order_id=order.id,
+        user_id=user.id,
+        bill_date=now,
+        amount_cents=amount,
+        amount_paid_cents=0,
+        balance_cents=amount,
+        status="open",
+    )
+    db.add(invoice)
+    db.flush()
+    db.add(
+        Payment(
+            order_id=order.id,
+            invoice_id=invoice.id,
+            user_id=user.id,
+            provider="manual",
+            amount_cents=amount,
+            status="pending",
+        )
+    )
+    db.commit()
+    return (
+        db.query(Order)
+        .options(joinedload(Order.items))
+        .filter(Order.id == order.id)
+        .one()
+    )
+
+
+def ensure_attempt_paid(db: Session, user: User, course: Course) -> None:
+    """Block a final-exam start until the exam fee or retake fee is paid.
+
+    A zero fee leaves the attempt free. The first attempt uses the exam fee.
+    Every later attempt uses the retake fee.
+    """
+    exam = course.final_exam
+    if exam is None:
+        return
+    prior = (
+        db.query(QuizAttempt)
+        .filter(QuizAttempt.user_id == user.id, QuizAttempt.final_exam_id == exam.id)
+        .count()
+    )
+    if prior == 0:
+        amount = max(0, int(course.exam_fee_cents or 0))
+        kind = "exam"
+        needed = 1
+    else:
+        amount = max(0, int(course.retake_fee_cents or 0))
+        kind = "retake"
+        needed = prior
+    if amount <= 0 or _paid_attempt_fees(db, user, course, kind) >= needed:
+        return
+    order = _open_attempt_fee_order(db, user, course, kind, amount)
+    label = "exam fee" if kind == "exam" else "retake fee"
+    raise HTTPException(
+        status_code=status.HTTP_402_PAYMENT_REQUIRED,
+        detail={
+            "message": f"Pay the {label} of {format_money(amount, course.currency)} before this attempt.",
+            "order_id": order.id,
+            "order_number": order.number,
+            "amount_cents": amount,
+            "kind": kind,
+        },
+    )
+
+
+def settle_checkout(db: Session, order: Order, *, cancel_url: str) -> str | None:
+    """Use Stripe Checkout when a secret key is configured.
+
+    Returns the hosted checkout URL and leaves the order pending. With no Stripe
+    key, record a manual payment and fulfill immediately, matching the current
+    enroll-on-confirm behavior. Returns None once the order is fulfilled.
+    """
+    order = (
+        db.query(Order)
+        .options(
+            joinedload(Order.items),
+            joinedload(Order.invoices),
+            joinedload(Order.payments),
+            joinedload(Order.user),
+        )
+        .filter(Order.id == order.id)
+        .one()
+    )
+    if order.status == "paid":
+        return None
+    if settings.stripe_secret_key:
+        session_id, url = create_stripe_session(order, cancel_url=cancel_url)
+        payment = order.payments[0] if order.payments else None
+        if payment is None:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Order has no payment.")
+        payment.provider = "stripe"
+        payment.status = "pending"
+        payment.stripe_session_id = session_id
+        db.commit()
+        return url
+    payment = order.payments[0] if order.payments else None
+    mark_manual_unlock(order, payment)
+    fulfill_order(db, order)
+    db.commit()
+    return None
+
+
+def confirm_pending_order(db: Session, user: User, order_id: int) -> tuple[Order, str | None]:
+    order = (
+        db.query(Order)
+        .options(joinedload(Order.items), joinedload(Order.invoices), joinedload(Order.payments), joinedload(Order.user))
+        .filter(Order.id == order_id, Order.user_id == user.id)
+        .first()
+    )
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    if order.status == "paid":
+        return order, None
+    if order.status != "pending":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This order cannot be paid.")
+    checkout_url = settle_checkout(
+        db,
+        order,
+        cancel_url=f"{settings.portal_public_url.rstrip('/')}/cart",
+    )
+    order = (
+        db.query(Order)
+        .options(joinedload(Order.items), joinedload(Order.payments))
+        .filter(Order.id == order.id)
+        .one()
+    )
+    return order, checkout_url

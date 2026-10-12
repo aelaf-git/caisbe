@@ -2,11 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHero, ContentSection } from "@/components/pages/ContentPage";
 import { siteFullName, siteName } from "@/lib/data/home";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
-export const metadata: Metadata = {
-  title: `Privacy Policy | ${siteName}`,
-  description: `Privacy policy for the ${siteFullName} website.`,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return (
+    (await cmsTopicMetadata(
+      "/privacy-policy",
+      `Privacy policy for the ${siteFullName} website.`,
+    )) ?? {
+      title: `Privacy Policy | ${siteName}`,
+      description: `Privacy policy for the ${siteFullName} website.`,
+    }
+  );
+}
 
 const lastUpdated = "June 1, 2025";
 
@@ -145,7 +153,10 @@ const sections: {
   },
 ];
 
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
+  const cms = await cmsTopicPage("/privacy-policy");
+  if (cms) return cms;
+
   return (
     <>
       <PageHero
@@ -159,22 +170,22 @@ export default function PrivacyPolicyPage() {
       </PageHero>
 
       <ContentSection>
-        <div className="space-y-8">
+        <div className="max-w-3xl space-y-5">
           {sections.map((section) => (
             <section key={section.number} id={`section-${section.number}`}>
-              <h2 className="font-display text-caisbe-text-dark text-xl font-semibold">
+              <h2 className="font-hopewell-display text-xl font-bold tracking-tight text-caisbe-text-dark md:text-2xl">
                 {section.number}. {section.title}
               </h2>
               {section.paragraphs?.map((paragraph) => (
                 <p
                   key={paragraph}
-                  className="mt-3 whitespace-pre-line text-base leading-7 text-caisbe-muted"
+                  className="mt-2 whitespace-pre-line text-sm leading-6 text-caisbe-muted md:text-base md:leading-7"
                 >
                   {paragraph}
                 </p>
               ))}
               {section.bullets ? (
-                <ul className="mt-3 list-disc space-y-2 pl-5 text-base leading-7 text-caisbe-muted">
+                <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-6 text-caisbe-muted md:text-base md:leading-7">
                   {section.bullets.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
@@ -183,7 +194,7 @@ export default function PrivacyPolicyPage() {
               {section.closing?.map((paragraph) => (
                 <p
                   key={paragraph}
-                  className="mt-3 text-base leading-7 text-caisbe-muted"
+                  className="mt-2 text-sm leading-6 text-caisbe-muted md:text-base md:leading-7"
                 >
                   {paragraph}
                 </p>
@@ -192,7 +203,7 @@ export default function PrivacyPolicyPage() {
           ))}
         </div>
 
-        <p className="mt-12 text-sm text-caisbe-muted">
+        <p className="mt-8 max-w-3xl text-sm text-caisbe-muted">
           Return to the{" "}
           <Link
             href="/"

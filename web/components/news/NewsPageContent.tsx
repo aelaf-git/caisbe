@@ -81,7 +81,7 @@ export default async function NewsPageContent() {
                       {formatNewsDate(post.posted_on)}
                       {post.tag ? ` · ${post.tag}` : ""}
                     </p>
-                    <h3 className="mt-2 font-display text-2xl font-semibold text-caisbe-text-dark">
+                    <h3 className="mt-2 font-hopewell-display text-2xl font-bold tracking-tight text-caisbe-text-dark">
                       {post.title}
                     </h3>
                     {post.short_description ? (
@@ -91,12 +91,23 @@ export default async function NewsPageContent() {
                     ) : (
                       <div className="flex-1" />
                     )}
-                    <Link
-                      href={`/news/${post.slug}`}
-                      className="mt-5 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
-                    >
-                      Read more
-                    </Link>
+                    {post.external_url ? (
+                      <a
+                        href={post.external_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-5 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
+                      >
+                        Open article
+                      </a>
+                    ) : (
+                      <Link
+                        href={`/news/${post.slug}`}
+                        className="mt-5 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
+                      >
+                        Read more
+                      </Link>
+                    )}
                   </div>
                 </div>
               </article>

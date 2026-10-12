@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -17,6 +18,7 @@ class CourseOut(BaseModel):
     pass_percent: int = 70
     price_cents: int = 9900
     currency: str = "usd"
+    content_protection: bool = True
 
     model_config = {"from_attributes": True}
 
@@ -34,6 +36,7 @@ class CourseCreate(BaseModel):
     cover_url: str | None = None
     pass_percent: int = Field(default=70, ge=0, le=100)
     price_cents: int = Field(default=9900, ge=0)
+    content_protection: bool = True
 
 
 class CourseUpdate(BaseModel):
@@ -44,6 +47,7 @@ class CourseUpdate(BaseModel):
     cover_url: str | None = None
     pass_percent: int | None = Field(default=None, ge=0, le=100)
     price_cents: int | None = Field(default=None, ge=0)
+    content_protection: bool | None = None
     status: str | None = None
 
 
@@ -55,6 +59,13 @@ class EnrollmentOut(BaseModel):
     course: CourseOut
     exam_passed: bool = False
     certificate_code: str | None = None
+    topics_completed: int = 0
+    topics_total: int = 0
+    quizzes_completed: int = 0
+    quizzes_total: int = 0
+    assignments_completed: int = 0
+    assignments_total: int = 0
+    has_final_exam: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -223,6 +234,8 @@ class ContentBlockCreate(BaseModel):
     label: str | None = None
     parent_id: int | None = None
     sort_order: int = 0
+    points_possible: int | None = Field(default=None, ge=1, le=10000)
+    due_at: datetime | None = None
     quiz_title: str | None = "Quiz"
     quiz_questions: list[QuizQuestionIn] = Field(default_factory=list)
 
@@ -234,6 +247,8 @@ class ContentBlockUpdate(BaseModel):
     label: str | None = None
     parent_id: int | None = None
     sort_order: int | None = None
+    points_possible: int | None = Field(default=None, ge=1, le=10000)
+    due_at: datetime | None = None
     quiz_title: str | None = None
     quiz_questions: list[QuizQuestionIn] | None = None
 
@@ -247,6 +262,8 @@ class ContentBlockOut(BaseModel):
     label: str | None
     parent_id: int | None = None
     sort_order: int
+    points_possible: int | None = None
+    due_at: datetime | None = None
     quiz: QuizOut | None = None
 
     model_config = {"from_attributes": True}
@@ -263,6 +280,17 @@ class ContentBlockStudentOut(BaseModel):
     sort_order: int
     completed: bool = False
     review_status: str | None = None
+    points_possible: int | None = None
+    due_at: datetime | None = None
+    submission_score: int | None = None
+    submission_feedback: str | None = None
+    submission_file_url: str | None = None
+    submission_file_name: str | None = None
+    submission_body: str | None = None
+    submitted_at: datetime | None = None
+    can_submit: bool = False
+    can_resubmit: bool = False
+    is_late: bool = False
     quiz: QuizStudentOut | None = None
 
     model_config = {"from_attributes": True}
@@ -345,6 +373,8 @@ class FinalExamUpdate(BaseModel):
     pass_percent: int | None = Field(default=None, ge=0, le=100)
     time_limit_minutes: int | None = Field(default=None, ge=1, le=480)
     questions_to_appear: int | None = Field(default=None, ge=1)
+    secure_mode: bool | None = None
+    max_integrity_violations: int | None = Field(default=None, ge=1, le=20)
     questions: list[QuizQuestionIn] | None = None
 
 
@@ -354,6 +384,8 @@ class FinalExamOut(BaseModel):
     pass_percent: int
     time_limit_minutes: int | None = None
     questions_to_appear: int | None = None
+    secure_mode: bool = True
+    max_integrity_violations: int = 3
     questions: list[QuizQuestionOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
@@ -366,6 +398,8 @@ class FinalExamStudentOut(BaseModel):
     time_limit_minutes: int | None = None
     questions_to_appear: int | None = None
     question_bank_size: int = 0
+    secure_mode: bool = True
+    max_integrity_violations: int = 3
     # Full bank is withheld; live prompts arrive on ExamSessionOut when the attempt starts.
     questions: list[QuizQuestionStudentOut] = Field(default_factory=list)
 
@@ -386,17 +420,69 @@ class ExamSessionOut(BaseModel):
     latest_passed: bool | None = None
     order: ExamOrderOut | None = None
     questions: list[QuizQuestionStudentOut] = Field(default_factory=list)
+    secure_mode: bool = True
+    secure_ok: bool = False
+    violation_count: int = 0
+    max_integrity_violations: int = 3
+    locked_out: bool = False
+
+
+class ExamPrecheckIn(BaseModel):
+    rules_accepted: bool = False
+    fullscreen_ok: bool = False
+    visibility_api_ok: bool = False
+    camera_ok: bool = False
+    multi_monitor: bool | None = None
+    user_agent: str | None = Field(default=None, max_length=512)
+
+
+class ExamPrecheckOut(BaseModel):
+    allowed: bool
+    reasons: list[str] = Field(default_factory=list)
+    secure_ok: bool = False
+
+
+class ExamIntegrityEventIn(BaseModel):
+    phase: Literal["pre", "live", "post"] = "live"
+    event_type: str = Field(min_length=1, max_length=64)
+    detail: dict | None = None
+
+
+class ExamIntegrityBatchIn(BaseModel):
+    events: list[ExamIntegrityEventIn] = Field(default_factory=list, max_length=40)
+
+
+class ExamIntegrityEventOut(BaseModel):
+    id: int
+    phase: str
+    event_type: str
+    detail_json: str | None = None
+    created_at: datetime
+    user_id: int
+    final_exam_id: int
+    exam_session_id: int | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class ExamIntegrityStateOut(BaseModel):
+    violation_count: int
+    max_integrity_violations: int
+    locked_out: bool
+    force_submit: bool = False
 
 
 class CertificateTemplateUpdate(BaseModel):
     title: str | None = None
     body: str | None = None
+    program_name: str | None = Field(default=None, max_length=255)
 
 
 class CertificateTemplateOut(BaseModel):
     id: int
     title: str
     body: str
+    program_name: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -439,14 +525,86 @@ class AssignmentSubmissionOut(BaseModel):
     file_url: str | None = None
     file_name: str | None = None
     status: str
+    score: int | None = None
+    feedback: str | None = None
+    points_possible: int | None = None
+    due_at: datetime | None = None
+    is_late: bool = False
+    graded_at: datetime | None = None
     user_id: int | None = None
     student_name: str | None = None
     student_email: str | None = None
     submitted_at: datetime | None = None
 
 
+class AssignmentAttemptOut(BaseModel):
+    id: int
+    body: str | None = None
+    file_url: str | None = None
+    file_name: str | None = None
+    submitted_at: datetime
+
+
+class StudentAssignmentOut(BaseModel):
+    block_id: int
+    course_id: int
+    title: str
+    course_code: str
+    course_title: str
+    chapter_title: str
+    due_at: datetime | None = None
+    bucket: str
+    review_status: str | None = None
+    score: int | None = None
+    points_possible: int | None = None
+    submitted_at: datetime | None = None
+    is_late: bool = False
+    unlocked: bool = True
+
+
+class StudentAssignmentDetailOut(BaseModel):
+    block_id: int
+    course_id: int
+    title: str
+    instructions_body: str | None = None
+    instructions_url: str | None = None
+    instructions_label: str | None = None
+    course_code: str
+    course_title: str
+    chapter_title: str
+    points_possible: int | None = None
+    due_at: datetime | None = None
+    bucket: str
+    review_status: str | None = None
+    score: int | None = None
+    feedback: str | None = None
+    graded_at: datetime | None = None
+    body: str | None = None
+    file_url: str | None = None
+    file_name: str | None = None
+    submitted_at: datetime | None = None
+    is_late: bool = False
+    can_submit: bool = False
+    can_resubmit: bool = False
+    can_withdraw: bool = False
+    unlocked: bool = True
+    attempts: list[AssignmentAttemptOut] = Field(default_factory=list)
+
+
+class UserDocumentOut(BaseModel):
+    id: int
+    label: str
+    file_name: str
+    file_url: str
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class AssignmentReviewIn(BaseModel):
     status: str = Field(pattern="^(passed|failed)$")
+    score: int | None = Field(default=None, ge=0)
+    feedback: str | None = Field(default=None, max_length=5000)
 
 
 class QuizSubmitIn(BaseModel):
@@ -465,6 +623,8 @@ class QuizAttemptOut(BaseModel):
     passed: bool
     certificate_code: str | None = None
     reviews: list[QuizAnswerReview] = Field(default_factory=list)
+    integrity_violations: int = 0
+    locked_out: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -477,6 +637,7 @@ class CertificateOut(BaseModel):
     student_name: str
     title: str
     body: str
+    program_name: str
     verify_url: str | None = None
     issued_by: str = "CAISBE"
 

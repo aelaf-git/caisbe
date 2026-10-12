@@ -15,6 +15,11 @@ export default function VisitTrendChart({ points }: { points: SiteVisitDaily[] }
   const pad = { top: 16, right: 12, bottom: 28, left: 28 };
   const innerW = width - pad.left - pad.right;
   const innerH = height - pad.top - pad.bottom;
+
+  if (points.length === 0) {
+    return <p className="py-10 text-sm text-caisbe-muted">No daily data in this range.</p>;
+  }
+
   const max = Math.max(1, ...points.map((point) => point.views));
   const step = points.length > 1 ? innerW / (points.length - 1) : innerW;
 

@@ -1,15 +1,25 @@
+import { sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { officeDirectionsUrl, officeEmbedUrl, offices } from "@/lib/data/home";
 
-export default function OfficesSection() {
+type OfficeCard = { region: string; address: string; mapQuery: string };
+
+export default function OfficesSection({
+  title = "Offices",
+  items,
+}: {
+  title?: string;
+  items?: OfficeCard[];
+}) {
+  const shown = items ?? offices;
   return (
-    <section className="bg-white py-16 md:py-24">
+    <section className={`bg-white ${sectionSpacingClassName}`}>
       <div className="mx-auto max-w-7xl px-4">
         <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark motion-safe:animate-page-fade-in md:text-4xl">
-          Offices
+          {title}
         </h2>
 
         <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {offices.map((office, index) => (
+          {shown.map((office, index) => (
             <div
               key={office.region}
               className="overflow-hidden rounded-[20px] bg-white shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in"

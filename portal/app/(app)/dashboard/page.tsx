@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { HelpSupportCard } from "@/components/portal/HelpSupportCenter";
+import MyProgressSection from "@/components/portal/MyProgressSection";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError, type Enrollment } from "@/lib/auth";
@@ -35,6 +37,129 @@ function UnreadNotificationsBanner() {
         View notifications
       </Link>
     </div>
+  );
+}
+
+type AssignmentSummary = {
+  block_id: number;
+  title: string;
+  course_code: string;
+  due_at: string | null;
+  bucket: "pending" | "submitted" | "evaluated";
+};
+
+function formatDue(value: string | null) {
+  if (!value) return "No due date";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "No due date";
+  return date.toLocaleString();
+}
+
+function isOverdue(row: AssignmentSummary) {
+  if (row.bucket !== "pending" || !row.due_at) return false;
+  const due = new Date(row.due_at).getTime();
+  return !Number.isNaN(due) && due < Date.now();
+}
+
+function MyAssignmentsCard() {
+  const [rows, setRows] = useState<AssignmentSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void apiFetch<AssignmentSummary[]>("/me/assignments")
+      .then((data) => {
+        if (active) setRows(data);
+      })
+      .catch((err) => {
+        if (active) setError(err instanceof ApiError ? err.detail : "Unable to load assignments.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const counts = {
+    pending: rows.filter((row) => row.bucket === "pending").length,
+    submitted: rows.filter((row) => row.bucket === "submitted").length,
+    evaluated: rows.filter((row) => row.bucket === "evaluated").length,
+  };
+  const upcoming = [...rows]
+    .filter((row) => row.due_at)
+    .sort((a, b) => {
+      const pendingFirst = Number(a.bucket !== "pending") - Number(b.bucket !== "pending");
+      if (pendingFirst !== 0) return pendingFirst;
+      return new Date(a.due_at ?? 0).getTime() - new Date(b.due_at ?? 0).getTime();
+    })
+    .slice(0, 4);
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">My Assignments</h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-caisbe-muted">
+            Due dates, coursework to submit, and grades after your instructor reviews the work.
+          </p>
+        </div>
+        <Link href="/assignments" className="text-sm font-semibold text-caisbe-red hover:underline">
+          Open My Assignments
+        </Link>
+      </div>
+      {error ? <p className="mt-4 text-sm text-caisbe-red">{error}</p> : null}
+      {loading ? (
+        <p className="mt-4 text-sm text-caisbe-muted">Loading assignments…</p>
+      ) : (
+        <>
+          <dl className="mt-5 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: "Pending", value: counts.pending },
+              { label: "Under review", value: counts.submitted },
+              { label: "Evaluated", value: counts.evaluated },
+            ].map((item) => (
+              <div key={item.label} className="rounded-md border border-ifma-border-light bg-admin-surface-muted/50 px-4 py-3">
+                <dt className="text-xs font-bold uppercase tracking-[0.14em] text-caisbe-muted">{item.label}</dt>
+                <dd className="mt-1 font-display text-2xl font-semibold text-caisbe-text-dark">{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-5">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Assignment due dates</h3>
+            {upcoming.length === 0 ? (
+              <p className="mt-2 text-sm text-caisbe-muted">
+                {rows.length === 0
+                  ? "Assignments from your courses will show up here."
+                  : "None of your assignments have a due date."}
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {upcoming.map((row) => (
+                  <li key={row.block_id}>
+                    <Link
+                      href={`/assignments?block=${row.block_id}`}
+                      className="flex flex-wrap items-baseline justify-between gap-2 rounded-md border border-ifma-border-light px-4 py-3 text-sm hover:border-caisbe-red"
+                    >
+                      <span>
+                        <span className="font-semibold text-caisbe-text">{row.title}</span>
+                        <span className="mt-0.5 block text-caisbe-muted">{row.course_code}</span>
+                      </span>
+                      <span className={isOverdue(row) ? "font-semibold text-caisbe-red" : "text-caisbe-text"}>
+                        {formatDue(row.due_at)}
+                        {isOverdue(row) ? <span className="mt-0.5 block text-xs uppercase tracking-wide">Overdue</span> : null}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+    </Card>
   );
 }
 
@@ -99,7 +224,7 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Student"
+        eyebrow="myCAISBE"
         title="Dashboard"
         description={`Welcome back, ${user?.full_name}. Track your courses, submissions, and credentials.`}
         actions={
@@ -120,6 +245,40 @@ export default function StudentDashboardPage() {
 
       <UnreadNotificationsBanner />
 
+      <MyProgressSection enrollments={enrollments} />
+
+      <HelpSupportCard />
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Student User Guide</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-caisbe-muted">
+              How myCAISBE works today: register, buy a course, study, submit assignments, take exams,
+              download certificates, and open a ticket.
+            </p>
+          </div>
+          <Link href="/guide" className="text-sm font-semibold text-caisbe-red hover:underline">
+            Open user guide
+          </Link>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Discussion forum</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-caisbe-muted">
+              Read and join student discussions on courses, careers, mentorship, and events. You are
+              signed in, so you can take part from here.
+            </p>
+          </div>
+          <Link href="/forum" className="text-sm font-semibold text-caisbe-red hover:underline">
+            Open forum
+          </Link>
+        </div>
+      </Card>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "In progress", value: current.filter((item) => item.status === "enrolled").length },
@@ -133,6 +292,8 @@ export default function StudentDashboardPage() {
           </Card>
         ))}
       </div>
+
+      <MyAssignmentsCard />
 
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -191,7 +352,7 @@ export default function StudentDashboardPage() {
               onClick={() => setTab(item.id)}
               className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 tab === item.id
-                  ? "bg-caisbe-red/10 text-caisbe-red"
+                  ? "bg-caisbe-red text-white"
                   : "text-caisbe-muted hover:bg-admin-surface hover:text-caisbe-text"
               }`}
             >

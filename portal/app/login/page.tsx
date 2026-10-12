@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { ApiError, clearToken } from "@/lib/auth";
-import { safeNextPath } from "@/lib/membershipApplication";
+import { ApiError } from "@/lib/auth";
+import { safeReturnTarget } from "@/lib/membershipApplication";
 
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001";
 
@@ -18,11 +18,26 @@ function PortalLoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const nextPath = safeNextPath(searchParams.get("next"), "/dashboard");
+  const nextPath = safeReturnTarget(searchParams.get("next"), "/dashboard");
+  const registerNext = nextPath.startsWith("/") ? nextPath : "/dashboard";
+
+  function goNext() {
+    if (nextPath.startsWith("http://") || nextPath.startsWith("https://")) {
+      window.location.assign(nextPath);
+      return;
+    }
+    router.push(nextPath);
+  }
 
   useEffect(() => {
     if (!loading && user && user.role !== "admin") {
+      if (nextPath.startsWith("http://") || nextPath.startsWith("https://")) {
+        window.location.replace(nextPath);
+        return;
+      }
       router.replace(nextPath);
     }
   }, [loading, user, router, nextPath]);
@@ -30,18 +45,31 @@ function PortalLoginForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setNeedsVerification(false);
+    setShowForgotPassword(false);
     setSubmitting(true);
     try {
       const loggedIn = await login(email, password);
       if (loggedIn.role === "admin") {
-        logout();
-        clearToken();
+        await logout();
         setError("Administrators should use the Admin portal.");
         return;
       }
-      router.push(nextPath);
+      goNext();
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Unable to log in. Please try again.");
+      const detail =
+        err instanceof ApiError ? err.detail : "Unable to log in. Please try again.";
+      setError(detail);
+      const isVerify =
+        err instanceof ApiError &&
+        err.status === 403 &&
+        detail.toLowerCase().includes("verify your email");
+      setNeedsVerification(isVerify);
+      setShowForgotPassword(
+        !isVerify &&
+          err instanceof ApiError &&
+          (err.status === 401 || detail.toLowerCase().includes("invalid email or password")),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -68,15 +96,15 @@ function PortalLoginForm() {
         />
         <div className="absolute inset-0 bg-linear-to-t from-black/75 via-caisbe-red/20 to-black/10 lg:bg-linear-to-r lg:from-black/20 lg:via-transparent lg:to-caisbe-red/35" />
         <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10 lg:p-12">
-          <p className="text-xs font-semibold uppercase tracking-wide text-white/80">CAISBE Students</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-white/80">myCAISBE</p>
           <p className="font-hopewell-display mt-2 max-w-md text-2xl font-extrabold text-white sm:text-3xl">
-            Continue your courses and certificates with CAISBE
+            Continue your courses and certificates
           </p>
         </div>
       </div>
 
       <div className="flex flex-col justify-center bg-admin-canvas px-4 py-10 sm:px-10 lg:px-16">
-        <div className="mx-auto w-full max-w-md rounded-[20px] bg-white p-6 shadow-hopewell sm:p-8">
+        <div className="mx-auto w-full max-w-md rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-8">
           <Image
             src="/images/logo.png"
             alt="CAISBE logo"
@@ -86,12 +114,12 @@ function PortalLoginForm() {
             className="h-20 w-auto object-contain sm:h-24"
           />
           <h1 className="font-hopewell-display mt-6 text-2xl font-extrabold tracking-tight text-caisbe-text-dark">
-            Student login
+            Sign in to myCAISBE
           </h1>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <div>
-              <label htmlFor="login-email" className="mb-1 block text-sm font-medium">
+              <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-caisbe-text">
                 Email
               </label>
               <input
@@ -101,11 +129,11 @@ function PortalLoginForm() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface px-4 text-sm outline-none focus:border-caisbe-red"
+                className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface-muted px-4 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red"
               />
             </div>
             <div>
-              <label htmlFor="login-password" className="mb-1 block text-sm font-medium">
+              <label htmlFor="login-password" className="mb-1 block text-sm font-medium text-caisbe-text">
                 Password
               </label>
               <div className="relative">
@@ -116,7 +144,7 @@ function PortalLoginForm() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface px-4 pr-12 text-sm outline-none focus:border-caisbe-red"
+                  className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface-muted px-4 pr-12 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red"
                 />
                 <button
                   type="button"
@@ -143,29 +171,71 @@ function PortalLoginForm() {
             </div>
 
             {error ? (
-              <p className="text-sm text-caisbe-red">
-                {error}{" "}
-                {error.includes("Admin") ? (
-                  <a href={ADMIN_URL} className="font-semibold underline">
-                    Open Admin
-                  </a>
+              <div
+                className={
+                  needsVerification
+                    ? "rounded-md border border-ifma-border bg-admin-surface px-4 py-3 text-sm text-caisbe-text"
+                    : "text-sm text-caisbe-red"
+                }
+              >
+                <p>{error}</p>
+                {needsVerification ? (
+                  <p className="mt-2 text-caisbe-muted">
+                    Open the link in that email to open your account, then sign in here. Link expired?{" "}
+                    <Link
+                      href={`/register?next=${encodeURIComponent(registerNext)}`}
+                      className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                    >
+                      Register again
+                    </Link>
+                    .
+                  </p>
                 ) : null}
-              </p>
+                {showForgotPassword ? (
+                  <p className="mt-2 text-caisbe-muted">
+                    Forgot your password?{" "}
+                    <Link
+                      href={`/forgot-password?email=${encodeURIComponent(email.trim())}`}
+                      className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                    >
+                      Reset it by email
+                    </Link>
+                    .
+                  </p>
+                ) : null}
+                {error.includes("Admin") ? (
+                  <p className="mt-1">
+                    <a href={ADMIN_URL} className="font-semibold underline">
+                      Open Admin
+                    </a>
+                  </p>
+                ) : null}
+              </div>
             ) : null}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex min-w-[180px] items-center justify-center rounded-full bg-caisbe-red px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark disabled:opacity-60"
-            >
-              {submitting ? "Signing in…" : "Sign in"}
-            </button>
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex min-w-[180px] items-center justify-center rounded-full bg-caisbe-red px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark disabled:opacity-60"
+              >
+                {submitting ? "Signing in…" : "Sign in"}
+              </button>
+              {!showForgotPassword ? (
+                <Link
+                  href={`/forgot-password?email=${encodeURIComponent(email.trim())}`}
+                  className="text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                >
+                  Forgot password?
+                </Link>
+              ) : null}
+            </div>
           </form>
 
           <p className="mt-6 text-sm text-caisbe-muted">
-            New to CAISBE?{" "}
+            New to myCAISBE?{" "}
             <Link
-              href={`/register?next=${encodeURIComponent(nextPath)}`}
+              href={`/register?next=${encodeURIComponent(registerNext)}`}
               className="font-semibold text-caisbe-red hover:text-caisbe-red-dark"
             >
               Register

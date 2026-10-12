@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 
 export const fieldClassName =
-  "h-11 w-full rounded-full border border-ifma-border bg-admin-surface px-4 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red";
+  "h-11 w-full rounded-full border border-ifma-border bg-admin-surface-muted px-4 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red";
 
 export const textAreaClassName =
-  "w-full rounded-[20px] border border-ifma-border bg-admin-surface px-4 py-3 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red";
+  "w-full rounded-[20px] border border-ifma-border bg-admin-surface-muted px-4 py-3 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red";
 
 export default function FormField({
   label,

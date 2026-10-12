@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Alert from "@/components/ui/Alert";
 import Button from "@/components/ui/Button";
 import { fieldClassName } from "@/components/ui/FormField";
+import { appendQuestionBank, parseQuestionBank } from "@/lib/parseQuestionBank";
 import type { QuizQuestion } from "@/lib/lms";
 
 const MIN_CHOICES = 2;
@@ -57,10 +59,26 @@ export default function QuizQuestionEditor({
   radioNamePrefix,
   error,
 }: QuizQuestionEditorProps) {
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteError, setPasteError] = useState<string | null>(null);
+
   function updateQuestion(index: number, next: QuizQuestion) {
     const copy = [...questions];
     copy[index] = next;
     onChange(copy);
+  }
+
+  function addPastedQuestions() {
+    const parsed = parseQuestionBank(pasteText);
+    if ("error" in parsed) {
+      setPasteError(parsed.error);
+      return;
+    }
+    onChange(appendQuestionBank(questions, parsed.questions));
+    setPasteText("");
+    setPasteError(null);
+    setPasteOpen(false);
   }
 
   return (
@@ -68,6 +86,30 @@ export default function QuizQuestionEditor({
       <p className="text-sm text-caisbe-muted">
         Select the radio button next to the correct answer for each question.
       </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="secondary" size="sm" onClick={() => setPasteOpen((open) => !open)}>
+          {pasteOpen ? "Hide paste" : "Paste questions"}
+        </Button>
+      </div>
+      {pasteOpen ? (
+        <div className="space-y-3 rounded-xl border border-ifma-border bg-admin-surface p-4">
+          <p className="text-sm text-caisbe-muted">
+            Number each question. Mark the one correct choice with * or (correct). The bank is numbered
+            again after you add it.
+          </p>
+          <textarea
+            value={pasteText}
+            onChange={(event) => setPasteText(event.target.value)}
+            rows={10}
+            placeholder={"1. What is facility management?\na) Cleaning only\n*b) Managing the built environment\nc) Selling property"}
+            className="w-full rounded-md border border-ifma-border px-3 py-2 text-sm outline-none focus:border-caisbe-green"
+          />
+          {pasteError ? <Alert tone="error">{pasteError}</Alert> : null}
+          <Button size="sm" onClick={addPastedQuestions} disabled={!pasteText.trim()}>
+            Add pasted questions
+          </Button>
+        </div>
+      ) : null}
 
       {questions.map((q, qi) => (
         <div key={qi} className="space-y-4 rounded-xl border border-ifma-border bg-admin-surface-muted/30 p-4 sm:p-5">

@@ -281,13 +281,22 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
           </p>
           <div className="mt-3 flex flex-wrap gap-4">
             {isRenewal ? null : (
-              <a
-                href="/forms/caisbe-membership-registration.docx"
-                download="CAISBE-Membership-Registration.docx"
-                className="inline-flex text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
-              >
-                Download Word form
-              </a>
+              <>
+                <a
+                  href="/forms/caisbe-membership-registration.pdf"
+                  download="CAISBE-Membership-Registration.pdf"
+                  className="inline-flex text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                >
+                  Download PDF form
+                </a>
+                <a
+                  href="/forms/caisbe-membership-registration.docx"
+                  download="CAISBE-Membership-Registration.docx"
+                  className="inline-flex text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                >
+                  Download Word form
+                </a>
+              </>
             )}
             <a
               href={printHref}

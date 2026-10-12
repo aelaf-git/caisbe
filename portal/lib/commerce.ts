@@ -68,6 +68,13 @@ export type CheckoutPreview = {
   items?: CheckoutPreviewItem[];
 };
 
+/** Send the browser to Stripe when the API opened a card checkout. */
+export function followCheckout(result: { checkout_url?: string | null }): boolean {
+  if (typeof window === "undefined" || !result.checkout_url) return false;
+  window.location.assign(result.checkout_url);
+  return true;
+}
+
 export type CheckoutResult = {
   order_id: number;
   order_number: string;
@@ -99,7 +106,19 @@ export type OrderRow = {
   balance_cents: number;
   currency: string;
   promo_code?: string | null;
+  invoice_number?: string | null;
   items?: OrderItemRow[];
+};
+
+export type StudentPayment = {
+  id: number;
+  description: string;
+  amount_cents: number;
+  currency: string;
+  status: string;
+  method: string;
+  created_at: string;
+  order_number: string;
 };
 
 export type InvoiceRow = {

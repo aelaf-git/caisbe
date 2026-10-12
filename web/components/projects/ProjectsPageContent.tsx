@@ -3,6 +3,7 @@ import {
   ContentCard,
   ContentSection,
   PageHero,
+  heroNoteClassName,
 } from "@/components/pages/ContentPage";
 import { projectsContent } from "@/lib/data/projects";
 
@@ -29,7 +30,7 @@ export default function ProjectsPageContent() {
           </>
         }
       >
-        <p className="mt-6 text-base leading-7 text-caisbe-muted">{intro}</p>
+        <p className={heroNoteClassName}>{intro}</p>
       </PageHero>
 
       <ContentSection

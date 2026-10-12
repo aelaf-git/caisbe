@@ -2,8 +2,9 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { apiFetch, ApiError, type AdminStudent } from "@/lib/auth";
+import AssignmentReviewForm, { type AssignmentReviewPayload } from "@/components/lms/AssignmentReviewForm";
 import Button from "@/components/ui/Button";
+import { apiFetch, ApiError, type AdminStudent } from "@/lib/auth";
 import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { resolveUploadUrl } from "@/lib/mediaUrl";
 
@@ -16,6 +17,27 @@ type AssignmentSubmission = {
   file_url: string | null;
   file_name: string | null;
   status: string;
+  score: number | null;
+  feedback: string | null;
+  points_possible: number | null;
+  graded_at: string | null;
+};
+
+type StudentDocument = {
+  id: number;
+  label: string;
+  file_name: string;
+  file_url: string;
+  created_at?: string | null;
+};
+
+type IntegrityEvent = {
+  id: number;
+  phase: string;
+  event_type: string;
+  detail_json?: string | null;
+  created_at: string;
+  final_exam_id: number;
 };
 
 export default function StudentProfilePrintPage() {
@@ -23,6 +45,8 @@ export default function StudentProfilePrintPage() {
   const { notice, dialog } = useNoticeDialog();
   const [student, setStudent] = useState<AdminStudent | null>(null);
   const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
+  const [documents, setDocuments] = useState<StudentDocument[]>([]);
+  const [integrity, setIntegrity] = useState<IntegrityEvent[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<number | null>(null);
 
@@ -33,20 +57,26 @@ export default function StudentProfilePrintPage() {
     void apiFetch<AssignmentSubmission[]>(`/admin/students/${params.id}/assignment-submissions`)
       .then(setSubmissions)
       .catch(() => setSubmissions([]));
+    void apiFetch<StudentDocument[]>(`/admin/students/${params.id}/documents`)
+      .then(setDocuments)
+      .catch(() => setDocuments([]));
+    void apiFetch<IntegrityEvent[]>(`/admin/students/${params.id}/exam-integrity`)
+      .then(setIntegrity)
+      .catch(() => setIntegrity([]));
   }, [params.id]);
 
-  async function review(id: number, status: "passed" | "failed") {
+  async function review(id: number, payload: AssignmentReviewPayload) {
     setReviewing(id);
     try {
       const updated = await apiFetch<AssignmentSubmission>(`/admin/assignment-submissions/${id}/review`, {
         method: "POST",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(payload),
       });
       setSubmissions((current) => current.map((row) => (row.id === id ? updated : row)));
       await notice({
         tone: "success",
         title: "Done",
-        description: status === "passed" ? "Submission marked as passed." : "Submission marked as failed.",
+        description: payload.status === "passed" ? "Submission marked as passed." : "Submission marked as failed.",
       });
     } catch (err) {
       await notice({
@@ -109,6 +139,26 @@ export default function StudentProfilePrintPage() {
           <dd className="capitalize">{student.membership_status || "pending"}</dd>
         </div>
       </dl>
+      <h2 className="font-display text-xl font-semibold">Supporting documents</h2>
+      {documents.length === 0 ? (
+        <p className="text-sm text-caisbe-muted">No supporting documents attached.</p>
+      ) : (
+        <ul className="space-y-2 text-sm">
+          {documents.map((doc) => (
+            <li key={doc.id} className="border border-ifma-border p-3">
+              <a
+                href={resolveUploadUrl(doc.file_url) ?? doc.file_url}
+                className="font-semibold text-caisbe-red underline"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {doc.file_name}
+              </a>
+              <p className="text-caisbe-muted">{doc.label}</p>
+            </li>
+          ))}
+        </ul>
+      )}
       <h2 className="font-display text-xl font-semibold">Assignment submissions</h2>
       {submissions.length === 0 ? (
         <p className="text-sm text-caisbe-muted">No assignment submissions yet.</p>
@@ -133,20 +183,39 @@ export default function StudentProfilePrintPage() {
                 <p className="whitespace-pre-wrap text-caisbe-text">{row.body}</p>
               )}
               <p className="font-semibold capitalize">{row.status.replaceAll("_", " ")}</p>
-              {row.status === "under_review" ? (
-                <div className="flex gap-2 print:hidden">
-                  <Button disabled={reviewing === row.id} onClick={() => void review(row.id, "passed")}>
-                    Pass
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={reviewing === row.id}
-                    onClick={() => void review(row.id, "failed")}
-                  >
-                    Fail
-                  </Button>
-                </div>
+              {row.points_possible != null && row.score != null ? (
+                <p className="text-caisbe-text">
+                  Score {row.score} / {row.points_possible}
+                </p>
               ) : null}
+              {row.feedback ? <p className="whitespace-pre-wrap text-caisbe-text">{row.feedback}</p> : null}
+              <div className="print:hidden">
+                <AssignmentReviewForm
+                  key={`${row.id}-${row.status}-${row.score ?? ""}-${row.graded_at ?? ""}`}
+                  pointsPossible={row.points_possible}
+                  initialScore={row.score}
+                  initialFeedback={row.feedback}
+                  busy={reviewing === row.id}
+                  onReview={(payload) => void review(row.id, payload)}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <h2 className="font-display text-xl font-semibold">Exam integrity log</h2>
+      {integrity.length === 0 ? (
+        <p className="text-sm text-caisbe-muted">No secure-exam integrity events recorded.</p>
+      ) : (
+        <ul className="max-h-80 space-y-2 overflow-y-auto text-sm print:max-h-none">
+          {integrity.map((row) => (
+            <li key={row.id} className="border border-ifma-border px-3 py-2">
+              <p className="font-semibold text-caisbe-text">
+                {row.event_type.replaceAll("_", " ")} · {row.phase}
+              </p>
+              <p className="text-caisbe-muted">
+                Exam #{row.final_exam_id} · {new Date(row.created_at).toLocaleString()}
+              </p>
             </li>
           ))}
         </ul>

@@ -2,9 +2,9 @@ import Link from "next/link";
 
 const variantStyles = {
   primary:
-    "inline-flex min-w-[150px] items-center justify-center rounded-full bg-caisbe-red px-7 py-3.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark",
+    "inline-flex w-full min-w-0 items-center justify-center rounded-full bg-caisbe-red px-6 py-3.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark sm:w-auto sm:min-w-[150px] sm:px-7",
   secondary:
-    "inline-flex min-w-[150px] items-center justify-center rounded-full border-2 border-caisbe-red bg-white px-7 py-3.5 text-sm font-bold text-caisbe-red transition hover:-translate-y-0.5 hover:bg-caisbe-red hover:text-white",
+    "inline-flex w-full min-w-0 items-center justify-center rounded-full border-2 border-caisbe-red bg-white px-6 py-3.5 text-sm font-bold text-caisbe-red transition hover:-translate-y-0.5 hover:bg-caisbe-red hover:text-white sm:w-auto sm:min-w-[150px] sm:px-7",
   green:
     "inline-flex items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:border-caisbe-red-dark hover:bg-caisbe-red-dark",
   red:
@@ -14,7 +14,7 @@ const variantStyles = {
   textGreen:
     "text-sm font-semibold uppercase tracking-wide text-caisbe-red transition-colors hover:text-caisbe-red-dark",
   pill:
-    "inline-flex items-center justify-center rounded-full bg-caisbe-red px-7 py-3.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark",
+    "inline-flex w-full items-center justify-center rounded-full bg-caisbe-red px-6 py-3.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark sm:w-auto sm:px-7",
 };
 
 type ButtonLinkProps = {
@@ -31,9 +31,22 @@ export default function ButtonLink({
   className = "",
 }: ButtonLinkProps) {
   const classNameFull = `${variantStyles[variant]} ${className}`;
-  if (href.startsWith("http://") || href.startsWith("https://")) {
+  const isExternal =
+    href.startsWith("http://") ||
+    href.startsWith("https://") ||
+    href.startsWith("mailto:") ||
+    href.startsWith("tel:");
+  if (isExternal) {
+    const opensAway =
+      href.startsWith("http://") || href.startsWith("https://");
     return (
-      <a href={href} className={classNameFull}>
+      <a
+        href={href}
+        className={classNameFull}
+        {...(opensAway
+          ? { target: "_blank", rel: "noopener noreferrer" }
+          : {})}
+      >
         {children}
       </a>
     );

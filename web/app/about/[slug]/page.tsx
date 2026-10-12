@@ -4,6 +4,7 @@ import BuiltEnvironmentPageContent from "@/components/about/BuiltEnvironmentPage
 import TopicPageContent from "@/components/pages/TopicPageContent";
 import { aboutContent } from "@/lib/data/about";
 import { aboutPages, getAboutPage } from "@/lib/data/site-pages";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -13,6 +14,9 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+
+  const published = await cmsTopicMetadata(`/about/${slug}`, "About CAISBE");
+  if (published) return published;
 
   if (slug === aboutContent.builtEnvironment.slug) {
     return {
@@ -31,6 +35,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function AboutSubpage({ params }: Props) {
   const { slug } = await params;
+
+  const cms = await cmsTopicPage(`/about/${slug}`);
+  if (cms) return cms;
 
   if (slug === aboutContent.builtEnvironment.slug) {
     return <BuiltEnvironmentPageContent />;

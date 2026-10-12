@@ -41,6 +41,12 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        if connection.dialect.name == "sqlite":
+            # A few revisions insert rows into tables whose default is now().
+            # Postgres provides that function; SQLite needs it registered so the
+            # same migrations can be checked off Postgres.
+            dbapi = connection.connection.dbapi_connection
+            dbapi.create_function("now", 0, lambda: "2000-01-01 00:00:00")
         context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():

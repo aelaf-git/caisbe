@@ -1,5 +1,6 @@
 import {
   ContentSection,
+  FeatureList,
   PageHero,
   SubsectionIndex,
 } from "@/components/pages/ContentPage";
@@ -35,16 +36,7 @@ export function MediaItemContent({ slug }: { slug: string }) {
         lead={item.lead}
       />
       <ContentSection title="What to expect">
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {item.highlights.map((highlight) => (
-            <li
-              key={highlight}
-              className="rounded-[20px] bg-white px-4 py-3 text-sm font-medium text-caisbe-text shadow-hopewell"
-            >
-              {highlight}
-            </li>
-          ))}
-        </ul>
+        <FeatureList items={item.highlights} />
       </ContentSection>
     </>
   );

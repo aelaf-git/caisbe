@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import Alert from "@/components/ui/Alert";
 import Button from "@/components/ui/Button";
 import FormField, { fieldClassName } from "@/components/ui/FormField";
-import { ApiError, clearToken } from "@/lib/auth";
+import { ApiError } from "@/lib/auth";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -31,8 +31,7 @@ export default function AdminLoginPage() {
     try {
       const loggedIn = await login(email, password);
       if (loggedIn.role !== "admin") {
-        logout();
-        clearToken();
+        await logout();
         setError("This portal is for administrators only. Students should use the student portal.");
         return;
       }
@@ -73,7 +72,7 @@ export default function AdminLoginPage() {
       </div>
 
       <div className="flex flex-col justify-center bg-admin-canvas px-4 py-10 sm:px-10 lg:px-16">
-        <div className="mx-auto w-full max-w-md rounded-[20px] bg-white p-6 shadow-hopewell sm:p-8">
+        <div className="mx-auto w-full max-w-md rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-8">
           <Image
             src="/images/logo.png"
             alt="CAISBE logo"
@@ -134,13 +133,21 @@ export default function AdminLoginPage() {
               </div>
               </FormField>
               {error ? <Alert tone="error">{error}</Alert> : null}
-              <Button
-                type="submit"
-                disabled={submitting}
-                className="min-w-[180px]"
-              >
-                {submitting ? "Signing in…" : "Sign in"}
-              </Button>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="min-w-[180px]"
+                >
+                  {submitting ? "Signing in…" : "Sign in"}
+                </Button>
+                <a
+                  href={`${(process.env.NEXT_PUBLIC_PORTAL_URL || "https://portal.caisbe.org").replace(/\/$/, "")}/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`}
+                  className="text-sm font-semibold text-caisbe-red hover:text-caisbe-red-dark"
+                >
+                  Forgot password?
+                </a>
+              </div>
           </form>
         </div>
       </div>

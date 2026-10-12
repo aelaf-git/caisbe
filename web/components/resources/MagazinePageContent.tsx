@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHero } from "@/components/pages/ContentPage";
+import { PageHero, sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { fetchPublishedMagazines, type MediaAsset } from "@/lib/api";
 import { mediaContent } from "@/lib/data/resources";
 
@@ -33,7 +33,7 @@ export default function MagazinePageContent() {
         lead={item.lead}
       />
 
-      <section className="bg-transparent py-16 md:py-24">
+      <section className={`bg-transparent ${sectionSpacingClassName}`}>
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
             Latest issues
@@ -66,14 +66,16 @@ export default function MagazinePageContent() {
                     </div>
                   )}
                   <div className="flex flex-1 flex-col p-6">
-                    <h3 className="text-lg font-semibold text-ifma-navy">{issue.title}</h3>
+                    <h3 className="font-hopewell-display text-lg font-bold tracking-tight text-ifma-navy">
+                      {issue.title}
+                    </h3>
                     {issue.description ? (
                       <p className="mt-3 flex-1 text-sm leading-6 text-ifma-muted">{issue.description}</p>
                     ) : (
                       <div className="flex-1" />
                     )}
                     <a
-                      href={issue.file_url}
+                      href={issue.file_url || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-6 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"

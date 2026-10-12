@@ -11,8 +11,19 @@ import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/Fo
 import ProgressBar from "@/components/ui/ProgressBar";
 import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
+import Tabs from "@/components/ui/Tabs";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, apiUpload, ApiError, type NewsPost } from "@/lib/auth";
+
+type NewsTab = "posts" | "links";
+
+function isLinkPost(post: NewsPost) {
+  return Boolean((post.external_url || "").trim());
+}
+
+function isHttpUrl(value: string) {
+  return /^https?:\/\//i.test(value.trim());
+}
 
 const IMAGE_ACCEPT = "image/*,.jpg,.jpeg,.png,.webp,.gif";
 const VIDEO_ACCEPT = "video/*,.mp4,.webm,.mov,.m4v";
@@ -64,10 +75,12 @@ export default function NewsManager({
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [tab, setTab] = useState<NewsTab>("posts");
   const [title, setTitle] = useState("");
   const [tag, setTag] = useState("");
   const [shortDescription, setShortDescription] = useState("");
   const [longDescription, setLongDescription] = useState("");
+  const [externalUrl, setExternalUrl] = useState("");
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [videoUrls, setVideoUrls] = useState<string[]>([]);
@@ -76,6 +89,11 @@ export default function NewsManager({
   const [featured, setFeatured] = useState(false);
 
   const isEditing = editingId !== null;
+  const isLinksTab = tab === "links";
+  const visiblePosts = useMemo(
+    () => posts.filter((post) => (isLinksTab ? isLinkPost(post) : !isLinkPost(post))),
+    [posts, isLinksTab],
+  );
 
   const formValues = useMemo(
     () => ({
@@ -83,6 +101,7 @@ export default function NewsManager({
       tag: tag.trim(),
       short_description: shortDescription.trim(),
       long_description: longDescription.trim(),
+      external_url: externalUrl.trim(),
       cover_url: coverUrl,
       image_urls: imageUrls,
       video_urls: videoUrls,
@@ -90,7 +109,19 @@ export default function NewsManager({
       published,
       featured,
     }),
-    [title, tag, shortDescription, longDescription, coverUrl, imageUrls, videoUrls, postedOn, published, featured],
+    [
+      title,
+      tag,
+      shortDescription,
+      longDescription,
+      externalUrl,
+      coverUrl,
+      imageUrls,
+      videoUrls,
+      postedOn,
+      published,
+      featured,
+    ],
   );
   const { dirty, resetBaseline } = useDirtyForm(formValues);
 
@@ -101,6 +132,7 @@ export default function NewsManager({
     setTag("");
     setShortDescription("");
     setLongDescription("");
+    setExternalUrl("");
     setCoverUrl(null);
     setImageUrls([]);
     setVideoUrls([]);
@@ -116,6 +148,7 @@ export default function NewsManager({
       tag: "",
       short_description: "",
       long_description: "",
+      external_url: "",
       cover_url: null,
       image_urls: [],
       video_urls: [],
@@ -125,12 +158,19 @@ export default function NewsManager({
     });
   }
 
+  function changeTab(next: NewsTab) {
+    setTab(next);
+    clearForm();
+  }
+
   function startEdit(post: NewsPost) {
+    setTab(isLinkPost(post) ? "links" : "posts");
     setEditingId(post.id);
     setTitle(post.title);
     setTag(post.tag ?? "");
     setShortDescription(post.short_description ?? "");
     setLongDescription(post.long_description ?? "");
+    setExternalUrl(post.external_url ?? "");
     setCoverUrl(post.cover_url);
     setImageUrls(post.image_urls ?? []);
     setVideoUrls(post.video_urls ?? []);
@@ -145,6 +185,7 @@ export default function NewsManager({
       tag: (post.tag ?? "").trim(),
       short_description: (post.short_description ?? "").trim(),
       long_description: (post.long_description ?? "").trim(),
+      external_url: (post.external_url ?? "").trim(),
       cover_url: post.cover_url,
       image_urls: post.image_urls ?? [],
       video_urls: post.video_urls ?? [],
@@ -225,16 +266,31 @@ export default function NewsManager({
       onError("Post date is required.");
       return;
     }
+    const link = externalUrl.trim();
+    if (isLinksTab) {
+      if (!link) {
+        onError("Paste the article or page URL to share.");
+        return;
+      }
+      if (!isHttpUrl(link)) {
+        onError("The link must start with http:// or https://");
+        return;
+      }
+    } else if (link && !isHttpUrl(link)) {
+      onError("The link must start with http:// or https://");
+      return;
+    }
     setSaving(true);
     try {
       const body = {
         title: title.trim(),
         tag: tag.trim() || null,
         short_description: shortDescription.trim() || null,
-        long_description: longDescription.trim() || null,
+        long_description: isLinksTab ? null : longDescription.trim() || null,
+        external_url: link || null,
         cover_url: coverUrl,
-        image_urls: imageUrls,
-        video_urls: videoUrls,
+        image_urls: isLinksTab ? [] : imageUrls,
+        video_urls: isLinksTab ? [] : videoUrls,
         posted_on: fromInputDate(postedOn),
         published,
         featured,
@@ -244,13 +300,13 @@ export default function NewsManager({
           method: "PATCH",
           body: JSON.stringify(body),
         });
-        onSuccess("News post updated.");
+        onSuccess(isLinksTab ? "Shared link updated." : "News post updated.");
       } else {
         await apiFetch("/admin/news", {
           method: "POST",
           body: JSON.stringify(body),
         });
-        onSuccess("News post created.");
+        onSuccess(isLinksTab ? "Shared link created." : "News post created.");
       }
       clearForm();
       await onRefresh();
@@ -293,15 +349,40 @@ export default function NewsManager({
 
   return (
     <div className="space-y-6">
+      <Tabs
+        ariaLabel="News sections"
+        value={tab}
+        onChange={changeTab}
+        items={[
+          {
+            id: "posts",
+            label: "Posts",
+            count: posts.filter((post) => !isLinkPost(post)).length,
+          },
+          {
+            id: "links",
+            label: "Links",
+            count: posts.filter((post) => isLinkPost(post)).length,
+          },
+        ]}
+      />
+
       <Card>
         <div ref={formRef} className="space-y-4 p-6">
           <div>
             <h2 className="text-lg font-semibold text-caisbe-text-dark">
-              {isEditing ? "Edit news post" : "Add news post"}
+              {isLinksTab
+                ? isEditing
+                  ? "Edit shared link"
+                  : "Share a link"
+                : isEditing
+                  ? "Edit news post"
+                  : "Add news post"}
             </h2>
             <p className="mt-1 text-sm text-caisbe-muted">
-              Publish announcements with a cover image, gallery images, videos, and short/long
-              descriptions.
+              {isLinksTab
+                ? "Paste an external article or page URL. Visitors open the link from News & Announcements."
+                : "Publish announcements with a cover image, gallery images, videos, and short/long descriptions."}
             </p>
           </div>
 
@@ -352,6 +433,26 @@ export default function NewsManager({
             </div>
           </div>
 
+          <FormField
+            label={isLinksTab ? "Article or page URL" : "External link (optional)"}
+            hint={
+              isLinksTab
+                ? "Required. Example: https://example.com/article"
+                : "Optional. Add a URL if this post should also open an external article."
+            }
+          >
+            <input
+              id="news-external-url"
+              type="url"
+              inputMode="url"
+              className={fieldClassName}
+              value={externalUrl}
+              onChange={(e) => setExternalUrl(e.target.value)}
+              placeholder="https://"
+              required={isLinksTab}
+            />
+          </FormField>
+
           <FormField label="Short description">
             <textarea
               id="news-short"
@@ -363,19 +464,21 @@ export default function NewsManager({
             />
           </FormField>
 
-          <FormField label="Long description">
-            <textarea
-              id="news-long"
-              className={textAreaClassName}
-              rows={8}
-              value={longDescription}
-              onChange={(e) => setLongDescription(e.target.value)}
-              placeholder="Full announcement body on the detail page."
-            />
-          </FormField>
+          {!isLinksTab ? (
+            <FormField label="Long description">
+              <textarea
+                id="news-long"
+                className={textAreaClassName}
+                rows={8}
+                value={longDescription}
+                onChange={(e) => setLongDescription(e.target.value)}
+                placeholder="Full announcement body on the detail page."
+              />
+            </FormField>
+          ) : null}
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <FormField label="Cover image">
+          <div className={`grid gap-4 ${isLinksTab ? "md:grid-cols-1" : "md:grid-cols-3"}`}>
+            <FormField label="Cover image (optional)">
               <input
                 ref={coverInputRef}
                 type="file"
@@ -392,7 +495,7 @@ export default function NewsManager({
                   <img
                     src={coverUrl}
                     alt=""
-                    className="h-28 w-full object-cover border border-ifma-border"
+                    className="h-28 w-full max-w-sm object-cover border border-ifma-border"
                   />
                   <Button variant="secondary" onClick={() => setCoverUrl(null)}>
                     Remove cover
@@ -401,78 +504,82 @@ export default function NewsManager({
               ) : null}
             </FormField>
 
-            <FormField label="Additional images">
-              <input
-                ref={imagesInputRef}
-                type="file"
-                accept={IMAGE_ACCEPT}
-                multiple
-                className={fieldClassName}
-                onChange={(e) => void uploadImages(e.target.files)}
-              />
-              {imageUrls.length > 0 ? (
-                <ul className="mt-2 space-y-2">
-                  {imageUrls.map((url) => (
-                    <li key={url} className="flex items-center gap-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={url}
-                        alt=""
-                        className="h-14 w-20 object-cover border border-ifma-border"
-                      />
-                      <Button
-                        variant="secondary"
-                        onClick={() =>
-                          setImageUrls((prev) => prev.filter((item) => item !== url))
-                        }
-                      >
-                        Remove
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </FormField>
+            {!isLinksTab ? (
+              <>
+                <FormField label="Additional images">
+                  <input
+                    ref={imagesInputRef}
+                    type="file"
+                    accept={IMAGE_ACCEPT}
+                    multiple
+                    className={fieldClassName}
+                    onChange={(e) => void uploadImages(e.target.files)}
+                  />
+                  {imageUrls.length > 0 ? (
+                    <ul className="mt-2 space-y-2">
+                      {imageUrls.map((url) => (
+                        <li key={url} className="flex items-center gap-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={url}
+                            alt=""
+                            className="h-14 w-20 object-cover border border-ifma-border"
+                          />
+                          <Button
+                            variant="secondary"
+                            onClick={() =>
+                              setImageUrls((prev) => prev.filter((item) => item !== url))
+                            }
+                          >
+                            Remove
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </FormField>
 
-            <FormField label="Videos">
-              <input
-                ref={videoInputRef}
-                type="file"
-                accept={VIDEO_ACCEPT}
-                className={fieldClassName}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void uploadVideo(file);
-                }}
-              />
-              {videoUrls.length > 0 ? (
-                <ul className="mt-2 space-y-2">
-                  {videoUrls.map((url) => (
-                    <li
-                      key={url}
-                      className="flex flex-wrap items-center gap-2 text-sm text-caisbe-muted"
-                    >
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-caisbe-red hover:underline"
-                      >
-                        View video
-                      </a>
-                      <Button
-                        variant="secondary"
-                        onClick={() =>
-                          setVideoUrls((prev) => prev.filter((item) => item !== url))
-                        }
-                      >
-                        Remove
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </FormField>
+                <FormField label="Videos">
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept={VIDEO_ACCEPT}
+                    className={fieldClassName}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void uploadVideo(file);
+                    }}
+                  />
+                  {videoUrls.length > 0 ? (
+                    <ul className="mt-2 space-y-2">
+                      {videoUrls.map((url) => (
+                        <li
+                          key={url}
+                          className="flex flex-wrap items-center gap-2 text-sm text-caisbe-muted"
+                        >
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-caisbe-red hover:underline"
+                          >
+                            View video
+                          </a>
+                          <Button
+                            variant="secondary"
+                            onClick={() =>
+                              setVideoUrls((prev) => prev.filter((item) => item !== url))
+                            }
+                          >
+                            Remove
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </FormField>
+              </>
+            ) : null}
           </div>
 
           {uploading ? <ProgressBar value={uploadProgress} /> : null}
@@ -482,7 +589,15 @@ export default function NewsManager({
               dirty={dirty}
               saving={saving}
               disabled={uploading}
-              idleLabel={isEditing ? "Update post" : "Create post"}
+              idleLabel={
+                isLinksTab
+                  ? isEditing
+                    ? "Update link"
+                    : "Share link"
+                  : isEditing
+                    ? "Update post"
+                    : "Create post"
+              }
               onClick={() => void handleSave()}
             />
             {isEditing ? (
@@ -496,21 +611,27 @@ export default function NewsManager({
 
       <Card>
         <div className="border-b border-ifma-border px-6 py-4">
-          <h2 className="text-lg font-semibold text-caisbe-text-dark">News posts</h2>
+          <h2 className="text-lg font-semibold text-caisbe-text-dark">
+            {isLinksTab ? "Shared links" : "News posts"}
+          </h2>
         </div>
         {loading ? (
           <div className="space-y-3 p-6">
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
           </div>
-        ) : posts.length === 0 ? (
+        ) : visiblePosts.length === 0 ? (
           <EmptyState
-            title="No news posts"
-            description="Create your first announcement with cover media and descriptions."
+            title={isLinksTab ? "No shared links" : "No news posts"}
+            description={
+              isLinksTab
+                ? "Paste an external article URL above to share it on the public news page."
+                : "Create your first announcement with cover media and descriptions."
+            }
           />
         ) : (
           <ul className="divide-y divide-ifma-border">
-            {posts.map((post) => (
+            {visiblePosts.map((post) => (
               <li
                 key={post.id}
                 className="flex flex-col gap-3 px-6 py-4 md:flex-row md:items-center md:justify-between"
@@ -522,10 +643,12 @@ export default function NewsManager({
                       {post.published ? "Published" : "Draft"}
                     </Badge>
                     {post.featured ? <Badge tone="brand">Featured</Badge> : null}
+                    {isLinkPost(post) ? <Badge tone="neutral">Link</Badge> : null}
                   </div>
                   <p className="mt-1 text-sm text-caisbe-muted">
                     {toInputDate(post.posted_on)}
                     {post.tag ? ` · ${post.tag}` : ""}
+                    {post.external_url ? " · External link" : ""}
                     {post.cover_url ? " · Cover" : ""}
                     {post.image_urls?.length
                       ? ` · ${post.image_urls.length} image${post.image_urls.length === 1 ? "" : "s"}`
@@ -534,6 +657,16 @@ export default function NewsManager({
                       ? ` · ${post.video_urls.length} video${post.video_urls.length === 1 ? "" : "s"}`
                       : ""}
                   </p>
+                  {post.external_url ? (
+                    <a
+                      href={post.external_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-block truncate text-sm font-semibold text-caisbe-red hover:underline"
+                    >
+                      {post.external_url}
+                    </a>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button variant="secondary" onClick={() => void togglePublished(post)}>

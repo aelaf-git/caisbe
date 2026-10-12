@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/auth";
 import type { Cart } from "@/lib/commerce";
+import { siteUrl } from "@/lib/membershipApplication";
 
 type NavItem = {
   href: string;
@@ -18,20 +19,28 @@ type NavItem = {
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Overview",
-    items: [{ href: "/dashboard", label: "Dashboard", icon: "grid", match: "exact" }],
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: "grid", match: "exact" },
+      { href: "/guide", label: "User Guide", icon: "file", match: "exact" },
+    ],
   },
   {
     label: "Learning",
     items: [
       { href: "/courses", label: "My courses", icon: "book", match: "prefix" },
+      { href: "/assignments", label: "My Assignments", icon: "clipboard", match: "prefix" },
+      { href: "/progress", label: "My Progress", icon: "chart", match: "prefix" },
       { href: "/cart", label: "Cart", icon: "cart", match: "exact" },
-      { href: "/certificates", label: "Certificates", icon: "award", match: "prefix" },
+      { href: "/certificates", label: "Credentials", icon: "award", match: "prefix" },
+      { href: "/forum", label: "Discussion forum", icon: "forum", match: "prefix" },
       { href: "/membership", label: "Membership", icon: "badge", match: "prefix" },
     ],
   },
   {
     label: "Account",
     items: [
+      { href: "/support", label: "Help and Support", icon: "help", match: "prefix" },
+      { href: "/messages", label: "Tickets", icon: "chat", match: "prefix" },
       { href: "/notifications", label: "Notifications", icon: "bell", match: "prefix" },
       { href: "/account", label: "Manage profile", icon: "user", match: "prefix" },
     ],
@@ -91,6 +100,46 @@ function NavIcon({ name }: { name: string }) {
         <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
       </>
     ),
+    chat: (
+      <>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </>
+    ),
+    help: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .8-1 1.7" />
+        <path d="M12 17h.01" />
+      </>
+    ),
+    forum: (
+      <>
+        <path d="M4 6h16" />
+        <path d="M4 12h16" />
+        <path d="M4 18h10" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M4 19V5" />
+        <path d="M4 19h16" />
+        <path d="M8 16v-4" />
+        <path d="M12 16V8" />
+        <path d="M16 16v-6" />
+      </>
+    ),
+    clipboard: (
+      <>
+        <rect x="8" y="2" width="8" height="4" rx="1" />
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      </>
+    ),
+    file: (
+      <>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+        <path d="M14 2v6h6M8 13h8M8 17h8" />
+      </>
+    ),
   };
   return (
     <svg
@@ -119,6 +168,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
   const router = useRouter();
   const [cartCount, setCartCount] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -135,6 +185,13 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
       })
       .catch(() => {
         if (active) setUnreadNotifications(0);
+      });
+    void apiFetch<{ unread_count: number }>("/me/support/unread")
+      .then((data) => {
+        if (active) setUnreadMessages(data.unread_count);
+      })
+      .catch(() => {
+        if (active) setUnreadMessages(0);
       });
     return () => {
       active = false;
@@ -154,7 +211,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
             className="h-10 w-auto max-w-full object-contain"
           />
           <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-caisbe-red-dark">
-            Student
+            myCAISBE
           </p>
         </Link>
       </div>
@@ -175,8 +232,8 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
                     onClick={onNavigate}
                     className={`flex items-center justify-between gap-2 rounded-full px-3 py-2.5 text-sm transition-colors ${
                       active
-                        ? "bg-caisbe-red/10 font-semibold text-caisbe-red"
-                        : "text-caisbe-muted hover:bg-[#f8fafc] hover:text-caisbe-text"
+                        ? "bg-caisbe-red font-semibold text-white"
+                        : "text-caisbe-muted hover:bg-admin-surface-muted hover:text-caisbe-text"
                     }`}
                   >
                     <span className="flex min-w-0 items-center gap-3">
@@ -186,6 +243,11 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
                     {item.href === "/cart" && cartCount > 0 ? (
                       <span className="rounded-full bg-caisbe-red px-2 py-0.5 text-xs font-semibold text-white">
                         {cartCount}
+                      </span>
+                    ) : null}
+                    {item.href === "/messages" && unreadMessages > 0 ? (
+                      <span className="rounded-full bg-caisbe-red px-2 py-0.5 text-xs font-semibold text-white">
+                        {unreadMessages}
                       </span>
                     ) : null}
                     {item.href === "/notifications" && unreadNotifications > 0 ? (
@@ -211,11 +273,16 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
             <p className="truncate text-xs text-caisbe-muted">{user?.email}</p>
           </div>
         </div>
+        <a
+          href={siteUrl("/")}
+          className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-ifma-border px-4 py-2 text-sm font-semibold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
+        >
+          Main page
+        </a>
         <button
           type="button"
           onClick={() => {
-            logout();
-            router.push("/login");
+            void logout().then(() => router.push("/login"));
           }}
           className="mt-3 inline-flex w-full items-center justify-center rounded-full border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
         >

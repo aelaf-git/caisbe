@@ -92,7 +92,9 @@ export const professionalDevelopmentContent = {
         title: "On-Site Corporate Training",
         description:
           "Customized training at your company’s location—tailored content, flexible scheduling, and team-focused learning without travel.",
-        details: [],
+        details: [
+          "Our corporate programmes are fully tailored: both the content and the scheduling are shaped around your team's goals and operating context to ensure maximum relevance and minimal disruption.",
+        ],
         ctaLabel: "Contact us for details",
         ctaHref: "/contact",
       },

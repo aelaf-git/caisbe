@@ -44,16 +44,18 @@ def upgrade() -> None:
     )
 
     # Backfill expires_at for existing non-student certificates.
-    op.execute(
-        """
-        UPDATE membership_certificates AS mc
-        SET expires_at = mc.issued_at + (COALESCE(t.validity_months, 12) || ' months')::interval
-        FROM membership_certificate_types AS t
-        WHERE t.membership_type = mc.membership_type
-          AND mc.membership_type IS DISTINCT FROM 'student'
-          AND t.validity_months IS NOT NULL
-        """
-    )
+    # The interval cast is Postgres. A fresh SQLite database has no rows to backfill.
+    if op.get_bind().dialect.name == "postgresql":
+        op.execute(
+            """
+            UPDATE membership_certificates AS mc
+            SET expires_at = mc.issued_at + (COALESCE(t.validity_months, 12) || ' months')::interval
+            FROM membership_certificate_types AS t
+            WHERE t.membership_type = mc.membership_type
+              AND mc.membership_type IS DISTINCT FROM 'student'
+              AND t.validity_months IS NOT NULL
+            """
+        )
 
 
 def downgrade() -> None:

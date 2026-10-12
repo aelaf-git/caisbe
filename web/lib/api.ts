@@ -2,8 +2,10 @@ export type MediaAsset = {
   id: number;
   title: string;
   description: string | null;
-  file_url: string;
+  file_url: string | null;
   cover_url: string | null;
+  external_url: string | null;
+  body: string | null;
   category: string;
   published: boolean;
   featured: boolean;
@@ -58,6 +60,7 @@ export type NewsPost = {
   slug: string;
   short_description: string | null;
   long_description: string | null;
+  external_url: string | null;
   cover_url: string | null;
   image_urls: string[];
   video_urls: string[];
@@ -88,6 +91,14 @@ export type HeroSlide = {
   title: string;
   file_url: string;
   media_type: "image" | "video" | string;
+};
+
+export type Seminar = {
+  id: number;
+  title: string;
+  description: string;
+  published: boolean;
+  sort_order: number;
 };
 
 export type Testimonial = {
@@ -152,12 +163,23 @@ export async function apiFetch<T>(
   return response.json() as Promise<T>;
 }
 
+export async function fetchPublishedMedia(
+  category: string,
+  options?: { featured?: boolean },
+): Promise<MediaAsset[]> {
+  const params = new URLSearchParams({ category });
+  if (options?.featured) params.set("featured", "true");
+  return apiFetch<MediaAsset[]>(`/media?${params.toString()}`);
+}
+
 export async function fetchPublishedMagazines(options?: {
   featured?: boolean;
 }): Promise<MediaAsset[]> {
-  const params = new URLSearchParams({ category: "magazine" });
-  if (options?.featured) params.set("featured", "true");
-  return apiFetch<MediaAsset[]>(`/media?${params.toString()}`);
+  return fetchPublishedMedia("magazine", options);
+}
+
+export async function fetchPublishedMediaAsset(id: number): Promise<MediaAsset> {
+  return apiFetch<MediaAsset>(`/media/${id}`);
 }
 
 export async function fetchPublishedEvents(options?: {
@@ -178,6 +200,10 @@ export async function fetchActiveJobs(options?: {
   if (options?.featured) params.set("featured", "true");
   const query = params.toString();
   return apiFetch<JobPosting[]>(`/jobs${query ? `?${query}` : ""}`);
+}
+
+export async function fetchPublishedSeminars(): Promise<Seminar[]> {
+  return apiFetch<Seminar[]>("/seminars");
 }
 
 export async function fetchPublishedTestimonials(): Promise<Testimonial[]> {
@@ -210,10 +236,14 @@ export function courseProgramPath(slug: string) {
 }
 
 export function courseEnrollUrl(courseId: number) {
-  const portal = (
-    process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3002"
-  ).replace(/\/$/, "");
-  return `${portal}/courses/${courseId}/checkout`;
+  return portalUrl(`/courses/${courseId}/checkout`);
+}
+
+/** Portal login that returns the visitor to course checkout after they sign in. */
+export function courseRegisterLoginUrl(courseId: number) {
+  return portalUrl(
+    `/login?next=${encodeURIComponent(`/courses/${courseId}/checkout`)}`,
+  );
 }
 
 export function portalUrl(path = "") {

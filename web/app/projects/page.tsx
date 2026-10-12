@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
 import ProjectsPageContent from "@/components/projects/ProjectsPageContent";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
-export const metadata: Metadata = {
-  title: "Projects & Initiatives | CAISBE",
-  description:
-    "Explore CAISBE projects advancing sustainable facility management and Africa–Canada collaboration.",
-};
+const fallbackDescription =
+  "Explore CAISBE projects advancing sustainable facility management and Africa–Canada collaboration.";
 
-export default function ProjectsPage() {
-  return <ProjectsPageContent />;
+export async function generateMetadata(): Promise<Metadata> {
+  return (
+    (await cmsTopicMetadata("/projects", fallbackDescription)) ?? {
+      title: "Projects & Initiatives | CAISBE",
+      description: fallbackDescription,
+    }
+  );
+}
+
+export default async function ProjectsPage() {
+  return (await cmsTopicPage("/projects")) ?? <ProjectsPageContent />;
 }

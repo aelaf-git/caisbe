@@ -1,7 +1,4 @@
-import {
-  ContentSection,
-  PageHero,
-} from "@/components/pages/ContentPage";
+import { PageHero, heroNoteClassName } from "@/components/pages/ContentPage";
 import ButtonLink from "@/components/ui/ButtonLink";
 import {
   learningFormatsPath,
@@ -15,8 +12,6 @@ type LearningFormatPageContentProps = {
 export default function LearningFormatPageContent({
   format,
 }: LearningFormatPageContentProps) {
-  const hasDetails = format.details.length > 0;
-
   return (
     <>
       <PageHero
@@ -30,18 +25,13 @@ export default function LearningFormatPageContent({
             {format.ctaLabel}
           </ButtonLink>
         }
-      />
-      {hasDetails ? (
-        <ContentSection wide>
-          <div className="max-w-3xl space-y-5">
-            {format.details.map((paragraph) => (
-              <p key={paragraph} className="text-base leading-8 text-caisbe-text">
-                {paragraph}
-              </p>
-            ))}
-          </div>
-        </ContentSection>
-      ) : null}
+      >
+        {format.details.map((paragraph) => (
+          <p key={paragraph} className={heroNoteClassName}>
+            {paragraph}
+          </p>
+        ))}
+      </PageHero>
     </>
   );
 }

@@ -2,6 +2,7 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_JWT_SECRET = "change-me-in-production-use-a-long-random-string"
+DEFAULT_ADMIN_PASSWORD = "adminpass123"
 
 
 def normalize_database_url(url: str) -> str:
@@ -33,7 +34,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7
     database_url: str = "postgresql+psycopg://caisbe:caisbe@127.0.0.1:5433/caisbe"
     admin_email: str = "admin@caisbe.org"
-    admin_password: str = "adminpass123"
+    admin_password: str = DEFAULT_ADMIN_PASSWORD
     admin_full_name: str = "CAISBE Admin"
     upload_dir: str = "./uploads"
     # S3-compatible object storage (Cloudflare R2, AWS S3, etc.).
@@ -46,6 +47,8 @@ class Settings(BaseSettings):
     s3_public_base_url: str = ""
     s3_region: str = "auto"
     portal_public_url: str = "http://localhost:3002"
+    # Public marketing site (news, events, jobs, media) — used in student notification links.
+    web_public_url: str = "http://localhost:3000"
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_publishable_key: str = ""
@@ -57,6 +60,16 @@ class Settings(BaseSettings):
     email_from_contact: str = "CAISBE <contact@caisbe.org>"
     email_from_info: str = "CAISBE <info@caisbe.org>"
     email_from_system: str = "CAISBE <noreply@caisbe.org>"
+    # Automatic job board sync (curated feed + optional Adzuna / Arbeitnow).
+    job_sync_enabled: bool = True
+    job_sync_interval_hours: int = 12
+    # Runs in a background task (must not block API readiness / login).
+    job_sync_on_startup: bool = True
+    job_sync_expiry_days: int = 45
+    job_feed_url: str = ""
+    adzuna_app_id: str = ""
+    adzuna_app_key: str = ""
+    adzuna_country: str = "ca"
 
     @field_validator("database_url", mode="before")
     @classmethod
@@ -82,8 +95,17 @@ settings = Settings()
 
 
 def validate_production_settings() -> None:
-    if settings.is_production and settings.jwt_secret == DEFAULT_JWT_SECRET:
+    if not settings.is_production:
+        return
+    if settings.jwt_secret == DEFAULT_JWT_SECRET:
         raise RuntimeError(
             "Refusing to start in production with the default JWT_SECRET. "
             "Set a strong JWT_SECRET in the environment."
         )
+
+
+def openapi_route_urls() -> tuple[str | None, str | None, str | None]:
+    """Hide schema and docs when the API is running in production."""
+    if settings.is_production:
+        return None, None, None
+    return "/docs", "/redoc", "/openapi.json"

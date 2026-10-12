@@ -164,14 +164,14 @@ export default function HeroManager({
   function startEdit(asset: MediaAsset) {
     setEditingId(asset.id);
     setTitle(asset.title);
-    setFileUrl(asset.file_url);
+    setFileUrl(asset.file_url ?? null);
     setSortOrder(asset.sort_order);
     setFileProgress(0);
     setFormError(null);
     resetFileInput(fileInputRef);
     resetBaseline({
       title: asset.title.trim(),
-      file_url: asset.file_url,
+      file_url: asset.file_url ?? null,
       sort_order: asset.sort_order,
     });
     setShowForm(true);
@@ -523,7 +523,7 @@ export default function HeroManager({
               }`}
             >
               <div className="relative aspect-[16/10] bg-[#f3f0ec]">
-                {isVideoUrl(asset.file_url) ? (
+                {asset.file_url && isVideoUrl(asset.file_url) ? (
                   // eslint-disable-next-line jsx-a11y/media-has-caption
                   <video
                     src={resolveMediaSrc(asset.file_url)}
@@ -531,14 +531,14 @@ export default function HeroManager({
                     playsInline
                     className="h-full w-full object-cover"
                   />
-                ) : (
+                ) : asset.file_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={resolveMediaSrc(asset.file_url)}
                     alt={asset.title}
                     className="h-full w-full object-cover"
                   />
-                )}
+                ) : null}
                 <div className="absolute left-2 top-2">
                   <button
                     type="button"

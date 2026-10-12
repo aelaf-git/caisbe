@@ -1,21 +1,70 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from app.private_uploads import GuardedUploads
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app import models  # noqa: F401 — register SQLAlchemy models
-from app.config import settings, validate_production_settings
+from app.config import openapi_route_urls, settings, validate_production_settings
 from app.db_migrations import upgrade_to_head
 from app.db import SessionLocal
-from app.routers import admin, auth, commerce, courses, health, public
+from app.routers import (
+    access_control,
+    admin,
+    fees,
+    auth,
+    commerce,
+    courses,
+    forum,
+    health,
+    public,
+    site_pages,
+    support,
+)
+from app.process_leader import ProcessLeader
 from app.security.limiter import limiter
+from app.services.storage import object_storage_enabled
 from app.security.middleware import SecurityHeadersMiddleware
 from app.seeds.admin import seed_admin
 from app.seeds.events_cpd import seed_industry_events
+from app.seeds.forum import seed_forum
+from app.seeds.site_pages import seed_site_pages
+
+logger = logging.getLogger(__name__)
+
+
+def _run_job_sync() -> None:
+    from app.services.job_sync import sync_jobs
+
+    db = SessionLocal()
+    try:
+        result = sync_jobs(db)
+        logger.info(
+            "Job sync complete created=%s updated=%s skipped=%s sources=%s",
+            result.created,
+            result.updated,
+            result.skipped,
+            result.sources,
+        )
+    except Exception:  # noqa: BLE001 — keep API up if sync fails
+        logger.exception("Job sync failed")
+    finally:
+        db.close()
+
+
+async def _job_sync_loop(stop: asyncio.Event) -> None:
+    hours = max(1, int(settings.job_sync_interval_hours or 12))
+    while not stop.is_set():
+        try:
+            await asyncio.wait_for(stop.wait(), timeout=hours * 3600)
+            break
+        except TimeoutError:
+            await asyncio.to_thread(_run_job_sync)
 
 
 @asynccontextmanager
@@ -28,16 +77,53 @@ async def lifespan(_: FastAPI):
     try:
         seed_admin(db)
         seed_industry_events(db)
+        seed_forum(db)
+        seed_site_pages(db)
     finally:
         db.close()
-    yield
 
+    if settings.is_production and not object_storage_enabled():
+        logger.warning(
+            "Uploads are stored on this machine's disk. Another API instance cannot see them. "
+            "Set S3 storage before running more than one API process."
+        )
+
+    stop = asyncio.Event()
+    background_tasks: list[asyncio.Task] = []
+    leader = ProcessLeader()
+    is_leader = leader.acquire()
+    if settings.job_sync_enabled and is_leader:
+        # Never block lifespan on external job feeds — that kept /api/login
+        # unreachable during cold starts ("Unable to reach the API").
+        if settings.job_sync_on_startup:
+            background_tasks.append(asyncio.create_task(asyncio.to_thread(_run_job_sync)))
+        background_tasks.append(asyncio.create_task(_job_sync_loop(stop)))
+    elif settings.job_sync_enabled:
+        logger.info("Job sync is running in another API process")
+    try:
+        yield
+    finally:
+        leader.release()
+        stop.set()
+        for task in background_tasks:
+            task.cancel()
+        for task in background_tasks:
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+
+_docs_url, _redoc_url, _openapi_url = openapi_route_urls()
 
 app = FastAPI(
     title="CAISBE API",
     description="Canada Africa Institute for the Sustainable Built Environment API",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
+    openapi_url=_openapi_url,
 )
 
 app.state.limiter = limiter
@@ -47,10 +133,9 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_origin_regex=r"https://.*\.onrender\.com",
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(health.router, prefix="/api")
@@ -58,13 +143,21 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(courses.router, prefix="/api")
 app.include_router(commerce.router, prefix="/api")
 app.include_router(public.router, prefix="/api")
+app.include_router(support.router, prefix="/api")
+app.include_router(forum.router, prefix="/api")
+app.include_router(site_pages.router, prefix="/api")
+app.include_router(access_control.router, prefix="/api")
+app.include_router(fees.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 
 upload_path = Path(settings.upload_dir)
 upload_path.mkdir(parents=True, exist_ok=True)
-app.mount("/api/uploads", StaticFiles(directory=str(upload_path)), name="uploads")
+app.mount("/api/uploads", GuardedUploads(directory=str(upload_path)), name="uploads")
 
 
 @app.get("/")
 async def root() -> dict[str, str]:
-    return {"service": "caisbe-api", "docs": "/docs"}
+    info = {"service": "caisbe-api"}
+    if not settings.is_production:
+        info["docs"] = "/docs"
+    return info

@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import AboutPageContent from "@/components/about/AboutPageContent";
 import { aboutContent } from "@/lib/data/about";
+import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
 
-export const metadata: Metadata = {
-  title: aboutContent.seoTitle,
-  description: aboutContent.metaDescription,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return (
+    (await cmsTopicMetadata("/about", aboutContent.metaDescription)) ?? {
+      title: aboutContent.seoTitle,
+      description: aboutContent.metaDescription,
+    }
+  );
+}
 
-export default function AboutPage() {
-  return <AboutPageContent />;
+export default async function AboutPage() {
+  return (await cmsTopicPage("/about")) ?? <AboutPageContent />;
 }

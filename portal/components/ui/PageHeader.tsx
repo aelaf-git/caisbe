@@ -16,7 +16,7 @@ export default function PageHeader({ eyebrow, title, description, actions }: Pag
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
+        <h1 className="font-hopewell-display text-2xl font-extrabold tracking-tight text-caisbe-text-dark sm:text-3xl">
           {title}
         </h1>
         {description ? (
