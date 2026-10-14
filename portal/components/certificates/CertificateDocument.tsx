@@ -209,15 +209,19 @@ export default function CertificateDocument({
             }}
           >
             <div className="col-start-1 row-start-1 justify-self-center px-2 text-center">
-              <p className="mb-1 font-medium text-[#3d3832]" style={{ fontSize: 17 }}>
-                {issuedLabel}
-              </p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/signature.png"
+                alt=""
+                className="mx-auto mb-1 object-contain"
+                style={{ width: 140, height: "auto", maxHeight: 48 }}
+              />
               <div className="mx-auto bg-[#c9a227]" style={{ height: 1, width: 140 }} />
               <p
                 className="mt-1.5 font-bold uppercase tracking-wide text-[#7b1e3a]"
                 style={{ fontSize: 15 }}
               >
-                Issue Date
+                Signature
               </p>
             </div>
 
