@@ -223,11 +223,19 @@ def create_support_thread(
     db.commit()
     if (current_user.email or "").strip():
         try:
+            from app.services.email import EmailDeliveryError
             from app.services.request_received_email import send_request_received_email
 
             send_request_received_email(
                 to=current_user.email,
                 full_name=current_user.full_name,
+            )
+        except EmailDeliveryError as exc:
+            logger.error(
+                "Request-received email delivery failed for support thread %s (%s): %s",
+                thread.id,
+                current_user.email,
+                exc,
             )
         except Exception:
             logger.exception("Request-received email failed for support thread %s", thread.id)

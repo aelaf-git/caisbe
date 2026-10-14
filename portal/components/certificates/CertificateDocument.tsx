@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import CertificateQr from "@/components/certificates/CertificateQr";
 import { cssPx } from "@/lib/cssLength";
 import {
   CERTIFICATE_HEIGHT_PX,
   CERTIFICATE_WIDTH_PX,
 } from "@/components/certificates/MembershipCertificateDocument";
+import { certFitPx, useCertificateContentFit } from "@/lib/fitCertificateContent";
 
 export type CertificateDocumentProps = {
   studentName: string;
@@ -63,6 +64,8 @@ export default function CertificateDocument({
   issuedBy = "CAISBE",
 }: CertificateDocumentProps) {
   const issuedLabel = formatIssueDate(issuedAt);
+  const middleRef = useRef<HTMLDivElement>(null);
+  useCertificateContentFit(middleRef, [studentName, courseTitle, issuedLabel]);
 
   useEffect(() => {
     function onBeforePrint() {
@@ -171,36 +174,39 @@ export default function CertificateDocument({
             </p>
           </header>
 
-          <div className="shrink-0" style={{ marginTop: 18 }}>
-            <p className="text-[#5c5348]" style={{ fontSize: 18, lineHeight: 1.4 }}>
+          <div
+            ref={middleRef}
+            className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden"
+            style={{ marginTop: 18, ["--cert-fit" as string]: 1 }}
+          >
+            <p className="shrink-0 text-[#5c5348]" style={{ fontSize: 18, lineHeight: 1.4 }}>
               This certificate is proudly presented to
             </p>
             <p
               className="mx-auto font-[family-name:var(--font-great-vibes)] leading-tight text-[#7b1e3a]"
-              style={{ marginTop: 4, maxWidth: 700, fontSize: 68 }}
+              style={{ marginTop: 4, maxWidth: 700, fontSize: certFitPx(68) }}
             >
               {studentName}
             </p>
             <div className="mx-auto bg-[#7b1e3a]" style={{ marginTop: 6, height: 1, width: 320 }} />
             <p
               className="mx-auto font-[family-name:var(--font-cinzel)] font-semibold text-[#7b1e3a]"
-              style={{ marginTop: 12, maxWidth: 680, fontSize: 26, lineHeight: 1.3 }}
+              style={{ marginTop: 12, maxWidth: 680, fontSize: certFitPx(26), lineHeight: 1.3 }}
             >
               {courseTitle}
             </p>
+            <p
+              className="mx-auto text-balance leading-relaxed text-[#5c5348]"
+              style={{ marginTop: 16, maxWidth: 680, fontSize: certFitPx(18) }}
+            >
+              in recognition of your dedication and successful completion of{" "}
+              <span className="font-semibold text-[#3d3832]">{courseTitle}</span>, issued on{" "}
+              <span className="font-semibold text-[#3d3832]">{issuedLabel}</span>.
+            </p>
           </div>
 
-          <p
-            className="mx-auto shrink-0 text-balance leading-relaxed text-[#5c5348]"
-            style={{ marginTop: 16, maxWidth: 680, fontSize: 18 }}
-          >
-            in recognition of your dedication and successful completion of{" "}
-            <span className="font-semibold text-[#3d3832]">{courseTitle}</span>, issued on{" "}
-            <span className="font-semibold text-[#3d3832]">{issuedLabel}</span>.
-          </p>
-
           <footer
-            className="relative z-10 mt-auto grid shrink-0 items-end"
+            className="relative z-10 grid shrink-0 items-end"
             style={{
               gridTemplateColumns: "1fr 120px 1fr",
               columnGap: 24,

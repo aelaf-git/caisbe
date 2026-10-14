@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -7,7 +8,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from starlette.datastructures import UploadFile
-from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -27,7 +28,13 @@ from app.models import (
 )
 from app.schemas.analytics import SiteVisitIn
 from app.schemas.contact import ContactMessageIn, ContactMessageOut
-from app.schemas.media import MediaAssetOut, NewsletterSubscribeIn, HeroCarouselOut, HeroSlideOut
+from app.schemas.media import (
+    MediaAssetOut,
+    NewsletterSubscribeIn,
+    NewsletterUnsubscribeIn,
+    HeroCarouselOut,
+    HeroSlideOut,
+)
 from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.schemas.events import IndustryEventOut
 from app.schemas.jobs import JobPostingOut
@@ -233,11 +240,19 @@ def submit_contact_message(
             detail="Contact form is temporarily unavailable. Try again shortly.",
         ) from exc
     try:
+        from app.services.email import EmailDeliveryError
         from app.services.request_received_email import send_request_received_email
 
         send_request_received_email(
             to=row.email,
             full_name=f"{row.first_name} {row.last_name}".strip(),
+        )
+    except EmailDeliveryError as exc:
+        logger.error(
+            "Request-received email delivery failed for contact message %s (%s): %s",
+            row.id,
+            row.email,
+            exc,
         )
     except Exception:
         logger.exception("Request-received email failed for contact message %s", row.id)
@@ -252,41 +267,105 @@ def subscribe_newsletter(
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     email = payload.email.lower().strip()
-    send_welcome = False
     welcome_message = "Thank you for subscribing to the CAISBE newsletter."
+    subscriber: NewsletterSubscriber | None = None
     try:
         existing = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == email).first()
         if existing:
+            subscriber = existing
             if existing.unsubscribed_at is None:
-                return {"message": "You are already subscribed."}
-            existing.unsubscribed_at = None
-            existing.subscribed_at = datetime.now(timezone.utc)
-            existing.source = "website"
-            db.commit()
-            send_welcome = True
-            welcome_message = "Welcome back! You are subscribed again."
+                welcome_message = "You are already subscribed."
+            else:
+                existing.unsubscribed_at = None
+                existing.subscribed_at = datetime.now(timezone.utc)
+                existing.source = "website"
+                db.commit()
+                db.refresh(existing)
+                welcome_message = "Welcome back! You are subscribed again."
         else:
             subscriber = NewsletterSubscriber(
                 email=email,
                 source="website",
             )
             db.add(subscriber)
-            db.commit()
-            send_welcome = True
+            try:
+                db.commit()
+                db.refresh(subscriber)
+            except IntegrityError:
+                # Concurrent insert for the same unique email — reuse the existing row.
+                db.rollback()
+                subscriber = (
+                    db.query(NewsletterSubscriber)
+                    .filter(NewsletterSubscriber.email == email)
+                    .first()
+                )
+                if subscriber is None:
+                    raise
+                if subscriber.unsubscribed_at is None:
+                    welcome_message = "You are already subscribed."
+                else:
+                    subscriber.unsubscribed_at = None
+                    subscriber.subscribed_at = datetime.now(timezone.utc)
+                    subscriber.source = "website"
+                    db.commit()
+                    db.refresh(subscriber)
+                    welcome_message = "Welcome back! You are subscribed again."
     except (OperationalError, ProgrammingError) as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Newsletter signup is temporarily unavailable. Try again shortly.",
         ) from exc
-    if send_welcome:
-        try:
-            from app.services.newsletter_subscribed_email import send_newsletter_subscribed_email
 
-            send_newsletter_subscribed_email(to=email)
-        except Exception:
-            logger.exception("Newsletter subscribed email failed for %s", email)
+    if subscriber is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Newsletter signup is temporarily unavailable. Try again shortly.",
+        )
+
+    # Always attempt the Resend welcome mail (including already-subscribed retries).
+    try:
+        from app.services.email import EmailDeliveryError
+        from app.services.newsletter_subscribed_email import send_newsletter_subscribed_email
+
+        send_newsletter_subscribed_email(to=email, subscriber_id=subscriber.id)
+    except EmailDeliveryError as exc:
+        logger.error(
+            "Newsletter welcome email delivery failed for %s: %s",
+            email,
+            exc,
+        )
+    except Exception:
+        logger.exception("Newsletter subscribed email failed for %s", email)
     return {"message": welcome_message}
+
+
+@router.post("/newsletter/unsubscribe", status_code=status.HTTP_200_OK)
+@limiter.limit("30/minute")
+def unsubscribe_newsletter(
+    request: Request,
+    payload: NewsletterUnsubscribeIn,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    from app.services.newsletter_unsubscribe import (
+        make_unsubscribe_token,
+        parse_unsubscribe_token,
+    )
+
+    parsed = parse_unsubscribe_token(payload.token)
+    if parsed is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid unsubscribe link.")
+    subscriber_id, _signature = parsed
+    row = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.id == subscriber_id).first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid unsubscribe link.")
+    expected = make_unsubscribe_token(subscriber_id=row.id, email=row.email)
+    if not hmac.compare_digest(payload.token.strip(), expected):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid unsubscribe link.")
+    if row.unsubscribed_at is None:
+        row.unsubscribed_at = datetime.now(timezone.utc)
+        db.commit()
+    return {"message": "You have been unsubscribed from the CAISBE newsletter."}
 
 
 @router.get("/membership/certificate-types", response_model=list[MembershipCertificateTypePublicOut])

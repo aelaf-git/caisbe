@@ -321,6 +321,19 @@ def admin_list_newsletter_subscribers(
     return [NewsletterSubscriberOut.model_validate(row) for row in rows]
 
 
+@router.delete("/newsletter/subscribers/{subscriber_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_newsletter_subscriber(
+    subscriber_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.id == subscriber_id).first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscriber not found")
+    db.delete(row)
+    db.commit()
+
+
 @router.get("/newsletter/campaigns", response_model=list[NewsletterCampaignOut])
 def admin_list_newsletter_campaigns(
     _: User = Depends(require_admin),
@@ -434,14 +447,20 @@ def admin_send_newsletter(
     except EmailDeliveryError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
+    from app.services.newsletter_unsubscribe import unsubscribe_footer_html
+
     failed: list[str] = []
     sent_count = 0
     for row in subscribers:
         try:
+            recipient_html = body_html + unsubscribe_footer_html(
+                subscriber_id=row.id,
+                email=row.email,
+            )
             send_email(
                 to=row.email,
                 subject=subject,
-                html_body=body_html,
+                html_body=recipient_html,
                 purpose="newsletter",
                 attachments=attachments,
             )

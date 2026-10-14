@@ -54,6 +54,7 @@ export default function NewsletterPanel({
   const [uploading, setUploading] = useState(false);
   const [attachments, setAttachments] = useState<NewsletterAttachment[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [removingId, setRemovingId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -77,6 +78,27 @@ export default function NewsletterPanel({
 
   function unmarkAll() {
     setSelectedIds([]);
+  }
+
+  async function removeSubscriber(row: NewsletterSubscriber) {
+    if (
+      !window.confirm(
+        `Remove ${row.email} from the newsletter list? This deletes the subscriber from the database.`,
+      )
+    ) {
+      return;
+    }
+    setRemovingId(row.id);
+    try {
+      await apiFetch(`/admin/newsletter/subscribers/${row.id}`, { method: "DELETE" });
+      setSelectedIds((current) => current.filter((id) => id !== row.id));
+      onSuccess(`Removed ${row.email}.`);
+      await onRefresh();
+    } catch (err) {
+      onError(err instanceof ApiError ? err.message : "Unable to remove subscriber.");
+    } finally {
+      setRemovingId(null);
+    }
   }
 
   async function attachDocuments(files: FileList | null) {
@@ -281,6 +303,9 @@ export default function NewsletterPanel({
                 </th>
                 <th className="px-6 py-3 font-semibold text-caisbe-text">Email</th>
                 <th className="px-6 py-3 font-semibold text-caisbe-text">Subscribed</th>
+                <th className="px-6 py-3 font-semibold text-caisbe-text">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ifma-border-light">
@@ -302,6 +327,16 @@ export default function NewsletterPanel({
                       month: "short",
                       day: "numeric",
                     })}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      type="button"
+                      disabled={removingId === row.id}
+                      onClick={() => void removeSubscriber(row)}
+                      className="text-xs font-semibold uppercase tracking-wide text-caisbe-red hover:underline disabled:opacity-50"
+                    >
+                      {removingId === row.id ? "Removing…" : "Remove"}
+                    </button>
                   </td>
                 </tr>
               ))}

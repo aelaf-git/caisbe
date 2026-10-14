@@ -81,10 +81,11 @@ def _course(db: Session) -> Course:
 
 def test_sender_bodies_use_standard_copy_and_logo() -> None:
     with patch("app.services.newsletter_subscribed_email.send_email") as send:
-        send_newsletter_subscribed_email(to="a@example.com")
+        send_newsletter_subscribed_email(to="a@example.com", subscriber_id=1)
         assert send.call_args.kwargs["subject"] == "You're Successfully Subscribed"
         assert "subscription has been confirmed" in send.call_args.kwargs["html_body"]
         assert "/images/logo.png" in send.call_args.kwargs["html_body"]
+        assert "/newsletter/unsubscribe?token=" in send.call_args.kwargs["html_body"]
         assert send.call_args.kwargs["purpose"] == "newsletter"
 
     with patch("app.services.course_registration_email.send_email") as send:
@@ -151,7 +152,8 @@ def test_newsletter_subscribe_sends_success_email(client: TestClient, db: Sessio
         again = client.post("/api/newsletter/subscribe", json={"email": "news@example.com"})
         assert again.status_code == 201
         assert again.json()["message"] == "You are already subscribed."
-        assert send.call_count == 1
+        assert send.call_count == 2
+        assert send.call_args.kwargs["to"] == "news@example.com"
 
 
 def test_contact_form_sends_request_received_email(client: TestClient, db: Session) -> None:

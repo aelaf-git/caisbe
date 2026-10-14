@@ -270,3 +270,12 @@ export async function subscribeNewsletter(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+export async function unsubscribeNewsletter(payload: {
+  token: string;
+}): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>("/newsletter/unsubscribe", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

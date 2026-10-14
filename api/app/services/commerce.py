@@ -386,6 +386,7 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
     if (user.email or "").strip():
         from app.services.course_payment_email import send_course_payment_email
         from app.services.course_registration_email import send_course_registration_email
+        from app.services.email import EmailDeliveryError
         from app.services.receipt_email import send_receipt_email
 
         transaction_id = order.number
@@ -401,6 +402,14 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
                     full_name=user.full_name,
                     course_title=course.title,
                     start_date=enrollment.enrolled_at or now,
+                )
+            except EmailDeliveryError as exc:
+                logger.error(
+                    "Registration email delivery failed for order %s course %s (%s): %s",
+                    order.number,
+                    course.id,
+                    user.email,
+                    exc,
                 )
             except Exception:
                 logger.exception(
@@ -419,6 +428,14 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
                         transaction_id=transaction_id,
                         paid_at=order.paid_at or now,
                     )
+                except EmailDeliveryError as exc:
+                    logger.error(
+                        "Payment confirmation email delivery failed for order %s course %s (%s): %s",
+                        order.number,
+                        course.id,
+                        user.email,
+                        exc,
+                    )
                 except Exception:
                     logger.exception(
                         "Payment confirmation email failed for order %s course %s",
@@ -432,6 +449,13 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
                 order_number=order.number,
                 amount_cents=paid,
                 currency=order.currency,
+            )
+        except EmailDeliveryError as exc:
+            logger.error(
+                "Receipt email delivery failed for order %s (%s): %s",
+                order.number,
+                user.email,
+                exc,
             )
         except Exception:
             logger.exception("Receipt email failed for order %s", order.number)
@@ -830,6 +854,7 @@ def refund_payment(db: Session, payment: Payment, admin: User) -> None:
         revert_membership_to_student(db, user)
     if cancelled_courses and (user.email or "").strip():
         from app.services.course_cancellation_email import send_course_cancellation_email
+        from app.services.email import EmailDeliveryError
 
         for course in cancelled_courses:
             try:
@@ -838,6 +863,14 @@ def refund_payment(db: Session, payment: Payment, admin: User) -> None:
                     full_name=user.full_name,
                     course_title=course.title,
                     cancelled_at=payment.reviewed_at or datetime.now(timezone.utc),
+                )
+            except EmailDeliveryError as exc:
+                logger.error(
+                    "Cancellation email delivery failed for payment %s course %s (%s): %s",
+                    payment.id,
+                    course.id,
+                    user.email,
+                    exc,
                 )
             except Exception:
                 logger.exception(

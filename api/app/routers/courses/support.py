@@ -371,12 +371,21 @@ def _finalize_course_completion(
     if (user.email or "").strip():
         try:
             from app.services.course_completion_email import send_course_completion_email
+            from app.services.email import EmailDeliveryError
 
             send_course_completion_email(
                 to=user.email,
                 full_name=user.full_name,
                 course_title=course.title,
                 certificate_code=certificate_code,
+            )
+        except EmailDeliveryError as exc:
+            logger.error(
+                "Course completion email delivery failed for user %s course %s (%s): %s",
+                user.id,
+                course.id,
+                user.email,
+                exc,
             )
         except Exception:
             logger.exception(
