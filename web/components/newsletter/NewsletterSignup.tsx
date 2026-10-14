@@ -71,7 +71,7 @@ export default function NewsletterSignup({
             title="Enter a valid email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`h-11 w-full rounded-md border bg-white px-3 text-base outline-none focus:border-caisbe-red ${
+            className={`h-11 w-full rounded-md border bg-white px-3 text-base text-ifma-navy outline-none placeholder:text-ifma-navy/45 focus:border-caisbe-red ${
               isDark ? "border-white/25" : "border-ifma-border-light"
             }`}
             placeholder="name@example.com"

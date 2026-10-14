@@ -16,7 +16,10 @@ from app.services.course_cancellation_email import send_course_cancellation_emai
 from app.services.course_completion_email import send_course_completion_email
 from app.services.course_payment_email import send_course_payment_email
 from app.services.course_registration_email import send_course_registration_email
-from app.services.newsletter_subscribed_email import send_newsletter_subscribed_email
+from app.services.newsletter_subscribed_email import (
+    send_newsletter_already_subscribed_email,
+    send_newsletter_subscribed_email,
+)
 from app.services.request_received_email import send_request_received_email
 
 STRONG_PASSWORD = "Str0ng-Password!99"
@@ -82,10 +85,24 @@ def _course(db: Session) -> Course:
 def test_sender_bodies_use_standard_copy_and_logo() -> None:
     with patch("app.services.newsletter_subscribed_email.send_email") as send:
         send_newsletter_subscribed_email(to="a@example.com", subscriber_id=1)
+        body = send.call_args.kwargs["html_body"]
         assert send.call_args.kwargs["subject"] == "You're Successfully Subscribed"
-        assert "subscription has been confirmed" in send.call_args.kwargs["html_body"]
-        assert "/images/logo.png" in send.call_args.kwargs["html_body"]
-        assert "/newsletter/unsubscribe?token=" in send.call_args.kwargs["html_body"]
+        assert "subscription has been confirmed" in body
+        assert body.count("/images/logo.png") == 1
+        assert "Canada Africa Institute for the Sustainable Built Environment" in body
+        assert "/newsletter/unsubscribe?token=" in body
+        assert send.call_args.kwargs["purpose"] == "newsletter"
+
+    with patch("app.services.newsletter_subscribed_email.send_email") as send:
+        send_newsletter_already_subscribed_email(to="a@example.com", subscriber_id=1)
+        body = send.call_args.kwargs["html_body"]
+        assert (
+            send.call_args.kwargs["subject"]
+            == "You're Already Subscribed to the CAISBE Newsletter"
+        )
+        assert "already subscribed" in body.lower()
+        assert body.count("/images/logo.png") == 1
+        assert "/newsletter/unsubscribe?token=" in body
         assert send.call_args.kwargs["purpose"] == "newsletter"
 
     with patch("app.services.course_registration_email.send_email") as send:
@@ -148,12 +165,18 @@ def test_newsletter_subscribe_sends_success_email(client: TestClient, db: Sessio
         assert first.status_code == 201
         assert send.call_count == 1
         assert send.call_args.kwargs["to"] == "news@example.com"
+        assert send.call_args.kwargs["subject"] == "You're Successfully Subscribed"
 
         again = client.post("/api/newsletter/subscribe", json={"email": "news@example.com"})
         assert again.status_code == 201
         assert again.json()["message"] == "You are already subscribed."
         assert send.call_count == 2
         assert send.call_args.kwargs["to"] == "news@example.com"
+        assert (
+            send.call_args.kwargs["subject"]
+            == "You're Already Subscribed to the CAISBE Newsletter"
+        )
+        assert "already subscribed" in send.call_args.kwargs["html_body"].lower()
 
 
 def test_contact_form_sends_request_received_email(client: TestClient, db: Session) -> None:

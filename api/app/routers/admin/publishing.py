@@ -447,15 +447,22 @@ def admin_send_newsletter(
     except EmailDeliveryError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
+    from app.services.email_layout import wrap_email_html
     from app.services.newsletter_unsubscribe import unsubscribe_footer_html
 
     failed: list[str] = []
     sent_count = 0
     for row in subscribers:
         try:
-            recipient_html = body_html + unsubscribe_footer_html(
-                subscriber_id=row.id,
-                email=row.email,
+            recipient_html = wrap_email_html(
+                body_html,
+                heading=subject,
+                eyebrow="CAISBE Newsletter",
+                include_signoff=False,
+                footer_extra_html=unsubscribe_footer_html(
+                    subscriber_id=row.id,
+                    email=row.email,
+                ),
             )
             send_email(
                 to=row.email,

@@ -7,7 +7,12 @@ import logging
 
 from app.config import settings
 from app.services.email import send_email
-from app.services.email_layout import cta_button, portal_certificate_url, wrap_email_html
+from app.services.email_layout import (
+    cta_button,
+    fallback_link,
+    portal_certificate_url,
+    wrap_email_html,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +35,16 @@ def send_course_completion_email(
     cert_url = portal_certificate_url(certificate_code)
     html_body = wrap_email_html(
         f"""
-<p>Dear {name},</p>
-<p>Congratulations on successfully completing {course}!</p>
-<p>We are proud of your achievement. Your certificate of completion is now available.</p>
+<p style="margin:0 0 14px;">Dear {name},</p>
+<p style="margin:0 0 14px;">Congratulations on successfully completing <strong>{course}</strong>!</p>
+<p style="margin:0 0 14px;">We are proud of your achievement. Your certificate of completion is now available.</p>
 {cta_button("View Certificate", cert_url)}
-<p>Or paste this link into your browser:<br>
-<a href="{html.escape(cert_url)}">{html.escape(cert_url)}</a></p>
-<p>We hope you found the course valuable. We would love to hear your feedback.</p>
-<p>Thank you for learning with us.</p>
-""".strip()
+{fallback_link(cert_url)}
+<p style="margin:18px 0 14px;">We hope you found the course valuable. We would love to hear your feedback.</p>
+<p style="margin:0;">Thank you for learning with us.</p>
+""".strip(),
+        heading="Certificate of Completion Ready",
+        eyebrow="myCAISBE Credentials",
     )
     send_email(
         to=recipient,

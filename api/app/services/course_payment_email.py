@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.config import settings
 from app.services.email import send_email
-from app.services.email_layout import format_date, format_money, wrap_email_html
+from app.services.email_layout import detail_box, format_date, format_money, wrap_email_html
 
 logger = logging.getLogger(__name__)
 
@@ -30,21 +30,29 @@ def send_course_payment_email(
         logger.info("RESEND_API_KEY unset — course payment email for %s", recipient)
 
     name = html.escape((full_name or "").strip() or "there")
-    course = html.escape((course_title or "").strip() or "your course")
-    amount = html.escape(format_money(amount_cents, currency))
-    txn = html.escape((transaction_id or "").strip() or "N/A")
-    when = html.escape(format_date(paid_at) or format_date(datetime.now()))
+    raw_course = (course_title or "").strip() or "your course"
+    course = html.escape(raw_course)
+    amount = format_money(amount_cents, currency)
+    txn = (transaction_id or "").strip() or "N/A"
+    when = format_date(paid_at) or format_date(datetime.now())
+    details = detail_box(
+        [
+            ("Amount Paid", amount),
+            ("Transaction ID", txn),
+            ("Date", when),
+        ],
+        title="Payment Details",
+    )
     html_body = wrap_email_html(
         f"""
-<p>Dear {name},</p>
-<p>We have successfully received your payment for {course}.</p>
-<p><strong>Payment Details:</strong><br>
-Amount Paid: {amount}<br>
-Transaction ID: {txn}<br>
-Date: {when}</p>
-<p>Your course access will be activated shortly. You will receive a separate email with login credentials and course materials.</p>
-<p>Thank you for choosing us.</p>
-""".strip()
+<p style="margin:0 0 14px;">Dear {name},</p>
+<p style="margin:0 0 14px;">We have successfully received your payment for <strong>{course}</strong>.</p>
+{details}
+<p style="margin:0 0 14px;">Your course access will be activated shortly. You will receive a separate email with login credentials and course materials.</p>
+<p style="margin:0;">Thank you for choosing us.</p>
+""".strip(),
+        heading="Payment Received",
+        eyebrow="myCAISBE Billing",
     )
     send_email(
         to=recipient,

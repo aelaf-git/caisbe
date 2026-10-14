@@ -8,7 +8,13 @@ from urllib.parse import quote
 
 from app.config import settings
 from app.services.email import send_email
-from app.services.email_layout import cta_button, format_money, wrap_email_html
+from app.services.email_layout import (
+    cta_button,
+    detail_box,
+    fallback_link,
+    format_money,
+    wrap_email_html,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,16 +38,25 @@ def send_receipt_email(
         logger.info("RESEND_API_KEY unset — receipt link for %s: %s", to, url)
 
     name = html.escape((full_name or "").strip() or "there")
-    amount = html.escape(format_money(amount_cents, currency))
-    safe_url = html.escape(url)
+    raw_amount = format_money(amount_cents, currency)
+    amount = html.escape(raw_amount)
+    details = detail_box(
+        [
+            ("Order Number", str(order_number).strip()),
+            ("Amount Paid", raw_amount),
+        ],
+        title="Receipt Summary",
+    )
     html_body = wrap_email_html(
         f"""
-<p>Hello {name},</p>
-<p>Thank you. Your CAISBE payment of {amount} is recorded. Your receipt is ready to view, print, or save as a PDF.</p>
+<p style="margin:0 0 14px;">Hello {name},</p>
+<p style="margin:0 0 14px;">Thank you. Your CAISBE payment of <strong>{amount}</strong> is recorded. Your receipt is ready to view, print, or save as a PDF.</p>
+{details}
 {cta_button("View receipt", url)}
-<p>Or paste this link into your browser:<br>
-<a href="{safe_url}">{safe_url}</a></p>
-""".strip()
+{fallback_link(url)}
+""".strip(),
+        heading=f"Your CAISBE Receipt ({order_number})",
+        eyebrow="myCAISBE Billing",
     )
     send_email(
         to=to,

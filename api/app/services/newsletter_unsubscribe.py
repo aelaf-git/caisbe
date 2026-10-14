@@ -53,8 +53,8 @@ def unsubscribe_url(*, subscriber_id: int, email: str) -> str:
 def unsubscribe_footer_html(*, subscriber_id: int, email: str) -> str:
     url = html.escape(unsubscribe_url(subscriber_id=subscriber_id, email=email))
     return f"""
-<p style="margin-top:28px;padding-top:16px;border-top:1px solid #e5e5e5;font-size:13px;color:#666666;line-height:1.5;">
+<p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">
   You are receiving this because you subscribed to CAISBE updates.
-  <a href="{url}" style="color:#c42032;text-decoration:underline;">Unsubscribe</a>
+  <a href="{url}" style="color:#ffffff;font-weight:600;text-decoration:underline;">Unsubscribe</a>
 </p>
 """.strip()

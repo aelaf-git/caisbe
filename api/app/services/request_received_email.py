@@ -25,12 +25,14 @@ def send_request_received_email(*, to: str, full_name: str) -> None:
     window = html.escape(RESPONSE_WINDOW)
     html_body = wrap_email_html(
         f"""
-<p>Dear {name},</p>
-<p>Thank you for contacting us.</p>
-<p>We have received your message and will review it shortly. Our team typically responds within {window}.</p>
-<p>If your matter is urgent, please reply to this email with additional details.</p>
-<p>Thank you for your patience.</p>
-""".strip()
+<p style="margin:0 0 14px;">Dear {name},</p>
+<p style="margin:0 0 14px;">Thank you for contacting us.</p>
+<p style="margin:0 0 14px;">We have received your message and will review it shortly. Our team typically responds within <strong>{window}</strong>.</p>
+<p style="margin:0 0 14px;">If your matter is urgent, please reply to this email with additional details.</p>
+<p style="margin:0;">Thank you for your patience.</p>
+""".strip(),
+        heading="We've Received Your Request",
+        eyebrow="CAISBE Support",
     )
     send_email(
         to=recipient,

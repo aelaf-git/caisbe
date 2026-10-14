@@ -39,21 +39,36 @@ def _login(client: TestClient, email: str) -> str:
     return response.json()["access_token"]
 
 
-def test_subscribe_twice_keeps_one_row_and_sends_welcome(
+def test_subscribe_twice_keeps_one_row_and_sends_already_subscribed_email(
     client: TestClient, db: Session
 ) -> None:
     with patch("app.services.newsletter_subscribed_email.send_email") as send:
         first = client.post("/api/newsletter/subscribe", json={"email": "Unique@Example.com"})
         assert first.status_code == 201
+        assert send.call_args.kwargs["subject"] == "You're Successfully Subscribed"
+
         second = client.post("/api/newsletter/subscribe", json={"email": "unique@example.com"})
         assert second.status_code == 201
         assert second.json()["message"] == "You are already subscribed."
         assert send.call_count == 2
+        assert (
+            send.call_args.kwargs["subject"]
+            == "You're Already Subscribed to the CAISBE Newsletter"
+        )
+        assert "already subscribed" in send.call_args.kwargs["html_body"].lower()
+        assert "/newsletter/unsubscribe?token=" in send.call_args.kwargs["html_body"]
 
     rows = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == "unique@example.com").all()
     assert len(rows) == 1
     assert rows[0].unsubscribed_at is None
-    assert "/newsletter/unsubscribe?token=" in send.call_args.kwargs["html_body"]
+    token = make_unsubscribe_token(subscriber_id=rows[0].id, email=rows[0].email)
+    client.post("/api/newsletter/unsubscribe", json={"token": token})
+
+    with patch("app.services.newsletter_subscribed_email.send_email") as send_resub:
+        resub = client.post("/api/newsletter/subscribe", json={"email": "unique@example.com"})
+        assert resub.status_code == 201
+        assert send_resub.call_count == 1
+        assert send_resub.call_args.kwargs["subject"] == "You're Successfully Subscribed"
 
 
 def test_unsubscribe_with_valid_token_sets_unsubscribed_at(

@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.config import settings
 from app.services.email import send_email
-from app.services.email_layout import format_date, wrap_email_html
+from app.services.email_layout import detail_box, format_date, wrap_email_html
 
 logger = logging.getLogger(__name__)
 
@@ -30,19 +30,27 @@ def send_course_cancellation_email(
         logger.info("RESEND_API_KEY unset — course cancellation email for %s", recipient)
 
     name = html.escape((full_name or "").strip() or "there")
-    course = html.escape((course_title or "").strip() or "your course")
-    when = html.escape(format_date(cancelled_at) or format_date(datetime.now()))
-    refund = html.escape((refund_status or DEFAULT_REFUND_STATUS).strip())
+    raw_course = (course_title or "").strip() or "your course"
+    course = html.escape(raw_course)
+    when = format_date(cancelled_at) or format_date(datetime.now())
+    refund = (refund_status or DEFAULT_REFUND_STATUS).strip()
+    details = detail_box(
+        [
+            ("Cancellation Date", when),
+            ("Refund Status", refund),
+        ],
+        title="Cancellation Details",
+    )
     html_body = wrap_email_html(
         f"""
-<p>Dear {name},</p>
-<p>Your request to cancel the course {course} has been processed successfully.</p>
-<p><strong>Cancellation Details:</strong><br>
-Cancellation Date: {when}<br>
-Refund Status: {refund}</p>
-<p>If you have any further questions or would like to register for another course in the future, please feel free to contact us.</p>
-<p>We hope to see you again.</p>
-""".strip()
+<p style="margin:0 0 14px;">Dear {name},</p>
+<p style="margin:0 0 14px;">Your request to cancel the course <strong>{course}</strong> has been processed successfully.</p>
+{details}
+<p style="margin:0 0 14px;">If you have any further questions or would like to register for another course in the future, please feel free to contact us.</p>
+<p style="margin:0;">We hope to see you again.</p>
+""".strip(),
+        heading="Course Cancellation Confirmed",
+        eyebrow="myCAISBE Courses",
     )
     send_email(
         to=recipient,

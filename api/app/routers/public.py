@@ -269,11 +269,13 @@ def subscribe_newsletter(
     email = payload.email.lower().strip()
     welcome_message = "Thank you for subscribing to the CAISBE newsletter."
     subscriber: NewsletterSubscriber | None = None
+    already_active = False
     try:
         existing = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == email).first()
         if existing:
             subscriber = existing
             if existing.unsubscribed_at is None:
+                already_active = True
                 welcome_message = "You are already subscribed."
             else:
                 existing.unsubscribed_at = None
@@ -302,6 +304,7 @@ def subscribe_newsletter(
                 if subscriber is None:
                     raise
                 if subscriber.unsubscribed_at is None:
+                    already_active = True
                     welcome_message = "You are already subscribed."
                 else:
                     subscriber.unsubscribed_at = None
@@ -323,20 +326,26 @@ def subscribe_newsletter(
             detail="Newsletter signup is temporarily unavailable. Try again shortly.",
         )
 
-    # Always attempt the Resend welcome mail (including already-subscribed retries).
+    # Send welcome mail for new/reactivated subscribers, or already-subscribed notice if active.
     try:
         from app.services.email import EmailDeliveryError
-        from app.services.newsletter_subscribed_email import send_newsletter_subscribed_email
+        from app.services.newsletter_subscribed_email import (
+            send_newsletter_already_subscribed_email,
+            send_newsletter_subscribed_email,
+        )
 
-        send_newsletter_subscribed_email(to=email, subscriber_id=subscriber.id)
+        if already_active:
+            send_newsletter_already_subscribed_email(to=email, subscriber_id=subscriber.id)
+        else:
+            send_newsletter_subscribed_email(to=email, subscriber_id=subscriber.id)
     except EmailDeliveryError as exc:
         logger.error(
-            "Newsletter welcome email delivery failed for %s: %s",
+            "Newsletter email delivery failed for %s: %s",
             email,
             exc,
         )
     except Exception:
-        logger.exception("Newsletter subscribed email failed for %s", email)
+        logger.exception("Newsletter email failed for %s", email)
     return {"message": welcome_message}
 
 
