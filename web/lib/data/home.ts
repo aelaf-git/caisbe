@@ -11,7 +11,7 @@ export const stats = [
   { value: "12+", label: "Certified courses" },
   { value: "25+", label: "Aggregate years of experience in the field" },
   {
-    value: "120+",
+    value: "12+",
     label: "African based trade and professionals associations",
   },
   { value: "1520+", label: "Members & counting more daily" },

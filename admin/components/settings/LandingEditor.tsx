@@ -148,31 +148,43 @@ export default function LandingEditor() {
       {dialog}
       {error ? <Alert tone="error">{error}</Alert> : null}
       <p className="text-sm text-caisbe-muted">
-        Edit the words on the public homepage. Course cards, magazine issues, hero photos, and testimonial quotes
-        stay in Courses, Media, and Testimonials.
+        Edit the words on the public homepage, including the statistics strip under the hero. Course cards, magazine
+        issues, hero photos, and testimonial quotes stay in Courses, Media, and Testimonials.
       </p>
 
       <Card className="space-y-4">
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Hero</h2>
         <TextArea label="Landing sentence" value={home.hero_intro} onChange={(hero_intro) => patch({ hero_intro })} rows={4} />
         <TextInput label="Join button" value={home.hero_button} onChange={(hero_button) => patch({ hero_button })} />
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold">Statistics</p>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => patch({ stats: [...home.stats, { value: "", label: "" }] })}
-            >
-              Add statistic
-            </Button>
+      </Card>
+
+      <Card className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Statistics</h2>
+            <p className="mt-1 text-sm text-caisbe-muted">
+              Numbers shown under the hero, such as chapter counts and association totals.
+            </p>
           </div>
-          {home.stats.map((stat, index) => (
-            <div key={index} className="grid grid-cols-[7rem_1fr_auto] gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => patch({ stats: [...home.stats, { value: "", label: "" }] })}
+          >
+            Add statistic
+          </Button>
+        </div>
+        {home.stats.map((stat, index) => (
+          <div
+            key={index}
+            className="grid gap-3 border-t border-ifma-border pt-4 sm:grid-cols-[7rem_1fr_auto] sm:items-end"
+          >
+            <FormField label="Value">
               <input
                 className={fieldClassName}
                 value={stat.value}
+                placeholder="12+"
                 aria-label={`Statistic ${index + 1} value`}
                 onChange={(event) =>
                   patch({
@@ -183,9 +195,12 @@ export default function LandingEditor() {
                 }
                 required
               />
+            </FormField>
+            <FormField label="Label">
               <input
                 className={fieldClassName}
                 value={stat.label}
+                placeholder="African based trade and professionals associations"
                 aria-label={`Statistic ${index + 1} label`}
                 onChange={(event) =>
                   patch({
@@ -196,18 +211,20 @@ export default function LandingEditor() {
                 }
                 required
               />
-              {home.stats.length > 1 ? (
-                <button
-                  type="button"
-                  className="text-sm font-semibold text-caisbe-red"
-                  onClick={() => patch({ stats: home.stats.filter((_, itemIndex) => itemIndex !== index) })}
-                >
-                  Remove
-                </button>
-              ) : null}
-            </div>
-          ))}
-        </div>
+            </FormField>
+            {home.stats.length > 1 ? (
+              <button
+                type="button"
+                className="pb-2 text-left text-sm font-semibold text-caisbe-red sm:text-center"
+                onClick={() => patch({ stats: home.stats.filter((_, itemIndex) => itemIndex !== index) })}
+              >
+                Remove
+              </button>
+            ) : (
+              <span className="hidden sm:block" aria-hidden />
+            )}
+          </div>
+        ))}
       </Card>
 
       <Card className="space-y-4">

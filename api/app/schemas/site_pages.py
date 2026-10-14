@@ -89,7 +89,7 @@ class HomeLandingIn(BaseModel):
         default_factory=lambda: [
             HomeStat(value="12+", label="Certified courses"),
             HomeStat(value="25+", label="Aggregate years of experience in the field"),
-            HomeStat(value="120+", label="African based trade and professionals associations"),
+            HomeStat(value="12+", label="African based trade and professionals associations"),
             HomeStat(value="1520+", label="Members & counting more daily"),
         ],
         min_length=1,

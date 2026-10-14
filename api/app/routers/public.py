@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,6 +41,7 @@ from app.services.membership import is_student_membership
 from app.services.hero import ensure_default_hero_slides
 from app.services.settings import hero_transition_ms
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["public"])
 
 VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".m4v"}
@@ -230,6 +232,15 @@ def submit_contact_message(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Contact form is temporarily unavailable. Try again shortly.",
         ) from exc
+    try:
+        from app.services.request_received_email import send_request_received_email
+
+        send_request_received_email(
+            to=row.email,
+            full_name=f"{row.first_name} {row.last_name}".strip(),
+        )
+    except Exception:
+        logger.exception("Request-received email failed for contact message %s", row.id)
     return ContactMessageOut.model_validate(row)
 
 
@@ -241,6 +252,8 @@ def subscribe_newsletter(
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     email = payload.email.lower().strip()
+    send_welcome = False
+    welcome_message = "Thank you for subscribing to the CAISBE newsletter."
     try:
         existing = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == email).first()
         if existing:
@@ -250,21 +263,30 @@ def subscribe_newsletter(
             existing.subscribed_at = datetime.now(timezone.utc)
             existing.source = "website"
             db.commit()
-            return {"message": "Welcome back! You are subscribed again."}
-
-        subscriber = NewsletterSubscriber(
-            email=email,
-            source="website",
-        )
-        db.add(subscriber)
-        db.commit()
+            send_welcome = True
+            welcome_message = "Welcome back! You are subscribed again."
+        else:
+            subscriber = NewsletterSubscriber(
+                email=email,
+                source="website",
+            )
+            db.add(subscriber)
+            db.commit()
+            send_welcome = True
     except (OperationalError, ProgrammingError) as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Newsletter signup is temporarily unavailable. Try again shortly.",
         ) from exc
-    return {"message": "Thank you for subscribing to the CAISBE newsletter."}
+    if send_welcome:
+        try:
+            from app.services.newsletter_subscribed_email import send_newsletter_subscribed_email
+
+            send_newsletter_subscribed_email(to=email)
+        except Exception:
+            logger.exception("Newsletter subscribed email failed for %s", email)
+    return {"message": welcome_message}
 
 
 @router.get("/membership/certificate-types", response_model=list[MembershipCertificateTypePublicOut])
