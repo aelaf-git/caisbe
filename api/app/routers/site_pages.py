@@ -37,8 +37,11 @@ def public_site_page(
 
 
 @router.get("/site-pages/home", response_model=HomeLandingOut)
-def public_home_landing(db: Session = Depends(get_db)) -> HomeLandingOut:
-    return home_for_admin(db)
+def public_home_landing(
+    lang: str = Query(default="en", max_length=12),
+    db: Session = Depends(get_db),
+) -> HomeLandingOut:
+    return home_for_admin(db, lang=lang)
 
 
 @router.get("/admin/site-pages", response_model=list[SitePageOut])
@@ -60,19 +63,21 @@ def admin_create_site_page(
 
 @router.get("/admin/site-pages/home", response_model=HomeLandingOut)
 def admin_get_home_landing(
+    lang: str = Query(default="en", max_length=12),
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> HomeLandingOut:
-    return home_for_admin(db)
+    return home_for_admin(db, lang=lang)
 
 
 @router.put("/admin/site-pages/home", response_model=HomeLandingOut)
 def admin_save_home_landing(
     payload: HomeLandingIn,
+    lang: str = Query(default="en", max_length=12),
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> HomeLandingOut:
-    return write_home(db, payload)
+    return write_home(db, payload, lang=lang)
 
 
 @router.put("/admin/site-pages/{page_id}", response_model=SitePageOut)

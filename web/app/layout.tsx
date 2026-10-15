@@ -4,6 +4,7 @@ import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
 import { siteName } from "@/lib/data/home";
 import { siteFontClassName } from "@/lib/fonts";
+import { getServerLocale } from "@/lib/i18n/server";
 import { siteOrigin } from "@/lib/site";
 import "./globals.css";
 
@@ -23,13 +24,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getServerLocale();
+
   return (
-    <html lang="en" className={`${siteFontClassName} h-full`} suppressHydrationWarning>
+    <html lang={locale} className={`${siteFontClassName} h-full`} suppressHydrationWarning>
       <body
         className="flex min-h-full flex-col bg-background font-sans text-foreground antialiased"
         suppressHydrationWarning

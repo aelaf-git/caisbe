@@ -1,6 +1,7 @@
 import type { NavSectionData } from "@/components/layout/nav-types";
 import { apiFetch } from "@/lib/api";
 import type { TopicPage } from "@/lib/data/site-pages";
+import { FALLBACK_HOME_FR, type Locale } from "@/lib/i18n";
 
 export type SiteNavItem = {
   menu_label: string;
@@ -93,11 +94,13 @@ export async function fetchSiteNav(): Promise<SiteNavItem[]> {
   }
 }
 
-export async function fetchHomeLanding(): Promise<HomeLanding | null> {
+export async function fetchHomeLanding(
+  locale: Locale = "en",
+): Promise<HomeLanding | null> {
   try {
-    return await apiFetch<HomeLanding>("/site-pages/home");
+    return await apiFetch<HomeLanding>(`/site-pages/home?lang=${encodeURIComponent(locale)}`);
   } catch {
-    return null;
+    return locale === "fr" ? FALLBACK_HOME_FR : null;
   }
 }
 

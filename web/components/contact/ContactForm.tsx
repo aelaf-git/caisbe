@@ -3,15 +3,30 @@
 import { FormEvent, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
+export type ContactFormLabels = {
+  firstName: string;
+  lastName: string;
+  company: string;
+  jobTitle: string;
+  phone: string;
+  email: string;
+  helpTopic: string;
+  comments: string;
+  sending: string;
+  success: string;
+  error: string;
+};
+
 type ContactFormProps = {
   cta: string;
   heading?: string;
+  labels?: ContactFormLabels;
 };
 
 const inputClass =
   "h-12 w-full rounded-md border border-ifma-border bg-white px-4 text-base text-caisbe-text outline-none focus:border-caisbe-red focus:ring-1 focus:ring-caisbe-red";
 
-export default function ContactForm({ cta, heading }: ContactFormProps) {
+export default function ContactForm({ cta, heading, labels }: ContactFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -41,9 +56,13 @@ export default function ContactForm({ cta, heading }: ContactFormProps) {
         body: JSON.stringify(payload),
       });
       form.reset();
-      setSuccess("Thank you. Your message has been sent.");
+      setSuccess(labels?.success ?? "Thank you. Your message has been sent.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to send your message. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : (labels?.error ?? "Unable to send your message. Please try again."),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -71,13 +90,13 @@ export default function ContactForm({ cta, heading }: ContactFormProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="contact-first-name" className="mb-1 block text-base font-medium text-caisbe-text">
-            First Name
+            {labels?.firstName ?? "First Name"}
           </label>
           <input id="contact-first-name" name="firstName" type="text" required className={inputClass} />
         </div>
         <div>
           <label htmlFor="contact-last-name" className="mb-1 block text-base font-medium text-caisbe-text">
-            Last Name
+            {labels?.lastName ?? "Last Name"}
           </label>
           <input id="contact-last-name" name="lastName" type="text" required className={inputClass} />
         </div>
@@ -85,42 +104,42 @@ export default function ContactForm({ cta, heading }: ContactFormProps) {
 
       <div>
         <label htmlFor="contact-company" className="mb-1 block text-base font-medium text-caisbe-text">
-          Company
+          {labels?.company ?? "Company"}
         </label>
         <input id="contact-company" name="company" type="text" className={inputClass} />
       </div>
 
       <div>
         <label htmlFor="contact-job-title" className="mb-1 block text-base font-medium text-caisbe-text">
-          Job Title
+          {labels?.jobTitle ?? "Job Title"}
         </label>
         <input id="contact-job-title" name="jobTitle" type="text" className={inputClass} />
       </div>
 
       <div>
         <label htmlFor="contact-phone" className="mb-1 block text-base font-medium text-caisbe-text">
-          Phone
+          {labels?.phone ?? "Phone"}
         </label>
         <input id="contact-phone" name="phone" type="tel" className={inputClass} />
       </div>
 
       <div>
         <label htmlFor="contact-email" className="mb-1 block text-base font-medium text-caisbe-text">
-          Email
+          {labels?.email ?? "Email"}
         </label>
         <input id="contact-email" name="email" type="email" required className={inputClass} />
       </div>
 
       <div>
         <label htmlFor="contact-help" className="mb-1 block text-base font-medium text-caisbe-text">
-          How can we help?
+          {labels?.helpTopic ?? "How can we help?"}
         </label>
         <input id="contact-help" name="help" type="text" className={inputClass} />
       </div>
 
       <div>
         <label htmlFor="contact-comments" className="mb-1 block text-base font-medium text-caisbe-text">
-          Comments
+          {labels?.comments ?? "Comments"}
         </label>
         <textarea
           id="contact-comments"
@@ -137,7 +156,7 @@ export default function ContactForm({ cta, heading }: ContactFormProps) {
           disabled={submitting}
           className="inline-flex w-full min-w-0 items-center justify-center rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-base font-semibold uppercase tracking-wide text-white transition-colors hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto sm:min-w-[180px] sm:px-8"
         >
-          {submitting ? "Sending…" : cta}
+          {submitting ? (labels?.sending ?? "Sending…") : cta}
         </button>
       </div>
     </form>

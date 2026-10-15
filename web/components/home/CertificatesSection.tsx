@@ -12,10 +12,12 @@ export default async function CertificatesSection({
   title,
   subtitle,
   cta,
+  emptyMessage = "Certificate programs will appear here once published by CAISBE.",
 }: {
   title?: string;
   subtitle?: string;
   cta?: string;
+  emptyMessage?: string;
 }) {
   const heading = title ?? certificatesIntro.title;
   const line = subtitle ?? certificatesIntro.subtitle;
@@ -47,7 +49,7 @@ export default async function CertificatesSection({
             ) : null}
           </div>
           <p className="text-base leading-7 text-caisbe-muted">
-            Certificate programs will appear here once published by CAISBE.
+            {emptyMessage}
           </p>
         </div>
       </section>

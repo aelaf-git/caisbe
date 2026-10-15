@@ -29,9 +29,11 @@ const DEFAULT_SLIDES: HeroSlide[] = [
 const DEFAULT_TRANSITION_MS = 3000;
 
 export default function HeroSection({
+  heading,
   intro,
   buttonLabel,
 }: {
+  heading?: string | null;
   intro?: string | null;
   buttonLabel?: string | null;
 }) {
@@ -92,7 +94,7 @@ export default function HeroSection({
       <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 py-12 sm:gap-10 sm:py-16 md:py-20 lg:grid-cols-2 lg:gap-16 lg:py-24">
         <div className="min-w-0">
           <h1 className="font-hopewell-display text-3xl font-extrabold leading-[1.08] tracking-tight text-caisbe-text-dark sm:text-4xl md:text-5xl">
-            {siteFullName}
+            {heading || siteFullName}
           </h1>
           <p className="mt-4 max-w-xl text-base leading-7 text-caisbe-muted sm:mt-5 sm:text-xl sm:leading-8">
             {intro || heroIntro}

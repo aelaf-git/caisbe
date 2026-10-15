@@ -5,9 +5,10 @@ import { courseProgramPath, fetchPublishedCourses } from "@/lib/api";
 import {
   footerAddress,
   footerColumns,
-  siteFullName,
   type FooterColumn,
 } from "@/lib/data/home";
+import { getDictionary, localizeFooterColumns } from "@/lib/i18n";
+import { getServerLocale } from "@/lib/i18n/server";
 
 type SocialLink = {
   label: string;
@@ -48,20 +49,25 @@ const socialLinks: SocialLink[] = [
 ];
 
 export default async function Footer() {
-  let columns: FooterColumn[] = footerColumns;
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  let columns: FooterColumn[] = localizeFooterColumns(footerColumns, locale);
   try {
     const courses = await fetchPublishedCourses();
     if (courses.length > 0) {
-      columns = footerColumns.map((column) => {
-        if (column.title !== "Programs") return column;
-        return {
-          ...column,
-          links: courses.map((course) => ({
-            label: course.title,
-            href: courseProgramPath(course.slug),
-          })),
-        };
-      });
+      columns = localizeFooterColumns(
+        footerColumns.map((column) => {
+          if (column.title !== "Programs") return column;
+          return {
+            ...column,
+            links: courses.map((course) => ({
+              label: course.title,
+              href: courseProgramPath(course.slug),
+            })),
+          };
+        }),
+        locale,
+      );
     }
   } catch {
     // Keep static Programs links.
@@ -103,7 +109,7 @@ export default async function Footer() {
               href="/contact"
               className="font-hopewell-display mb-4 block text-base font-bold uppercase tracking-wide text-white transition-colors hover:text-white/85"
             >
-              Contact
+              {dict.footer.contactHeading}
             </Link>
             <p className="text-base font-semibold leading-6 text-white/95">
               {footerAddress}
@@ -112,7 +118,7 @@ export default async function Footer() {
               href="/contact"
               className="mt-3 inline-block text-base font-semibold text-white/95 transition-colors hover:text-white"
             >
-              Get in touch
+              {dict.footer.getInTouch}
             </Link>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {socialLinks.map((link) => (
@@ -136,25 +142,25 @@ export default async function Footer() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-md">
               <p className="font-hopewell-display text-base font-bold uppercase tracking-wide text-white">
-                Subscribe to newsletter
+                {dict.footer.subscribeHeading}
               </p>
               <p className="mt-2 text-base font-semibold leading-6 text-white/90">
-                Get magazine issues and CAISBE news by email.
+                {dict.footer.subscribeSubtext}
               </p>
             </div>
             <div className="w-full max-w-lg">
-              <NewsletterSignup compact tone="dark" />
+              <NewsletterSignup compact tone="dark" labels={dict.footer.newsletter} />
             </div>
           </div>
         </div>
 
         <div className="mt-10 flex flex-col gap-3 border-t border-white/25 pt-6 text-base font-semibold text-white sm:flex-row sm:items-center sm:justify-between">
-          <p>Copyright © 2026 {siteFullName}</p>
+          <p>{dict.footer.copyright(dict.siteFullName)}</p>
           <Link
             href="/privacy-policy"
             className="transition-colors hover:text-white/85"
           >
-            Privacy Policy
+            {dict.footer.privacyPolicy}
           </Link>
         </div>
       </div>

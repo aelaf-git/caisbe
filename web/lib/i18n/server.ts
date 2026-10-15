@@ -1,0 +1,11 @@
+import { cookies } from "next/headers";
+import { LOCALE_COOKIE, normalizeLocale, type Locale } from "@/lib/i18n";
+
+export async function getServerLocale(): Promise<Locale> {
+  try {
+    const store = await cookies();
+    return normalizeLocale(store.get(LOCALE_COOKIE)?.value);
+  } catch {
+    return "en";
+  }
+}

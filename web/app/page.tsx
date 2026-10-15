@@ -9,6 +9,8 @@ import StatsSection from "@/components/home/StatsSection";
 import SustainabilitySection from "@/components/home/SustainabilitySection";
 import Testimonials from "@/components/home/Testimonials";
 import { contactContent, offices, siteFullName, siteName } from "@/lib/data/home";
+import { getDictionary } from "@/lib/i18n";
+import { getServerLocale } from "@/lib/i18n/server";
 import { homeDescription, homeTitle, siteOrigin } from "@/lib/site";
 import { fetchHomeLanding } from "@/lib/sitePages";
 
@@ -78,7 +80,9 @@ function homeJsonLd(landing: Awaited<ReturnType<typeof fetchHomeLanding>>) {
 }
 
 export default async function Home() {
-  const landing = await fetchHomeLanding();
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const landing = await fetchHomeLanding(locale);
 
   return (
     <div className="font-hopewell bg-[#f8fafc]">
@@ -86,7 +90,11 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd(landing)) }}
       />
-      <HeroSection intro={landing?.hero_intro} buttonLabel={landing?.hero_button} />
+      <HeroSection
+        heading={dict.siteFullName}
+        intro={landing?.hero_intro}
+        buttonLabel={landing?.hero_button}
+      />
       <StatsSection items={landing?.stats} />
       <AboutSection
         tagline={landing?.tagline}
@@ -99,11 +107,15 @@ export default async function Home() {
         title={landing?.certificates_title}
         subtitle={landing?.certificates_subtitle}
         cta={landing?.certificates_cta}
+        emptyMessage={dict.certificates.empty}
       />
       <MagazineSection
         title={landing?.magazine_title}
         subtitle={landing?.magazine_subtitle}
         cta={landing?.magazine_cta}
+        emptyMessage={dict.magazine.empty}
+        readIssueLabel={dict.magazine.readIssue}
+        badgeLabel={dict.magazine.badge}
       />
       <SustainabilitySection
         eyebrow={landing?.practice_eyebrow}
@@ -113,6 +125,7 @@ export default async function Home() {
       />
       <OfficesSection
         title={landing?.offices_title}
+        directionLabel={dict.offices.direction}
         items={
           landing
             ? landing.offices.map((office) => ({
@@ -135,6 +148,7 @@ export default async function Home() {
         hours={landing?.contact_hours}
         formHeading={landing?.contact_form_heading}
         cta={landing?.contact_cta}
+        labels={dict.contact}
       />
     </div>
   );

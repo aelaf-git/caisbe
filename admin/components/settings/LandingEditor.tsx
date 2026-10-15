@@ -82,8 +82,11 @@ function TextArea({
   );
 }
 
+export type HomeLandingLocale = "en" | "fr";
+
 export default function LandingEditor() {
   const { notice, dialog } = useNoticeDialog();
+  const [activeLang, setActiveLang] = useState<HomeLandingLocale>("en");
   const [home, setHome] = useState<HomeLanding | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -95,7 +98,7 @@ export default function LandingEditor() {
       setLoading(true);
       setError(null);
       try {
-        const data = await apiFetch<HomeLanding>("/admin/site-pages/home");
+        const data = await apiFetch<HomeLanding>(`/admin/site-pages/home?lang=${activeLang}`);
         if (active) setHome(data);
       } catch (err) {
         if (active) setError(err instanceof ApiError ? err.detail : "Unable to load the landing page.");
@@ -107,7 +110,7 @@ export default function LandingEditor() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeLang]);
 
   function patch(partial: Partial<HomeLanding>) {
     setHome((current) => (current ? { ...current, ...partial } : current));
@@ -118,15 +121,18 @@ export default function LandingEditor() {
     if (!home) return;
     setSaving(true);
     try {
-      const saved = await apiFetch<HomeLanding>("/admin/site-pages/home", {
+      const saved = await apiFetch<HomeLanding>(`/admin/site-pages/home?lang=${activeLang}`, {
         method: "PUT",
         body: JSON.stringify(home),
       });
       setHome(saved);
       await notice({
         tone: "success",
-        title: "Landing page saved",
-        description: "The public homepage will use this text.",
+        title: activeLang === "fr" ? "French landing page saved" : "Landing page saved",
+        description:
+          activeLang === "fr"
+            ? "The public homepage will use this French text when visitors select FR."
+            : "The public homepage will use this English text.",
       });
     } catch (err) {
       await notice({
@@ -139,18 +145,53 @@ export default function LandingEditor() {
     }
   }
 
-  if (loading || !home) {
-    return error ? <Alert tone="error">{error}</Alert> : <p className="text-sm text-caisbe-muted">Loading landing page…</p>;
-  }
-
   return (
     <form onSubmit={(event) => void save(event)} className="space-y-6">
       {dialog}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <p className="text-sm text-caisbe-muted">
+          Edit the words on the public homepage, including the statistics strip under the hero. Course cards, magazine
+          issues, hero photos, and testimonial quotes stay in Courses, Media, and Testimonials.
+        </p>
+        <div
+          role="tablist"
+          aria-label="Landing page language"
+          className="inline-flex rounded-full border border-ifma-border bg-white p-1"
+        >
+          {(
+            [
+              { code: "en", label: "English (EN)" },
+              { code: "fr", label: "Français (FR)" },
+            ] as const
+          ).map((option) => {
+            const active = activeLang === option.code;
+            return (
+              <button
+                key={option.code}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setActiveLang(option.code)}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                  active
+                    ? "bg-caisbe-red text-white shadow-sm"
+                    : "text-caisbe-text hover:text-caisbe-red"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {error ? <Alert tone="error">{error}</Alert> : null}
-      <p className="text-sm text-caisbe-muted">
-        Edit the words on the public homepage, including the statistics strip under the hero. Course cards, magazine
-        issues, hero photos, and testimonial quotes stay in Courses, Media, and Testimonials.
-      </p>
+      {loading || !home ? (
+        <p className="text-sm text-caisbe-muted">
+          Loading {activeLang === "fr" ? "French" : "English"} landing page…
+        </p>
+      ) : (
+        <>
 
       <Card className="space-y-4">
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Hero</h2>
@@ -359,8 +400,10 @@ export default function LandingEditor() {
       </Card>
 
       <Button type="submit" disabled={saving}>
-        {saving ? "Saving…" : "Save landing page"}
+        {saving ? "Saving…" : activeLang === "fr" ? "Save French landing page" : "Save English landing page"}
       </Button>
+        </>
+      )}
     </form>
   );
 }

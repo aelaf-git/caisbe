@@ -7,6 +7,11 @@ import {
   type Course,
 } from "@/lib/api";
 import { mainNavigation, utilityLinks } from "@/lib/data/navigation";
+import {
+  localizeNavSections,
+  localizeUtilityLinks,
+  type Locale,
+} from "@/lib/i18n";
 import { fetchSiteNav, mergeSiteNav } from "@/lib/sitePages";
 
 function toNavSections(courses: Course[]): NavSectionData[] {
@@ -36,19 +41,29 @@ function toNavSections(courses: Course[]): NavSectionData[] {
   }));
 }
 
-export default async function MainNav() {
+export default async function MainNav({
+  locale = "en",
+}: {
+  locale?: Locale;
+}) {
   let courses: Course[] = [];
   try {
     courses = await fetchPublishedCourses();
   } catch {
     courses = [];
   }
-  const sections = mergeSiteNav(toNavSections(courses), await fetchSiteNav());
+  const merged = mergeSiteNav(toNavSections(courses), await fetchSiteNav());
+  const sections = localizeNavSections(merged, locale);
+  const localizedUtility = localizeUtilityLinks(utilityLinks, locale);
 
   return (
     <>
       <DesktopMegaMenu sections={sections} />
-      <MobileNav sections={sections} utilityLinks={utilityLinks} />
+      <MobileNav
+        sections={sections}
+        utilityLinks={localizedUtility}
+        locale={locale}
+      />
     </>
   );
 }

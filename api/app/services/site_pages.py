@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.models import AppSetting, SitePage
 from app.schemas.site_pages import (
+    DEFAULT_HOME_FR,
     HomeCard,
     HomeLandingIn,
     HomeLandingOut,
@@ -24,8 +25,22 @@ from app.security.html_sanitize import strip_plain_text
 
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HOME_KEY = "home_landing"
+HOME_KEY_FR = "home_landing_fr"
 
 DEFAULT_HOME = HomeLandingIn()
+
+
+def normalize_home_lang(lang: str | None) -> str:
+    value = (lang or "en").strip().lower()
+    if value in {"fr", "fr-ca", "fr-fr"} or value.startswith("fr"):
+        return "fr"
+    return "en"
+
+
+def _home_storage(lang: str | None) -> tuple[str, HomeLandingIn]:
+    if normalize_home_lang(lang) == "fr":
+        return HOME_KEY_FR, DEFAULT_HOME_FR
+    return HOME_KEY, DEFAULT_HOME
 
 
 
@@ -336,8 +351,9 @@ def _landing_from(payload: HomeLandingIn) -> HomeLandingOut:
     return HomeLandingOut.model_validate(stored)
 
 
-def read_home(db: Session) -> HomeLandingOut | None:
-    row = db.query(AppSetting).filter(AppSetting.key == HOME_KEY).first()
+def read_home(db: Session, lang: str = "en") -> HomeLandingOut | None:
+    key, default_model = _home_storage(lang)
+    row = db.query(AppSetting).filter(AppSetting.key == key).first()
     if row is None or not (row.value or "").strip():
         return None
     try:
@@ -346,24 +362,26 @@ def read_home(db: Session) -> HomeLandingOut | None:
         return None
     if not isinstance(data, dict):
         return None
-    merged = {**DEFAULT_HOME.model_dump(), **data}
+    merged = {**default_model.model_dump(), **data}
     try:
         return HomeLandingOut.model_validate(merged)
     except ValidationError:
-        return HomeLandingOut.model_validate(DEFAULT_HOME.model_dump())
+        return HomeLandingOut.model_validate(default_model.model_dump())
 
 
-def write_home(db: Session, payload: HomeLandingIn) -> HomeLandingOut:
+def write_home(db: Session, payload: HomeLandingIn, lang: str = "en") -> HomeLandingOut:
+    key, _ = _home_storage(lang)
     stored = _landing_from(payload)
-    row = db.query(AppSetting).filter(AppSetting.key == HOME_KEY).first()
+    row = db.query(AppSetting).filter(AppSetting.key == key).first()
     encoded = json.dumps(stored.model_dump())
     if row is None:
-        db.add(AppSetting(key=HOME_KEY, value=encoded))
+        db.add(AppSetting(key=key, value=encoded))
     else:
         row.value = encoded
     db.commit()
     return stored
 
 
-def home_for_admin(db: Session) -> HomeLandingOut:
-    return read_home(db) or HomeLandingOut.model_validate(DEFAULT_HOME.model_dump())
+def home_for_admin(db: Session, lang: str = "en") -> HomeLandingOut:
+    _, default_model = _home_storage(lang)
+    return read_home(db, lang=lang) or HomeLandingOut.model_validate(default_model.model_dump())
