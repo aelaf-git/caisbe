@@ -15,6 +15,12 @@ import {
   type NewsletterSubscriber,
 } from "@/lib/auth";
 
+type AskConfirm = (options: {
+  title: string;
+  description: string;
+  confirmLabel?: string;
+}) => Promise<boolean>;
+
 type NewsletterAttachment = {
   filename: string;
   file_url: string;
@@ -39,6 +45,7 @@ export default function NewsletterPanel({
   onRefresh,
   onError,
   onSuccess,
+  askConfirm,
 }: {
   subscribers: NewsletterSubscriber[];
   campaigns: NewsletterCampaign[];
@@ -46,6 +53,7 @@ export default function NewsletterPanel({
   onRefresh: () => Promise<void>;
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
+  askConfirm: AskConfirm;
 }) {
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
@@ -81,21 +89,24 @@ export default function NewsletterPanel({
   }
 
   async function removeSubscriber(row: NewsletterSubscriber) {
-    if (
-      !window.confirm(
-        `Remove ${row.email} from the newsletter list? This deletes the subscriber from the database.`,
-      )
-    ) {
-      return;
-    }
+    const ok = await askConfirm({
+      title: "Remove subscriber?",
+      description: `Remove ${row.email} from the newsletter list? This deletes the subscriber from the database and cannot be undone.`,
+      confirmLabel: "Remove",
+    });
+    if (!ok) return;
+
     setRemovingId(row.id);
     try {
-      await apiFetch(`/admin/newsletter/subscribers/${row.id}`, { method: "DELETE" });
+      const result = await apiFetch<{ message?: string }>(
+        `/admin/newsletter/subscribers/${row.id}`,
+        { method: "DELETE" },
+      );
       setSelectedIds((current) => current.filter((id) => id !== row.id));
-      onSuccess(`Removed ${row.email}.`);
+      onSuccess(result?.message || `Removed ${row.email}.`);
       await onRefresh();
     } catch (err) {
-      onError(err instanceof ApiError ? err.message : "Unable to remove subscriber.");
+      onError(err instanceof ApiError ? err.detail : "Unable to remove subscriber.");
     } finally {
       setRemovingId(null);
     }

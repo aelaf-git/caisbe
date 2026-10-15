@@ -321,17 +321,26 @@ def admin_list_newsletter_subscribers(
     return [NewsletterSubscriberOut.model_validate(row) for row in rows]
 
 
-@router.delete("/newsletter/subscribers/{subscriber_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/newsletter/subscribers/{subscriber_id}")
 def admin_delete_newsletter_subscriber(
     subscriber_id: int,
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> None:
+) -> dict[str, str]:
     row = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.id == subscriber_id).first()
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscriber not found")
-    db.delete(row)
-    db.commit()
+    email = row.email
+    try:
+        db.delete(row)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to remove subscriber. Please try again.",
+        ) from exc
+    return {"message": f"Removed {email}."}
 
 
 @router.get("/newsletter/campaigns", response_model=list[NewsletterCampaignOut])

@@ -169,6 +169,7 @@ export default function MediaPage() {
           onRefresh={load}
           onError={showActionError}
           onSuccess={showSuccess}
+          askConfirm={confirm}
         />
       ) : null}
       {confirmDialog}

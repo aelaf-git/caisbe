@@ -227,7 +227,13 @@ async function proxy(request: NextRequest, path: string[], options: ApiProxyOpti
       init.duplex = "half";
     } else {
       bodyBuffer = await request.arrayBuffer();
-      init.body = bodyBuffer;
+      // Avoid sending an empty body on DELETE/etc. Some upstreams/CDNs reject
+      // DELETE with Content-Length: 0 even when the body is unused.
+      if (bodyBuffer.byteLength > 0) {
+        init.body = bodyBuffer;
+      } else {
+        bodyBuffer = null;
+      }
     }
   }
 

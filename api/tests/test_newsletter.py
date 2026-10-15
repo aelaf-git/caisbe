@@ -127,7 +127,8 @@ def test_admin_delete_removes_subscriber_row(client: TestClient, db: Session) ->
         f"/api/admin/newsletter/subscribers/{subscriber_id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert deleted.status_code == 204
+    assert deleted.status_code == 200, deleted.text
+    assert "gone@example.com" in deleted.json()["message"]
     assert db.query(NewsletterSubscriber).filter(NewsletterSubscriber.id == subscriber_id).first() is None
 
     missing = client.delete(
