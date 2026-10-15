@@ -305,6 +305,7 @@ def _normalize_media_fields(
 ) -> dict:
     from app.services.media_channels import (
         CHANNEL_CATEGORIES,
+        FILE_CATEGORIES,
         extract_youtube_id,
         is_http_url,
         is_podcast_external_url,
@@ -327,7 +328,7 @@ def _normalize_media_fields(
     clean_external = (external_url or "").strip() or None
     clean_body = strip_plain_text(body) if body else None
 
-    if cat in {"hero", "magazine"}:
+    if cat in FILE_CATEGORIES:
         if not clean_file:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

@@ -8,6 +8,7 @@ import {
   type ForumAdminThreadSummary,
   type ForumCategory,
 } from "@/lib/forum";
+import { IconActionButton } from "@/components/ui/IconAction";
 
 export default function ForumModeration() {
   const [categories, setCategories] = useState<ForumCategory[]>([]);
@@ -317,30 +318,24 @@ export default function ForumModeration() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
+                  <IconActionButton
+                    icon={detail.pinned ? "unpin" : "pin"}
+                    label={detail.pinned ? "Unpin thread" : "Pin thread"}
                     disabled={busy}
                     onClick={() => void moderate({ pinned: !detail.pinned })}
-                    className="rounded-md border border-ifma-border px-3 py-1.5 text-xs font-semibold uppercase text-caisbe-text"
-                  >
-                    {detail.pinned ? "Unpin" : "Pin"}
-                  </button>
-                  <button
-                    type="button"
+                  />
+                  <IconActionButton
+                    icon={detail.locked ? "unlock" : "lock"}
+                    label={detail.locked ? "Unlock thread" : "Lock thread"}
                     disabled={busy}
                     onClick={() => void moderate({ locked: !detail.locked })}
-                    className="rounded-md border border-ifma-border px-3 py-1.5 text-xs font-semibold uppercase text-caisbe-text"
-                  >
-                    {detail.locked ? "Unlock" : "Lock"}
-                  </button>
-                  <button
-                    type="button"
+                  />
+                  <IconActionButton
+                    icon={detail.hidden ? "publish" : "unpublish"}
+                    label={detail.hidden ? "Restore thread" : "Hide thread"}
                     disabled={busy}
                     onClick={() => void moderate({ hidden: !detail.hidden })}
-                    className="rounded-md border border-ifma-border px-3 py-1.5 text-xs font-semibold uppercase text-caisbe-text"
-                  >
-                    {detail.hidden ? "Restore" : "Hide"}
-                  </button>
+                  />
                 </div>
               </header>
               <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
@@ -360,14 +355,12 @@ export default function ForumModeration() {
                         {item.author_name} · {formatForumTime(item.created_at)}
                         {item.hidden ? " · Hidden" : ""}
                       </p>
-                      <button
-                        type="button"
+                      <IconActionButton
+                        icon={item.hidden ? "publish" : "unpublish"}
+                        label={item.hidden ? "Restore reply" : "Hide reply"}
                         disabled={busy}
                         onClick={() => void moderateReply(item.id, !item.hidden)}
-                        className="text-[11px] font-semibold uppercase text-caisbe-red"
-                      >
-                        {item.hidden ? "Restore" : "Hide"}
-                      </button>
+                      />
                     </div>
                     <p className="mt-1 whitespace-pre-wrap leading-6 text-caisbe-text">{item.body}</p>
                   </article>

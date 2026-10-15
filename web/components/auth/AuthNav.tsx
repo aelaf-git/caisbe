@@ -5,12 +5,20 @@ import { useStudentSession } from "@/components/auth/useStudentSession";
 
 type AuthNavProps = {
   layout?: "bar" | "stack";
+  labels?: {
+    login: string;
+    register: string;
+    logout: string;
+  };
 };
 
-export default function AuthNav({ layout = "bar" }: AuthNavProps) {
+export default function AuthNav({ layout = "bar", labels }: AuthNavProps) {
   const { user, loading } = useStudentSession();
   const stack = layout === "stack";
   const row = stack ? "flex flex-col gap-2" : "flex items-center gap-4 leading-none";
+  const loginLabel = labels?.login ?? "Login";
+  const registerLabel = labels?.register ?? "Register";
+  const logoutLabel = labels?.logout ?? "Log out";
 
   if (loading) {
     return <span className={`${stack ? "block h-11" : "inline-block h-8 w-16"}`} aria-hidden />;
@@ -27,13 +35,13 @@ export default function AuthNav({ layout = "bar" }: AuthNavProps) {
               : "inline-flex h-8 items-center font-medium text-caisbe-text transition-colors hover:text-caisbe-red"
           }
         >
-          Login
+          {loginLabel}
         </a>
         <a
           href={portalMembershipRegisterUrl()}
           className="inline-flex h-9 items-center justify-center rounded-full bg-caisbe-red px-4 text-base font-bold text-white transition hover:bg-caisbe-red-dark"
         >
-          Register
+          {registerLabel}
         </a>
       </div>
     );
@@ -63,7 +71,7 @@ export default function AuthNav({ layout = "bar" }: AuthNavProps) {
             : "inline-flex h-8 items-center text-sm font-medium text-caisbe-text hover:text-caisbe-red"
         }
       >
-        Log out
+        {logoutLabel}
       </a>
     </div>
   );

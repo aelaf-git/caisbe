@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -24,6 +25,7 @@ from app.services.notifications import notify_users
 from fastapi import Request
 
 router = APIRouter(tags=["support"])
+logger = logging.getLogger(__name__)
 
 ALLOWED_KINDS = {"question", "issue", "general"}
 ALLOWED_STATUSES = {"open", "waiting_admin", "waiting_student", "closed"}
@@ -219,6 +221,24 @@ def create_support_thread(
         body=f'{current_user.full_name} opened "{subject}" ({kind}).',
     )
     db.commit()
+    if (current_user.email or "").strip():
+        try:
+            from app.services.email import EmailDeliveryError
+            from app.services.request_received_email import send_request_received_email
+
+            send_request_received_email(
+                to=current_user.email,
+                full_name=current_user.full_name,
+            )
+        except EmailDeliveryError as exc:
+            logger.error(
+                "Request-received email delivery failed for support thread %s (%s): %s",
+                thread.id,
+                current_user.email,
+                exc,
+            )
+        except Exception:
+            logger.exception("Request-received email failed for support thread %s", thread.id)
     loaded = _load_thread(db, thread.id)
     assert loaded is not None
     return _thread_out(loaded, for_admin=False, include_messages=True)

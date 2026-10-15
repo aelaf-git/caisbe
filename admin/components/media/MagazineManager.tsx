@@ -5,6 +5,7 @@ import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import FrenchTranslationPanel from "@/components/translations/FrenchTranslationPanel";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
@@ -13,6 +14,7 @@ import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, apiUpload, ApiError, type MediaAsset } from "@/lib/auth";
+import { IconActionButton, IconActionLink } from "@/components/ui/IconAction";
 
 const MAGAZINE_ACCEPT =
   "application/pdf,.pdf,image/*,.jpg,.jpeg,.png,.webp,.gif,application/epub+zip,.epub";
@@ -291,14 +293,7 @@ export default function MagazineManager({
                       {fileLabelFromUrl(fileUrl)}
                     </p>
                   </div>
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 text-xs font-semibold uppercase tracking-wide text-caisbe-green hover:underline"
-                  >
-                    Open
-                  </a>
+                  <IconActionLink icon="open" external href={fileUrl} label="Open file" />
                 </div>
                 <div className="border-t border-ifma-border-light bg-admin-surface px-4 py-3">
                   <button
@@ -370,18 +365,17 @@ export default function MagazineManager({
                   >
                     Replace cover
                   </button>
-                  <button
-                    type="button"
+                  <IconActionButton
+                    icon="trash"
+                    tone="danger"
+                    label="Remove cover"
                     disabled={uploading || saving}
                     onClick={() => {
                       setCoverUrl(null);
                       setCoverProgress(0);
                       resetFileInput(coverInputRef);
                     }}
-                    className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted hover:text-caisbe-red disabled:opacity-50"
-                  >
-                    Remove
-                  </button>
+                  />
                 </div>
               </div>
             ) : (
@@ -451,6 +445,17 @@ export default function MagazineManager({
             </Button>
           ) : null}
         </div>
+      <div className="mt-6">
+      <FrenchTranslationPanel
+        entityType="media"
+        entityId={editingId}
+        english={{ title: title, description: description }}
+        fields={[
+              { name: "title", label: "Title" },
+              { name: "description", label: "Description", kind: "textarea", rows: 4 },
+        ]}
+      />
+      </div>
       </Card>
 
       <Card padding="none" className="overflow-x-auto">
@@ -510,14 +515,7 @@ export default function MagazineManager({
                   </td>
                   <td className="px-6 py-4">
                     {asset.file_url ? (
-                      <a
-                        href={asset.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-caisbe-green hover:underline"
-                      >
-                        Open
-                      </a>
+                      <IconActionLink icon="open" external href={asset.file_url} label={`Open ${asset.title}`} />
                     ) : (
                       <span className="text-caisbe-muted">—</span>
                     )}

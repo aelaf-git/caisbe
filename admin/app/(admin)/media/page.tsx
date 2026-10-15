@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import BlogManager from "@/components/media/BlogManager";
+import FormsGuidesManager from "@/components/media/FormsGuidesManager";
 import HeroManager from "@/components/media/HeroManager";
 import MagazineManager from "@/components/media/MagazineManager";
 import NewsletterPanel from "@/components/media/NewsletterPanel";
@@ -20,12 +21,20 @@ import {
   type NewsletterSubscriber,
 } from "@/lib/auth";
 
-type Tab = "hero" | "magazines" | "youtube" | "podcasts" | "blog" | "newsletter";
+type Tab =
+  | "hero"
+  | "magazines"
+  | "forms"
+  | "youtube"
+  | "podcasts"
+  | "blog"
+  | "newsletter";
 
 export default function MediaPage() {
   const [tab, setTab] = useState<Tab>("hero");
   const [heroAssets, setHeroAssets] = useState<MediaAsset[]>([]);
   const [magazineAssets, setMagazineAssets] = useState<MediaAsset[]>([]);
+  const [formAssets, setFormAssets] = useState<MediaAsset[]>([]);
   const [youtubeAssets, setYoutubeAssets] = useState<MediaAsset[]>([]);
   const [podcastAssets, setPodcastAssets] = useState<MediaAsset[]>([]);
   const [blogAssets, setBlogAssets] = useState<MediaAsset[]>([]);
@@ -40,18 +49,28 @@ export default function MediaPage() {
     setLoading(true);
     setError(null);
     try {
-      const [heroData, magazines, youtube, podcasts, blogs, subscriberData, campaignData] =
-        await Promise.all([
-          apiFetch<MediaAsset[]>("/admin/media?category=hero"),
-          apiFetch<MediaAsset[]>("/admin/media?category=magazine"),
-          apiFetch<MediaAsset[]>("/admin/media?category=youtube"),
-          apiFetch<MediaAsset[]>("/admin/media?category=podcast"),
-          apiFetch<MediaAsset[]>("/admin/media?category=blog"),
-          apiFetch<NewsletterSubscriber[]>("/admin/newsletter/subscribers"),
-          apiFetch<NewsletterCampaign[]>("/admin/newsletter/campaigns"),
-        ]);
+      const [
+        heroData,
+        magazines,
+        forms,
+        youtube,
+        podcasts,
+        blogs,
+        subscriberData,
+        campaignData,
+      ] = await Promise.all([
+        apiFetch<MediaAsset[]>("/admin/media?category=hero"),
+        apiFetch<MediaAsset[]>("/admin/media?category=magazine"),
+        apiFetch<MediaAsset[]>("/admin/media?category=forms"),
+        apiFetch<MediaAsset[]>("/admin/media?category=youtube"),
+        apiFetch<MediaAsset[]>("/admin/media?category=podcast"),
+        apiFetch<MediaAsset[]>("/admin/media?category=blog"),
+        apiFetch<NewsletterSubscriber[]>("/admin/newsletter/subscribers"),
+        apiFetch<NewsletterCampaign[]>("/admin/newsletter/campaigns"),
+      ]);
       setHeroAssets(heroData);
       setMagazineAssets(magazines);
+      setFormAssets(forms);
       setYoutubeAssets(youtube);
       setPodcastAssets(podcasts);
       setBlogAssets(blogs);
@@ -89,13 +108,14 @@ export default function MediaPage() {
       <PageHeader
         eyebrow="Content"
         title="Media library"
-        description="Manage the homepage hero, magazines, YouTube videos, podcasts, blog posts, and newsletters."
+        description="Manage the homepage hero, magazines, forms and guides, YouTube videos, podcasts, blog posts, and newsletters."
       />
 
       <Tabs
         items={[
           { id: "hero", label: "Hero", count: heroAssets.length },
           { id: "magazines", label: "Magazines", count: magazineAssets.length },
+          { id: "forms", label: "Forms & Guides", count: formAssets.length },
           { id: "youtube", label: "YouTube", count: youtubeAssets.length },
           { id: "podcasts", label: "Podcasts", count: podcastAssets.length },
           { id: "blog", label: "Blog", count: blogAssets.length },
@@ -124,6 +144,16 @@ export default function MediaPage() {
       {tab === "magazines" ? (
         <MagazineManager
           assets={magazineAssets}
+          loading={loading}
+          onRefresh={load}
+          onError={showActionError}
+          onSuccess={showSuccess}
+          askConfirm={confirm}
+        />
+      ) : null}
+      {tab === "forms" ? (
+        <FormsGuidesManager
+          assets={formAssets}
           loading={loading}
           onRefresh={load}
           onError={showActionError}
@@ -169,6 +199,7 @@ export default function MediaPage() {
           onRefresh={load}
           onError={showActionError}
           onSuccess={showSuccess}
+          askConfirm={confirm}
         />
       ) : null}
       {confirmDialog}

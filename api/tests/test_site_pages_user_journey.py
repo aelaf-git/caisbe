@@ -179,3 +179,32 @@ def test_admin_can_edit_seeded_landing_pages_and_public_site_shows_them(
     assert public_home.status_code == 200, public_home.text
     assert public_home.json()["tagline"] == "Edited tagline for visitors."
     assert public_home.json()["stats"][0]["value"] == "10+"
+
+    # French landing page defaults to French copy and can be edited independently.
+    fr_default = client.get("/api/site-pages/home", params={"lang": "fr"})
+    assert fr_default.status_code == 200, fr_default.text
+    assert "Transformer les bâtiments" in fr_default.json()["tagline"]
+
+    fr_saved = client.put(
+        "/api/admin/site-pages/home",
+        params={"lang": "fr"},
+        headers=headers,
+        json={
+            "tagline": "Slogan modifié pour les visiteurs francophones.",
+            "hero_intro": "Phrase d'accueil modifiée pour la page d'accueil en français.",
+            "stats": [
+                {"value": "15+", "label": "Programmes certifiés"},
+                {"value": "25+", "label": "Années d'expérience"},
+                {"value": "12+", "label": "Associations partenaires"},
+                {"value": "1520+", "label": "Membres actifs"},
+            ],
+        },
+    )
+    assert fr_saved.status_code == 200, fr_saved.text
+    public_fr = client.get("/api/site-pages/home", params={"lang": "fr"})
+    assert public_fr.status_code == 200, public_fr.text
+    assert public_fr.json()["tagline"] == "Slogan modifié pour les visiteurs francophones."
+    assert public_fr.json()["stats"][0]["label"] == "Programmes certifiés"
+    # English remains untouched
+    assert client.get("/api/site-pages/home", params={"lang": "en"}).json()["tagline"] == "Edited tagline for visitors."
+

@@ -7,6 +7,7 @@ import Card from "@/components/ui/Card";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { apiFetch, ApiError } from "@/lib/auth";
+import { IconActionButton } from "@/components/ui/IconAction";
 
 type CardItem = { title: string; description: string };
 type OfficeItem = { region: string; address: string; map_query: string };
@@ -82,8 +83,11 @@ function TextArea({
   );
 }
 
+export type HomeLandingLocale = "en" | "fr";
+
 export default function LandingEditor() {
   const { notice, dialog } = useNoticeDialog();
+  const [activeLang, setActiveLang] = useState<HomeLandingLocale>("en");
   const [home, setHome] = useState<HomeLanding | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -95,7 +99,7 @@ export default function LandingEditor() {
       setLoading(true);
       setError(null);
       try {
-        const data = await apiFetch<HomeLanding>("/admin/site-pages/home");
+        const data = await apiFetch<HomeLanding>(`/admin/site-pages/home?lang=${activeLang}`);
         if (active) setHome(data);
       } catch (err) {
         if (active) setError(err instanceof ApiError ? err.detail : "Unable to load the landing page.");
@@ -107,7 +111,7 @@ export default function LandingEditor() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeLang]);
 
   function patch(partial: Partial<HomeLanding>) {
     setHome((current) => (current ? { ...current, ...partial } : current));
@@ -118,15 +122,18 @@ export default function LandingEditor() {
     if (!home) return;
     setSaving(true);
     try {
-      const saved = await apiFetch<HomeLanding>("/admin/site-pages/home", {
+      const saved = await apiFetch<HomeLanding>(`/admin/site-pages/home?lang=${activeLang}`, {
         method: "PUT",
         body: JSON.stringify(home),
       });
       setHome(saved);
       await notice({
         tone: "success",
-        title: "Landing page saved",
-        description: "The public homepage will use this text.",
+        title: activeLang === "fr" ? "French landing page saved" : "Landing page saved",
+        description:
+          activeLang === "fr"
+            ? "The public homepage will use this French text when visitors select FR."
+            : "The public homepage will use this English text.",
       });
     } catch (err) {
       await notice({
@@ -139,40 +146,87 @@ export default function LandingEditor() {
     }
   }
 
-  if (loading || !home) {
-    return error ? <Alert tone="error">{error}</Alert> : <p className="text-sm text-caisbe-muted">Loading landing page…</p>;
-  }
-
   return (
     <form onSubmit={(event) => void save(event)} className="space-y-6">
       {dialog}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <p className="text-sm text-caisbe-muted">
+          Edit the words on the public homepage, including the statistics strip under the hero. Course cards, magazine
+          issues, hero photos, and testimonial quotes stay in Courses, Media, and Testimonials.
+        </p>
+        <div
+          role="tablist"
+          aria-label="Landing page language"
+          className="inline-flex rounded-full border border-ifma-border bg-white p-1"
+        >
+          {(
+            [
+              { code: "en", label: "English (EN)" },
+              { code: "fr", label: "Français (FR)" },
+            ] as const
+          ).map((option) => {
+            const active = activeLang === option.code;
+            return (
+              <button
+                key={option.code}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setActiveLang(option.code)}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                  active
+                    ? "bg-caisbe-red text-white shadow-sm"
+                    : "text-caisbe-text hover:text-caisbe-red"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {error ? <Alert tone="error">{error}</Alert> : null}
-      <p className="text-sm text-caisbe-muted">
-        Edit the words on the public homepage. Course cards, magazine issues, hero photos, and testimonial quotes
-        stay in Courses, Media, and Testimonials.
-      </p>
+      {loading || !home ? (
+        <p className="text-sm text-caisbe-muted">
+          Loading {activeLang === "fr" ? "French" : "English"} landing page…
+        </p>
+      ) : (
+        <>
 
       <Card className="space-y-4">
         <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Hero</h2>
         <TextArea label="Landing sentence" value={home.hero_intro} onChange={(hero_intro) => patch({ hero_intro })} rows={4} />
         <TextInput label="Join button" value={home.hero_button} onChange={(hero_button) => patch({ hero_button })} />
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold">Statistics</p>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => patch({ stats: [...home.stats, { value: "", label: "" }] })}
-            >
-              Add statistic
-            </Button>
+      </Card>
+
+      <Card className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Statistics</h2>
+            <p className="mt-1 text-sm text-caisbe-muted">
+              Numbers shown under the hero, such as chapter counts and association totals.
+            </p>
           </div>
-          {home.stats.map((stat, index) => (
-            <div key={index} className="grid grid-cols-[7rem_1fr_auto] gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => patch({ stats: [...home.stats, { value: "", label: "" }] })}
+          >
+            Add statistic
+          </Button>
+        </div>
+        {home.stats.map((stat, index) => (
+          <div
+            key={index}
+            className="grid gap-3 border-t border-ifma-border pt-4 sm:grid-cols-[7rem_1fr_auto] sm:items-end"
+          >
+            <FormField label="Value">
               <input
                 className={fieldClassName}
                 value={stat.value}
+                placeholder="12+"
                 aria-label={`Statistic ${index + 1} value`}
                 onChange={(event) =>
                   patch({
@@ -183,9 +237,12 @@ export default function LandingEditor() {
                 }
                 required
               />
+            </FormField>
+            <FormField label="Label">
               <input
                 className={fieldClassName}
                 value={stat.label}
+                placeholder="African based trade and professionals associations"
                 aria-label={`Statistic ${index + 1} label`}
                 onChange={(event) =>
                   patch({
@@ -196,18 +253,20 @@ export default function LandingEditor() {
                 }
                 required
               />
-              {home.stats.length > 1 ? (
-                <button
-                  type="button"
-                  className="text-sm font-semibold text-caisbe-red"
-                  onClick={() => patch({ stats: home.stats.filter((_, itemIndex) => itemIndex !== index) })}
-                >
-                  Remove
-                </button>
-              ) : null}
-            </div>
-          ))}
-        </div>
+            </FormField>
+            {home.stats.length > 1 ? (
+              <IconActionButton
+                icon="trash"
+                tone="danger"
+                label="Remove stat"
+                className="mb-1"
+                onClick={() => patch({ stats: home.stats.filter((_, itemIndex) => itemIndex !== index) })}
+              />
+            ) : (
+              <span className="hidden sm:block" aria-hidden />
+            )}
+          </div>
+        ))}
       </Card>
 
       <Card className="space-y-4">
@@ -342,8 +401,10 @@ export default function LandingEditor() {
       </Card>
 
       <Button type="submit" disabled={saving}>
-        {saving ? "Saving…" : "Save landing page"}
+        {saving ? "Saving…" : activeLang === "fr" ? "Save French landing page" : "Save English landing page"}
       </Button>
+        </>
+      )}
     </form>
   );
 }
@@ -386,13 +447,12 @@ function CardList({
               )
             }
           />
-          <button
-            type="button"
-            className="text-sm font-semibold text-caisbe-red"
+          <IconActionButton
+            icon="trash"
+            tone="danger"
+            label="Remove item"
             onClick={() => onChange(items.filter((_, rowIndex) => rowIndex !== index))}
-          >
-            Remove
-          </button>
+          />
         </div>
       ))}
     </div>

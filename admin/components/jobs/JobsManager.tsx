@@ -5,6 +5,7 @@ import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import FrenchTranslationPanel from "@/components/translations/FrenchTranslationPanel";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
@@ -13,6 +14,7 @@ import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, apiUpload, ApiError, type JobPosting } from "@/lib/auth";
+import { IconActionButton, IconActionLink } from "@/components/ui/IconAction";
 
 const ATTACH_ACCEPT =
   "application/pdf,.pdf,application/msword,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,image/*,.jpg,.jpeg,.png,.webp";
@@ -390,22 +392,8 @@ export default function JobsManager({
             {attachmentUrl ? (
               <p className="text-xs text-caisbe-muted">
                 Attached:{" "}
-                <a
-                  href={attachmentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-caisbe-red"
-                >
-                  View file
-                </a>{" "}
-                ·{" "}
-                <button
-                  type="button"
-                  className="font-semibold text-caisbe-red"
-                  onClick={() => setAttachmentUrl(null)}
-                >
-                  Remove
-                </button>
+                <IconActionLink icon="view" external href={attachmentUrl} label="View file" />
+                <IconActionButton icon="trash" tone="danger" label="Remove attachment" onClick={() => setAttachmentUrl(null)} />
               </p>
             ) : null}
           </div>
@@ -443,6 +431,20 @@ export default function JobsManager({
               </Button>
             ) : null}
           </div>
+        <div className="mt-6">
+      <FrenchTranslationPanel
+        entityType="job"
+        entityId={editingId}
+        english={{ title: title, company: company, location: location, summary: summary, description: description }}
+        fields={[
+              { name: "title", label: "Title" },
+              { name: "company", label: "Company" },
+              { name: "location", label: "Location" },
+              { name: "summary", label: "Summary", kind: "textarea", rows: 3 },
+              { name: "description", label: "Description", kind: "textarea", rows: 8 },
+        ]}
+      />
+        </div>
         </Card>
       </div>
 

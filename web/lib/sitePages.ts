@@ -1,6 +1,8 @@
 import type { NavSectionData } from "@/components/layout/nav-types";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, requestLocale } from "@/lib/api";
 import type { TopicPage } from "@/lib/data/site-pages";
+import { FALLBACK_HOME_FR, type Locale } from "@/lib/i18n";
+import { FR_SITE_PAGES } from "@/lib/i18n/content/sitePages.fr";
 
 export type SiteNavItem = {
   menu_label: string;
@@ -73,31 +75,44 @@ function toTopicPage(page: SitePageApi): TopicPage {
   };
 }
 
-export async function fetchPublishedSitePage(path: string): Promise<TopicPage | null> {
+/**
+ * Published Admin Pages entry in the visitor's language (French falls back to English
+ * per field on the API). When the API is unreachable, French reads the bundled copy.
+ */
+export async function fetchPublishedSitePage(
+  path: string,
+  locale?: Locale,
+): Promise<TopicPage | null> {
   try {
     const page = await apiFetch<SitePageApi>(
       `/site-pages/by-path?path=${encodeURIComponent(path)}`,
+      { locale },
     );
     return toTopicPage(page);
-  } catch {
-    return null;
+  } catch (error) {
+    const missing = error instanceof Error && error.message === "Page not found";
+    if (missing) return null;
+    const active = locale ?? (await requestLocale());
+    return active === "fr" ? (FR_SITE_PAGES[path] ?? null) : null;
   }
 }
 
-export async function fetchSiteNav(): Promise<SiteNavItem[]> {
+export async function fetchSiteNav(locale?: Locale): Promise<SiteNavItem[]> {
   try {
-    const data = await apiFetch<{ items: SiteNavItem[] }>("/site-pages/nav");
+    const data = await apiFetch<{ items: SiteNavItem[] }>("/site-pages/nav", { locale });
     return data.items ?? [];
   } catch {
     return [];
   }
 }
 
-export async function fetchHomeLanding(): Promise<HomeLanding | null> {
+export async function fetchHomeLanding(
+  locale: Locale = "en",
+): Promise<HomeLanding | null> {
   try {
-    return await apiFetch<HomeLanding>("/site-pages/home");
+    return await apiFetch<HomeLanding>(`/site-pages/home?lang=${encodeURIComponent(locale)}`);
   } catch {
-    return null;
+    return locale === "fr" ? FALLBACK_HOME_FR : null;
   }
 }
 
@@ -165,6 +180,9 @@ function knownHrefs(sections: NavSectionData[]) {
   return known;
 }
 
+/** CMS paths that must never appear in the public mega-menu. */
+const HIDDEN_NAV_PATHS = new Set(["/resources/component-reports"]);
+
 export function mergeSiteNav(sections: NavSectionData[], items: SiteNavItem[]): NavSectionData[] {
   const next = sections.map((section) => ({
     ...section,
@@ -174,9 +192,9 @@ export function mergeSiteNav(sections: NavSectionData[], items: SiteNavItem[]): 
     })),
   }));
   const known = knownHrefs(next);
-  const sorted = [...items].sort(
-    (a, b) => a.sort_order - b.sort_order || a.menu_label.localeCompare(b.menu_label),
-  );
+  const sorted = [...items]
+    .filter((item) => !HIDDEN_NAV_PATHS.has(item.path))
+    .sort((a, b) => a.sort_order - b.sort_order || a.menu_label.localeCompare(b.menu_label));
 
   for (const item of sorted) {
     if (!item.parent_path && !known.has(item.path)) {

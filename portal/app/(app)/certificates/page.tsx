@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { Certificate, MembershipCertificate } from "@/lib/lms";
+import { IconActionLink } from "@/components/ui/IconAction";
 
 export default function StudentCertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -84,12 +85,7 @@ export default function StudentCertificatesPage() {
                   : " · Lifetime"}
               </p>
             </div>
-            <Link
-              href="/certificates/membership"
-              className="text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:text-caisbe-red-dark"
-            >
-              View
-            </Link>
+            <IconActionLink icon="view" href="/certificates/membership" label="View membership certificate" />
           </div>
         ) : membershipLocked ? (
           <div className="p-6">
@@ -141,12 +137,7 @@ export default function StudentCertificatesPage() {
                   <p className="font-semibold text-caisbe-text">{cert.course.title}</p>
                   <p className="text-sm text-caisbe-muted">{cert.certificate_code}</p>
                 </div>
-                <Link
-                  href={`/certificates/${cert.certificate_code}`}
-                  className="text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:text-caisbe-red-dark"
-                >
-                  View
-                </Link>
+                <IconActionLink icon="view" href={`/certificates/${cert.certificate_code}`} label={`View certificate for ${cert.course.title}`} />
               </li>
             ))}
           </ul>

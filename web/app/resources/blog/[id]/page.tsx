@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import BlogPostPageContent from "@/components/resources/BlogPostPageContent";
+import { getServerT } from "@/lib/i18n/server";
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
+  const { t } = await getServerT();
   return {
-    title: `Blog | CAISBE`,
-    description: `CAISBE blog post ${id}`,
+    title: t("Blog | CAISBE", "Blogue | CAISBE"),
+    description: t(`CAISBE blog post ${id}`, `Article du blogue du CAISBE ${id}`),
   };
 }
 

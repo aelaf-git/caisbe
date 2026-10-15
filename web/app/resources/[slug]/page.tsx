@@ -12,6 +12,8 @@ import {
 } from "@/lib/data/resources";
 import { getResourcePage, resourcesPages } from "@/lib/data/site-pages";
 import { fetchPublishedSitePage, topicChrome } from "@/lib/sitePages";
+import { cmsTopicPage } from "@/lib/cmsTopic";
+import { getServerT } from "@/lib/i18n/server";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -26,6 +28,13 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const published = await fetchPublishedSitePage(`/resources/${slug}`);
+  if (published) {
+    return {
+      title: `${published.title} | CAISBE`,
+      description: published.description || published.lead,
+    };
+  }
 
   if (slug === advocacyContent.slug) {
     return {
@@ -42,16 +51,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const published = await fetchPublishedSitePage(`/resources/${slug}`);
-  if (published) {
-    return {
-      title: `${published.title} | CAISBE`,
-      description: published.description,
-    };
-  }
-
   const page = getResourcePage(slug);
-  if (!page) return { title: "Resources | CAISBE" };
+  const { t } = await getServerT();
+  if (!page) return { title: t("Resources | CAISBE", "Ressources | CAISBE") };
   return {
     title: `${page.title} | CAISBE`,
     description: page.description,
@@ -62,15 +64,32 @@ export default async function ResourceSubpage({ params }: Props) {
   const { slug } = await params;
 
   if (slug === advocacyContent.slug) {
+    const cms = await cmsTopicPage(`/resources/${slug}`);
+    if (cms) return cms;
     return <AdvocacyPageContent />;
   }
 
   if (slug === "magazine") {
-    return <MagazinePageContent />;
+    const published = await fetchPublishedSitePage("/resources/magazine");
+    return (
+      <MagazinePageContent
+        title={published?.title}
+        lead={published?.lead}
+        sectionTitle={published?.sections[0]?.title}
+      />
+    );
   }
 
   if (slug === "youtube" || slug === "podcast" || slug === "blog") {
-    return <MediaChannelPageContent channel={slug} />;
+    const published = await fetchPublishedSitePage(`/resources/${slug}`);
+    return (
+      <MediaChannelPageContent
+        channel={slug}
+        title={published?.title}
+        lead={published?.lead}
+        sectionTitle={published?.sections[0]?.title}
+      />
+    );
   }
 
   if (mediaSlugs.includes(slug)) {

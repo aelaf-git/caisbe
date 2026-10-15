@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.models import SitePage
+from app.seeds.site_pages_fr import seed_french_site_pages
 from app.services.site_pages import _assign_paths, _pages
 
 Section = dict
@@ -276,30 +277,6 @@ RESOURCE_PAGES = [
             ),
         ),
         "cta_label": "Request Leader Tools",
-        "cta_href": "/contact",
-    },
-    {
-        "slug": "component-reports",
-        "title": "Component Reports",
-        "description": "Reports and updates supporting CAISBE components, chapters, and member communities.",
-        "lead": "Updates that help components and chapters share progress, priorities, and learning across the network.",
-        "sections": _sections(
-            (
-                "What reports support",
-                "",
-                [
-                    "Chapter activity and membership snapshots",
-                    "Program outcomes and event summaries",
-                    "Shared priorities across regions",
-                ],
-            ),
-            (
-                "Questions",
-                "For questions about published summaries or regional activity, contact the CAISBE team.",
-                [],
-            ),
-        ),
-        "cta_label": "Contact Us",
         "cta_href": "/contact",
     },
 ]
@@ -988,6 +965,280 @@ SPONSOR_PAGE = {
 }
 
 
+def _faq_sections() -> list[Section]:
+    faqs: list[tuple[str, list[str]]] = [
+        (
+            "Why Choose CAISBE?",
+            [
+                "Industry-recognized qualifications",
+                "Corporate training",
+                "Global industry partnerships",
+                "A growing community of Sustainable Built Environment professionals, students, and employers",
+            ],
+        ),
+        (
+            "How long does the certificate program take?",
+            ["Program duration varies by certificate and may take 8 weeks, with flexible pacing options."],
+        ),
+        (
+            "Can I study CAISBE courses online or self-paced?",
+            [
+                "Yes. CAISBE offers online learning and weekend study options designed for working professionals across Canada and Africa."
+            ],
+        ),
+        (
+            "Can I take some courses in online self-paced and in classroom?",
+            [
+                "You can choose from any delivery method that is available to you. Once you select one method, you do not need to use this method for the remaining courses in the certificate programs. You can mix the delivery options depending on your budget, availability, and needs."
+            ],
+        ),
+        (
+            "Is there a time limit as to completion of the certificates?",
+            [
+                "Learners must complete their certificate enrolment within a three-year period. Learners selecting not to complete their certificate enrolment within the term will be considered inactive."
+            ],
+        ),
+        (
+            "How long are the certificate exams?",
+            [
+                "In the CAISBE Learning Portal, you will have two hours to complete your exams. You are required to read and comply with the CAISBE code of professional ethics, so please read those prior to taking your course exam."
+            ],
+        ),
+        (
+            "What is the pass mark?",
+            [
+                "To pass the exam you must score a 70% or better. If you fail, you cannot appeal to have your score changed to a pass."
+            ],
+        ),
+        (
+            "What type of questions are possibly asked on the exam?",
+            [
+                "Exams are multiple choice. Each chapter within your course material will have practice questions that can be used to prepare you for the type of questions that will appear on the certificate exam."
+            ],
+        ),
+        (
+            "When do I find out how I did on the exam?",
+            [
+                "Once you complete your last question of the exam, the system will indicate what your unofficial mark is. You will receive an official result within fourteen days after you complete the exam."
+            ],
+        ),
+        (
+            "What is the CAISBE continuing professional development program?",
+            [
+                "The CPD program requires that course graduates earn 16 points of continuing education credit every two years to maintain their membership certificate status. The two-year renewal period begins on the date that graduates attain their first certificate."
+            ],
+        ),
+        (
+            "How do I get my CPD points and certificates?",
+            [
+                "You can get your CPD points in a number of ways. You can attend conferences, seminars, and trade shows related to facility management or property management, including building operations."
+            ],
+        ),
+        (
+            "Which course should I take first?",
+            [
+                "You can take any course in any order. If you don’t have a background in facility operations, start with the Fundamentals course, as this course covers a bit of everything about facility operations and you will find it easier once you have taken the other courses."
+            ],
+        ),
+        (
+            "Is there a time limit as to when I must complete the certificate programs?",
+            [
+                "Learners must complete their certificate enrolment within a one-year period. Beyond this term, members will be considered inactive."
+            ],
+        ),
+    ]
+    return _sections(*((question, "", answers) for question, answers in faqs))
+
+
+FRAME_PAGES = [
+    {
+        "slug": "careers",
+        "title": "Careers & Job Opportunities",
+        "menu_label": "Careers & Job Opportunities",
+        "description": "Explore facility management jobs, internships, and career development resources published by CAISBE.",
+        "lead": "Browse facility management roles published by CAISBE for professionals across Canada, Africa, and global markets.",
+        "sections": [],
+        "show_in_menu": False,
+    },
+    {
+        "slug": "news",
+        "title": "News & Announcements",
+        "menu_label": "News & Announcements",
+        "description": "Stay informed about institute initiatives, upcoming forums, membership milestones, and opportunities to get involved.",
+        "lead": "Updates from CAISBE programs, events, partnerships, and the professional community across Africa and Canada.",
+        "sections": _sections(
+            (
+                "Latest updates",
+                "Announcements are listed newest first as published by the CAISBE team.",
+                [],
+            ),
+        ),
+        "cta_label": "Media Inquiries",
+        "cta_href": "/contact",
+        "show_in_menu": False,
+    },
+    {
+        "slug": "help",
+        "title": "Help and Support",
+        "menu_label": "Help and Support",
+        "description": "FAQs, technical support tickets, and requests for courses, certificates, your account, and problems to report.",
+        "lead": "FAQs, technical tickets, and requests for courses, certificates, your account, and problems to report.",
+        "sections": [],
+        "show_in_menu": False,
+    },
+    {
+        "parent_path": "/resources",
+        "slug": "help-desk",
+        "title": "CAISBE Help Desk",
+        "menu_label": "CAISBE Help Desk",
+        "description": "Search CAISBE FAQs for answers about courses, exams, membership, CPD, and enrollment.",
+        "lead": "How can we help?",
+        "sections": _faq_sections(),
+        "cta_label": "Open a support ticket",
+        "cta_href": "/resources/tickets",
+    },
+    {
+        "parent_path": "/resources",
+        "slug": "tickets",
+        "title": "Tickets",
+        "menu_label": "Tickets",
+        "description": "Sign in to see your CAISBE support tickets or submit a new one.",
+        "lead": "Sign in to see your support tickets or submit a new one.",
+        "sections": [],
+    },
+    {
+        "parent_path": "/resources",
+        "slug": "media",
+        "title": "Media",
+        "menu_label": "Media",
+        "description": "Stay connected with CAISBE through our magazine, video, podcast, and blog channels.",
+        "lead": "Stay connected with CAISBE through our magazine, video, podcast, and blog channels.",
+        "sections": [],
+    },
+    {
+        "parent_path": "/resources",
+        "slug": "magazine",
+        "title": "CAISBE Magazine",
+        "menu_label": "CAISBE Magazine",
+        "description": "CAISBE Magazine features and updates for facility management professionals.",
+        "lead": "Features and updates from practitioners shaping facility management across Africa and Canada.",
+        "sections": _sections(("Latest issues", "", [])),
+    },
+    {
+        "parent_path": "/resources",
+        "slug": "youtube",
+        "title": "YouTube",
+        "menu_label": "YouTube",
+        "description": "Watch CAISBE videos, event highlights, and educational content.",
+        "lead": "Video sessions, event highlights, and short learning clips from CAISBE programs.",
+        "sections": _sections(("Latest videos", "", [])),
+    },
+    {
+        "parent_path": "/resources",
+        "slug": "podcast",
+        "title": "Podcast",
+        "menu_label": "Podcast",
+        "description": "Listen to conversations with leaders shaping facility management across Africa and Canada.",
+        "lead": "Conversations with leaders on operations, sustainability, and Africa–Canada collaboration.",
+        "sections": _sections(("Latest episodes", "", [])),
+    },
+    {
+        "parent_path": "/resources",
+        "slug": "blog",
+        "title": "Blog",
+        "menu_label": "Blog",
+        "description": "Stay informed with articles and commentary on facility management and the built environment.",
+        "lead": "Articles and commentary on facility management practice and the sustainable built environment.",
+        "sections": _sections(("Latest posts", "", [])),
+    },
+    {
+        "parent_path": "/resources",
+        "slug": "advocacy-government-affairs",
+        "title": "Advocacy and Government",
+        "menu_label": "Advocacy and Government",
+        "description": "CAISBE advocates for stronger Africa–Canada collaboration in Facility Management, sustainable buildings, and the built environment.",
+        "lead": (
+            "We advocate for stronger Africa–Canada collaboration in Facility Management, Property Management, "
+            "Sustainable Buildings, and the Built Environment by promoting knowledge exchange, policy dialogue, and "
+            "strategic partnerships between governments, industry, and professional organizations."
+        ),
+        "sections": _sections(
+            (
+                "Focus",
+                (
+                    "Our advocacy efforts focus on supporting green growth, climate-resilient infrastructure, energy "
+                    "efficiency, circular economy practices, net-zero and low-carbon buildings, and sustainable asset "
+                    "management across Africa. We work to connect African institutions with Canadian expertise, "
+                    "innovation, technologies, and best practices in areas such as facility operations, smart buildings, "
+                    "sustainable construction, and property lifecycle management."
+                ),
+                [],
+            ),
+            (
+                "Stakeholders",
+                (
+                    "We engage with key stakeholders including the African Union, regional economic communities such as "
+                    "COMESA, national governments, municipalities, professional associations, and relevant Canadian "
+                    "federal and provincial organizations to advance policies and initiatives that strengthen capacity, "
+                    "improve building performance, and support sustainable economic development."
+                ),
+                [],
+            ),
+            (
+                "Our aim",
+                (
+                    "Through collaboration, research, policy advocacy, and knowledge transfer, we aim to support Africa’s "
+                    "transition toward sustainable, efficient, and resilient built environments while creating "
+                    "opportunities for investment, innovation, and long-term partnerships between Africa and Canada."
+                ),
+                [],
+            ),
+            (
+                "Strategic consultancy",
+                "We provide strategic consultancy services that strengthen Africa–Canada collaboration in and sustainable built environments. Our services include:",
+                [],
+            ),
+            (
+                "Policy Advisory & Consultation",
+                "Supporting governments and institutions with sustainable building, asset management, and facility management strategies.",
+                [],
+            ),
+            (
+                "Knowledge Exchange & Partnerships",
+                "Connecting African and Canadian organizations through expert networks, forums, and technical collaboration.",
+                [],
+            ),
+            (
+                "Green Growth & Sustainability Support",
+                "Promoting energy efficiency, net-zero buildings, climate resilience, and sustainable infrastructure solutions.",
+                [],
+            ),
+            (
+                "Capacity Building & Training",
+                "Developing skills and professional capacity for government agencies, organizations, and industry professionals.",
+                [],
+            ),
+            (
+                "How this helps",
+                "Through these services, we support the development of resilient, efficient, and sustainable built environments across Africa by sharing global expertise and fostering long-term partnerships.",
+                [],
+            ),
+        ),
+        "cta_label": "Contact Us",
+        "cta_href": "/contact",
+    },
+    {
+        "parent_path": "/events",
+        "slug": "calendar",
+        "title": "Event Calendar",
+        "menu_label": "Event Calendar",
+        "description": "Explore upcoming CAISBE events, forums, conferences, and webinars connecting Africa and Canada across the built environment sector.",
+        "lead": "A living view of forums, conferences, webinars, and chapter activities across the CAISBE calendar.",
+        "sections": [],
+    },
+]
+
+
 def _is_blank(page: SitePage) -> bool:
     return (
         not (page.description or "").strip()
@@ -1109,6 +1360,13 @@ _MISTAKEN_PD_SLUGS = (
 
 def _apply_editorial_updates(db: Session) -> None:
     """Refresh labels and corporate copy on pages that seed will not overwrite."""
+    # Component Reports was retired in favour of Forms and Guides.
+    component_reports = db.query(SitePage).filter(SitePage.path == "/resources/component-reports").first()
+    if component_reports is not None:
+        component_reports.show_in_menu = False
+        if component_reports.status == "published":
+            component_reports.status = "draft"
+
     overview = db.query(SitePage).filter(SitePage.path == "/network/overview").first()
     if overview is not None:
         if overview.title == _OLD_NETWORK_LABEL:
@@ -1148,6 +1406,39 @@ def _apply_editorial_updates(db: Session) -> None:
         if not found:
             next_sections.append({"title": leadership_title, "body": leadership_body, "items": []})
         board.sections = next_sections
+
+    programs = db.query(SitePage).filter(SitePage.path == "/professional-development").first()
+    if (
+        programs is not None
+        and programs.title == "Professional Development"
+        and programs.lead
+        == "Certificate programs and flexible learning formats for working professionals, students, and organizations."
+    ):
+        programs.title = "Certificate Programs"
+        programs.lead = (
+            "Explore CAISBE certificate programs designed for facility management, property management, "
+            "and built environment professionals."
+        )
+        programs.sections = _sections(
+            (
+                "Certificate courses",
+                "Published CAISBE certificate programs for facility, property, and built-environment professionals.",
+                [],
+            ),
+            (
+                "Seminars",
+                "Professional seminars that complement certificate pathways and support continuing development.",
+                [],
+            ),
+            (
+                "Learning Formats",
+                (
+                    "CAISBE delivers certificate programs through flexible learning formats designed for working "
+                    "professionals, students, and organizations."
+                ),
+                [],
+            ),
+        )
 
     corporate = db.query(SitePage).filter(SitePage.path == _CORPORATE_PATH).first()
     if corporate is not None:
@@ -1193,18 +1484,34 @@ def seed_site_pages(db: Session) -> None:
         db,
         "professional-development",
         {
-            "title": "Professional Development",
+            "title": "Certificate Programs",
             "menu_label": "Professional Development",
             "description": (
                 "Explore CAISBE certificate programs designed for facility management, property management, "
                 "and built environment professionals."
             ),
-            "lead": "Certificate programs and flexible learning formats for working professionals, students, and organizations.",
+            "lead": (
+                "Explore CAISBE certificate programs designed for facility management, property management, "
+                "and built environment professionals."
+            ),
             "sections": _sections(
                 (
-                    "Learning paths",
-                    "",
-                    ["Certificate Programs", "Learning Formats"],
+                    "Certificate courses",
+                    "Published CAISBE certificate programs for facility, property, and built-environment professionals.",
+                    [],
+                ),
+                (
+                    "Seminars",
+                    "Professional seminars that complement certificate pathways and support continuing development.",
+                    [],
+                ),
+                (
+                    "Learning Formats",
+                    (
+                        "CAISBE delivers certificate programs through flexible learning formats designed for working "
+                        "professionals, students, and organizations."
+                    ),
+                    [],
                 ),
             ),
             "cta_label": "Learning Formats",
@@ -1239,6 +1546,17 @@ def seed_site_pages(db: Session) -> None:
     if partners_page is not None:
         _child(db, partners_page, SPONSOR_PAGE, 10)
 
+    resources_page = db.query(SitePage).filter(SitePage.path == "/resources").first()
+    events_page = db.query(SitePage).filter(SitePage.path == "/events").first()
+    for index, spec in enumerate(FRAME_PAGES):
+        parent_path = spec.get("parent_path")
+        parent = resources_page if parent_path == "/resources" else events_page if parent_path == "/events" else None
+        if parent_path and parent is not None:
+            _child(db, parent, spec, (index + 1) * 10, show_in_menu=False)
+        elif not parent_path:
+            _top_level(db, spec, (index + 1) * 10)
+
     _apply_editorial_updates(db)
     _assign_paths(_pages(db))
     db.commit()
+    seed_french_site_pages(db)

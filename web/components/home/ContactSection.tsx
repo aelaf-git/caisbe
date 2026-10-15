@@ -1,4 +1,4 @@
-import ContactForm from "@/components/contact/ContactForm";
+import ContactForm, { type ContactFormLabels } from "@/components/contact/ContactForm";
 import { PageHero, ContentSection, sectionSpacingClassName } from "@/components/pages/ContentPage";
 import {
   contactContent,
@@ -8,6 +8,16 @@ import {
 } from "@/lib/data/home";
 
 type OfficeCard = { region: string; address: string; mapQuery: string };
+
+type ContactSectionLabels = {
+  detailsHeading?: string;
+  addressLabel?: string;
+  phoneLabel?: string;
+  emailLabel?: string;
+  hoursLabel?: string;
+  officesHeading?: string;
+  form?: ContactFormLabels;
+};
 
 type ContactSectionProps = {
   title?: string;
@@ -22,6 +32,7 @@ type ContactSectionProps = {
   officeItems?: OfficeCard[];
   showOffices?: boolean;
   variant?: "page" | "home";
+  labels?: ContactSectionLabels;
 };
 
 function ContactDetails({
@@ -29,27 +40,35 @@ function ContactDetails({
   phone,
   email,
   hours,
+  labels,
 }: {
   address: string;
   phone: string;
   email: string;
   hours: string;
+  labels?: ContactSectionLabels;
 }) {
   return (
     <div className="mt-8 space-y-5">
       <h3 className="font-hopewell-display text-lg font-extrabold uppercase tracking-wide text-caisbe-text-dark">
-        {contactContent.detailsHeading}
+        {labels?.detailsHeading ?? contactContent.detailsHeading}
       </h3>
       <div>
-        <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.addressLabel}</p>
+        <p className="text-base font-semibold text-caisbe-text-dark">
+          {labels?.addressLabel ?? contactContent.addressLabel}
+        </p>
         <p className="mt-1 whitespace-pre-line text-base leading-7 text-caisbe-muted">{address}</p>
       </div>
       <div>
-        <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.phoneLabel}</p>
+        <p className="text-base font-semibold text-caisbe-text-dark">
+          {labels?.phoneLabel ?? contactContent.phoneLabel}
+        </p>
         <p className="mt-1 text-base leading-7 text-caisbe-muted">{phone}</p>
       </div>
       <div>
-        <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.emailLabel}</p>
+        <p className="text-base font-semibold text-caisbe-text-dark">
+          {labels?.emailLabel ?? contactContent.emailLabel}
+        </p>
         {email ? (
           <a
             href={`mailto:${email}`}
@@ -60,7 +79,9 @@ function ContactDetails({
         ) : null}
       </div>
       <div>
-        <p className="text-base font-semibold text-caisbe-text-dark">{contactContent.hoursLabel}</p>
+        <p className="text-base font-semibold text-caisbe-text-dark">
+          {labels?.hoursLabel ?? contactContent.hoursLabel}
+        </p>
         <p className="mt-1 text-base leading-7 text-caisbe-muted">{hours}</p>
       </div>
     </div>
@@ -80,6 +101,7 @@ export default function ContactSection({
   officeItems,
   showOffices = false,
   variant = "page",
+  labels,
 }: ContactSectionProps) {
   const shownTitle = title ?? contactContent.title;
   const shownEyebrow = eyebrow ?? contactContent.eyebrow;
@@ -106,13 +128,19 @@ export default function ContactSection({
               {shownTitle}
             </h2>
             <p className="mt-4 text-base leading-7 text-caisbe-muted">{shownLead}</p>
-            <ContactDetails address={shownAddress} phone={shownPhone} email={shownEmail} hours={shownHours} />
+            <ContactDetails
+              address={shownAddress}
+              phone={shownPhone}
+              email={shownEmail}
+              hours={shownHours}
+              labels={labels}
+            />
           </div>
           <div
             className="rounded-[20px] bg-white p-5 shadow-hopewell motion-safe:animate-page-fade-in md:p-8"
             style={{ animationDelay: "120ms" }}
           >
-            <ContactForm cta={shownCta} heading={shownFormHeading} />
+            <ContactForm cta={shownCta} heading={shownFormHeading} labels={labels?.form} />
           </div>
         </div>
       </section>
@@ -123,8 +151,14 @@ export default function ContactSection({
     <>
       <PageHero eyebrow={shownEyebrow} title={shownTitle} lead={shownLead}>
         <div className="mt-10 grid max-w-5xl gap-10 lg:grid-cols-[0.85fr_1.15fr]">
-          <ContactDetails address={shownAddress} phone={shownPhone} email={shownEmail} hours={shownHours} />
-          <ContactForm cta={shownCta} heading={shownFormHeading} />
+          <ContactDetails
+            address={shownAddress}
+            phone={shownPhone}
+            email={shownEmail}
+            hours={shownHours}
+            labels={labels}
+          />
+          <ContactForm cta={shownCta} heading={shownFormHeading} labels={labels?.form} />
         </div>
       </PageHero>
 

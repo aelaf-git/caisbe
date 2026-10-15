@@ -342,6 +342,7 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
         if not user.membership_date:
             user.membership_date = now
     granted_titles: list[str] = []
+    granted_courses: list[tuple[Course, Enrollment, OrderItem]] = []
     for item in order.items:
         if item.membership_type:
             renew = (item.membership_kind or "").strip().lower() == "renewal"
@@ -351,8 +352,9 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
         if (item.item_kind or "course") != "course" or item.course_id is None:
             continue
         course = item.course or db.query(Course).filter(Course.id == item.course_id).one()
-        _ensure_enrollment(db, user, course, "enrolled")
+        enrollment = _ensure_enrollment(db, user, course, "enrolled")
         granted_titles.append(course.title)
+        granted_courses.append((course, enrollment, item))
 
     from app.services.notifications import notify_payment_received, notify_users
 
@@ -382,15 +384,78 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
                 link="/access-control",
             )
     if (user.email or "").strip():
-        try:
-            from app.services.receipt_email import send_receipt_email
+        from app.services.course_payment_email import send_course_payment_email
+        from app.services.course_registration_email import send_course_registration_email
+        from app.services.email import EmailDeliveryError
+        from app.services.receipt_email import send_receipt_email
 
+        transaction_id = order.number
+        for payment in order.payments:
+            intent = (payment.stripe_payment_intent_id or "").strip()
+            if intent:
+                transaction_id = intent
+                break
+        for course, enrollment, item in granted_courses:
+            try:
+                send_course_registration_email(
+                    to=user.email,
+                    full_name=user.full_name,
+                    course_title=course.title,
+                    start_date=enrollment.enrolled_at or now,
+                )
+            except EmailDeliveryError as exc:
+                logger.error(
+                    "Registration email delivery failed for order %s course %s (%s): %s",
+                    order.number,
+                    course.id,
+                    user.email,
+                    exc,
+                )
+            except Exception:
+                logger.exception(
+                    "Registration email failed for order %s course %s",
+                    order.number,
+                    course.id,
+                )
+            if paid > 0:
+                try:
+                    send_course_payment_email(
+                        to=user.email,
+                        full_name=user.full_name,
+                        course_title=course.title,
+                        amount_cents=max(0, item.unit_price_cents or 0),
+                        currency=order.currency,
+                        transaction_id=transaction_id,
+                        paid_at=order.paid_at or now,
+                    )
+                except EmailDeliveryError as exc:
+                    logger.error(
+                        "Payment confirmation email delivery failed for order %s course %s (%s): %s",
+                        order.number,
+                        course.id,
+                        user.email,
+                        exc,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Payment confirmation email failed for order %s course %s",
+                        order.number,
+                        course.id,
+                    )
+        try:
             send_receipt_email(
                 to=user.email,
                 full_name=user.full_name,
                 order_number=order.number,
                 amount_cents=paid,
                 currency=order.currency,
+            )
+        except EmailDeliveryError as exc:
+            logger.error(
+                "Receipt email delivery failed for order %s (%s): %s",
+                order.number,
+                user.email,
+                exc,
             )
         except Exception:
             logger.exception("Receipt email failed for order %s", order.number)
@@ -768,6 +833,7 @@ def refund_payment(db: Session, payment: Payment, admin: User) -> None:
         invoice.status = "refunded"
     user = order.user
     membership_refunded = False
+    cancelled_courses: list[Course] = []
     for item in order.items:
         if item.membership_type:
             membership_refunded = True
@@ -781,8 +847,37 @@ def refund_payment(db: Session, payment: Payment, admin: User) -> None:
         )
         if enrollment and enrollment.status != "completed":
             enrollment.status = "revoked"
+            course = item.course or db.query(Course).filter(Course.id == item.course_id).first()
+            if course is not None:
+                cancelled_courses.append(course)
     if membership_refunded:
         revert_membership_to_student(db, user)
+    if cancelled_courses and (user.email or "").strip():
+        from app.services.course_cancellation_email import send_course_cancellation_email
+        from app.services.email import EmailDeliveryError
+
+        for course in cancelled_courses:
+            try:
+                send_course_cancellation_email(
+                    to=user.email,
+                    full_name=user.full_name,
+                    course_title=course.title,
+                    cancelled_at=payment.reviewed_at or datetime.now(timezone.utc),
+                )
+            except EmailDeliveryError as exc:
+                logger.error(
+                    "Cancellation email delivery failed for payment %s course %s (%s): %s",
+                    payment.id,
+                    course.id,
+                    user.email,
+                    exc,
+                )
+            except Exception:
+                logger.exception(
+                    "Cancellation email failed for payment %s course %s",
+                    payment.id,
+                    course.id,
+                )
 
 
 def _paid_attempt_fees(db: Session, user: User, course: Course, kind: str) -> int:

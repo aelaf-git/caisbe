@@ -5,6 +5,7 @@ import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import FrenchTranslationPanel from "@/components/translations/FrenchTranslationPanel";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
@@ -13,6 +14,7 @@ import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, apiUpload, ApiError, type IndustryEvent } from "@/lib/auth";
+import { IconActionButton, IconActionLink } from "@/components/ui/IconAction";
 
 const REPORT_ACCEPT =
   "application/pdf,.pdf,application/msword,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,image/*,.jpg,.jpeg,.png,.webp";
@@ -438,22 +440,8 @@ export default function EventsManager({
           {reportFileUrl ? (
             <p className="text-xs text-caisbe-muted">
               Attached:{" "}
-              <a
-                href={reportFileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold text-caisbe-red"
-              >
-                View file
-              </a>{" "}
-              ·{" "}
-              <button
-                type="button"
-                className="font-semibold text-caisbe-red"
-                onClick={() => setReportFileUrl(null)}
-              >
-                Remove
-              </button>
+              <IconActionLink icon="view" external href={reportFileUrl} label="View file" />
+              <IconActionButton icon="trash" tone="danger" label="Remove file" onClick={() => setReportFileUrl(null)} />
             </p>
           ) : null}
         </div>
@@ -491,6 +479,18 @@ export default function EventsManager({
             </Button>
           ) : null}
         </div>
+      <div className="mt-6">
+      <FrenchTranslationPanel
+        entityType="event"
+        entityId={editingId}
+        english={{ title: title, summary: summary, location: location }}
+        fields={[
+              { name: "title", label: "Title" },
+              { name: "summary", label: "Summary", kind: "textarea", rows: 4 },
+              { name: "location", label: "Location" },
+        ]}
+      />
+      </div>
       </Card>
       </div>
 
@@ -535,12 +535,11 @@ export default function EventsManager({
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="secondary"
+                  <IconActionButton
+                    icon={event.published ? "unpublish" : "publish"}
+                    label={event.published ? `Unpublish ${event.title}` : `Publish ${event.title}`}
                     onClick={() => void togglePublished(event)}
-                  >
-                    {event.published ? "Unpublish" : "Publish"}
-                  </Button>
+                  />
                   <EditIconButton
                     label={`Edit ${event.title}`}
                     onClick={() => startEdit(event)}

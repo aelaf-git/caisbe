@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -211,14 +212,24 @@ def admin_reply_contact_message(
 
     body = payload.body.strip()
     subject = payload.subject.strip() or "Re: Your message to CAISBE"
-    full_name = f"{row.first_name} {row.last_name}".strip()
-    html_body = (
-        f"<p>Hello {full_name},</p>"
-        f"<p>{body.replace(chr(10), '<br>')}</p>"
-        "<p>— CAISBE</p>"
-        "<hr>"
-        "<p><small>In reply to your message:</small></p>"
-        f"<blockquote>{row.comments.replace(chr(10), '<br>')}</blockquote>"
+    full_name = html.escape(f"{row.first_name} {row.last_name}".strip() or "there")
+    escaped_body = html.escape(body).replace("\n", "<br>")
+    escaped_quote = html.escape(row.comments or "").replace("\n", "<br>")
+    from app.services.email_layout import wrap_email_html
+
+    html_body = wrap_email_html(
+        f"""
+<p style="margin:0 0 14px;">Hello {full_name},</p>
+<p style="margin:0 0 18px;">{escaped_body}</p>
+<div style="margin:22px 0 0;padding:14px 18px;background:#f8fafc;border:1px solid #e5e7eb;border-left:4px solid #c42032;border-radius:4px;">
+  <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4b5563;">
+    In reply to your message
+  </p>
+  <p style="margin:0;font-size:14px;color:#374151;line-height:1.55;">{escaped_quote}</p>
+</div>
+""".strip(),
+        heading=subject,
+        eyebrow="CAISBE Support",
     )
     try:
         send_email(

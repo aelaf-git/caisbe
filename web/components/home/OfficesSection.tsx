@@ -5,9 +5,11 @@ type OfficeCard = { region: string; address: string; mapQuery: string };
 
 export default function OfficesSection({
   title = "Offices",
+  directionLabel = "Direction",
   items,
 }: {
   title?: string;
+  directionLabel?: string;
   items?: OfficeCard[];
 }) {
   const shown = items ?? offices;
@@ -48,7 +50,7 @@ export default function OfficesSection({
                   rel="noopener noreferrer"
                   className="mt-4 inline-flex text-base font-bold text-caisbe-red transition-colors hover:text-caisbe-red-dark"
                 >
-                  Direction
+                  {directionLabel}
                 </a>
               </div>
             </div>

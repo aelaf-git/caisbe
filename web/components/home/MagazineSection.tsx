@@ -6,10 +6,16 @@ export default async function MagazineSection({
   title = "CAISBE Magazine",
   subtitle = "Read the latest features and insights from across the CAISBE community.",
   cta = "View all issues",
+  emptyMessage = "New magazine issues will appear here once published by the CAISBE team.",
+  readIssueLabel = "Read issue",
+  badgeLabel = "Magazine",
 }: {
   title?: string;
   subtitle?: string;
   cta?: string;
+  emptyMessage?: string;
+  readIssueLabel?: string;
+  badgeLabel?: string;
 }) {
   let issues: MediaAsset[] = [];
   try {
@@ -41,7 +47,7 @@ export default async function MagazineSection({
 
         {issues.length === 0 ? (
           <p className="text-base text-caisbe-muted">
-            New magazine issues will appear here once published by the CAISBE team.
+            {emptyMessage}
           </p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -60,7 +66,7 @@ export default async function MagazineSection({
                 ) : (
                   <div className="flex aspect-video items-center justify-center bg-[#f7f9fa]">
                     <span className="text-base font-semibold text-caisbe-red">
-                      Magazine
+                      {badgeLabel}
                     </span>
                   </div>
                 )}
@@ -82,7 +88,7 @@ export default async function MagazineSection({
                       rel="noopener noreferrer"
                       className="mt-4 text-base font-bold text-caisbe-red hover:underline"
                     >
-                      Read issue
+                      {readIssueLabel}
                     </a>
                   ) : null}
                 </div>

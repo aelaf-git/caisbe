@@ -5,8 +5,10 @@ import {
   PageHero,
 } from "@/components/pages/ContentPage";
 import { storeContent } from "@/lib/data/store";
+import { getServerT } from "@/lib/i18n/server";
 
-export default function StorePageContent() {
+export default async function StorePageContent() {
+  const { t } = await getServerT();
   const { eyebrow, title, lead, intro, categories, featured, howToOrder } =
     storeContent;
 
@@ -19,10 +21,10 @@ export default function StorePageContent() {
         actions={
           <>
             <ButtonLink href="/contact" variant="primary">
-              Order / Inquire
+              {t("Order / Inquire", "Commander / Se renseigner")}
             </ButtonLink>
             <ButtonLink href="/membership" variant="secondary">
-              Become a Member
+              {t("Become a Member", "Devenir membre")}
             </ButtonLink>
           </>
         }
@@ -31,8 +33,11 @@ export default function StorePageContent() {
       </PageHero>
 
       <ContentSection
-        title="Browse by category"
-        description="Start with the collection that matches how you learn and practice."
+        title={t("Browse by category", "Parcourir par catégorie")}
+        description={t(
+          "Start with the collection that matches how you learn and practice.",
+          "Commencez par la collection qui correspond à votre façon d’apprendre et de pratiquer.",
+        )}
         wide
       >
         <div className="grid gap-6 md:grid-cols-3">
@@ -48,8 +53,11 @@ export default function StorePageContent() {
       </ContentSection>
 
       <ContentSection
-        title="Featured titles"
-        description="A sample of publications and guides available through CAISBE. Contact us to confirm stock and pricing."
+        title={t("Featured titles", "Titres en vedette")}
+        description={t(
+          "A sample of publications and guides available through CAISBE. Contact us to confirm stock and pricing.",
+          "Un échantillon de publications et de guides offerts par le CAISBE. Communiquez avec nous pour confirmer les stocks et les prix.",
+        )}
         wide
       >
         <div className="grid gap-6 md:grid-cols-2">
@@ -78,7 +86,7 @@ export default function StorePageContent() {
         </ol>
         <div className="mt-10">
           <ButtonLink href="/contact" variant="primary">
-            Contact the Bookstore
+            {t("Contact the Bookstore", "Joindre la librairie")}
           </ButtonLink>
         </div>
       </ContentSection>

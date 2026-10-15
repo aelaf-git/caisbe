@@ -8,6 +8,13 @@ from urllib.parse import quote
 
 from app.config import settings
 from app.services.email import send_email
+from app.services.email_layout import (
+    cta_button,
+    detail_box,
+    fallback_link,
+    format_money,
+    wrap_email_html,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -16,13 +23,6 @@ def receipt_url(order_number: str) -> str:
     base = (settings.portal_public_url or "http://localhost:3002").rstrip("/")
     number = quote(str(order_number).strip(), safe="-._~")
     return f"{base}/account/receipts/{number}"
-
-
-def _money(amount_cents: int, currency: str) -> str:
-    code = (currency or "usd").upper()
-    if code == "USD":
-        return f"${amount_cents / 100:,.2f}"
-    return f"{amount_cents / 100:,.2f} {code}"
 
 
 def send_receipt_email(
@@ -38,22 +38,26 @@ def send_receipt_email(
         logger.info("RESEND_API_KEY unset — receipt link for %s: %s", to, url)
 
     name = html.escape((full_name or "").strip() or "there")
-    amount = html.escape(_money(amount_cents, currency))
-    safe_url = html.escape(url)
-    html_body = f"""
-<p>Hello {name},</p>
-<p>Thank you. Your CAISBE payment of {amount} is recorded. Your receipt is ready to view, print, or save as a PDF.</p>
-<p>
-  <a href="{safe_url}"
-     style="display:inline-block;background:#c42032;color:#ffffff;text-decoration:none;
-            font-weight:700;padding:12px 22px;border-radius:999px;">
-    View receipt
-  </a>
-</p>
-<p>Or paste this link into your browser:<br>
-<a href="{safe_url}">{safe_url}</a></p>
-<p>— CAISBE</p>
-""".strip()
+    raw_amount = format_money(amount_cents, currency)
+    amount = html.escape(raw_amount)
+    details = detail_box(
+        [
+            ("Order Number", str(order_number).strip()),
+            ("Amount Paid", raw_amount),
+        ],
+        title="Receipt Summary",
+    )
+    html_body = wrap_email_html(
+        f"""
+<p style="margin:0 0 14px;">Hello {name},</p>
+<p style="margin:0 0 14px;">Thank you. Your CAISBE payment of <strong>{amount}</strong> is recorded. Your receipt is ready to view, print, or save as a PDF.</p>
+{details}
+{cta_button("View receipt", url)}
+{fallback_link(url)}
+""".strip(),
+        heading=f"Your CAISBE Receipt ({order_number})",
+        eyebrow="myCAISBE Billing",
+    )
     send_email(
         to=to,
         subject=f"Your CAISBE receipt {order_number}",

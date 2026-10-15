@@ -5,8 +5,30 @@ import { useEffect, useState } from "react";
 import { PageHero, sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { fetchPublishedMedia, type MediaAsset } from "@/lib/api";
 import { getMediaItem } from "@/lib/data/resources";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 type Channel = "youtube" | "podcast" | "blog";
+
+const CHANNEL_META_FR: Record<
+  Channel,
+  { empty: string; cta: string; sectionTitle: string }
+> = {
+  youtube: {
+    empty: "Les vidéos apparaîtront ici dès leur publication.",
+    cta: "Regarder sur YouTube",
+    sectionTitle: "Dernières vidéos",
+  },
+  podcast: {
+    empty: "Les épisodes du balado apparaîtront ici dès leur publication.",
+    cta: "Écouter",
+    sectionTitle: "Derniers épisodes",
+  },
+  blog: {
+    empty: "Les articles du blogue apparaîtront ici dès leur publication.",
+    cta: "Lire l’article",
+    sectionTitle: "Derniers articles",
+  },
+};
 
 const CHANNEL_META: Record<
   Channel,
@@ -29,16 +51,28 @@ const CHANNEL_META: Record<
   },
 };
 
-export default function MediaChannelPageContent({ channel }: { channel: Channel }) {
-  const item = getMediaItem(channel);
-  const meta = CHANNEL_META[channel];
+export default function MediaChannelPageContent({
+  channel,
+  title,
+  lead,
+  sectionTitle,
+}: {
+  channel: Channel;
+  title?: string;
+  lead?: string;
+  sectionTitle?: string;
+}) {
+  const locale = useLocale();
+  const fr = locale === "fr";
+  const item = getMediaItem(channel, locale);
+  const meta = (fr ? CHANNEL_META_FR : CHANNEL_META)[channel];
   const [rows, setRows] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        setRows(await fetchPublishedMedia(channel));
+        setRows(await fetchPublishedMedia(channel, { locale }));
       } catch {
         setRows([]);
       } finally {
@@ -46,21 +80,25 @@ export default function MediaChannelPageContent({ channel }: { channel: Channel 
       }
     }
     void load();
-  }, [channel]);
+  }, [channel, locale]);
 
   if (!item) return null;
 
   return (
     <>
-      <PageHero eyebrow="Media" title={item.title} lead={item.lead} />
+      <PageHero
+        eyebrow={fr ? "Médias" : "Media"}
+        title={title?.trim() || item.title}
+        lead={lead?.trim() || item.lead}
+      />
 
       <section className={`bg-transparent ${sectionSpacingClassName}`}>
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
-            {meta.sectionTitle}
+            {sectionTitle?.trim() || meta.sectionTitle}
           </h2>
           {loading ? (
-            <p className="mt-6 text-sm text-caisbe-muted">Loading…</p>
+            <p className="mt-6 text-sm text-caisbe-muted">{fr ? "Chargement…" : "Loading…"}</p>
           ) : rows.length === 0 ? (
             <p className="mt-6 text-sm text-caisbe-muted">{meta.empty}</p>
           ) : (

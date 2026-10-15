@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { NavSectionData } from "@/components/layout/nav-types";
 import AuthNav from "@/components/auth/AuthNav";
+import LanguageSwitch from "@/components/layout/LanguageSwitch";
+import { getDictionary, type Locale } from "@/lib/i18n";
 
 type UtilityLink = {
   label: string;
@@ -103,10 +105,13 @@ function MobileNavSection({
 export default function MobileNav({
   sections,
   utilityLinks,
+  locale = "en",
 }: {
   sections: NavSectionData[];
   utilityLinks: UtilityLink[];
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
 
@@ -130,14 +135,15 @@ export default function MobileNav({
   }, [mobileOpen]);
 
   return (
-    <div className="lg:hidden">
+    <div className="flex items-center gap-2 lg:hidden">
+      <LanguageSwitch locale={locale} />
       <button
         type="button"
         onClick={() => setMobileOpen((prev) => !prev)}
         className="inline-flex items-center justify-center rounded-full border border-caisbe-red p-2 text-caisbe-red transition-colors hover:bg-caisbe-red/5"
         aria-expanded={mobileOpen}
         aria-controls="mobile-site-menu"
-        aria-label={mobileOpen ? "Close menu" : "Open menu"}
+        aria-label={mobileOpen ? dict.mobileNav.closeMenu : dict.mobileNav.openMenu}
       >
         <MenuIcon open={mobileOpen} />
       </button>
@@ -146,7 +152,7 @@ export default function MobileNav({
         <>
           <button
             type="button"
-            aria-label="Close menu"
+            aria-label={dict.mobileNav.closeMenu}
             className="fixed inset-0 z-[60] bg-caisbe-text/25"
             onClick={closeMenu}
           />
@@ -172,7 +178,7 @@ export default function MobileNav({
 
             <div className="border-t border-ifma-border-light px-4 py-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-caisbe-muted">
-                Quick links
+                {dict.mobileNav.quickLinks}
               </p>
               <ul className="space-y-1">
                 {utilityLinks.map((link) => (
@@ -190,7 +196,7 @@ export default function MobileNav({
             </div>
 
             <div className="border-t border-ifma-border-light px-4 py-4" onClick={closeMenu}>
-              <AuthNav layout="stack" />
+              <AuthNav layout="stack" labels={dict.auth} />
             </div>
           </div>
         </>

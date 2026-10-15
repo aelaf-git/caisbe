@@ -12,25 +12,31 @@ import {
   networkPages,
   type NetworkSlug,
 } from "@/lib/data/network";
+import { getServerT } from "@/lib/i18n/server";
 
-export function NetworkIndexContent() {
+export async function NetworkIndexContent() {
+  const { t } = await getServerT();
   return (
     <SubsectionIndex
-      eyebrow="Network"
-      title="Network"
-      description="Connect with CAISBE networking groups and join the African Facility Management Discussion Forum."
+      eyebrow={t("Network", "Réseau")}
+      title={t("Network", "Réseau")}
+      description={t(
+        "Connect with CAISBE networking groups and join the African Facility Management Discussion Forum.",
+        "Échangez avec les groupes de réseautage du CAISBE et joignez le forum de discussion africain sur la gestion des installations.",
+      )}
       items={networkIndexItems}
     />
   );
 }
 
-export function NetworkSubpageContent({ slug }: { slug: NetworkSlug }) {
+export async function NetworkSubpageContent({ slug }: { slug: NetworkSlug }) {
+  const { t } = await getServerT();
   const page = networkPages[slug];
 
   return (
     <>
       <PageHero
-        eyebrow="Network"
+        eyebrow={t("Network", "Réseau")}
         title={page.title}
         lead={page.lead}
         actions={
@@ -39,7 +45,7 @@ export function NetworkSubpageContent({ slug }: { slug: NetworkSlug }) {
               {page.ctaLabel}
             </ButtonLink>
             <ButtonLink href="/network" variant="secondary">
-              Network Overview
+              {t("Network Overview", "Aperçu du réseau")}
             </ButtonLink>
           </>
         }
@@ -52,7 +58,7 @@ export function NetworkSubpageContent({ slug }: { slug: NetworkSlug }) {
       </PageHero>
       {slug === "discussion-forum" ? <DiscussionForumHome /> : null}
       {page.benefits.length > 0 ? (
-        <ContentSection title="Benefits of joining">
+        <ContentSection title={t("Benefits of joining", "Avantages de l’adhésion")}>
           <FeatureList items={page.benefits} />
         </ContentSection>
       ) : null}

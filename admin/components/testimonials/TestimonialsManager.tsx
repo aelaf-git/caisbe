@@ -5,6 +5,7 @@ import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import FrenchTranslationPanel from "@/components/translations/FrenchTranslationPanel";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
@@ -12,6 +13,7 @@ import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, ApiError, type Testimonial } from "@/lib/auth";
+import { IconActionButton } from "@/components/ui/IconAction";
 
 type AskConfirm = (options: {
   title: string;
@@ -227,6 +229,17 @@ export default function TestimonialsManager({
             ) : null}
           </div>
         </div>
+      <div className="mt-6">
+      <FrenchTranslationPanel
+        entityType="testimonial"
+        entityId={editingId}
+        english={{ quote: quote, role: role }}
+        fields={[
+              { name: "quote", label: "Quote", kind: "textarea", rows: 4 },
+              { name: "role", label: "Role" },
+        ]}
+      />
+      </div>
       </Card>
 
       <Card>
@@ -256,9 +269,11 @@ export default function TestimonialsManager({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="secondary" onClick={() => void togglePublished(item)}>
-                      {item.published ? "Hide" : "Publish"}
-                    </Button>
+                    <IconActionButton
+                      icon={item.published ? "unpublish" : "publish"}
+                      label={item.published ? `Hide ${item.name}` : `Publish ${item.name}`}
+                      onClick={() => void togglePublished(item)}
+                    />
                     <EditIconButton label={`Edit ${item.name}`} onClick={() => startEdit(item)} />
                     <DeleteIconButton label={`Delete ${item.name}`} onClick={() => void deleteItem(item)} />
                   </div>

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models import MediaAsset, User
 from app.security.auth import hash_password
-from app.services.media_channels import extract_youtube_id, youtube_thumbnail_url
+from app.services.media_channels import extract_youtube_id, media_public_path, youtube_thumbnail_url
 
 STRONG_PASSWORD = "Str0ng-Password!99"
 
@@ -123,6 +123,39 @@ def test_admin_publishes_blog_and_public_get(client: TestClient, db: Session) ->
     )
     hidden = client.get(f"/api/media/{post_id}")
     assert hidden.status_code == 404
+
+
+def test_media_public_path_for_forms() -> None:
+    assert media_public_path("forms") == "/resources/forms-and-guides"
+    assert media_public_path("magazine") == "/resources/magazine"
+
+
+def test_admin_publishes_forms_document(client: TestClient, db: Session, monkeypatch) -> None:
+    from app.routers.admin import support as admin_support
+
+    monkeypatch.setattr(admin_support, "_validate_upload_url", lambda url, field="File": None)
+
+    admin = _admin(db)
+    token = _login(client, admin.email)
+    created = client.post(
+        "/api/admin/media",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Membership Application",
+            "description": "Fill and submit to CAISBE",
+            "category": "forms",
+            "file_url": "/api/uploads/forms/membership.pdf",
+            "published": True,
+        },
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["category"] == "forms"
+    assert created.json()["file_url"] == "/api/uploads/forms/membership.pdf"
+
+    public = client.get("/api/media?category=forms")
+    assert public.status_code == 200
+    assert len(public.json()) == 1
+    assert public.json()[0]["title"] == "Membership Application"
 
 
 def test_category_filter_isolates_channels(client: TestClient, db: Session) -> None:

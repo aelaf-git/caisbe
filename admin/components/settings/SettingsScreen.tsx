@@ -225,7 +225,7 @@ export default function SettingsScreen({ initialTab = "general" }: { initialTab?
               Defaults used for new courses and generated credentials.
             </p>
             <div className="mt-6 grid gap-5 md:grid-cols-2">
-              <FormField label="Institute name" hint="Shown in the certificate footer.">
+              <FormField label="Issued by" hint="Shown in the certificate footer. Default is CAISBE.">
                 <input
                   value={settings.institute_name}
                   onChange={(e) => setSettings({ ...settings, institute_name: e.target.value })}

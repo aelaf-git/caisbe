@@ -9,6 +9,7 @@ import { CourseStatusBadge, SaveStatus } from "@/components/lms/CourseEditorChro
 import FinalExamEditor, { type ExamDraft } from "@/components/lms/FinalExamEditor";
 import PassMarkControl from "@/components/lms/PassMarkControl";
 import { emptyQuestion } from "@/components/lms/QuizQuestionEditor";
+import FrenchTranslationPanel from "@/components/translations/FrenchTranslationPanel";
 import BackButton from "@/components/ui/BackButton";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -489,6 +490,16 @@ function AdminCourseEditorInner() {
             Enable content protection for enrolled students
           </label>
         </FormField>
+        <FrenchTranslationPanel
+          entityType="course"
+          entityId={courseId}
+          english={{ title: meta.title, description: meta.description }}
+          title="French (FR) — public catalog"
+          fields={[
+            { name: "title", label: "Title" },
+            { name: "description", label: "Teaser description", kind: "textarea", rows: 4 },
+          ]}
+        />
       </Card>
       ) : null}
 

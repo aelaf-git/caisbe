@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
 import { followCheckout, formatMoney, type Cart, type CheckoutResult } from "@/lib/commerce";
+import { IconActionButton } from "@/components/ui/IconAction";
 
 export default function CartPage() {
   return (
@@ -146,14 +147,13 @@ function CartInner() {
                       {formatMoney(item.price_cents, item.currency)}
                     </p>
                   </div>
-                  <button
-                    type="button"
+                  <IconActionButton
+                    icon="trash"
+                    tone="danger"
+                    label={`Remove ${item.course_title} from cart`}
                     disabled={removingId === item.course_id}
                     onClick={() => void removeItem(item.course_id)}
-                    className="text-sm font-semibold text-caisbe-red hover:underline disabled:opacity-60"
-                  >
-                    Remove
-                  </button>
+                  />
                 </li>
               ))}
             </ul>

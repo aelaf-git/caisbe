@@ -9,6 +9,7 @@ from urllib.parse import quote
 from app.config import settings
 from app.security.auth import PASSWORD_RESET_HOURS
 from app.services.email import EmailDeliveryError, send_email
+from app.services.email_layout import cta_button, fallback_link, wrap_email_html
 
 logger = logging.getLogger(__name__)
 
@@ -33,21 +34,17 @@ def send_password_reset_email(
 
     name = html.escape((full_name or "").strip() or "there")
     hours = PASSWORD_RESET_HOURS
-    html_body = f"""
-<p>Hello {name},</p>
-<p>We received a request to reset your CAISBE portal password.</p>
-<p>
-  <a href="{html.escape(reset_url)}"
-     style="display:inline-block;background:#c42032;color:#ffffff;text-decoration:none;
-            font-weight:700;padding:12px 22px;border-radius:999px;">
-    Reset your password
-  </a>
-</p>
-<p>Or paste this link into your browser:<br>
-<a href="{html.escape(reset_url)}">{html.escape(reset_url)}</a></p>
-<p>This link expires in {hours} hour{"s" if hours != 1 else ""}. If you did not request a reset, you can ignore this email.</p>
-<p>— CAISBE</p>
-""".strip()
+    html_body = wrap_email_html(
+        f"""
+<p style="margin:0 0 14px;">Hello {name},</p>
+<p style="margin:0 0 14px;">We received a request to reset your CAISBE portal password.</p>
+{cta_button("Reset your password", reset_url)}
+{fallback_link(reset_url)}
+<p style="margin:18px 0 0;font-size:13px;color:#4b5563;">This link expires in {hours} hour{"s" if hours != 1 else ""}. If you did not request a reset, you can ignore this email.</p>
+""".strip(),
+        heading="Reset Your Password",
+        eyebrow="myCAISBE Portal",
+    )
     send_email(
         to=to,
         subject="Reset your CAISBE password",

@@ -5,16 +5,28 @@ import { subscribeNewsletter } from "@/lib/api";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export type NewsletterLabels = {
+  emailLabel: string;
+  emailTitle: string;
+  placeholder: string;
+  subscribe: string;
+  subscribing: string;
+  invalidEmail: string;
+  errorFallback: string;
+};
+
 type NewsletterSignupProps = {
   className?: string;
   compact?: boolean;
   tone?: "light" | "dark";
+  labels?: NewsletterLabels;
 };
 
 export default function NewsletterSignup({
   className = "",
   compact = false,
   tone = "light",
+  labels,
 }: NewsletterSignupProps) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -26,7 +38,7 @@ export default function NewsletterSignup({
     const trimmed = email.trim().toLowerCase();
     if (!EMAIL_PATTERN.test(trimmed)) {
       setStatus("error");
-      setMessage("Enter a valid email address.");
+      setMessage(labels?.invalidEmail ?? "Enter a valid email address.");
       return;
     }
     setStatus("loading");
@@ -40,7 +52,7 @@ export default function NewsletterSignup({
       setEmail("");
     } catch (err) {
       setStatus("error");
-      setMessage(err instanceof Error ? err.message : "Unable to subscribe.");
+      setMessage(err instanceof Error ? err.message : (labels?.errorFallback ?? "Unable to subscribe."));
     }
   }
 
@@ -55,7 +67,7 @@ export default function NewsletterSignup({
             <span
               className={`text-base font-semibold ${isDark ? "text-white" : "text-ifma-navy"}`}
             >
-              Email
+              {labels?.emailLabel ?? "Email"}
             </span>
           ) : null}
           <input
@@ -68,13 +80,13 @@ export default function NewsletterSignup({
             spellCheck={false}
             required
             pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
-            title="Enter a valid email address"
+            title={labels?.emailTitle ?? "Enter a valid email address"}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`h-11 w-full rounded-md border bg-white px-3 text-base outline-none focus:border-caisbe-red ${
+            className={`h-11 w-full rounded-md border bg-white px-3 text-base text-ifma-navy outline-none placeholder:text-ifma-navy/45 focus:border-caisbe-red ${
               isDark ? "border-white/25" : "border-ifma-border-light"
             }`}
-            placeholder="name@example.com"
+            placeholder={labels?.placeholder ?? "name@example.com"}
           />
         </label>
         <button
@@ -86,7 +98,9 @@ export default function NewsletterSignup({
               : "inline-flex w-full items-center justify-center border-2 border-caisbe-red bg-caisbe-red px-6 py-3 text-base font-semibold uppercase tracking-wide text-white hover:bg-caisbe-red/90 disabled:opacity-60"
           }
         >
-          {status === "loading" ? "Subscribing…" : "Subscribe"}
+          {status === "loading"
+            ? (labels?.subscribing ?? "Subscribing…")
+            : (labels?.subscribe ?? "Subscribe")}
         </button>
       </form>
       {message ? (

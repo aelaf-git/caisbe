@@ -18,6 +18,7 @@ from app.routers.admin import (  # noqa: F401
     seminars,
     students,
     testimonials,
+    translations,
 )
 
 __all__ = ["router"]

@@ -4,20 +4,35 @@ import {
   ContentSection,
   PageHero,
 } from "@/components/pages/ContentPage";
+import TopicPageContent from "@/components/pages/TopicPageContent";
 import { advocacyContent } from "@/lib/data/resources";
+import { FR_SITE_PAGES } from "@/lib/i18n/content/sitePages.fr";
+import { getServerT } from "@/lib/i18n/server";
 
-export default function AdvocacyPageContent() {
+export default async function AdvocacyPageContent() {
+  const { t, locale } = await getServerT();
+  const frPage = FR_SITE_PAGES["/resources/advocacy-government-affairs"];
+  if (locale === "fr" && frPage) {
+    return (
+      <TopicPageContent
+        eyebrow="Resources"
+        page={frPage}
+        indexHref="/resources"
+        indexLabel="All Resources"
+      />
+    );
+  }
   const [lead, ...bodyParagraphs] = advocacyContent.paragraphs;
 
   return (
     <>
       <PageHero
-        eyebrow="Resources"
+        eyebrow={t("Resources", "Ressources")}
         title={advocacyContent.title}
         lead={lead}
         actions={
           <ButtonLink href="/contact" variant="primary">
-            Contact Us
+            {t("Contact Us", "Nous joindre")}
           </ButtonLink>
         }
       />
@@ -36,7 +51,7 @@ export default function AdvocacyPageContent() {
       </ContentSection>
 
       <ContentSection
-        title="Strategic consultancy"
+        title={t("Strategic consultancy", "Conseil stratégique")}
         description={advocacyContent.servicesIntro}
         className="bg-[#fafafa]"
       >
@@ -55,7 +70,7 @@ export default function AdvocacyPageContent() {
         </p>
         <div className="mt-8">
           <ButtonLink href="/contact" variant="primary">
-            Contact Us
+            {t("Contact Us", "Nous joindre")}
           </ButtonLink>
         </div>
       </ContentSection>

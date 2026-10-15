@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import hmac
+import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from starlette.datastructures import UploadFile
-from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -26,7 +28,13 @@ from app.models import (
 )
 from app.schemas.analytics import SiteVisitIn
 from app.schemas.contact import ContactMessageIn, ContactMessageOut
-from app.schemas.media import MediaAssetOut, NewsletterSubscribeIn, HeroCarouselOut, HeroSlideOut
+from app.schemas.media import (
+    MediaAssetOut,
+    NewsletterSubscribeIn,
+    NewsletterUnsubscribeIn,
+    HeroCarouselOut,
+    HeroSlideOut,
+)
 from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.schemas.events import IndustryEventOut
 from app.schemas.jobs import JobPostingOut
@@ -39,7 +47,9 @@ from app.services.commerce import apply_profile_fields, normalize_membership_typ
 from app.services.membership import is_student_membership
 from app.services.hero import ensure_default_hero_slides
 from app.services.settings import hero_transition_ms
+from app.services.translations import localize_many, localize_one
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["public"])
 
 VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".m4v"}
@@ -80,6 +90,7 @@ def get_hero_carousel(db: Session = Depends(get_db)) -> HeroCarouselOut:
 def list_published_media(
     category: str | None = Query(default=None, max_length=32),
     featured: bool | None = Query(default=None),
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[MediaAssetOut]:
     query = db.query(MediaAsset).filter(MediaAsset.published.is_(True))
@@ -91,12 +102,13 @@ def list_published_media(
         query.order_by(MediaAsset.sort_order.asc(), MediaAsset.created_at.desc())
         .all()
     )
-    return [MediaAssetOut.model_validate(row) for row in rows]
+    return localize_many(db, "media", [MediaAssetOut.model_validate(row) for row in rows], lang)
 
 
 @router.get("/media/{asset_id}", response_model=MediaAssetOut)
 def get_published_media_asset(
     asset_id: int,
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> MediaAssetOut:
     row = (
@@ -106,13 +118,14 @@ def get_published_media_asset(
     )
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
-    return MediaAssetOut.model_validate(row)
+    return localize_one(db, "media", MediaAssetOut.model_validate(row), lang)
 
 
 @router.get("/events", response_model=list[IndustryEventOut])
 def list_published_events(
     featured: bool | None = Query(default=None),
     event_type: str | None = Query(default=None, max_length=64),
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[IndustryEventOut]:
     query = db.query(IndustryEvent).filter(IndustryEvent.published.is_(True))
@@ -124,12 +137,13 @@ def list_published_events(
         query.order_by(IndustryEvent.starts_on.asc(), IndustryEvent.sort_order.asc())
         .all()
     )
-    return [IndustryEventOut.model_validate(row) for row in rows]
+    return localize_many(db, "event", [IndustryEventOut.model_validate(row) for row in rows], lang)
 
 
 @router.get("/jobs", response_model=list[JobPostingOut])
 def list_active_jobs(
     featured: bool | None = Query(default=None),
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[JobPostingOut]:
     """Published jobs that have not reached their expiry date."""
@@ -146,11 +160,12 @@ def list_active_jobs(
         item = JobPostingOut.model_validate(row)
         item.is_expired = False
         out.append(item)
-    return out
+    return localize_many(db, "job", out, lang)
 
 
 @router.get("/seminars", response_model=list[SeminarOut])
 def list_published_seminars(
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[SeminarOut]:
     rows = (
@@ -159,11 +174,12 @@ def list_published_seminars(
         .order_by(Seminar.sort_order.asc(), Seminar.id.asc())
         .all()
     )
-    return [SeminarOut.model_validate(row) for row in rows]
+    return localize_many(db, "seminar", [SeminarOut.model_validate(row) for row in rows], lang)
 
 
 @router.get("/testimonials", response_model=list[TestimonialOut])
 def list_published_testimonials(
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[TestimonialOut]:
     rows = (
@@ -172,24 +188,26 @@ def list_published_testimonials(
         .order_by(Testimonial.sort_order.asc(), Testimonial.id.asc())
         .all()
     )
-    return [TestimonialOut.model_validate(row) for row in rows]
+    return localize_many(db, "testimonial", [TestimonialOut.model_validate(row) for row in rows], lang)
 
 
 @router.get("/news", response_model=list[NewsPostOut])
 def list_published_news(
     featured: bool | None = Query(default=None),
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[NewsPostOut]:
     query = db.query(NewsPost).filter(NewsPost.published.is_(True))
     if featured is not None:
         query = query.filter(NewsPost.featured.is_(featured))
     rows = query.order_by(NewsPost.posted_on.desc(), NewsPost.sort_order.asc()).all()
-    return [NewsPostOut.model_validate(row) for row in rows]
+    return localize_many(db, "news", [NewsPostOut.model_validate(row) for row in rows], lang)
 
 
 @router.get("/news/{slug}", response_model=NewsPostOut)
 def get_published_news(
     slug: str,
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> NewsPostOut:
     row = (
@@ -199,7 +217,7 @@ def get_published_news(
     )
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
-    return NewsPostOut.model_validate(row)
+    return localize_one(db, "news", NewsPostOut.model_validate(row), lang)
 
 
 @router.post("/contact", response_model=ContactMessageOut, status_code=status.HTTP_201_CREATED)
@@ -230,6 +248,23 @@ def submit_contact_message(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Contact form is temporarily unavailable. Try again shortly.",
         ) from exc
+    try:
+        from app.services.email import EmailDeliveryError
+        from app.services.request_received_email import send_request_received_email
+
+        send_request_received_email(
+            to=row.email,
+            full_name=f"{row.first_name} {row.last_name}".strip(),
+        )
+    except EmailDeliveryError as exc:
+        logger.error(
+            "Request-received email delivery failed for contact message %s (%s): %s",
+            row.id,
+            row.email,
+            exc,
+        )
+    except Exception:
+        logger.exception("Request-received email failed for contact message %s", row.id)
     return ContactMessageOut.model_validate(row)
 
 
@@ -241,30 +276,114 @@ def subscribe_newsletter(
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     email = payload.email.lower().strip()
+    welcome_message = "Thank you for subscribing to the CAISBE newsletter."
+    subscriber: NewsletterSubscriber | None = None
+    already_active = False
     try:
         existing = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == email).first()
         if existing:
+            subscriber = existing
             if existing.unsubscribed_at is None:
-                return {"message": "You are already subscribed."}
-            existing.unsubscribed_at = None
-            existing.subscribed_at = datetime.now(timezone.utc)
-            existing.source = "website"
-            db.commit()
-            return {"message": "Welcome back! You are subscribed again."}
-
-        subscriber = NewsletterSubscriber(
-            email=email,
-            source="website",
-        )
-        db.add(subscriber)
-        db.commit()
+                already_active = True
+                welcome_message = "You are already subscribed."
+            else:
+                existing.unsubscribed_at = None
+                existing.subscribed_at = datetime.now(timezone.utc)
+                existing.source = "website"
+                db.commit()
+                db.refresh(existing)
+                welcome_message = "Welcome back! You are subscribed again."
+        else:
+            subscriber = NewsletterSubscriber(
+                email=email,
+                source="website",
+            )
+            db.add(subscriber)
+            try:
+                db.commit()
+                db.refresh(subscriber)
+            except IntegrityError:
+                # Concurrent insert for the same unique email — reuse the existing row.
+                db.rollback()
+                subscriber = (
+                    db.query(NewsletterSubscriber)
+                    .filter(NewsletterSubscriber.email == email)
+                    .first()
+                )
+                if subscriber is None:
+                    raise
+                if subscriber.unsubscribed_at is None:
+                    already_active = True
+                    welcome_message = "You are already subscribed."
+                else:
+                    subscriber.unsubscribed_at = None
+                    subscriber.subscribed_at = datetime.now(timezone.utc)
+                    subscriber.source = "website"
+                    db.commit()
+                    db.refresh(subscriber)
+                    welcome_message = "Welcome back! You are subscribed again."
     except (OperationalError, ProgrammingError) as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Newsletter signup is temporarily unavailable. Try again shortly.",
         ) from exc
-    return {"message": "Thank you for subscribing to the CAISBE newsletter."}
+
+    if subscriber is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Newsletter signup is temporarily unavailable. Try again shortly.",
+        )
+
+    # Send welcome mail for new/reactivated subscribers, or already-subscribed notice if active.
+    try:
+        from app.services.email import EmailDeliveryError
+        from app.services.newsletter_subscribed_email import (
+            send_newsletter_already_subscribed_email,
+            send_newsletter_subscribed_email,
+        )
+
+        if already_active:
+            send_newsletter_already_subscribed_email(to=email, subscriber_id=subscriber.id)
+        else:
+            send_newsletter_subscribed_email(to=email, subscriber_id=subscriber.id)
+    except EmailDeliveryError as exc:
+        logger.error(
+            "Newsletter email delivery failed for %s: %s",
+            email,
+            exc,
+        )
+    except Exception:
+        logger.exception("Newsletter email failed for %s", email)
+    return {"message": welcome_message}
+
+
+@router.post("/newsletter/unsubscribe", status_code=status.HTTP_200_OK)
+@limiter.limit("30/minute")
+def unsubscribe_newsletter(
+    request: Request,
+    payload: NewsletterUnsubscribeIn,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    from app.services.newsletter_unsubscribe import (
+        make_unsubscribe_token,
+        parse_unsubscribe_token,
+    )
+
+    parsed = parse_unsubscribe_token(payload.token)
+    if parsed is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid unsubscribe link.")
+    subscriber_id, _signature = parsed
+    row = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.id == subscriber_id).first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid unsubscribe link.")
+    expected = make_unsubscribe_token(subscriber_id=row.id, email=row.email)
+    if not hmac.compare_digest(payload.token.strip(), expected):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid unsubscribe link.")
+    if row.unsubscribed_at is None:
+        row.unsubscribed_at = datetime.now(timezone.utc)
+        db.commit()
+    return {"message": "You have been unsubscribed from the CAISBE newsletter."}
 
 
 @router.get("/membership/certificate-types", response_model=list[MembershipCertificateTypePublicOut])

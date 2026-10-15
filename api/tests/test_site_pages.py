@@ -118,6 +118,26 @@ def test_seeding_the_same_paths_twice_does_not_duplicate(db: Session) -> None:
     assert "Built environment community" in (sponsor.lead or "")
     membership = db.query(SitePage).filter(SitePage.path == "/membership/overview").one()
     assert membership.parent_id is not None
+    careers = db.query(SitePage).filter(SitePage.path == "/careers").one()
+    assert careers.show_in_menu is False
+    assert "Browse facility management roles" in (careers.lead or "")
+    news = db.query(SitePage).filter(SitePage.path == "/news").one()
+    assert news.cta_href == "/contact"
+    assert news.show_in_menu is False
+    help_desk = db.query(SitePage).filter(SitePage.path == "/resources/help-desk").one()
+    assert len(help_desk.sections or []) == 13
+    assert help_desk.sections[0]["title"] == "Why Choose CAISBE?"
+    assert help_desk.cta_href == "/resources/tickets"
+    calendar = db.query(SitePage).filter(SitePage.path == "/events/calendar").one()
+    assert calendar.title == "Event Calendar"
+    assert calendar.parent_id is not None
+    programs = db.query(SitePage).filter(SitePage.path == "/professional-development").one()
+    assert programs.title == "Certificate Programs"
+    advocacy = db.query(SitePage).filter(SitePage.path == "/resources/advocacy-government-affairs").one()
+    assert advocacy.lead.startswith("We advocate for stronger")
+
+    careers.title = "Edited careers heading"
+    db.commit()
 
     seed_site_pages(db)
     assert db.query(SitePage).count() == first
@@ -125,6 +145,32 @@ def test_seeding_the_same_paths_twice_does_not_duplicate(db: Session) -> None:
     assert db.query(SitePage).filter(SitePage.path == "/about/what-is-built-environment").count() == 1
     assert db.query(SitePage).filter(SitePage.path == "/partners").count() == 1
     assert db.query(SitePage).filter(SitePage.path == "/partners/become-a-sponsor").count() == 1
+    assert db.query(SitePage).filter(SitePage.path == "/careers").one().title == "Edited careers heading"
+    assert db.query(SitePage).filter(SitePage.path == "/resources/help-desk").count() == 1
+
+
+def test_seed_aligns_original_certificate_heading_and_keeps_later_edits(db: Session) -> None:
+    seed_site_pages(db)
+    programs = db.query(SitePage).filter(SitePage.path == "/professional-development").one()
+    programs.title = "Professional Development"
+    programs.lead = (
+        "Certificate programs and flexible learning formats for working professionals, students, and organizations."
+    )
+    db.commit()
+
+    seed_site_pages(db)
+    programs = db.query(SitePage).filter(SitePage.path == "/professional-development").one()
+    assert programs.title == "Certificate Programs"
+    assert programs.sections[0]["title"] == "Certificate courses"
+    assert programs.sections[1]["title"] == "Seminars"
+
+    programs.title = "Custom programs"
+    programs.lead = "Custom lead"
+    db.commit()
+    seed_site_pages(db)
+    programs = db.query(SitePage).filter(SitePage.path == "/professional-development").one()
+    assert programs.title == "Custom programs"
+    assert programs.lead == "Custom lead"
 
 
 def test_seed_removes_mistaken_professional_development_pages(db: Session) -> None:

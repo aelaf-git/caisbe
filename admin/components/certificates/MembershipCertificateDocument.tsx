@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { cssPx } from "@/lib/cssLength";
+import { certFitPx, useCertificateContentFit } from "@/lib/fitCertificateContent";
 
 /** Fixed A4 landscape design size — do not fluid-scale internal layout. */
 export const CERTIFICATE_WIDTH_PX = 900;
@@ -74,6 +76,13 @@ export default function MembershipCertificateDocument({
   const statement =
     body ||
     `is a recognised member of ${issuedBy}, admitted on ${issuedLabel}.`;
+  const middleRef = useRef<HTMLDivElement>(null);
+  useCertificateContentFit(middleRef, [
+    studentName,
+    statement,
+    membershipNumber,
+    validUntilLabel,
+  ]);
 
   return (
     <>
@@ -143,43 +152,45 @@ export default function MembershipCertificateDocument({
             </p>
           </header>
 
-          <div className="shrink-0" style={{ marginTop: 16 }}>
-            <p className="text-[#5c5348]" style={{ fontSize: 18, lineHeight: 1.4 }}>
+          <div
+            ref={middleRef}
+            className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden"
+            style={{ marginTop: 16, ["--cert-fit" as string]: 1 }}
+          >
+            <p className="shrink-0 text-[#5c5348]" style={{ fontSize: 18, lineHeight: 1.4 }}>
               This certifies that
             </p>
             <p
               className="mx-auto font-[family-name:var(--font-great-vibes)] leading-tight text-[#7b1e3a]"
-              style={{ marginTop: 4, maxWidth: 700, fontSize: 68 }}
+              style={{ marginTop: 4, maxWidth: 700, fontSize: certFitPx(68) }}
             >
               {studentName}
             </p>
             <div className="mx-auto bg-[#c9a227]" style={{ marginTop: 6, height: 1, width: 320 }} />
+            <p
+              className="mx-auto leading-relaxed text-[#5c5348]"
+              style={{ marginTop: 16, maxWidth: 680, fontSize: certFitPx(18) }}
+            >
+              {statement}
+            </p>
+            <p
+              className="font-semibold tracking-wide text-[#7b1e3a]"
+              style={{ marginTop: 10, fontSize: certFitPx(16) }}
+            >
+              Membership No. {membershipNumber}
+            </p>
+            {validUntilLabel ? (
+              <p
+                className="font-semibold tracking-wide text-[#7b1e3a]"
+                style={{ marginTop: 6, fontSize: certFitPx(16) }}
+              >
+                Valid until {validUntilLabel}
+              </p>
+            ) : null}
           </div>
 
-          <p
-            className="mx-auto shrink-0 leading-relaxed text-[#5c5348]"
-            style={{ marginTop: 16, maxWidth: 680, fontSize: 18 }}
-          >
-            {statement}
-          </p>
-
-          <p
-            className="shrink-0 font-semibold tracking-wide text-[#7b1e3a]"
-            style={{ marginTop: 10, fontSize: 16 }}
-          >
-            Membership No. {membershipNumber}
-          </p>
-          {validUntilLabel ? (
-            <p
-              className="shrink-0 font-semibold tracking-wide text-[#7b1e3a]"
-              style={{ marginTop: 6, fontSize: 16 }}
-            >
-              Valid until {validUntilLabel}
-            </p>
-          ) : null}
-
           <footer
-            className="relative z-10 mt-auto grid shrink-0 items-end"
+            className="relative z-10 grid shrink-0 items-end"
             style={{
               gridTemplateColumns: "1fr 120px 1fr",
               columnGap: 24,
@@ -188,15 +199,19 @@ export default function MembershipCertificateDocument({
             }}
           >
             <div className="col-start-1 row-start-1 justify-self-center px-2 text-center">
-              <p className="mb-1 font-medium text-[#3d3832]" style={{ fontSize: 17 }}>
-                {issuedLabel}
-              </p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/signature.png"
+                alt=""
+                className="mx-auto mb-1 object-contain"
+                style={{ width: 140, height: "auto", maxHeight: 48 }}
+              />
               <div className="mx-auto bg-[#c9a227]" style={{ height: 1, width: 140 }} />
               <p
                 className="mt-1.5 font-bold uppercase tracking-wide text-[#7b1e3a]"
                 style={{ fontSize: 15 }}
               >
-                Member Since
+                Signature
               </p>
             </div>
 

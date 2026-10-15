@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   PROTECTED_CONTENT_STYLE,
   attachAwayOverlay,
@@ -15,6 +16,12 @@ export default function ContentProtectionShell({
   children: ReactNode;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+
+  const watermarkStamp = useMemo(() => {
+    if (!user) return "CAISBE PROTECTED COURSE CONTENT";
+    return `CAISBE • ${user.email} • ID#${user.id}`;
+  }, [user]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -38,8 +45,31 @@ export default function ContentProtectionShell({
   }
 
   return (
-    <div ref={rootRef} className="relative select-none outline-none" style={PROTECTED_CONTENT_STYLE}>
-      {children}
-    </div>
+    <>
+      <div
+        ref={rootRef}
+        data-nosnippet
+        className="relative overflow-hidden select-none outline-none print:hidden"
+        style={PROTECTED_CONTENT_STYLE}
+      >
+        {children}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-[15] grid grid-cols-2 gap-12 overflow-hidden p-6 opacity-[0.045] select-none sm:grid-cols-3"
+        >
+          {Array.from({ length: 12 }).map((_, index) => (
+            <span
+              key={index}
+              className="flex items-center justify-center -rotate-12 text-center font-mono text-xs font-semibold tracking-widest whitespace-nowrap text-caisbe-text-dark"
+            >
+              {watermarkStamp}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="hidden rounded-md border border-caisbe-red/30 bg-caisbe-red/5 p-6 text-center text-sm font-semibold text-caisbe-red print:block">
+        Printing, saving, or automated extraction of CAISBE course material is prohibited ({watermarkStamp}).
+      </div>
+    </>
   );
 }

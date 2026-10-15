@@ -1,5 +1,6 @@
 import BackButton from "@/components/ui/BackButton";
 import ButtonLink from "@/components/ui/ButtonLink";
+import { T } from "@/lib/i18n/LocaleProvider";
 
 type PageHeroProps = {
   eyebrow: string;
@@ -19,7 +20,7 @@ export function PageHero({
   children,
   actions,
   backHref,
-  backLabel = "Go back",
+  backLabel,
   className = "",
 }: PageHeroProps) {
   return (
@@ -136,7 +137,7 @@ export function ContentCard({
   description,
   meta,
   href,
-  hrefLabel = "Learn More",
+  hrefLabel,
   children,
   className = "",
   style,
@@ -164,7 +165,7 @@ export function ContentCard({
       {children}
       {href ? (
         <ButtonLink href={href} variant="text" className="mt-6">
-          {hrefLabel}
+          {hrefLabel ?? <T en="Learn More" fr="En savoir plus" />}
         </ButtonLink>
       ) : null}
     </article>

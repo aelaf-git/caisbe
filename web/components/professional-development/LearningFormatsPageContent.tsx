@@ -7,18 +7,20 @@ import {
   learningFormatPath,
   professionalDevelopmentContent,
 } from "@/lib/data/professional-development";
+import { getServerT } from "@/lib/i18n/server";
 
-export default function LearningFormatsPageContent() {
+export default async function LearningFormatsPageContent() {
+  const { t } = await getServerT();
   const { formats } = professionalDevelopmentContent;
 
   return (
     <>
       <PageHero
-        eyebrow="Professional Development"
+        eyebrow={t("Professional Development", "Développement professionnel")}
         title={formats.title}
         lead={formats.description}
         backHref="/professional-development"
-        backLabel="Back to certificate programs"
+        backLabel={t("Back to certificate programs", "Retour aux programmes de certificat")}
       />
       <ContentSection
         title={formats.educationOptionsTitle}
@@ -32,7 +34,7 @@ export default function LearningFormatsPageContent() {
               title={format.title}
               description={format.description}
               href={learningFormatPath(format.slug)}
-              hrefLabel="View details"
+              hrefLabel={t("View details", "Voir les détails")}
               style={{ animationDelay: `${index * 70}ms` }}
             />
           ))}

@@ -14,6 +14,13 @@ import {
   type NewsletterCampaign,
   type NewsletterSubscriber,
 } from "@/lib/auth";
+import { IconActionButton } from "@/components/ui/IconAction";
+
+type AskConfirm = (options: {
+  title: string;
+  description: string;
+  confirmLabel?: string;
+}) => Promise<boolean>;
 
 type NewsletterAttachment = {
   filename: string;
@@ -39,6 +46,7 @@ export default function NewsletterPanel({
   onRefresh,
   onError,
   onSuccess,
+  askConfirm,
 }: {
   subscribers: NewsletterSubscriber[];
   campaigns: NewsletterCampaign[];
@@ -46,6 +54,7 @@ export default function NewsletterPanel({
   onRefresh: () => Promise<void>;
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
+  askConfirm: AskConfirm;
 }) {
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
@@ -54,6 +63,7 @@ export default function NewsletterPanel({
   const [uploading, setUploading] = useState(false);
   const [attachments, setAttachments] = useState<NewsletterAttachment[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [removingId, setRemovingId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -77,6 +87,30 @@ export default function NewsletterPanel({
 
   function unmarkAll() {
     setSelectedIds([]);
+  }
+
+  async function removeSubscriber(row: NewsletterSubscriber) {
+    const ok = await askConfirm({
+      title: "Remove subscriber?",
+      description: `Remove ${row.email} from the newsletter list? This deletes the subscriber from the database and cannot be undone.`,
+      confirmLabel: "Remove",
+    });
+    if (!ok) return;
+
+    setRemovingId(row.id);
+    try {
+      const result = await apiFetch<{ message?: string }>(
+        `/admin/newsletter/subscribers/${row.id}`,
+        { method: "DELETE" },
+      );
+      setSelectedIds((current) => current.filter((id) => id !== row.id));
+      onSuccess(result?.message || `Removed ${row.email}.`);
+      await onRefresh();
+    } catch (err) {
+      onError(err instanceof ApiError ? err.detail : "Unable to remove subscriber.");
+    } finally {
+      setRemovingId(null);
+    }
   }
 
   async function attachDocuments(files: FileList | null) {
@@ -212,13 +246,12 @@ export default function NewsletterPanel({
                   className="flex items-center justify-between gap-3 rounded-lg border border-ifma-border-light bg-admin-surface-muted px-3 py-2 text-sm"
                   >
                     <span className="truncate text-caisbe-text">{item.filename}</span>
-                    <button
-                      type="button"
+                    <IconActionButton
+                      icon="trash"
+                      tone="danger"
+                      label={`Remove ${item.filename}`}
                       onClick={() => removeAttachment(item.file_url)}
-                      className="shrink-0 text-xs font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
-                    >
-                      Remove
-                    </button>
+                    />
                   </li>
                 ))}
               </ul>
@@ -281,6 +314,9 @@ export default function NewsletterPanel({
                 </th>
                 <th className="px-6 py-3 font-semibold text-caisbe-text">Email</th>
                 <th className="px-6 py-3 font-semibold text-caisbe-text">Subscribed</th>
+                <th className="px-6 py-3 font-semibold text-caisbe-text">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ifma-border-light">
@@ -302,6 +338,15 @@ export default function NewsletterPanel({
                       month: "short",
                       day: "numeric",
                     })}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <IconActionButton
+                      icon="trash"
+                      tone="danger"
+                      label={`Remove ${row.email}`}
+                      disabled={removingId === row.id}
+                      onClick={() => void removeSubscriber(row)}
+                    />
                   </td>
                 </tr>
               ))}
