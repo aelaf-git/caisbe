@@ -165,6 +165,9 @@ function knownHrefs(sections: NavSectionData[]) {
   return known;
 }
 
+/** CMS paths that must never appear in the public mega-menu. */
+const HIDDEN_NAV_PATHS = new Set(["/resources/component-reports"]);
+
 export function mergeSiteNav(sections: NavSectionData[], items: SiteNavItem[]): NavSectionData[] {
   const next = sections.map((section) => ({
     ...section,
@@ -174,9 +177,9 @@ export function mergeSiteNav(sections: NavSectionData[], items: SiteNavItem[]): 
     })),
   }));
   const known = knownHrefs(next);
-  const sorted = [...items].sort(
-    (a, b) => a.sort_order - b.sort_order || a.menu_label.localeCompare(b.menu_label),
-  );
+  const sorted = [...items]
+    .filter((item) => !HIDDEN_NAV_PATHS.has(item.path))
+    .sort((a, b) => a.sort_order - b.sort_order || a.menu_label.localeCompare(b.menu_label));
 
   for (const item of sorted) {
     if (!item.parent_path && !known.has(item.path)) {

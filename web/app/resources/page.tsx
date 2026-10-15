@@ -46,6 +46,12 @@ const featuredResources = [
     href: `/resources/${ticketsContent.slug}`,
   },
   {
+    title: "Forms and Guides",
+    description:
+      "Download CAISBE forms, templates, and practical guides for members and facility professionals.",
+    href: "/resources/forms-and-guides",
+  },
+  {
     title: mediaContent.title,
     description: mediaContent.description,
     href: "/resources/media",

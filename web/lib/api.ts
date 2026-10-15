@@ -178,6 +178,12 @@ export async function fetchPublishedMagazines(options?: {
   return fetchPublishedMedia("magazine", options);
 }
 
+export async function fetchPublishedForms(options?: {
+  featured?: boolean;
+}): Promise<MediaAsset[]> {
+  return fetchPublishedMedia("forms", options);
+}
+
 export async function fetchPublishedMediaAsset(id: number): Promise<MediaAsset> {
   return apiFetch<MediaAsset>(`/media/${id}`);
 }

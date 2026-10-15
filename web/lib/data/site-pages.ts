@@ -103,27 +103,6 @@ export const resourcesPages: TopicPage[] = [
     ],
     { label: "Request Leader Tools", href: "/contact" },
   ),
-  topic(
-    "component-reports",
-    "Component Reports",
-    "Reports and updates supporting CAISBE components, chapters, and member communities.",
-    "Updates that help components and chapters share progress, priorities, and learning across the network.",
-    [
-      {
-        title: "What reports support",
-        items: [
-          "Chapter activity and membership snapshots",
-          "Program outcomes and event summaries",
-          "Shared priorities across regions",
-        ],
-      },
-      {
-        title: "Questions",
-        body: "For questions about published summaries or regional activity, contact the CAISBE team.",
-      },
-    ],
-    { label: "Contact Us", href: "/contact" },
-  ),
 ];
 
 export const aboutPages: TopicPage[] = [

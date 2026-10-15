@@ -307,6 +307,7 @@ const rawFooterColumns = [
       },
       { label: "CAISBE Help Desk", href: "/resources/help-desk" },
       { label: "Tickets", href: "/resources/tickets" },
+      { label: "Forms and Guides", href: "/resources/forms-and-guides" },
       {
         label: "Membership Overview and Benefits",
         href: "/membership/overview",

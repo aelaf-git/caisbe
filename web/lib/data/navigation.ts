@@ -196,6 +196,10 @@ const rawNavigation: readonly RawNavSection[] = [
             label: "Tickets",
             href: "/resources/tickets",
           },
+          {
+            label: "Forms and Guides",
+            href: "/resources/forms-and-guides",
+          },
         ],
       },
       {

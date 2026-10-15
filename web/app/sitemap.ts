@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   "/events",
   "/news",
   "/resources",
+  "/resources/forms-and-guides",
   "/careers",
   "/contact",
   "/partners",

@@ -278,30 +278,6 @@ RESOURCE_PAGES = [
         "cta_label": "Request Leader Tools",
         "cta_href": "/contact",
     },
-    {
-        "slug": "component-reports",
-        "title": "Component Reports",
-        "description": "Reports and updates supporting CAISBE components, chapters, and member communities.",
-        "lead": "Updates that help components and chapters share progress, priorities, and learning across the network.",
-        "sections": _sections(
-            (
-                "What reports support",
-                "",
-                [
-                    "Chapter activity and membership snapshots",
-                    "Program outcomes and event summaries",
-                    "Shared priorities across regions",
-                ],
-            ),
-            (
-                "Questions",
-                "For questions about published summaries or regional activity, contact the CAISBE team.",
-                [],
-            ),
-        ),
-        "cta_label": "Contact Us",
-        "cta_href": "/contact",
-    },
 ]
 
 ABOUT_INDEX = {
@@ -1383,6 +1359,13 @@ _MISTAKEN_PD_SLUGS = (
 
 def _apply_editorial_updates(db: Session) -> None:
     """Refresh labels and corporate copy on pages that seed will not overwrite."""
+    # Component Reports was retired in favour of Forms and Guides.
+    component_reports = db.query(SitePage).filter(SitePage.path == "/resources/component-reports").first()
+    if component_reports is not None:
+        component_reports.show_in_menu = False
+        if component_reports.status == "published":
+            component_reports.status = "draft"
+
     overview = db.query(SitePage).filter(SitePage.path == "/network/overview").first()
     if overview is not None:
         if overview.title == _OLD_NETWORK_LABEL:

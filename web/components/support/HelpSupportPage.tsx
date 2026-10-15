@@ -52,7 +52,7 @@ export default function HelpSupportPage({
   title?: string;
   lead?: string;
 }) {
-  const { user } = useStudentSession();
+  const { user, loading: sessionLoading } = useStudentSession();
   const [courses, setCourses] = useState<string[]>([]);
   const [threads, setThreads] = useState<SupportThread[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
@@ -152,7 +152,7 @@ export default function HelpSupportPage({
             {lead}
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            {user ? (
+            {sessionLoading ? null : user ? (
               <a
                 href={portalUrl("/dashboard")}
                 className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
@@ -182,18 +182,6 @@ export default function HelpSupportPage({
       </section>
 
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-12">
-        <nav className="flex flex-wrap gap-2" aria-label="Help and Support sections">
-          {HELP_SECTIONS.map((section) => (
-            <a
-              key={section.id}
-              href={`#${section.id}`}
-              className="inline-flex rounded-full border border-ifma-border bg-white px-3 py-1.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
-            >
-              {section.label}
-            </a>
-          ))}
-        </nav>
-
         <section id="faqs" className="scroll-mt-28 rounded-[20px] bg-white p-6 shadow-hopewell">
           <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">FAQs</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-caisbe-muted">
@@ -207,373 +195,419 @@ export default function HelpSupportPage({
           </Link>
         </section>
 
-        <section id="technical" className="scroll-mt-28 rounded-[20px] bg-white p-6 shadow-hopewell">
-          <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
-            Technical Support
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-caisbe-muted">
-            Choose the problem you are seeing, describe what happened, and submit a ticket.
-          </p>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void sendTicket("technical", "Technical Support", "issue", problem, [
-                { label: "Details", value: technicalDetails },
-              ]).then((ok) => {
-                if (ok) setTechnicalDetails("");
-              });
-            }}
-            className="mt-5 max-w-2xl space-y-4"
+        {sessionLoading ? (
+          <p className="text-sm text-caisbe-muted">Checking your sign-in status…</p>
+        ) : !user ? (
+          <section
+            id="request-support"
+            className="scroll-mt-28 rounded-[20px] bg-white p-6 shadow-hopewell"
           >
-            <label className="block text-sm font-semibold text-caisbe-text">
-              Common technical problems
-              <select
-                required
-                value={problem}
-                onChange={(event) => setProblem(event.target.value)}
-                className={fieldClass}
-              >
-                <option value="">Select a problem</option>
-                {TECHNICAL_GROUPS.map((group) => (
-                  <optgroup key={group.label} label={group.label}>
-                    {group.options.map((option) => (
-                      <option key={`${group.label}-${option}`} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm font-semibold text-caisbe-text">
-              Details
-              <textarea
-                required
-                rows={5}
-                value={technicalDetails}
-                onChange={(event) => setTechnicalDetails(event.target.value)}
-                className={fieldClass}
-                placeholder="What were you trying to do, and what happened?"
-              />
-            </label>
-            <SubmitButton busy={busy === "technical"} signedIn={Boolean(user)} label="Submit a ticket" />
-            <NoticeLine notice={notices.technical ?? null} />
-          </form>
-        </section>
+            <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
+              Request support
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-caisbe-muted">
+              Sign in to myCAISBE to open technical, course, certificate, account, and problem-report
+              requests. Support forms and your ticket history are available after you log in.
+            </p>
+            <button
+              type="button"
+              onClick={loginToHelp}
+              className="mt-5 inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+            >
+              Log in to request support
+            </button>
+          </section>
+        ) : (
+          <>
+            <nav className="flex flex-wrap gap-2" aria-label="Help and Support sections">
+              {HELP_SECTIONS.map((section) => (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  className="inline-flex rounded-full border border-ifma-border bg-white px-3 py-1.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+                >
+                  {section.label}
+                </a>
+              ))}
+            </nav>
 
-        <RequestTable
-          id="course"
-          title="Course Support"
-          description="Ask for help with a course you are taking."
-          busy={busy === "course"}
-          signedIn={Boolean(user)}
-          notice={notices.course ?? null}
-          onSubmit={(event) => {
-            event.preventDefault();
-            void sendTicket("course", "Course Support", "question", courseRequest, [
-              { label: "Course", value: courseName },
-              { label: "Details", value: courseDetails },
-            ]);
-          }}
-          rows={[
-            {
-              label: "Course",
-              control:
-                courses.length > 0 ? (
+            <section id="technical" className="scroll-mt-28 rounded-[20px] bg-white p-6 shadow-hopewell">
+              <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
+                Technical Support
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-caisbe-muted">
+                Choose the problem you are seeing, describe what happened, and submit a ticket.
+              </p>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void sendTicket("technical", "Technical Support", "issue", problem, [
+                    { label: "Details", value: technicalDetails },
+                  ]).then((ok) => {
+                    if (ok) setTechnicalDetails("");
+                  });
+                }}
+                className="mt-5 max-w-2xl space-y-4"
+              >
+                <label className="block text-sm font-semibold text-caisbe-text">
+                  Common technical problems
                   <select
                     required
-                    value={courseName}
-                    onChange={(event) => setCourseName(event.target.value)}
+                    value={problem}
+                    onChange={(event) => setProblem(event.target.value)}
                     className={fieldClass}
                   >
-                    {courses.map((title) => (
-                      <option key={title} value={title}>
-                        {title}
-                      </option>
+                    <option value="">Select a problem</option>
+                    {TECHNICAL_GROUPS.map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.options.map((option) => (
+                          <option key={`${group.label}-${option}`} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
-                    <option value="Other course">Other course</option>
                   </select>
-                ) : (
-                  <input
+                </label>
+                <label className="block text-sm font-semibold text-caisbe-text">
+                  Details
+                  <textarea
                     required
-                    value={courseName}
-                    onChange={(event) => setCourseName(event.target.value)}
+                    rows={5}
+                    value={technicalDetails}
+                    onChange={(event) => setTechnicalDetails(event.target.value)}
                     className={fieldClass}
-                    placeholder="Course name"
+                    placeholder="What were you trying to do, and what happened?"
                   />
-                ),
-            },
-            {
-              label: "Request",
-              control: (
-                <select
-                  required
-                  value={courseRequest}
-                  onChange={(event) => setCourseRequest(event.target.value)}
-                  className={fieldClass}
-                >
-                  {COURSE_REQUESTS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              ),
-            },
-            {
-              label: "Details",
-              control: (
-                <textarea
-                  required
-                  rows={4}
-                  value={courseDetails}
-                  onChange={(event) => setCourseDetails(event.target.value)}
-                  className={fieldClass}
-                />
-              ),
-            },
-          ]}
-        />
+                </label>
+                <SubmitButton busy={busy === "technical"} signedIn label="Submit a ticket" />
+                <NoticeLine notice={notices.technical ?? null} />
+              </form>
+            </section>
 
-        <RequestTable
-          id="certification"
-          title="Certification Support"
-          description="Ask about a course certificate or your membership certificate."
-          busy={busy === "certification"}
-          signedIn={Boolean(user)}
-          notice={notices.certification ?? null}
-          onSubmit={(event) => {
-            event.preventDefault();
-            void sendTicket("certification", "Certification Support", "question", certificateRequest, [
-              { label: "Certificate or program", value: certificateName },
-              { label: "Details", value: certificateDetails },
-            ]);
-          }}
-          rows={[
-            {
-              label: "Certificate or program",
-              control: (
-                <input
-                  required
-                  value={certificateName}
-                  onChange={(event) => setCertificateName(event.target.value)}
-                  className={fieldClass}
-                  placeholder="Program or certificate name"
-                />
-              ),
-            },
-            {
-              label: "Request",
-              control: (
-                <select
-                  required
-                  value={certificateRequest}
-                  onChange={(event) => setCertificateRequest(event.target.value)}
-                  className={fieldClass}
-                >
-                  {CERTIFICATION_REQUESTS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              ),
-            },
-            {
-              label: "Details",
-              control: (
-                <textarea
-                  required
-                  rows={4}
-                  value={certificateDetails}
-                  onChange={(event) => setCertificateDetails(event.target.value)}
-                  className={fieldClass}
-                />
-              ),
-            },
-          ]}
-        />
-
-        <AccountTable
-          user={user}
-          busy={busy === "account"}
-          notice={notices.account ?? null}
-          accountRequest={accountRequest}
-          accountDetails={accountDetails}
-          setAccountRequest={setAccountRequest}
-          setAccountDetails={setAccountDetails}
-          onSubmit={(event) => {
-            event.preventDefault();
-            void sendTicket("account", "Account Support", "question", accountRequest, [
-              { label: "Account email", value: user?.email ?? "" },
-              { label: "Details", value: accountDetails },
-            ]);
-          }}
-        />
-
-        <RequestTable
-          id="contact"
-          title="Contact CAISBE"
-          description="Send a message to CAISBE. It is delivered as a support ticket."
-          busy={busy === "contact"}
-          signedIn={Boolean(user)}
-          notice={notices.contact ?? null}
-          submitLabel="Send message"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void sendTicket("contact", "Contact CAISBE", "general", contactSubject, [
-              { label: "Message", value: contactMessage },
-            ]);
-          }}
-          rows={[
-            {
-              label: "Subject",
-              control: (
-                <input
-                  required
-                  minLength={2}
-                  value={contactSubject}
-                  onChange={(event) => setContactSubject(event.target.value)}
-                  className={fieldClass}
-                />
-              ),
-            },
-            {
-              label: "Message",
-              control: (
-                <textarea
-                  required
-                  rows={4}
-                  value={contactMessage}
-                  onChange={(event) => setContactMessage(event.target.value)}
-                  className={fieldClass}
-                />
-              ),
-            },
-          ]}
-        />
-
-        <RequestTable
-          id="report"
-          title="Report a Problem"
-          description="Tell CAISBE about something that is not working."
-          busy={busy === "report"}
-          signedIn={Boolean(user)}
-          notice={notices.report ?? null}
-          submitLabel="Submit report"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void sendTicket("report", "Report a Problem", "issue", reportWhat, [
-              { label: "Where it happened", value: reportWhere },
-              { label: "Details", value: reportDetails },
-            ]);
-          }}
-          rows={[
-            {
-              label: "Where it happened",
-              control: (
-                <input
-                  required
-                  value={reportWhere}
-                  onChange={(event) => setReportWhere(event.target.value)}
-                  className={fieldClass}
-                  placeholder="Page, course, or exam"
-                />
-              ),
-            },
-            {
-              label: "What went wrong",
-              control: (
-                <input
-                  required
-                  minLength={2}
-                  value={reportWhat}
-                  onChange={(event) => setReportWhat(event.target.value)}
-                  className={fieldClass}
-                />
-              ),
-            },
-            {
-              label: "Details",
-              control: (
-                <textarea
-                  required
-                  rows={4}
-                  value={reportDetails}
-                  onChange={(event) => setReportDetails(event.target.value)}
-                  className={fieldClass}
-                />
-              ),
-            },
-          ]}
-        />
-
-        <section className="overflow-hidden rounded-[20px] bg-white shadow-hopewell">
-          <div className="border-b border-ifma-border-light px-6 py-4">
-            <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
-              Your requests
-            </h2>
-            <p className="mt-1 text-sm text-caisbe-muted">Tickets you have already sent to CAISBE.</p>
-          </div>
-          {!user ? (
-            <p className="px-5 py-8 text-caisbe-muted">Log in to see the requests you have sent.</p>
-          ) : threads.length === 0 ? (
-            <p className="px-5 py-8 text-caisbe-muted">No requests yet.</p>
-          ) : (
-            <>
-              <ul className="divide-y divide-ifma-border-light md:hidden">
-                {threads.map((thread) => (
-                  <li key={thread.id} className="px-5 py-4">
-                    <p className="break-words font-medium text-caisbe-text">{thread.subject}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                      <span className="capitalize text-caisbe-muted">{thread.status.replaceAll("_", " ")}</span>
-                      <a
-                        href={portalUrl(`/messages?thread=${thread.id}`)}
-                        className="font-semibold text-caisbe-red hover:underline"
+            <RequestTable
+              id="course"
+              title="Course Support"
+              description="Ask for help with a course you are taking."
+              busy={busy === "course"}
+              signedIn
+              notice={notices.course ?? null}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void sendTicket("course", "Course Support", "question", courseRequest, [
+                  { label: "Course", value: courseName },
+                  { label: "Details", value: courseDetails },
+                ]);
+              }}
+              rows={[
+                {
+                  label: "Course",
+                  control:
+                    courses.length > 0 ? (
+                      <select
+                        required
+                        value={courseName}
+                        onChange={(event) => setCourseName(event.target.value)}
+                        className={fieldClass}
                       >
-                        {ticketNumber(thread.id)}
-                      </a>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <div className="hidden md:block">
-                <table className="w-full table-fixed text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-ifma-border-light">
-                      {["Request", "Status", "Number"].map((header) => (
-                        <th
-                          key={header}
-                          className={`px-5 py-3 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark ${header === "Request" ? "" : "w-40 whitespace-nowrap"}`}
-                        >
-                          {header}
-                        </th>
+                        {courses.map((courseTitle) => (
+                          <option key={courseTitle} value={courseTitle}>
+                            {courseTitle}
+                          </option>
+                        ))}
+                        <option value="Other course">Other course</option>
+                      </select>
+                    ) : (
+                      <input
+                        required
+                        value={courseName}
+                        onChange={(event) => setCourseName(event.target.value)}
+                        className={fieldClass}
+                        placeholder="Course name"
+                      />
+                    ),
+                },
+                {
+                  label: "Request",
+                  control: (
+                    <select
+                      required
+                      value={courseRequest}
+                      onChange={(event) => setCourseRequest(event.target.value)}
+                      className={fieldClass}
+                    >
+                      {COURSE_REQUESTS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
                       ))}
-                    </tr>
-                  </thead>
-                  <tbody>
+                    </select>
+                  ),
+                },
+                {
+                  label: "Details",
+                  control: (
+                    <textarea
+                      required
+                      rows={4}
+                      value={courseDetails}
+                      onChange={(event) => setCourseDetails(event.target.value)}
+                      className={fieldClass}
+                    />
+                  ),
+                },
+              ]}
+            />
+
+            <RequestTable
+              id="certification"
+              title="Certification Support"
+              description="Ask about a course certificate or your membership certificate."
+              busy={busy === "certification"}
+              signedIn
+              notice={notices.certification ?? null}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void sendTicket(
+                  "certification",
+                  "Certification Support",
+                  "question",
+                  certificateRequest,
+                  [
+                    { label: "Certificate or program", value: certificateName },
+                    { label: "Details", value: certificateDetails },
+                  ],
+                );
+              }}
+              rows={[
+                {
+                  label: "Certificate or program",
+                  control: (
+                    <input
+                      required
+                      value={certificateName}
+                      onChange={(event) => setCertificateName(event.target.value)}
+                      className={fieldClass}
+                      placeholder="Program or certificate name"
+                    />
+                  ),
+                },
+                {
+                  label: "Request",
+                  control: (
+                    <select
+                      required
+                      value={certificateRequest}
+                      onChange={(event) => setCertificateRequest(event.target.value)}
+                      className={fieldClass}
+                    >
+                      {CERTIFICATION_REQUESTS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  ),
+                },
+                {
+                  label: "Details",
+                  control: (
+                    <textarea
+                      required
+                      rows={4}
+                      value={certificateDetails}
+                      onChange={(event) => setCertificateDetails(event.target.value)}
+                      className={fieldClass}
+                    />
+                  ),
+                },
+              ]}
+            />
+
+            <AccountTable
+              user={user}
+              busy={busy === "account"}
+              notice={notices.account ?? null}
+              accountRequest={accountRequest}
+              accountDetails={accountDetails}
+              setAccountRequest={setAccountRequest}
+              setAccountDetails={setAccountDetails}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void sendTicket("account", "Account Support", "question", accountRequest, [
+                  { label: "Account email", value: user.email },
+                  { label: "Details", value: accountDetails },
+                ]);
+              }}
+            />
+
+            <RequestTable
+              id="contact"
+              title="Contact CAISBE"
+              description="Send a message to CAISBE. It is delivered as a support ticket."
+              busy={busy === "contact"}
+              signedIn
+              notice={notices.contact ?? null}
+              submitLabel="Send message"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void sendTicket("contact", "Contact CAISBE", "general", contactSubject, [
+                  { label: "Message", value: contactMessage },
+                ]);
+              }}
+              rows={[
+                {
+                  label: "Subject",
+                  control: (
+                    <input
+                      required
+                      minLength={2}
+                      value={contactSubject}
+                      onChange={(event) => setContactSubject(event.target.value)}
+                      className={fieldClass}
+                    />
+                  ),
+                },
+                {
+                  label: "Message",
+                  control: (
+                    <textarea
+                      required
+                      rows={4}
+                      value={contactMessage}
+                      onChange={(event) => setContactMessage(event.target.value)}
+                      className={fieldClass}
+                    />
+                  ),
+                },
+              ]}
+            />
+
+            <RequestTable
+              id="report"
+              title="Report a Problem"
+              description="Tell CAISBE about something that is not working."
+              busy={busy === "report"}
+              signedIn
+              notice={notices.report ?? null}
+              submitLabel="Submit report"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void sendTicket("report", "Report a Problem", "issue", reportWhat, [
+                  { label: "Where it happened", value: reportWhere },
+                  { label: "Details", value: reportDetails },
+                ]);
+              }}
+              rows={[
+                {
+                  label: "Where it happened",
+                  control: (
+                    <input
+                      required
+                      value={reportWhere}
+                      onChange={(event) => setReportWhere(event.target.value)}
+                      className={fieldClass}
+                      placeholder="Page, course, or exam"
+                    />
+                  ),
+                },
+                {
+                  label: "What went wrong",
+                  control: (
+                    <input
+                      required
+                      minLength={2}
+                      value={reportWhat}
+                      onChange={(event) => setReportWhat(event.target.value)}
+                      className={fieldClass}
+                    />
+                  ),
+                },
+                {
+                  label: "Details",
+                  control: (
+                    <textarea
+                      required
+                      rows={4}
+                      value={reportDetails}
+                      onChange={(event) => setReportDetails(event.target.value)}
+                      className={fieldClass}
+                    />
+                  ),
+                },
+              ]}
+            />
+
+            <section className="overflow-hidden rounded-[20px] bg-white shadow-hopewell">
+              <div className="border-b border-ifma-border-light px-6 py-4">
+                <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
+                  Your requests
+                </h2>
+                <p className="mt-1 text-sm text-caisbe-muted">Tickets you have already sent to CAISBE.</p>
+              </div>
+              {threads.length === 0 ? (
+                <p className="px-5 py-8 text-caisbe-muted">No requests yet.</p>
+              ) : (
+                <>
+                  <ul className="divide-y divide-ifma-border-light md:hidden">
                     {threads.map((thread) => (
-                      <tr key={thread.id} className="border-t border-ifma-border-light">
-                        <td className="break-words px-5 py-4 font-medium text-caisbe-text">{thread.subject}</td>
-                        <td className="whitespace-nowrap px-5 py-4 capitalize text-caisbe-muted">
-                          {thread.status.replaceAll("_", " ")}
-                        </td>
-                        <td className="whitespace-nowrap px-5 py-4">
+                      <li key={thread.id} className="px-5 py-4">
+                        <p className="break-words font-medium text-caisbe-text">{thread.subject}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                          <span className="capitalize text-caisbe-muted">
+                            {thread.status.replaceAll("_", " ")}
+                          </span>
                           <a
                             href={portalUrl(`/messages?thread=${thread.id}`)}
                             className="font-semibold text-caisbe-red hover:underline"
                           >
                             {ticketNumber(thread.id)}
                           </a>
-                        </td>
-                      </tr>
+                        </div>
+                      </li>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </section>
+                  </ul>
+                  <div className="hidden md:block">
+                    <table className="w-full table-fixed text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-ifma-border-light">
+                          {["Request", "Status", "Number"].map((header) => (
+                            <th
+                              key={header}
+                              className={`px-5 py-3 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark ${header === "Request" ? "" : "w-40 whitespace-nowrap"}`}
+                            >
+                              {header}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {threads.map((thread) => (
+                          <tr key={thread.id} className="border-t border-ifma-border-light">
+                            <td className="break-words px-5 py-4 font-medium text-caisbe-text">
+                              {thread.subject}
+                            </td>
+                            <td className="whitespace-nowrap px-5 py-4 capitalize text-caisbe-muted">
+                              {thread.status.replaceAll("_", " ")}
+                            </td>
+                            <td className="whitespace-nowrap px-5 py-4">
+                              <a
+                                href={portalUrl(`/messages?thread=${thread.id}`)}
+                                className="font-semibold text-caisbe-red hover:underline"
+                              >
+                                {ticketNumber(thread.id)}
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </section>
+          </>
+        )}
       </div>
     </>
   );

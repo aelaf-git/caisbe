@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   );
 }
 
-const lastUpdated = "June 1, 2025";
+const lastUpdated = "June 1, 2026";
 
 const sections: {
   number: number;

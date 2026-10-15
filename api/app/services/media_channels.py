@@ -27,8 +27,9 @@ PODCAST_HOST_SUFFIXES = (
     "youtube.com",
 )
 
-CHANNEL_CATEGORIES = frozenset({"hero", "magazine", "youtube", "podcast", "blog"})
+CHANNEL_CATEGORIES = frozenset({"hero", "magazine", "forms", "youtube", "podcast", "blog"})
 LINK_CATEGORIES = frozenset({"youtube", "podcast", "blog"})
+FILE_CATEGORIES = frozenset({"hero", "magazine", "forms"})
 
 _YOUTUBE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,32}$")
 
@@ -91,4 +92,6 @@ def media_public_path(category: str) -> str:
         return "/resources/blog"
     if cat == "magazine":
         return "/resources/magazine"
+    if cat == "forms":
+        return "/resources/forms-and-guides"
     return "/resources/media"
