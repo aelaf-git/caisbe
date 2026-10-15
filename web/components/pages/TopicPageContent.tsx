@@ -6,6 +6,8 @@ import {
   heroNoteClassName,
 } from "@/components/pages/ContentPage";
 import type { TopicPage } from "@/lib/data/site-pages";
+import { translateLabel } from "@/lib/i18n";
+import { getServerLocale } from "@/lib/i18n/server";
 
 type TopicPageContentProps = {
   eyebrow: string;
@@ -14,20 +16,21 @@ type TopicPageContentProps = {
   indexLabel: string;
 };
 
-export default function TopicPageContent({
+export default async function TopicPageContent({
   eyebrow,
   page,
   indexHref,
   indexLabel,
 }: TopicPageContentProps) {
+  const locale = await getServerLocale();
   return (
     <>
       <PageHero
-        eyebrow={eyebrow}
+        eyebrow={translateLabel(eyebrow, locale)}
         title={page.title}
         lead={page.lead}
         backHref={indexHref}
-        backLabel={indexLabel}
+        backLabel={translateLabel(indexLabel, locale)}
         actions={
           page.ctaLabel && page.ctaHref ? (
             <ButtonLink href={page.ctaHref} variant="primary">
@@ -53,10 +56,10 @@ export default function TopicPageContent({
               <FeatureList items={section.items} />
             </div>
           ) : null}
-          {section.title === "Connect with leadership" ? (
+          {page.slug === "board-of-directors" && section === page.sections[page.sections.length - 1] ? (
             <div className="mt-6">
               <ButtonLink href="/contact" variant="primary">
-                Contact us
+                {locale === "fr" ? "Nous joindre" : "Contact us"}
               </ButtonLink>
             </div>
           ) : null}

@@ -191,6 +191,7 @@ def nav_items(db: Session) -> list[SiteNavItem]:
         parent = by_id.get(page.parent_id) if page.parent_id else None
         items.append(
             SiteNavItem(
+                id=page.id,
                 menu_label=page.menu_label,
                 path=page.path,
                 parent_path=parent.path if parent else None,

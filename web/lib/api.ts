@@ -1,3 +1,5 @@
+import { normalizeLocale, type Locale } from "@/lib/i18n";
+
 export type MediaAsset = {
   id: number;
   title: string;
@@ -126,15 +128,66 @@ function apiBaseForFetch(): string {
   return API_BASE;
 }
 
+/** Public content endpoints that accept `?lang=` and fall back to English. */
+const LOCALIZED_PATHS = [
+  "/site-pages/by-path",
+  "/site-pages/nav",
+  "/news",
+  "/events",
+  "/jobs",
+  "/seminars",
+  "/testimonials",
+  "/media",
+  "/courses",
+];
+
+function isLocalizedPath(path: string): boolean {
+  const pathname = path.split("?")[0];
+  return LOCALIZED_PATHS.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+let serverLocaleResolver: (() => Promise<Locale>) | null = null;
+
+/**
+ * Registered once by the root layout so server-side fetches can read the locale cookie
+ * without this (client-reachable) module importing `next/headers`.
+ */
+export function registerServerLocaleResolver(resolver: () => Promise<Locale>) {
+  serverLocaleResolver = resolver;
+}
+
+export async function requestLocale(): Promise<Locale> {
+  if (typeof window !== "undefined") {
+    return normalizeLocale(document.documentElement.lang);
+  }
+  try {
+    return serverLocaleResolver ? await serverLocaleResolver() : "en";
+  } catch {
+    return "en";
+  }
+}
+
+/** Append `lang=fr` for localized public endpoints when the visitor reads French. */
+async function withLocale(path: string, locale?: Locale): Promise<string> {
+  if (!isLocalizedPath(path) || /[?&]lang=/.test(path)) return path;
+  const active = locale ?? (await requestLocale());
+  if (active !== "fr") return path;
+  return `${path}${path.includes("?") ? "&" : "?"}lang=fr`;
+}
+
 export async function apiFetch<T>(
   path: string,
-  init?: RequestInit,
+  init?: RequestInit & { locale?: Locale },
 ): Promise<T> {
-  const response = await fetch(`${apiBaseForFetch()}${path}`, {
-    ...init,
+  const { locale, ...fetchInit } = init ?? {};
+  const localizedPath = await withLocale(path, locale);
+  const response = await fetch(`${apiBaseForFetch()}${localizedPath}`, {
+    ...fetchInit,
     headers: {
       "Content-Type": "application/json",
-      ...init?.headers,
+      ...fetchInit.headers,
     },
     cache: "no-store",
   });
@@ -165,76 +218,93 @@ export async function apiFetch<T>(
 
 export async function fetchPublishedMedia(
   category: string,
-  options?: { featured?: boolean },
+  options?: { featured?: boolean; locale?: Locale },
 ): Promise<MediaAsset[]> {
   const params = new URLSearchParams({ category });
   if (options?.featured) params.set("featured", "true");
-  return apiFetch<MediaAsset[]>(`/media?${params.toString()}`);
+  return apiFetch<MediaAsset[]>(`/media?${params.toString()}`, { locale: options?.locale });
 }
 
 export async function fetchPublishedMagazines(options?: {
   featured?: boolean;
+  locale?: Locale;
 }): Promise<MediaAsset[]> {
   return fetchPublishedMedia("magazine", options);
 }
 
 export async function fetchPublishedForms(options?: {
   featured?: boolean;
+  locale?: Locale;
 }): Promise<MediaAsset[]> {
   return fetchPublishedMedia("forms", options);
 }
 
-export async function fetchPublishedMediaAsset(id: number): Promise<MediaAsset> {
-  return apiFetch<MediaAsset>(`/media/${id}`);
+export async function fetchPublishedMediaAsset(
+  id: number,
+  locale?: Locale,
+): Promise<MediaAsset> {
+  return apiFetch<MediaAsset>(`/media/${id}`, { locale });
 }
 
 export async function fetchPublishedEvents(options?: {
   featured?: boolean;
   eventType?: string;
+  locale?: Locale;
 }): Promise<IndustryEvent[]> {
   const params = new URLSearchParams();
   if (options?.featured) params.set("featured", "true");
   if (options?.eventType) params.set("event_type", options.eventType);
   const query = params.toString();
-  return apiFetch<IndustryEvent[]>(`/events${query ? `?${query}` : ""}`);
+  return apiFetch<IndustryEvent[]>(`/events${query ? `?${query}` : ""}`, {
+    locale: options?.locale,
+  });
 }
 
 export async function fetchActiveJobs(options?: {
   featured?: boolean;
+  locale?: Locale;
 }): Promise<JobPosting[]> {
   const params = new URLSearchParams();
   if (options?.featured) params.set("featured", "true");
   const query = params.toString();
-  return apiFetch<JobPosting[]>(`/jobs${query ? `?${query}` : ""}`);
+  return apiFetch<JobPosting[]>(`/jobs${query ? `?${query}` : ""}`, {
+    locale: options?.locale,
+  });
 }
 
-export async function fetchPublishedSeminars(): Promise<Seminar[]> {
-  return apiFetch<Seminar[]>("/seminars");
+export async function fetchPublishedSeminars(locale?: Locale): Promise<Seminar[]> {
+  return apiFetch<Seminar[]>("/seminars", { locale });
 }
 
-export async function fetchPublishedTestimonials(): Promise<Testimonial[]> {
-  return apiFetch<Testimonial[]>("/testimonials");
+export async function fetchPublishedTestimonials(locale?: Locale): Promise<Testimonial[]> {
+  return apiFetch<Testimonial[]>("/testimonials", { locale });
 }
 
 export async function fetchPublishedNews(options?: {
   featured?: boolean;
+  locale?: Locale;
 }): Promise<NewsPost[]> {
   const params = new URLSearchParams();
   if (options?.featured) params.set("featured", "true");
   const query = params.toString();
-  return apiFetch<NewsPost[]>(`/news${query ? `?${query}` : ""}`);
+  return apiFetch<NewsPost[]>(`/news${query ? `?${query}` : ""}`, {
+    locale: options?.locale,
+  });
 }
 
-export async function fetchPublishedNewsBySlug(slug: string): Promise<NewsPost> {
-  return apiFetch<NewsPost>(`/news/${encodeURIComponent(slug)}`);
+export async function fetchPublishedNewsBySlug(
+  slug: string,
+  locale?: Locale,
+): Promise<NewsPost> {
+  return apiFetch<NewsPost>(`/news/${encodeURIComponent(slug)}`, { locale });
 }
 
 export async function fetchHeroCarousel(): Promise<HeroCarousel> {
   return apiFetch<HeroCarousel>("/hero");
 }
 
-export async function fetchPublishedCourses(): Promise<Course[]> {
-  return apiFetch<Course[]>("/courses");
+export async function fetchPublishedCourses(locale?: Locale): Promise<Course[]> {
+  return apiFetch<Course[]>("/courses", { locale });
 }
 
 export function courseProgramPath(slug: string) {

@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Alert from "@/components/ui/Alert";
 import Button from "@/components/ui/Button";
+import FrenchTranslationPanel from "@/components/translations/FrenchTranslationPanel";
 import Card from "@/components/ui/Card";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import { useConfirmDialog } from "@/components/ui/useConfirmDialog";
@@ -456,6 +457,21 @@ export default function PagesEditor() {
                     ) : null}
                   </div>
                 </form>
+                <div className="mt-6">
+                  <FrenchTranslationPanel
+                    entityType="site_page"
+                    entityId={typeof selectedId === "number" ? selectedId : null}
+                    english={(pages.find((item) => item.id === selectedId) as unknown as Record<string, unknown>) ?? {}}
+                    fields={[
+                      { name: "title", label: "Title" },
+                      { name: "menu_label", label: "Menu label" },
+                      { name: "description", label: "Description", kind: "textarea", rows: 3 },
+                      { name: "lead", label: "Lead", kind: "textarea", rows: 3 },
+                      { name: "sections", label: "Sections", kind: "sections" },
+                      { name: "cta_label", label: "Button label" },
+                    ]}
+                  />
+                </div>
               </Card>
             ) : (
               <Card>

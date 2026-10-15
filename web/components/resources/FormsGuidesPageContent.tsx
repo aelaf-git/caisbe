@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { PageHero, sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { fetchPublishedForms, type MediaAsset } from "@/lib/api";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { IconGlyph } from "@/components/ui/IconAction";
 
 function fileLabelFromUrl(url: string | null): string {
-  if (!url) return "Download";
+  if (!url) return "";
   const path = url.split("?")[0] ?? url;
-  const name = path.split("/").pop() ?? "Download";
+  const name = path.split("/").pop() ?? "";
   try {
     return decodeURIComponent(name);
   } catch {
@@ -16,19 +18,27 @@ function fileLabelFromUrl(url: string | null): string {
 }
 
 export default function FormsGuidesPageContent({
-  title = "Forms and Guides",
-  lead = "Download CAISBE forms, templates, and practical guides for members, chapters, and facility professionals.",
+  title,
+  lead,
 }: {
   title?: string;
   lead?: string;
 }) {
+  const locale = useLocale();
+  const fr = locale === "fr";
+  title = title ?? (fr ? "Formulaires et guides" : "Forms and Guides");
+  lead =
+    lead ??
+    (fr
+      ? "Téléchargez les formulaires, les modèles et les guides pratiques du CAISBE pour les membres, les sections et les professionnels des installations."
+      : "Download CAISBE forms, templates, and practical guides for members, chapters, and facility professionals.");
   const [items, setItems] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        setItems(await fetchPublishedForms());
+        setItems(await fetchPublishedForms({ locale }));
       } catch {
         setItems([]);
       } finally {
@@ -36,22 +46,24 @@ export default function FormsGuidesPageContent({
       }
     }
     void load();
-  }, []);
+  }, [locale]);
 
   return (
     <>
-      <PageHero eyebrow="Resources" title={title} lead={lead} />
+      <PageHero eyebrow={fr ? "Ressources" : "Resources"} title={title} lead={lead} />
 
       <section className={`bg-transparent ${sectionSpacingClassName}`}>
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
-            Available downloads
+            {fr ? "Téléchargements disponibles" : "Available downloads"}
           </h2>
           {loading ? (
-            <p className="mt-6 text-sm text-caisbe-muted">Loading…</p>
+            <p className="mt-6 text-sm text-caisbe-muted">{fr ? "Chargement…" : "Loading…"}</p>
           ) : items.length === 0 ? (
             <p className="mt-6 text-sm text-caisbe-muted">
-              Forms and guides will appear here once published in the admin media library.
+              {fr
+                ? "Les formulaires et les guides apparaîtront ici dès leur publication."
+                : "Forms and guides will appear here once published in the admin media library."}
             </p>
           ) : (
             <ul className="mt-8 divide-y divide-ifma-border-light overflow-hidden rounded-[20px] bg-white shadow-hopewell">
@@ -79,9 +91,11 @@ export default function FormsGuidesPageContent({
                       target="_blank"
                       rel="noopener noreferrer"
                       download
-                      className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+                      title={fr ? "Télécharger" : "Download"}
+                      aria-label={`${fr ? "Télécharger" : "Download"} ${item.title}`}
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-caisbe-red text-white hover:bg-caisbe-red-dark"
                     >
-                      Download
+                      <IconGlyph icon="download" />
                     </a>
                   ) : null}
                 </li>

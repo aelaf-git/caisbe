@@ -3,25 +3,28 @@
 import { useEffect, useState } from "react";
 import { PageHero, sectionSpacingClassName } from "@/components/pages/ContentPage";
 import { fetchPublishedMagazines, type MediaAsset } from "@/lib/api";
-import { mediaContent } from "@/lib/data/resources";
+import { getMediaItem } from "@/lib/data/resources";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 export default function MagazinePageContent({
   title,
   lead,
-  sectionTitle = "Latest issues",
+  sectionTitle,
 }: {
   title?: string;
   lead?: string;
   sectionTitle?: string;
 }) {
-  const item = mediaContent.items.find((row) => row.slug === "magazine");
+  const locale = useLocale();
+  const fr = locale === "fr";
+  const item = getMediaItem("magazine", locale);
   const [issues, setIssues] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        setIssues(await fetchPublishedMagazines());
+        setIssues(await fetchPublishedMagazines({ locale }));
       } catch {
         setIssues([]);
       } finally {
@@ -29,14 +32,14 @@ export default function MagazinePageContent({
       }
     }
     void load();
-  }, []);
+  }, [locale]);
 
   if (!item) return null;
 
   return (
     <>
       <PageHero
-        eyebrow="Resources"
+        eyebrow={fr ? "Ressources" : "Resources"}
         title={title?.trim() || item.title}
         lead={lead?.trim() || item.lead}
       />
@@ -44,13 +47,15 @@ export default function MagazinePageContent({
       <section className={`bg-transparent ${sectionSpacingClassName}`}>
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
-            {sectionTitle}
+            {sectionTitle ?? (fr ? "Derniers numéros" : "Latest issues")}
           </h2>
           {loading ? (
-            <p className="mt-6 text-sm text-caisbe-muted">Loading…</p>
+            <p className="mt-6 text-sm text-caisbe-muted">{fr ? "Chargement…" : "Loading…"}</p>
           ) : issues.length === 0 ? (
             <p className="mt-6 text-sm text-caisbe-muted">
-              Magazine issues will appear here once published in the admin media library.
+              {fr
+                ? "Les numéros du magazine apparaîtront ici dès leur publication."
+                : "Magazine issues will appear here once published in the admin media library."}
             </p>
           ) : (
             <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -69,7 +74,7 @@ export default function MagazinePageContent({
                   ) : (
                     <div className="flex aspect-[4/3] items-center justify-center bg-[#fafaf8]">
                       <span className="text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
-                        Magazine
+                        {fr ? "Magazine" : "Magazine"}
                       </span>
                     </div>
                   )}
@@ -88,7 +93,7 @@ export default function MagazinePageContent({
                       rel="noopener noreferrer"
                       className="mt-6 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
                     >
-                      Download / read
+                      {fr ? "Télécharger / lire" : "Download / read"}
                     </a>
                   </div>
                 </article>

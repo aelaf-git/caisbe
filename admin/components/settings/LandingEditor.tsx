@@ -7,6 +7,7 @@ import Card from "@/components/ui/Card";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import { useNoticeDialog } from "@/components/ui/useNoticeDialog";
 import { apiFetch, ApiError } from "@/lib/auth";
+import { IconActionButton } from "@/components/ui/IconAction";
 
 type CardItem = { title: string; description: string };
 type OfficeItem = { region: string; address: string; map_query: string };
@@ -254,13 +255,13 @@ export default function LandingEditor() {
               />
             </FormField>
             {home.stats.length > 1 ? (
-              <button
-                type="button"
-                className="pb-2 text-left text-sm font-semibold text-caisbe-red sm:text-center"
+              <IconActionButton
+                icon="trash"
+                tone="danger"
+                label="Remove stat"
+                className="mb-1"
                 onClick={() => patch({ stats: home.stats.filter((_, itemIndex) => itemIndex !== index) })}
-              >
-                Remove
-              </button>
+              />
             ) : (
               <span className="hidden sm:block" aria-hidden />
             )}
@@ -446,13 +447,12 @@ function CardList({
               )
             }
           />
-          <button
-            type="button"
-            className="text-sm font-semibold text-caisbe-red"
+          <IconActionButton
+            icon="trash"
+            tone="danger"
+            label="Remove item"
             onClick={() => onChange(items.filter((_, rowIndex) => rowIndex !== index))}
-          >
-            Remove
-          </button>
+          />
         </div>
       ))}
     </div>

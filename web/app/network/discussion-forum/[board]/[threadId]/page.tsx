@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import DiscussionThread from "@/components/network/DiscussionThread";
+import { getServerT } from "@/lib/i18n/server";
 
 type Props = { params: Promise<{ board: string; threadId: string }> };
 
 export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerT();
   return {
-    title: "Discussion | CAISBE",
-    description: "Read a discussion on the CAISBE forum.",
+    title: t("Discussion | CAISBE", "Discussion | CAISBE"),
+    description: t("Read a discussion on the CAISBE forum.", "Lisez une discussion du forum du CAISBE."),
   };
 }
 

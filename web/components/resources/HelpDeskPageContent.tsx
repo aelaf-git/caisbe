@@ -5,6 +5,7 @@ import ButtonLink from "@/components/ui/ButtonLink";
 import { ContentSection, PageHero } from "@/components/pages/ContentPage";
 import { helpDeskContent } from "@/lib/data/helpDesk";
 import { faqs } from "@/lib/data/home";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 function ChevronIcon() {
   return (
@@ -32,7 +33,7 @@ function matchesQuery(question: string, answer: string[], query: string) {
 export default function HelpDeskPageContent({
   title = helpDeskContent.title,
   lead = helpDeskContent.lead,
-  ctaLabel = helpDeskContent.contactLabel,
+  ctaLabel,
   ctaHref = helpDeskContent.contactHref,
   faqs: faqItems = faqs,
 }: {
@@ -42,6 +43,8 @@ export default function HelpDeskPageContent({
   ctaHref?: string;
   faqs?: { question: string; answer: string[] }[];
 }) {
+  const t = useT();
+  ctaLabel = ctaLabel ?? t(helpDeskContent.contactLabel, "Ouvrir un billet de soutien");
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query.trim());
 
@@ -53,7 +56,7 @@ export default function HelpDeskPageContent({
   return (
     <>
       <PageHero
-        eyebrow={helpDeskContent.eyebrow}
+        eyebrow={t(helpDeskContent.eyebrow, "Ressources")}
         title={title}
         lead={lead}
         actions={
@@ -65,7 +68,7 @@ export default function HelpDeskPageContent({
 
       <ContentSection>
         <label className="block max-w-2xl">
-          <span className="sr-only">Search FAQs</span>
+          <span className="sr-only">{t("Search FAQs", "Rechercher dans la FAQ")}</span>
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-caisbe-muted">
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -82,22 +85,26 @@ export default function HelpDeskPageContent({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={helpDeskContent.searchPlaceholder}
+              placeholder={t(helpDeskContent.searchPlaceholder, "Rechercher dans la FAQ…")}
               className="w-full rounded-full border border-ifma-border bg-white py-3.5 pl-12 pr-5 text-base text-caisbe-text shadow-hopewell outline-none transition placeholder:text-caisbe-muted/70 focus:border-caisbe-red focus:ring-2 focus:ring-caisbe-red/20"
             />
           </div>
         </label>
 
         <p className="mt-4 text-sm font-medium text-caisbe-muted">
-          {filtered.length} {filtered.length === 1 ? "result" : "results"}
-          {deferredQuery ? ` for “${deferredQuery}”` : ""}
+          {filtered.length}{" "}
+          {filtered.length === 1 ? t("result", "résultat") : t("results", "résultats")}
+          {deferredQuery ? ` ${t("for", "pour")} « ${deferredQuery} »` : ""}
         </p>
 
         <div className="mt-6 grid gap-4">
           {filtered.length === 0 ? (
             <div className="rounded-[20px] bg-white px-5 py-8 shadow-hopewell">
               <p className="text-base leading-8 text-caisbe-text md:text-lg">
-                {helpDeskContent.emptyResults}
+                {t(
+                  helpDeskContent.emptyResults,
+                  "Aucune question de la FAQ ne correspond à votre recherche. Essayez un autre mot-clé ou ouvrez un billet de soutien.",
+                )}
               </p>
               <div className="mt-6">
                 <ButtonLink href={ctaHref} variant="primary">
@@ -144,9 +151,12 @@ export default function HelpDeskPageContent({
           )}
         </div>
         <p className="mt-8 text-sm leading-6 text-caisbe-muted">
-          Need help with a course, certificate, account, or a technical problem?{" "}
+          {t(
+            "Need help with a course, certificate, account, or a technical problem?",
+            "Besoin d’aide pour un cours, un certificat, votre compte ou un problème technique?",
+          )}{" "}
           <a href="/help" className="font-semibold text-caisbe-red hover:underline">
-            Open Help and Support
+            {t("Open Help and Support", "Ouvrir Aide et soutien")}
           </a>
           .
         </p>

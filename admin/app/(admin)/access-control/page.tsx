@@ -10,6 +10,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { fieldClassName } from "@/components/ui/FormField";
 import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
+import { IconActionButton } from "@/components/ui/IconAction";
 
 type AccessValue = "allowed" | "restricted";
 
@@ -710,14 +711,13 @@ function ActivationTable({
                 </Badge>
               </td>
               <td className="px-4 py-4 text-right sm:px-6">
-                <button
-                  type="button"
+                <IconActionButton
+                  icon={user.suspended ? "activate" : "suspend"}
+                  tone={user.suspended ? "brand" : "danger"}
+                  label={user.suspended ? `Activate ${user.email}` : `Suspend ${user.email}`}
                   disabled={busy === `user-${user.id}`}
                   onClick={() => onToggle(user)}
-                  className="inline-flex h-9 items-center rounded-full border-2 border-caisbe-red px-4 text-sm font-bold text-caisbe-red hover:bg-caisbe-red hover:text-white disabled:opacity-60"
-                >
-                  {busy === `user-${user.id}` ? "Saving…" : user.suspended ? "Activate" : "Suspend"}
-                </button>
+                />
               </td>
             </tr>
           ))}

@@ -3,18 +3,28 @@
 import { useEffect, useState } from "react";
 import { ContentCard, ContentSection } from "@/components/pages/ContentPage";
 import { fetchPublishedEvents, type IndustryEvent } from "@/lib/api";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
+import type { Locale } from "@/lib/i18n";
 
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  calendar: "Event Calendar",
-  expo: "Africa–Canada Built Environment Expo & Forum",
-  conferences: "Conferences and Webinars",
+const EVENT_TYPE_LABELS: Record<Locale, Record<string, string>> = {
+  en: {
+    calendar: "Event Calendar",
+    expo: "Africa–Canada Built Environment Expo & Forum",
+    conferences: "Conferences and Webinars",
+  },
+  fr: {
+    calendar: "Calendrier des événements",
+    expo: "Exposition et forum Afrique–Canada sur l’environnement bâti",
+    conferences: "Conférences et webinaires",
+  },
 };
 
-function eventTypeLabel(raw: string) {
-  return EVENT_TYPE_LABELS[raw] ?? raw;
+function eventTypeLabel(raw: string, locale: Locale) {
+  return EVENT_TYPE_LABELS[locale][raw] ?? raw;
 }
 
-function formatEventRange(startsOn: string, endsOn: string | null) {
+function formatEventRange(startsOn: string, endsOn: string | null, locale: Locale) {
+  const tag = locale === "fr" ? "fr-CA" : "en-CA";
   const start = new Date(startsOn);
   const end = endsOn ? new Date(endsOn) : null;
   const opts: Intl.DateTimeFormatOptions = {
@@ -23,12 +33,14 @@ function formatEventRange(startsOn: string, endsOn: string | null) {
     day: "numeric",
   };
   if (!end || start.toDateString() === end.toDateString()) {
-    return start.toLocaleDateString("en-CA", opts);
+    return start.toLocaleDateString(tag, opts);
   }
-  return `${start.toLocaleDateString("en-CA", opts)} – ${end.toLocaleDateString("en-CA", opts)}`;
+  return `${start.toLocaleDateString(tag, opts)} – ${end.toLocaleDateString(tag, opts)}`;
 }
 
 export default function EventCalendarList() {
+  const locale = useLocale();
+  const fr = locale === "fr";
   const [events, setEvents] = useState<IndustryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,10 +49,10 @@ export default function EventCalendarList() {
     let cancelled = false;
     async function load() {
       try {
-        const data = await fetchPublishedEvents();
+        const data = await fetchPublishedEvents({ locale });
         if (!cancelled) setEvents(data);
       } catch {
-        if (!cancelled) setError("Unable to load the event calendar right now.");
+        if (!cancelled) setError(fr ? "Impossible de charger le calendrier des événements pour le moment." : "Unable to load the event calendar right now.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -49,22 +61,29 @@ export default function EventCalendarList() {
     return () => {
       cancelled = true;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale]);
 
   return (
     <ContentSection
-      title="Facility management events & exhibitions"
-      description="Industry conferences, expos, and forums curated and published by CAISBE for members and the wider FM community."
+      title={fr ? "Événements et expositions en gestion des installations" : "Facility management events & exhibitions"}
+      description={
+        fr
+          ? "Conférences, expositions et forums de l’industrie sélectionnés et publiés par le CAISBE pour ses membres et l’ensemble de la communauté de la gestion des installations."
+          : "Industry conferences, expos, and forums curated and published by CAISBE for members and the wider FM community."
+      }
       wide
     >
       {loading ? (
-        <p className="text-sm text-caisbe-muted">Loading events…</p>
+        <p className="text-sm text-caisbe-muted">{fr ? "Chargement des événements…" : "Loading events…"}</p>
       ) : null}
       {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
       {!loading && !error && events.length === 0 ? (
         <div className="rounded-lg border border-dashed border-ifma-border bg-[#fafafa] px-6 py-12 text-center">
           <p className="text-base leading-7 text-caisbe-muted">
-            No published events yet. Check back soon for updates from CAISBE.
+            {fr
+              ? "Aucun événement publié pour le moment. Revenez bientôt pour les nouveautés du CAISBE."
+              : "No published events yet. Check back soon for updates from CAISBE."}
           </p>
         </div>
       ) : null}
@@ -74,8 +93,8 @@ export default function EventCalendarList() {
             <ContentCard
               key={event.id}
               title={event.title}
-              meta={`${formatEventRange(event.starts_on, event.ends_on)} · ${eventTypeLabel(event.event_type)}${
-                event.featured ? " · Featured" : ""
+              meta={`${formatEventRange(event.starts_on, event.ends_on, locale)} · ${eventTypeLabel(event.event_type, locale)}${
+                event.featured ? (fr ? " · En vedette" : " · Featured") : ""
               }`}
               description={event.summary ?? undefined}
               style={{ animationDelay: `${index * 50}ms` }}
@@ -84,7 +103,7 @@ export default function EventCalendarList() {
                 {event.location ? (
                   <div>
                     <dt className="inline font-semibold text-caisbe-text">
-                      Location:{" "}
+                      {fr ? "Lieu : " : "Location: "}
                     </dt>
                     <dd className="inline">{event.location}</dd>
                   </div>
@@ -92,7 +111,7 @@ export default function EventCalendarList() {
                 {event.region ? (
                   <div>
                     <dt className="inline font-semibold text-caisbe-text">
-                      Region:{" "}
+                      {fr ? "Région : " : "Region: "}
                     </dt>
                     <dd className="inline">{event.region}</dd>
                   </div>
@@ -100,7 +119,7 @@ export default function EventCalendarList() {
                 {event.source_name ? (
                   <div>
                     <dt className="inline font-semibold text-caisbe-text">
-                      Source:{" "}
+                      {fr ? "Source : " : "Source: "}
                     </dt>
                     <dd className="inline">
                       {event.source_url ? (
@@ -129,7 +148,7 @@ export default function EventCalendarList() {
                 {event.cpd_hours != null ? (
                   <div>
                     <dt className="inline font-semibold text-caisbe-text">
-                      CPD hours:{" "}
+                      {fr ? "Heures de DPC : " : "CPD hours: "}
                     </dt>
                     <dd className="inline">{event.cpd_hours}</dd>
                   </div>
@@ -142,7 +161,7 @@ export default function EventCalendarList() {
                   rel="noopener noreferrer"
                   className="mt-4 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red transition-colors hover:text-caisbe-red-dark"
                 >
-                  View industry report
+                  {fr ? "Voir le rapport de l’industrie" : "View industry report"}
                 </a>
               ) : null}
             </ContentCard>

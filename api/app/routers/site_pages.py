@@ -9,6 +9,7 @@ from app.db import get_db
 from app.models import SitePage, User
 from app.schemas.site_pages import HomeLandingIn, HomeLandingOut, SiteNavOut, SitePageIn, SitePageOut
 from app.security.auth import require_admin
+from app.services.translations import localize_many, localize_one
 from app.services.site_pages import (
     delete_page,
     home_for_admin,
@@ -24,16 +25,20 @@ router = APIRouter(tags=["site-pages"])
 
 
 @router.get("/site-pages/nav", response_model=SiteNavOut)
-def public_site_nav(db: Session = Depends(get_db)) -> SiteNavOut:
-    return SiteNavOut(items=nav_items(db))
+def public_site_nav(
+    lang: str = Query(default="en", max_length=12),
+    db: Session = Depends(get_db),
+) -> SiteNavOut:
+    return SiteNavOut(items=localize_many(db, "site_page", nav_items(db), lang))
 
 
 @router.get("/site-pages/by-path", response_model=SitePageOut)
 def public_site_page(
     path: str = Query(min_length=1, max_length=255),
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> SitePageOut:
-    return published_page(db, path)
+    return localize_one(db, "site_page", published_page(db, path), lang)
 
 
 @router.get("/site-pages/home", response_model=HomeLandingOut)

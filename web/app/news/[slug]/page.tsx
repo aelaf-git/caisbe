@@ -7,6 +7,7 @@ import {
 } from "@/components/pages/ContentPage";
 import { fetchPublishedNewsBySlug } from "@/lib/api";
 import { formatNewsDate } from "@/lib/data/news";
+import { getServerT } from "@/lib/i18n/server";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -14,19 +15,21 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const { t } = await getServerT();
   try {
     const post = await fetchPublishedNewsBySlug(slug);
     return {
-      title: `${post.title} | CAISBE News`,
+      title: `${post.title} | ${t("CAISBE News", "Nouvelles du CAISBE")}`,
       description: post.short_description ?? post.title,
     };
   } catch {
-    return { title: "News | CAISBE" };
+    return { title: t("News | CAISBE", "Nouvelles | CAISBE") };
   }
 }
 
 export default async function NewsDetailPage({ params }: PageProps) {
   const { slug } = await params;
+  const { t, locale } = await getServerT();
   let post;
   try {
     post = await fetchPublishedNewsBySlug(slug);
@@ -37,29 +40,29 @@ export default async function NewsDetailPage({ params }: PageProps) {
   return (
     <>
       <PageHero
-        eyebrow="News & Announcements"
+        eyebrow={t("News & Announcements", "Nouvelles et annonces")}
         title={post.title}
         lead={post.short_description ?? undefined}
         actions={
           <>
             {post.external_url ? (
               <ButtonLink href={post.external_url} variant="primary">
-                Open article
+                {t("Open article", "Ouvrir l’article")}
               </ButtonLink>
             ) : null}
             <ButtonLink href="/news" variant={post.external_url ? "secondary" : "primary"}>
-              All News
+              {t("All News", "Toutes les nouvelles")}
             </ButtonLink>
             {!post.external_url ? (
               <ButtonLink href="/contact" variant="secondary">
-                Contact Us
+                {t("Contact Us", "Nous joindre")}
               </ButtonLink>
             ) : null}
           </>
         }
       >
         <p className="mt-6 text-sm font-semibold text-caisbe-muted">
-          {formatNewsDate(post.posted_on)}
+          {formatNewsDate(post.posted_on, locale)}
           {post.tag ? ` · ${post.tag}` : ""}
         </p>
       </PageHero>
@@ -76,7 +79,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
       ) : null}
 
       {post.long_description ? (
-        <ContentSection title="Announcement" wide>
+        <ContentSection title={t("Announcement", "Annonce")} wide>
           <div className="max-w-3xl whitespace-pre-wrap text-base leading-7 text-caisbe-text">
             {post.long_description}
           </div>
@@ -84,7 +87,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
       ) : null}
 
       {post.image_urls?.length ? (
-        <ContentSection title="Gallery" wide>
+        <ContentSection title={t("Gallery", "Galerie")} wide>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {post.image_urls.map((url) => (
               // eslint-disable-next-line @next/next/no-img-element
@@ -100,7 +103,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
       ) : null}
 
       {post.video_urls?.length ? (
-        <ContentSection title="Videos" wide>
+        <ContentSection title={t("Videos", "Vidéos")} wide>
           <div className="grid gap-6 md:grid-cols-2">
             {post.video_urls.map((url) => (
               <video
@@ -110,7 +113,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
                 className="aspect-video w-full bg-black"
                 src={url}
               >
-                <a href={url}>Download video</a>
+                <a href={url}>{t("Download video", "Télécharger la vidéo")}</a>
               </video>
             ))}
           </div>

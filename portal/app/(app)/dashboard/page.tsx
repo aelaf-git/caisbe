@@ -10,6 +10,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError, type Enrollment } from "@/lib/auth";
 import { formatDate, membershipTypeLabel } from "@/lib/commerce";
 import type { Certificate } from "@/lib/lms";
+import { IconActionLink } from "@/components/ui/IconAction";
 
 function UnreadNotificationsBanner() {
   const [unread, setUnread] = useState(0);
@@ -374,9 +375,7 @@ export default function StudentDashboardPage() {
                     className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-ifma-border-light bg-admin-surface-muted/30 px-4 py-3"
                   >
                     <span className="font-medium text-caisbe-text">{cert.course.title}</span>
-                    <Link href={`/certificates/${cert.certificate_code}`} className="text-sm font-semibold text-caisbe-red">
-                      Open
-                    </Link>
+                    <IconActionLink icon="open" href={`/certificates/${cert.certificate_code}`} label={`Open certificate for ${cert.course.title}`} />
                   </li>
                 ))}
               </ul>
@@ -396,16 +395,15 @@ export default function StudentDashboardPage() {
                       {enrollment.status.replaceAll("_", " ")} · {enrollment.progress}%
                     </p>
                   </div>
-                  <Link
+                  <IconActionLink
+                    icon={enrollment.status === "pending_payment" ? "pay" : "open"}
                     href={
                       enrollment.status === "pending_payment"
                         ? `/courses/${enrollment.course.id}/checkout`
                         : `/courses/${enrollment.course.id}`
                     }
-                    className="text-sm font-semibold text-caisbe-red"
-                  >
-                    {enrollment.status === "pending_payment" ? "Pay" : "Open"}
-                  </Link>
+                    label={`${enrollment.status === "pending_payment" ? "Pay for" : "Open"} ${enrollment.course.title}`}
+                  />
                 </li>
               ))}
             </ul>

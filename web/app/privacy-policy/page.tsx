@@ -3,15 +3,19 @@ import Link from "next/link";
 import { PageHero, ContentSection } from "@/components/pages/ContentPage";
 import { siteFullName, siteName } from "@/lib/data/home";
 import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
+import { PRIVACY_LAST_UPDATED_FR, privacySectionsFr } from "@/lib/i18n/content/privacy.fr";
+import { getServerT } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerT();
+  const description = t(
+    `Privacy policy for the ${siteFullName} website.`,
+    `Politique de confidentialité du site Web de ${siteFullName}.`,
+  );
   return (
-    (await cmsTopicMetadata(
-      "/privacy-policy",
-      `Privacy policy for the ${siteFullName} website.`,
-    )) ?? {
-      title: `Privacy Policy | ${siteName}`,
-      description: `Privacy policy for the ${siteFullName} website.`,
+    (await cmsTopicMetadata("/privacy-policy", description)) ?? {
+      title: `${t("Privacy Policy", "Politique de confidentialité")} | ${siteName}`,
+      description,
     }
   );
 }
@@ -157,21 +161,28 @@ export default async function PrivacyPolicyPage() {
   const cms = await cmsTopicPage("/privacy-policy");
   if (cms) return cms;
 
+  const { t, locale } = await getServerT();
+  const policySections = locale === "fr" ? privacySectionsFr(siteFullName) : sections;
+
   return (
     <>
       <PageHero
-        eyebrow="Legal"
-        title="Privacy Policy"
-        lead={`How ${siteName} collects, uses, and protects personal information.`}
+        eyebrow={t("Legal", "Mentions légales")}
+        title={t("Privacy Policy", "Politique de confidentialité")}
+        lead={t(
+          `How ${siteName} collects, uses, and protects personal information.`,
+          `Comment ${siteName} recueille, utilise et protège les renseignements personnels.`,
+        )}
       >
         <p className="mt-3 text-sm font-semibold text-caisbe-muted">
-          Last updated: {lastUpdated}
+          {t("Last updated:", "Dernière mise à jour :")}{" "}
+          {locale === "fr" ? PRIVACY_LAST_UPDATED_FR : lastUpdated}
         </p>
       </PageHero>
 
       <ContentSection>
         <div className="max-w-3xl space-y-5">
-          {sections.map((section) => (
+          {policySections.map((section) => (
             <section key={section.number} id={`section-${section.number}`}>
               <h2 className="font-hopewell-display text-xl font-bold tracking-tight text-caisbe-text-dark md:text-2xl">
                 {section.number}. {section.title}
@@ -204,19 +215,19 @@ export default async function PrivacyPolicyPage() {
         </div>
 
         <p className="mt-8 max-w-3xl text-sm text-caisbe-muted">
-          Return to the{" "}
+          {t("Return to the", "Retourner à la")}{" "}
           <Link
             href="/"
             className="font-semibold text-caisbe-red hover:underline"
           >
-            home page
+            {t("home page", "page d’accueil")}
           </Link>{" "}
-          or{" "}
+          {t("or", "ou")}{" "}
           <Link
             href="/contact"
             className="font-semibold text-caisbe-red hover:underline"
           >
-            contact us
+            {t("contact us", "nous joindre")}
           </Link>
           .
         </p>

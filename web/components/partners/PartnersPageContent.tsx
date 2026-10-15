@@ -1,8 +1,10 @@
 import ButtonLink from "@/components/ui/ButtonLink";
 import { ContentSection, PageHero } from "@/components/pages/ContentPage";
 import { partnersContent } from "@/lib/data/partners";
+import { getServerT } from "@/lib/i18n/server";
 
-export default function PartnersPageContent() {
+export default async function PartnersPageContent() {
+  const { t } = await getServerT();
   const {
     eyebrow,
     title,
@@ -15,7 +17,7 @@ export default function PartnersPageContent() {
     ctaLabel,
   } = partnersContent;
 
-  const mailtoHref = `mailto:${contactEmail}?subject=${encodeURIComponent("Partnership inquiry")}`;
+  const mailtoHref = `mailto:${contactEmail}?subject=${encodeURIComponent(t("Partnership inquiry", "Demande de partenariat"))}`;
 
   return (
     <>
@@ -45,7 +47,7 @@ export default function PartnersPageContent() {
               className="rounded-[20px] bg-white px-5 py-5 shadow-hopewell"
             >
               <p className="text-xs font-bold uppercase tracking-wider text-caisbe-red">
-                Step {index + 1}
+                {t("Step", "Étape")} {index + 1}
               </p>
               <h3 className="font-hopewell-display mt-2 text-lg font-bold text-caisbe-text-dark">
                 {step.title}

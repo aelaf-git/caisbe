@@ -7,9 +7,11 @@ import {
 import { fetchPublishedNews, type NewsPost } from "@/lib/api";
 import { formatNewsDate, newsContent } from "@/lib/data/news";
 import { fetchPublishedSitePage } from "@/lib/sitePages";
+import { getServerT } from "@/lib/i18n/server";
 
 export default async function NewsPageContent() {
   const { eyebrow, title, lead, intro } = newsContent;
+  const { t, locale } = await getServerT();
   const page = await fetchPublishedSitePage("/news");
   const updates = page?.sections?.[0];
 
@@ -25,17 +27,17 @@ export default async function NewsPageContent() {
   return (
     <>
       <PageHero
-        eyebrow={eyebrow}
+        eyebrow={t(eyebrow, "Nouvelles et annonces")}
         title={page?.title?.trim() || title}
         lead={page?.lead?.trim() || lead}
         actions={
           hasPosts ? (
             <>
               <ButtonLink href={page?.ctaHref || "/contact"} variant="primary">
-                {page?.ctaLabel?.trim() || "Media Inquiries"}
+                {page?.ctaLabel?.trim() || t("Media Inquiries", "Demandes des médias")}
               </ButtonLink>
               <ButtonLink href="/events" variant="secondary">
-                Upcoming Events
+                {t("Upcoming Events", "Événements à venir")}
               </ButtonLink>
             </>
           ) : undefined
@@ -47,18 +49,23 @@ export default async function NewsPageContent() {
       </PageHero>
 
       <ContentSection
-        title={updates?.title?.trim() || "Latest updates"}
+        title={updates?.title?.trim() || t("Latest updates", "Dernières nouvelles")}
         description={
           updates?.body?.trim() ||
-          "Announcements are listed newest first as published by the CAISBE team."
+          t(
+            "Announcements are listed newest first as published by the CAISBE team.",
+            "Les annonces sont présentées de la plus récente à la plus ancienne, telles que publiées par l’équipe du CAISBE.",
+          )
         }
         wide
       >
         {!hasPosts ? (
           <div className="rounded-lg border border-dashed border-ifma-border bg-[#fafafa] px-6 py-12 text-center">
             <p className="text-base leading-7 text-caisbe-muted">
-              No announcements yet. Check back soon for the latest institute
-              updates.
+              {t(
+                "No announcements yet. Check back soon for the latest institute updates.",
+                "Aucune annonce pour le moment. Revenez bientôt pour les dernières nouvelles de l’Institut.",
+              )}
             </p>
           </div>
         ) : (
@@ -80,13 +87,13 @@ export default async function NewsPageContent() {
                   ) : (
                     <div className="flex aspect-[4/3] items-center justify-center bg-[#fafaf8] md:aspect-auto md:min-h-[12rem]">
                       <span className="text-xs font-semibold uppercase tracking-[0.2em] text-caisbe-red">
-                        News
+                        {t("News", "Nouvelles")}
                       </span>
                     </div>
                   )}
                   <div className="flex flex-col p-6">
                     <p className="text-sm font-semibold text-caisbe-muted">
-                      {formatNewsDate(post.posted_on)}
+                      {formatNewsDate(post.posted_on, locale)}
                       {post.tag ? ` · ${post.tag}` : ""}
                     </p>
                     <h3 className="mt-2 font-hopewell-display text-2xl font-bold tracking-tight text-caisbe-text-dark">
@@ -106,14 +113,14 @@ export default async function NewsPageContent() {
                         rel="noopener noreferrer"
                         className="mt-5 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
                       >
-                        Open article
+                        {t("Open article", "Ouvrir l’article")}
                       </a>
                     ) : (
                       <Link
                         href={`/news/${post.slug}`}
                         className="mt-5 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
                       >
-                        Read more
+                        {t("Read more", "Lire la suite")}
                       </Link>
                     )}
                   </div>

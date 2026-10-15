@@ -14,20 +14,25 @@ import {
   type MembershipSlug,
 } from "@/lib/data/membership";
 import { portalMembershipLoginUrl, portalMembershipRegisterUrl } from "@/lib/api";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 export function MembershipIndexContent() {
+  const t = useT();
   return (
     <SubsectionIndex
-      eyebrow="Membership"
-      title="Membership"
-      description="Join CAISBE for professional benefits, community, and pathways into facility management excellence."
+      eyebrow={t("Membership", "Adhésion")}
+      title={t("Membership", "Adhésion")}
+      description={t(
+        "Join CAISBE for professional benefits, community, and pathways into facility management excellence.",
+        "Joignez le CAISBE pour des avantages professionnels, une communauté et des parcours vers l’excellence en gestion des installations.",
+      )}
       items={membershipIndexItems}
     />
   );
 }
 
 export function BecomeAMemberContent({
-  eyebrow = "Membership",
+  eyebrow,
   title,
   lead,
 }: {
@@ -36,6 +41,7 @@ export function BecomeAMemberContent({
   title?: string;
   lead?: string;
 }) {
+  const t = useT();
   const page = membershipPages["become-a-member"];
   const registerHref = portalMembershipRegisterUrl();
   const loginHref = portalMembershipLoginUrl();
@@ -43,25 +49,27 @@ export function BecomeAMemberContent({
   return (
     <>
       <PageHero
-        eyebrow={eyebrow}
+        eyebrow={eyebrow ?? t("Membership", "Adhésion")}
         title={title ?? page.title}
         lead={lead ?? page.description}
       />
       <ContentSection wide>
         <div className="mx-auto max-w-2xl rounded-[20px] bg-white p-8 text-center shadow-hopewell">
           <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
-            Login or create your student account
+            {t("Login or create your student account", "Connectez-vous ou créez votre compte étudiant")}
           </h2>
           <p className="mt-3 text-sm leading-6 text-caisbe-muted">
-            New accounts are student members immediately, with a downloadable membership
-            certificate in the portal. Log in if you already have an account to renew or upgrade.
+            {t(
+              "New accounts are student members immediately, with a downloadable membership certificate in the portal. Log in if you already have an account to renew or upgrade.",
+              "Les nouveaux comptes deviennent immédiatement membres étudiants, avec un certificat d’adhésion téléchargeable dans le portail. Connectez-vous si vous avez déjà un compte pour renouveler ou passer à une catégorie supérieure.",
+            )}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <ButtonLink href={registerHref} variant="primary">
-              Create account
+              {t("Create account", "Créer un compte")}
             </ButtonLink>
             <ButtonLink href={loginHref} variant="secondary">
-              Login
+              {t("Login", "Connexion")}
             </ButtonLink>
           </div>
         </div>
@@ -71,20 +79,21 @@ export function BecomeAMemberContent({
 }
 
 export function MembershipSubpageContent({ slug }: { slug: MembershipSlug }) {
+  const t = useT();
   if (slug === "overview") {
     const page = membershipPages.overview;
     return (
       <PageHero
-        eyebrow="Membership"
+        eyebrow={t("Membership", "Adhésion")}
         title={page.title}
         lead={page.paragraphs[0]}
         actions={
           <>
             <ButtonLink href={portalMembershipRegisterUrl()} variant="primary">
-              Join Now
+              {t("Join Now", "Adhérer maintenant")}
             </ButtonLink>
             <ButtonLink href="/membership/types" variant="secondary">
-              Membership Types
+              {t("Membership Types", "Types d’adhésion")}
             </ButtonLink>
           </>
         }
@@ -127,7 +136,7 @@ export function MembershipSubpageContent({ slug }: { slug: MembershipSlug }) {
           </div>
           <div className="mt-10">
             <ButtonLink href={portalMembershipRegisterUrl()} variant="primary">
-              Become a Member
+              {t("Become a Member", "Devenir membre")}
             </ButtonLink>
           </div>
         </ContentSection>

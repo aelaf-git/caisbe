@@ -13,28 +13,34 @@ import {
   type EventsSlug,
 } from "@/lib/data/events";
 import { fetchPublishedSitePage } from "@/lib/sitePages";
+import { getServerT } from "@/lib/i18n/server";
 
-export function EventsIndexContent() {
+export async function EventsIndexContent() {
+  const { t } = await getServerT();
   return (
     <SubsectionIndex
-      eyebrow="Events"
-      title="Events"
-      description="Explore CAISBE events, the Africa–Canada Built Environment Expo & Forum, conferences, and awards."
+      eyebrow={t("Events", "Événements")}
+      title={t("Events", "Événements")}
+      description={t(
+        "Explore CAISBE events, the Africa–Canada Built Environment Expo & Forum, conferences, and awards.",
+        "Explorez les événements du CAISBE, l’exposition et forum Afrique–Canada sur l’environnement bâti, les conférences et les prix.",
+      )}
       items={eventsIndexItems}
     />
   );
 }
 
-function ThinEventsPage({
+async function ThinEventsPage({
   slug,
 }: {
   slug: "conferences" | "get-involved";
 }) {
+  const { t } = await getServerT();
   const page = eventsPages[slug];
   return (
     <>
       <PageHero
-        eyebrow="Events"
+        eyebrow={t("Events", "Événements")}
         title={page.title}
         lead={page.lead}
         actions={
@@ -43,14 +49,14 @@ function ThinEventsPage({
               {page.ctaLabel}
             </ButtonLink>
             <ButtonLink href="/events/calendar" variant="secondary">
-              Event Calendar
+              {t("Event Calendar", "Calendrier des événements")}
             </ButtonLink>
           </>
         }
       >
         <p className={heroNoteClassName}>{page.description}</p>
       </PageHero>
-      <ContentSection title="What you will find">
+      <ContentSection title={t("What you will find", "Ce que vous y trouverez")}>
         <FeatureList items={page.highlights} />
         <p className="mt-8 text-base leading-7 text-caisbe-muted">
           {page.nextSteps}
@@ -61,21 +67,22 @@ function ThinEventsPage({
 }
 
 async function CalendarPage() {
+  const { t } = await getServerT();
   const page = eventsPages.calendar;
   const published = await fetchPublishedSitePage("/events/calendar");
   return (
     <>
       <PageHero
-        eyebrow="Events"
+        eyebrow={t("Events", "Événements")}
         title={published?.title?.trim() || page.title}
         lead={published?.lead?.trim() || page.lead}
         actions={
           <>
             <ButtonLink href="/events" variant="primary">
-              All Events
+              {t("All Events", "Tous les événements")}
             </ButtonLink>
             <ButtonLink href="/contact" variant="secondary">
-              Contact Us
+              {t("Contact Us", "Nous joindre")}
             </ButtonLink>
           </>
         }
@@ -87,22 +94,27 @@ async function CalendarPage() {
   );
 }
 
-function SponsorComingSoon() {
+async function SponsorComingSoon() {
+  const { t } = await getServerT();
   const page = eventsPages.sponsor;
   return (
     <PageHero
-      eyebrow="Under Construction"
+      eyebrow={t("Under Construction", "En construction")}
       title={page.title}
-      lead="Sponsorship and advertising packages for CAISBE events are being finalized. Thank you for your patience—we will publish opportunities here soon."
+      lead={t(
+        "Sponsorship and advertising packages for CAISBE events are being finalized. Thank you for your patience—we will publish opportunities here soon.",
+        "Les forfaits de commandite et de publicité pour les événements du CAISBE sont en cours de finalisation. Merci de votre patience : nous publierons bientôt les possibilités ici.",
+      )}
       backHref="/events"
-      backLabel="Back to events"
+      backLabel={t("Back to events", "Retour aux événements")}
     >
       <p className={heroNoteClassName}>{page.description}</p>
     </PageHero>
   );
 }
 
-export function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
+export async function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
+  const { t } = await getServerT();
   if (slug === "calendar") {
     return <CalendarPage />;
   }
@@ -116,7 +128,7 @@ export function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
     return (
       <>
         <PageHero
-          eyebrow="Events"
+          eyebrow={t("Events", "Événements")}
           title={page.title}
           lead={page.description}
           actions={
@@ -148,7 +160,7 @@ export function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
     return (
       <>
         <PageHero
-          eyebrow="Events"
+          eyebrow={t("Events", "Événements")}
           title={page.title}
           lead={page.description}
           actions={
@@ -159,7 +171,7 @@ export function EventsSubpageContent({ slug }: { slug: EventsSlug }) {
         >
           <p className={heroNoteClassName}>{page.intro}</p>
         </PageHero>
-        <ContentSection title="Award categories">
+        <ContentSection title={t("Award categories", "Catégories de prix")}>
           <FeatureList items={page.categories} tone="accent" />
           <p className="mt-8 text-base leading-7 text-caisbe-muted">
             {page.nominate}

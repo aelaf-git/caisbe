@@ -8,6 +8,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import Skeleton from "@/components/ui/Skeleton";
 import { apiFetch, ApiError, type ContactMessage } from "@/lib/auth";
+import { IconActionButton } from "@/components/ui/IconAction";
 
 type AskConfirm = (options: {
   title: string;
@@ -391,17 +392,11 @@ export default function ContactMessagesManager({
                   {saving ? "Sending…" : "Send reply"}
                 </Button>
                 {selected.status !== "archived" ? (
-                  <Button variant="secondary" onClick={() => void markStatus(selected, "archived")}>
-                    Archive
-                  </Button>
+                  <IconActionButton icon="archive" label="Archive message" onClick={() => void markStatus(selected, "archived")} />
                 ) : (
-                  <Button variant="secondary" onClick={() => void markStatus(selected, "read")}>
-                    Unarchive
-                  </Button>
+                  <IconActionButton icon="unarchive" label="Unarchive message" onClick={() => void markStatus(selected, "read")} />
                 )}
-                <Button variant="ghost" onClick={() => void deleteMessage(selected)}>
-                  Delete
-                </Button>
+                <IconActionButton icon="trash" tone="danger" label="Delete message" onClick={() => void deleteMessage(selected)} />
               </div>
             </div>
           </Card>

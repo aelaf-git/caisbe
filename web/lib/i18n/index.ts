@@ -14,6 +14,11 @@ export function normalizeLocale(raw: string | null | undefined): Locale {
   return "en";
 }
 
+/** Pick the English or French value for a locale. */
+export function pick<V>(locale: Locale, en: V, fr: V): V {
+  return locale === "fr" ? fr : en;
+}
+
 const NAV_LABEL_FR: Record<string, string> = {
   // Utility links
   About: "À propos",
@@ -73,6 +78,18 @@ const NAV_LABEL_FR: Record<string, string> = {
   "Our Mission": "Notre mission",
   Offices: "Bureaux",
   Projects: "Projets",
+  // Page chrome (eyebrows and back links)
+  "About Overview": "Aperçu — À propos",
+  "All Resources": "Toutes les ressources",
+  "Membership Overview": "Aperçu de l'adhésion",
+  "Events Overview": "Aperçu des événements",
+  "Network Overview": "Aperçu du réseau",
+  "Programs Overview": "Aperçu des programmes",
+  Home: "Accueil",
+  Legal: "Mentions légales",
+  Store: "Boutique",
+  CAISBE: "CAISBE",
+  "Go back": "Retour",
 };
 
 export function translateLabel(label: string, locale: Locale): string {

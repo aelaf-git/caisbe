@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Button from "@/components/ui/Button";
 import FormField from "@/components/ui/FormField";
 import { apiUpload, ApiError } from "@/lib/auth";
 import { resolveUploadUrl } from "@/lib/mediaUrl";
+import { IconActionButton } from "@/components/ui/IconAction";
 
 const COVER_ACCEPT = "image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif";
 
@@ -80,18 +80,16 @@ export default function CourseCoverField({
             }}
           />
           {value ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
+            <IconActionButton
+              icon="trash"
+              tone="danger"
+              label="Remove cover image"
               disabled={busy}
               onClick={() => {
                 void onChange(null);
                 if (inputRef.current) inputRef.current.value = "";
               }}
-            >
-              Remove
-            </Button>
+            />
           ) : null}
           {uploading ? (
             <span className="text-xs font-medium text-caisbe-muted">Uploading…</span>

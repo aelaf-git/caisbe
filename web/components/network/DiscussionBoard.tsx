@@ -9,10 +9,12 @@ import {
   portalForumRegisterUrl,
   type ForumBoardSummary,
 } from "@/lib/forum";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 export default function DiscussionBoard({ slug }: { slug: string }) {
+  const t = useT();
   const [board, setBoard] = useState<ForumBoardSummary | null>(null);
-  const [categoryTitle, setCategoryTitle] = useState("Discussion Forum");
+  const [categoryTitle, setCategoryTitle] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(false);
 
@@ -51,10 +53,10 @@ export default function DiscussionBoard({ slug }: { slug: string }) {
   if (loading) {
     return (
       <PageHero
-        eyebrow="Discussion Forum"
-        title="Loading board…"
+        eyebrow={t("Discussion Forum", "Forum de discussion")}
+        title={t("Loading board…", "Chargement du forum…")}
         backHref="/network/discussion-forum"
-        backLabel="Forum home"
+        backLabel={t("Forum home", "Accueil du forum")}
       />
     );
   }
@@ -62,36 +64,38 @@ export default function DiscussionBoard({ slug }: { slug: string }) {
   if (missing || !board) {
     return (
       <PageHero
-        eyebrow="Discussion Forum"
-        title="Board not found"
-        lead="This discussion board is not available."
+        eyebrow={t("Discussion Forum", "Forum de discussion")}
+        title={t("Board not found", "Forum introuvable")}
+        lead={t("This discussion board is not available.", "Ce forum de discussion n’est pas disponible.")}
         backHref="/network/discussion-forum"
-        backLabel="Forum home"
+        backLabel={t("Forum home", "Accueil du forum")}
       />
     );
   }
 
   return (
     <PageHero
-      eyebrow={categoryTitle}
+      eyebrow={categoryTitle ?? t("Discussion Forum", "Forum de discussion")}
       title={board.title}
       lead={board.description}
       backHref="/network/discussion-forum"
-      backLabel="Forum home"
+      backLabel={t("Forum home", "Accueil du forum")}
       actions={
         <>
           <ButtonLink href={portalForumLoginUrl(nextPath)} variant="primary">
-            Login
+            {t("Login", "Connexion")}
           </ButtonLink>
           <ButtonLink href={portalForumRegisterUrl(nextPath)} variant="secondary">
-            Register
+            {t("Register", "S’inscrire")}
           </ButtonLink>
         </>
       }
     >
       <p className="mt-6 max-w-2xl text-base leading-7 text-caisbe-muted">
-        You must be logged in to read and take part in this discussion. Sign in with your student
-        portal account to open the board.
+        {t(
+          "You must be logged in to read and take part in this discussion. Sign in with your student portal account to open the board.",
+          "Vous devez être connecté pour lire cette discussion et y participer. Connectez-vous avec votre compte du portail étudiant pour ouvrir le forum.",
+        )}
       </p>
     </PageHero>
   );

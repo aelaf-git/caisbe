@@ -47,6 +47,7 @@ from app.services.commerce import apply_profile_fields, normalize_membership_typ
 from app.services.membership import is_student_membership
 from app.services.hero import ensure_default_hero_slides
 from app.services.settings import hero_transition_ms
+from app.services.translations import localize_many, localize_one
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["public"])
@@ -89,6 +90,7 @@ def get_hero_carousel(db: Session = Depends(get_db)) -> HeroCarouselOut:
 def list_published_media(
     category: str | None = Query(default=None, max_length=32),
     featured: bool | None = Query(default=None),
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[MediaAssetOut]:
     query = db.query(MediaAsset).filter(MediaAsset.published.is_(True))
@@ -100,12 +102,13 @@ def list_published_media(
         query.order_by(MediaAsset.sort_order.asc(), MediaAsset.created_at.desc())
         .all()
     )
-    return [MediaAssetOut.model_validate(row) for row in rows]
+    return localize_many(db, "media", [MediaAssetOut.model_validate(row) for row in rows], lang)
 
 
 @router.get("/media/{asset_id}", response_model=MediaAssetOut)
 def get_published_media_asset(
     asset_id: int,
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> MediaAssetOut:
     row = (
@@ -115,13 +118,14 @@ def get_published_media_asset(
     )
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
-    return MediaAssetOut.model_validate(row)
+    return localize_one(db, "media", MediaAssetOut.model_validate(row), lang)
 
 
 @router.get("/events", response_model=list[IndustryEventOut])
 def list_published_events(
     featured: bool | None = Query(default=None),
     event_type: str | None = Query(default=None, max_length=64),
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[IndustryEventOut]:
     query = db.query(IndustryEvent).filter(IndustryEvent.published.is_(True))
@@ -133,12 +137,13 @@ def list_published_events(
         query.order_by(IndustryEvent.starts_on.asc(), IndustryEvent.sort_order.asc())
         .all()
     )
-    return [IndustryEventOut.model_validate(row) for row in rows]
+    return localize_many(db, "event", [IndustryEventOut.model_validate(row) for row in rows], lang)
 
 
 @router.get("/jobs", response_model=list[JobPostingOut])
 def list_active_jobs(
     featured: bool | None = Query(default=None),
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[JobPostingOut]:
     """Published jobs that have not reached their expiry date."""
@@ -155,11 +160,12 @@ def list_active_jobs(
         item = JobPostingOut.model_validate(row)
         item.is_expired = False
         out.append(item)
-    return out
+    return localize_many(db, "job", out, lang)
 
 
 @router.get("/seminars", response_model=list[SeminarOut])
 def list_published_seminars(
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[SeminarOut]:
     rows = (
@@ -168,11 +174,12 @@ def list_published_seminars(
         .order_by(Seminar.sort_order.asc(), Seminar.id.asc())
         .all()
     )
-    return [SeminarOut.model_validate(row) for row in rows]
+    return localize_many(db, "seminar", [SeminarOut.model_validate(row) for row in rows], lang)
 
 
 @router.get("/testimonials", response_model=list[TestimonialOut])
 def list_published_testimonials(
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[TestimonialOut]:
     rows = (
@@ -181,24 +188,26 @@ def list_published_testimonials(
         .order_by(Testimonial.sort_order.asc(), Testimonial.id.asc())
         .all()
     )
-    return [TestimonialOut.model_validate(row) for row in rows]
+    return localize_many(db, "testimonial", [TestimonialOut.model_validate(row) for row in rows], lang)
 
 
 @router.get("/news", response_model=list[NewsPostOut])
 def list_published_news(
     featured: bool | None = Query(default=None),
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> list[NewsPostOut]:
     query = db.query(NewsPost).filter(NewsPost.published.is_(True))
     if featured is not None:
         query = query.filter(NewsPost.featured.is_(featured))
     rows = query.order_by(NewsPost.posted_on.desc(), NewsPost.sort_order.asc()).all()
-    return [NewsPostOut.model_validate(row) for row in rows]
+    return localize_many(db, "news", [NewsPostOut.model_validate(row) for row in rows], lang)
 
 
 @router.get("/news/{slug}", response_model=NewsPostOut)
 def get_published_news(
     slug: str,
+    lang: str = Query(default="en", max_length=12),
     db: Session = Depends(get_db),
 ) -> NewsPostOut:
     row = (
@@ -208,7 +217,7 @@ def get_published_news(
     )
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
-    return NewsPostOut.model_validate(row)
+    return localize_one(db, "news", NewsPostOut.model_validate(row), lang)
 
 
 @router.post("/contact", response_model=ContactMessageOut, status_code=status.HTTP_201_CREATED)

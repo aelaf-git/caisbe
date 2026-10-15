@@ -7,6 +7,7 @@ import ButtonLink from "@/components/ui/ButtonLink";
 import { portalUrl } from "@/lib/api";
 import { ticketsContent, ticketsPortalComposeUrl, ticketsPortalLoginUrl } from "@/lib/data/tickets";
 import { ticketNumber } from "@/lib/helpSupport";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { studentFetch, StudentApiError } from "@/lib/studentSession";
 
 type TicketRow = {
@@ -18,17 +19,31 @@ type TicketRow = {
   unread_count?: number;
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  open: "Open",
-  waiting_admin: "Awaiting admin",
-  waiting_student: "Awaiting you",
-  closed: "Closed",
+const STATUS_LABELS: Record<"en" | "fr", Record<string, string>> = {
+  en: {
+    open: "Open",
+    waiting_admin: "Awaiting admin",
+    waiting_student: "Awaiting you",
+    closed: "Closed",
+  },
+  fr: {
+    open: "Ouvert",
+    waiting_admin: "En attente de l’administration",
+    waiting_student: "En attente de votre réponse",
+    closed: "Fermé",
+  },
 };
 
-function formatSubmittedDate(value: string) {
+const HEADERS_FR: Record<string, string> = {
+  Ticket: "Billet",
+  Status: "Statut",
+  Submitted: "Soumis le",
+};
+
+function formatSubmittedDate(value: string, locale: "en" | "fr") {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString([], {
+  return date.toLocaleDateString(locale === "fr" ? "fr-CA" : "en-CA", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -41,9 +56,11 @@ function statusTone(status: string) {
   return "bg-caisbe-red/10 text-caisbe-red-dark";
 }
 
-function statusLabel(ticket: TicketRow) {
-  const label = STATUS_LABELS[ticket.status] ?? ticket.status;
-  return ticket.unread_count ? `${label} · ${ticket.unread_count} new` : label;
+function statusLabel(ticket: TicketRow, locale: "en" | "fr") {
+  const label = STATUS_LABELS[locale][ticket.status] ?? ticket.status;
+  return ticket.unread_count
+    ? `${label} · ${ticket.unread_count} ${locale === "fr" ? "nouveau(x)" : "new"}`
+    : label;
 }
 
 export default function TicketsPageContent({
@@ -53,6 +70,8 @@ export default function TicketsPageContent({
   title?: string;
   intro?: string;
 }) {
+  const locale = useLocale();
+  const fr = locale === "fr";
   const { user, loading } = useStudentSession();
   const [tickets, setTickets] = useState<TicketRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +85,7 @@ export default function TicketsPageContent({
       })
       .catch((err) => {
         if (!active) return;
-        setError(err instanceof StudentApiError ? err.detail : "Unable to load tickets.");
+        setError(err instanceof StudentApiError ? err.detail : fr ? "Impossible de charger les billets." : "Unable to load tickets.");
         setTickets([]);
       });
     return () => {
@@ -76,28 +95,36 @@ export default function TicketsPageContent({
 
   const signedIn = Boolean(user);
   const hasTickets = Boolean(tickets && tickets.length > 0);
-  const heading = title?.trim() || ticketsContent.title;
-  const publicLead = intro?.trim() || ticketsContent.lead;
+  const heading = title?.trim() || (fr ? "Billets" : ticketsContent.title);
+  const publicLead =
+    intro?.trim() ||
+    (fr
+      ? "Connectez-vous pour voir vos billets de soutien ou en soumettre un nouveau."
+      : ticketsContent.lead);
   const lead = !signedIn
     ? publicLead
     : tickets && tickets.length === 0 && !error
-      ? ticketsContent.emptyLead
-      : ticketsContent.signedInLead;
+      ? fr
+        ? "Vous n’avez encore aucun billet de soutien."
+        : ticketsContent.emptyLead
+      : fr
+        ? "Vos billets de soutien ouverts et fermés."
+        : ticketsContent.signedInLead;
 
   return (
     <>
       <PageHero
-        eyebrow={ticketsContent.eyebrow}
+        eyebrow={fr ? "Ressources" : ticketsContent.eyebrow}
         title={heading}
         lead={lead}
         actions={
           loading ? null : signedIn ? (
             <ButtonLink href={ticketsPortalComposeUrl()} variant="primary">
-              {ticketsContent.submitCtaLabel}
+              {fr ? "Soumettre un billet" : ticketsContent.submitCtaLabel}
             </ButtonLink>
           ) : (
             <ButtonLink href={ticketsPortalLoginUrl()} variant="primary">
-              {ticketsContent.loginCtaLabel}
+              {fr ? "Connexion" : ticketsContent.loginCtaLabel}
             </ButtonLink>
           )
         }
@@ -108,7 +135,7 @@ export default function TicketsPageContent({
           {error ? (
             <p className="max-w-2xl leading-7 text-caisbe-red">{error}</p>
           ) : tickets === null ? (
-            <p className="max-w-2xl leading-7 text-caisbe-muted">Loading tickets…</p>
+            <p className="max-w-2xl leading-7 text-caisbe-muted">{fr ? "Chargement des billets…" : "Loading tickets…"}</p>
           ) : (
             <div className="overflow-hidden rounded-[20px] bg-white shadow-hopewell">
               <ul className="divide-y divide-ifma-border-light md:hidden">
@@ -124,10 +151,10 @@ export default function TicketsPageContent({
                         <span
                           className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusTone(ticket.status)}`}
                         >
-                          {statusLabel(ticket)}
+                          {statusLabel(ticket, locale)}
                         </span>
                         <span className="text-xs text-caisbe-muted">
-                          {formatSubmittedDate(ticket.created_at)}
+                          {formatSubmittedDate(ticket.created_at, locale)}
                         </span>
                       </div>
                     </a>
@@ -143,7 +170,7 @@ export default function TicketsPageContent({
                         scope="col"
                         className={`px-6 py-4 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark ${header === "Ticket" ? "" : "w-44 whitespace-nowrap"}`}
                       >
-                        {header}
+                        {fr ? (HEADERS_FR[header] ?? header) : header}
                       </th>
                     ))}
                   </tr>
@@ -164,11 +191,11 @@ export default function TicketsPageContent({
                         <span
                           className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusTone(ticket.status)}`}
                         >
-                          {statusLabel(ticket)}
+                          {statusLabel(ticket, locale)}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-caisbe-muted">
-                        {formatSubmittedDate(ticket.created_at)}
+                        {formatSubmittedDate(ticket.created_at, locale)}
                       </td>
                     </tr>
                   ))}

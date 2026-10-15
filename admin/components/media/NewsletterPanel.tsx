@@ -14,6 +14,7 @@ import {
   type NewsletterCampaign,
   type NewsletterSubscriber,
 } from "@/lib/auth";
+import { IconActionButton } from "@/components/ui/IconAction";
 
 type AskConfirm = (options: {
   title: string;
@@ -245,13 +246,12 @@ export default function NewsletterPanel({
                   className="flex items-center justify-between gap-3 rounded-lg border border-ifma-border-light bg-admin-surface-muted px-3 py-2 text-sm"
                   >
                     <span className="truncate text-caisbe-text">{item.filename}</span>
-                    <button
-                      type="button"
+                    <IconActionButton
+                      icon="trash"
+                      tone="danger"
+                      label={`Remove ${item.filename}`}
                       onClick={() => removeAttachment(item.file_url)}
-                      className="shrink-0 text-xs font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
-                    >
-                      Remove
-                    </button>
+                    />
                   </li>
                 ))}
               </ul>
@@ -340,14 +340,13 @@ export default function NewsletterPanel({
                     })}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button
-                      type="button"
+                    <IconActionButton
+                      icon="trash"
+                      tone="danger"
+                      label={`Remove ${row.email}`}
                       disabled={removingId === row.id}
                       onClick={() => void removeSubscriber(row)}
-                      className="text-xs font-semibold uppercase tracking-wide text-caisbe-red hover:underline disabled:opacity-50"
-                    >
-                      {removingId === row.id ? "Removing…" : "Remove"}
-                    </button>
+                    />
                   </td>
                 </tr>
               ))}

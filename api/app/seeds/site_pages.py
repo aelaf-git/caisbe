@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.models import SitePage
+from app.seeds.site_pages_fr import seed_french_site_pages
 from app.services.site_pages import _assign_paths, _pages
 
 Section = dict
@@ -1558,3 +1559,4 @@ def seed_site_pages(db: Session) -> None:
     _apply_editorial_updates(db)
     _assign_paths(_pages(db))
     db.commit()
+    seed_french_site_pages(db)

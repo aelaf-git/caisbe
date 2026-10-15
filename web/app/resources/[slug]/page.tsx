@@ -13,6 +13,7 @@ import {
 import { getResourcePage, resourcesPages } from "@/lib/data/site-pages";
 import { fetchPublishedSitePage, topicChrome } from "@/lib/sitePages";
 import { cmsTopicPage } from "@/lib/cmsTopic";
+import { getServerT } from "@/lib/i18n/server";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -51,7 +52,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const page = getResourcePage(slug);
-  if (!page) return { title: "Resources | CAISBE" };
+  const { t } = await getServerT();
+  if (!page) return { title: t("Resources | CAISBE", "Ressources | CAISBE") };
   return {
     title: `${page.title} | CAISBE`,
     description: page.description,

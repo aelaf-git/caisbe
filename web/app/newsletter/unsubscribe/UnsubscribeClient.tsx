@@ -3,14 +3,16 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { unsubscribeNewsletter } from "@/lib/api";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 type Status = "loading" | "success" | "error";
 
 export default function UnsubscribeClient() {
+  const t = useT();
   const searchParams = useSearchParams();
   const token = (searchParams.get("token") || "").trim();
   const [status, setStatus] = useState<Status>("loading");
-  const [message, setMessage] = useState("Processing your request…");
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -19,7 +21,12 @@ export default function UnsubscribeClient() {
       if (!token) {
         if (!cancelled) {
           setStatus("error");
-          setMessage("This unsubscribe link is missing or incomplete.");
+          setMessage(
+            t(
+              "This unsubscribe link is missing or incomplete.",
+              "Ce lien de désabonnement est manquant ou incomplet.",
+            ),
+          );
         }
         return;
       }
@@ -27,13 +34,17 @@ export default function UnsubscribeClient() {
         const result = await unsubscribeNewsletter({ token });
         if (!cancelled) {
           setStatus("success");
-          setMessage(result.message);
+          setMessage(
+            t(result.message, "Vous êtes désabonné de l’infolettre du CAISBE."),
+          );
         }
       } catch (err) {
         if (!cancelled) {
           setStatus("error");
           setMessage(
-            err instanceof Error ? err.message : "Unable to unsubscribe. Try again later.",
+            err instanceof Error
+              ? err.message
+              : t("Unable to unsubscribe. Try again later.", "Impossible de vous désabonner. Réessayez plus tard."),
           );
         }
       }
@@ -43,15 +54,20 @@ export default function UnsubscribeClient() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   return (
     <div className="text-center">
       <p className="font-display text-sm font-semibold uppercase tracking-[0.18em] text-caisbe-red">
-        CAISBE Newsletter
+        {t("CAISBE Newsletter", "Infolettre du CAISBE")}
       </p>
       <h1 className="mt-3 font-display text-3xl font-semibold text-ifma-navy">
-        {status === "success" ? "Unsubscribed" : status === "error" ? "Unable to unsubscribe" : "Unsubscribe"}
+        {status === "success"
+          ? t("Unsubscribed", "Désabonnement confirmé")
+          : status === "error"
+            ? t("Unable to unsubscribe", "Impossible de se désabonner")
+            : t("Unsubscribe", "Se désabonner")}
       </h1>
       <p
         className={`mt-4 text-base leading-relaxed ${
@@ -59,7 +75,7 @@ export default function UnsubscribeClient() {
         }`}
         role={status === "error" ? "alert" : undefined}
       >
-        {message}
+        {message ?? t("Processing your request…", "Traitement de votre demande…")}
       </p>
     </div>
   );

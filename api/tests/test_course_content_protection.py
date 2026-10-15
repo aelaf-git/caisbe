@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import Course, Enrollment, User
+from app.models import Chapter, ContentBlock, Course, Enrollment, Lesson, LessonProgress, User
 from app.security.auth import hash_password
 
 STRONG_PASSWORD = "Str0ng-Password!99"
@@ -146,3 +146,81 @@ def test_student_course_detail_includes_flag(client: TestClient, db: Session) ->
     )
     assert detail.status_code == 200, detail.text
     assert detail.json()["content_protection"] is True
+
+
+def test_scraper_user_agents_blocked_and_robots_header_set(client: TestClient, db: Session) -> None:
+    blocked = client.get("/api/courses", headers={"User-Agent": "Scrapy/2.11 (+https://scrapy.org)"})
+    assert blocked.status_code == 403
+    assert "noai" in blocked.headers.get("X-Robots-Tag", "")
+
+    ai_bot = client.get("/api/courses", headers={"User-Agent": "Mozilla/5.0 (compatible; GPTBot/1.0)"})
+    assert ai_bot.status_code == 403
+
+    normal = client.get("/api/courses")
+    assert normal.status_code == 200
+    assert "noindex" in normal.headers.get("X-Robots-Tag", "")
+
+
+def test_public_courses_truncates_long_description_and_locks_future_lessons(
+    client: TestClient, db: Session
+) -> None:
+    student = _student(db)
+    long_desc = "Facility management curriculum overview. " * 20
+    course = Course(
+        code="SCRP-1",
+        title="Anti-Scrape Course",
+        description=long_desc,
+        slug="anti-scrape-course",
+        status="published",
+        pass_percent=70,
+        price_cents=5000,
+    )
+    db.add(course)
+    db.flush()
+    chapter = Chapter(course_id=course.id, title="Chapter 1", sort_order=0)
+    db.add(chapter)
+    db.flush()
+    lesson1 = Lesson(chapter_id=chapter.id, title="Topic 1", body="First topic full lecture notes", sort_order=0)
+    lesson2 = Lesson(chapter_id=chapter.id, title="Topic 2", body="Second topic secret lecture notes", sort_order=1)
+    db.add_all([lesson1, lesson2])
+    db.flush()
+    db.add(
+        ContentBlock(
+            lesson_id=lesson2.id,
+            block_type="pdf",
+            title="Locked PDF",
+            url="/api/uploads/courses/media/secret.pdf",
+            sort_order=0,
+        )
+    )
+    db.add(Enrollment(user_id=student.id, course_id=course.id, status="enrolled", progress=0))
+    db.commit()
+
+    # 1. Public catalog returns a truncated teaser, not the full curriculum text
+    catalog = client.get("/api/courses").json()
+    matched = next(item for item in catalog if item["code"] == "SCRP-1")
+    assert len(matched["description"]) <= 265
+    assert matched["description"].endswith("…")
+
+    # 2. Enrolled student gets Topic 1 body, but Topic 2 body & block URLs are redacted until Topic 1 is completed
+    student_token = _login(client, student.email)
+    headers = {"Authorization": f"Bearer {student_token}"}
+    detail = client.get(f"/api/courses/{course.id}", headers=headers)
+    assert detail.status_code == 200
+    lessons = detail.json()["chapters"][0]["lessons"]
+    assert lessons[0]["body"] == "First topic full lecture notes"
+    assert lessons[1]["body"] == ""
+    assert lessons[1]["blocks"][0]["url"] is None
+
+    # Direct fetch of locked Lesson 2 is rejected with 400
+    locked_fetch = client.get(f"/api/courses/{course.id}/lessons/{lesson2.id}", headers=headers)
+    assert locked_fetch.status_code == 400
+
+    # Complete Topic 1 -> Topic 2 is now unlocked in both endpoints
+    db.add(LessonProgress(user_id=student.id, lesson_id=lesson1.id))
+    db.commit()
+    unlocked_fetch = client.get(f"/api/courses/{course.id}/lessons/{lesson2.id}", headers=headers)
+    assert unlocked_fetch.status_code == 200
+    assert unlocked_fetch.json()["body"] == "Second topic secret lecture notes"
+    assert unlocked_fetch.json()["blocks"][0]["url"] == "/api/uploads/courses/media/secret.pdf"
+

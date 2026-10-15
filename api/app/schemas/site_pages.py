@@ -42,6 +42,7 @@ class SitePageOut(BaseModel):
 
 
 class SiteNavItem(BaseModel):
+    id: int = 0
     menu_label: str
     path: str
     parent_path: str | None = None

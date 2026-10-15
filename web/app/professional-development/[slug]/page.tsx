@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import CertificateProgramPageContent from "@/components/professional-development/CertificateProgramPageContent";
 import { fetchPublishedCourses } from "@/lib/api";
 import { courseShortSummary } from "@/lib/courseSummary";
+import { getServerT } from "@/lib/i18n/server";
 
 type CertificatePageProps = {
   params: Promise<{ slug: string }>;
@@ -12,18 +13,20 @@ export async function generateMetadata({
   params,
 }: CertificatePageProps): Promise<Metadata> {
   const { slug } = await params;
+  const { t } = await getServerT();
+  const fallbackTitle = t("Certificate Program | CAISBE", "Programme de certificat | CAISBE");
   try {
     const courses = await fetchPublishedCourses();
     const course = courses.find((item) => item.slug === slug);
     if (!course) {
-      return { title: "Certificate Program | CAISBE" };
+      return { title: fallbackTitle };
     }
     return {
       title: `${course.title} | CAISBE`,
       description: courseShortSummary(course.description),
     };
   } catch {
-    return { title: "Certificate Program | CAISBE" };
+    return { title: fallbackTitle };
   }
 }
 

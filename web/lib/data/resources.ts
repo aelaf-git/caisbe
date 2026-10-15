@@ -1,3 +1,6 @@
+import type { Locale } from "@/lib/i18n";
+import { MEDIA_FR } from "@/lib/i18n/content/resources";
+
 export const advocacyContent = {
   slug: "advocacy-government-affairs",
   title: "Advocacy and Government",
@@ -110,8 +113,21 @@ export const mediaSlugs = mediaContent.items.map((item) => item.slug);
 /** @deprecated Use mediaSlugs */
 export const membersCornerSlugs = mediaSlugs;
 
-export function getMediaItem(slug: string) {
-  return mediaContent.items.find((item) => item.slug === slug);
+export function getMediaItem(slug: string, locale: Locale = "en") {
+  const item = mediaContent.items.find((row) => row.slug === slug);
+  if (!item || locale !== "fr") return item;
+  const fr = MEDIA_FR.items[slug as keyof typeof MEDIA_FR.items];
+  return fr ? { ...item, ...fr, highlights: [...fr.highlights] } : item;
+}
+
+export function getMediaContent(locale: Locale = "en") {
+  if (locale !== "fr") return mediaContent;
+  return {
+    ...mediaContent,
+    title: MEDIA_FR.title,
+    description: MEDIA_FR.description,
+    items: mediaContent.items.map((item) => getMediaItem(item.slug, "fr") ?? item),
+  };
 }
 
 /** @deprecated Use getMediaItem */

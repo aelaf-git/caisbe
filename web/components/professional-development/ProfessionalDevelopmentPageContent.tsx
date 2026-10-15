@@ -4,6 +4,7 @@ import {
   ContentSection,
   PageHero,
 } from "@/components/pages/ContentPage";
+import CourseScrapeGuard from "@/components/security/CourseScrapeGuard";
 import {
   courseProgramPath,
   fetchPublishedCourses,
@@ -15,10 +16,12 @@ import {
   professionalDevelopmentContent,
 } from "@/lib/data/professional-development";
 import { fetchPublishedSitePage } from "@/lib/sitePages";
+import { getServerT } from "@/lib/i18n/server";
 
 export default async function ProfessionalDevelopmentPageContent() {
   const { certificatesTitle, certificatesIntro, seminars: fallbackSeminars, formats } =
     professionalDevelopmentContent;
+  const { t } = await getServerT();
   const page = await fetchPublishedSitePage("/professional-development");
   const [coursesSection, seminarsSection, formatsSection] = page?.sections ?? [];
 
@@ -39,61 +42,75 @@ export default async function ProfessionalDevelopmentPageContent() {
   return (
     <>
       <PageHero
-        eyebrow={professionalDevelopmentContent.eyebrow}
+        eyebrow={t(professionalDevelopmentContent.eyebrow, "Développement professionnel")}
         title={page?.title?.trim() || certificatesTitle}
         lead={page?.lead?.trim() || certificatesIntro}
         actions={
           <>
             <ButtonLink href={page?.ctaHref || learningFormatsPath()} variant="primary">
-              {page?.ctaLabel?.trim() || "Learning Formats"}
+              {page?.ctaLabel?.trim() || t("Learning Formats", "Formats d’apprentissage")}
             </ButtonLink>
             <ButtonLink href="/events/calendar" variant="secondary">
-              Events Calendar
+              {t("Events Calendar", "Calendrier des événements")}
             </ButtonLink>
           </>
         }
       />
 
       <ContentSection
-        title={coursesSection?.title?.trim() || "Certificate courses"}
+        title={coursesSection?.title?.trim() || t("Certificate courses", "Cours de certificat")}
         description={
           coursesSection?.body?.trim() ||
-          "Published CAISBE certificate programs for facility, property, and built-environment professionals."
+          t(
+            "Published CAISBE certificate programs for facility, property, and built-environment professionals.",
+            "Programmes de certificat du CAISBE publiés à l’intention des professionnels des installations, de l’immobilier et de l’environnement bâti.",
+          )
         }
         wide
       >
         {courses.length === 0 ? (
           <p className="text-base leading-7 text-caisbe-muted">
-            No certificate programs are published yet. Check back soon.
+            {t(
+              "No certificate programs are published yet. Check back soon.",
+              "Aucun programme de certificat n’est encore publié. Revenez bientôt.",
+            )}
           </p>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2">
-            {courses.map((course, index) => (
-              <ContentCard
-                key={course.id}
-                title={course.title}
-                meta={course.code}
-                description={courseShortSummary(course.description)}
-                href={courseProgramPath(course.slug)}
-                hrefLabel="View Program"
-                style={{ animationDelay: `${index * 70}ms` }}
-              />
-            ))}
-          </div>
+          <CourseScrapeGuard>
+            <div className="grid gap-6 md:grid-cols-2">
+              {courses.map((course, index) => (
+                <ContentCard
+                  key={course.id}
+                  title={course.title}
+                  meta={course.code}
+                  description={courseShortSummary(course.description)}
+                  href={courseProgramPath(course.slug)}
+                  hrefLabel={t("View Program", "Voir le programme")}
+                  style={{ animationDelay: `${index * 70}ms` }}
+                />
+              ))}
+            </div>
+          </CourseScrapeGuard>
         )}
       </ContentSection>
 
       <ContentSection
-        title={seminarsSection?.title?.trim() || "Seminars"}
+        title={seminarsSection?.title?.trim() || t("Seminars", "Séminaires")}
         description={
           seminarsSection?.body?.trim() ||
-          "Professional seminars that complement certificate pathways and support continuing development."
+          t(
+            "Professional seminars that complement certificate pathways and support continuing development.",
+            "Séminaires professionnels qui complètent les parcours de certificat et soutiennent le perfectionnement continu.",
+          )
         }
         wide
       >
         {seminars.length === 0 ? (
           <p className="text-base leading-7 text-caisbe-muted">
-            No seminars are published yet. Check back soon.
+            {t(
+              "No seminars are published yet. Check back soon.",
+              "Aucun séminaire n’est encore publié. Revenez bientôt.",
+            )}
           </p>
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
@@ -101,10 +118,10 @@ export default async function ProfessionalDevelopmentPageContent() {
               <ContentCard
                 key={seminar.title}
                 title={seminar.title}
-                meta="Seminar"
+                meta={t("Seminar", "Séminaire")}
                 description={seminar.description}
                 href="/contact"
-                hrefLabel="Inquire"
+                hrefLabel={t("Inquire", "Se renseigner")}
                 style={{ animationDelay: `${index * 70}ms` }}
               />
             ))}
@@ -117,7 +134,7 @@ export default async function ProfessionalDevelopmentPageContent() {
         description={formatsSection?.body?.trim() || formats.description}
       >
         <ButtonLink href={learningFormatsPath()} variant="secondary">
-          Explore Learning Formats
+          {t("Explore Learning Formats", "Explorer les formats d’apprentissage")}
         </ButtonLink>
       </ContentSection>
     </>

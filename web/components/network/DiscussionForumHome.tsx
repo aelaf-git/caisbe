@@ -7,8 +7,10 @@ import {
   portalForumBoardUrl,
   type ForumCategory,
 } from "@/lib/forum";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 export default function DiscussionForumHome() {
+  const t = useT();
   const [categories, setCategories] = useState<ForumCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export default function DiscussionForumHome() {
         if (!cancelled) setCategories(data);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unable to load the forum.");
+          setError(err instanceof Error ? err.message : t("Unable to load the forum.", "Impossible de charger le forum."));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -36,10 +38,13 @@ export default function DiscussionForumHome() {
   return (
     <ContentSection
       id="forum"
-      title="Home"
-      description="These are the discussion boards. Sign in to the student portal to read discussions, start one, or reply."
+      title={t("Home", "Accueil")}
+      description={t(
+        "These are the discussion boards. Sign in to the student portal to read discussions, start one, or reply.",
+        "Voici les forums de discussion. Connectez-vous au portail étudiant pour lire les discussions, en lancer une ou répondre.",
+      )}
     >
-      {loading ? <p className="text-sm text-caisbe-muted">Loading forum…</p> : null}
+      {loading ? <p className="text-sm text-caisbe-muted">{t("Loading forum…", "Chargement du forum…")}</p> : null}
       {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
       {!loading && !error ? (
         <div className="space-y-8">
@@ -62,7 +67,7 @@ export default function DiscussionForumHome() {
                         <p className="font-semibold text-caisbe-text-dark">{board.title}</p>
                         <p className="mt-1 text-sm leading-6 text-caisbe-muted">{board.description}</p>
                       </div>
-                      <p className="shrink-0 text-sm font-semibold text-caisbe-red">Sign in to discuss</p>
+                      <p className="shrink-0 text-sm font-semibold text-caisbe-red">{t("Sign in to discuss", "Connectez-vous pour discuter")}</p>
                     </a>
                   </li>
                 ))}

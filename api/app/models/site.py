@@ -485,3 +485,21 @@ class SitePage(Base):
     )
 
 
+
+
+class ContentTranslation(Base):
+    """Hand-written translation of one public record (page, news post, event, ...)."""
+
+    __tablename__ = "content_translations"
+    __table_args__ = (
+        UniqueConstraint("entity_type", "entity_id", "lang", name="uq_content_translation_entity_lang"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    entity_type: Mapped[str] = mapped_column(String(32), index=True)
+    entity_id: Mapped[int] = mapped_column(Integer, index=True)
+    lang: Mapped[str] = mapped_column(String(8), index=True)
+    fields: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

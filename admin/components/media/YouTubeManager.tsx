@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
+import FrenchTranslationPanel from "@/components/translations/FrenchTranslationPanel";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
@@ -11,6 +12,7 @@ import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, ApiError, type MediaAsset } from "@/lib/auth";
+import { IconActionButton } from "@/components/ui/IconAction";
 
 type AskConfirm = (options: {
   title: string;
@@ -263,6 +265,17 @@ export default function YouTubeManager({
             </button>
           ) : null}
         </div>
+      <div className="mt-6">
+      <FrenchTranslationPanel
+        entityType="media"
+        entityId={editingId}
+        english={{ title: title, description: description }}
+        fields={[
+              { name: "title", label: "Title" },
+              { name: "description", label: "Description", kind: "textarea", rows: 4 },
+        ]}
+      />
+      </div>
       </Card>
 
       <Card>
@@ -293,13 +306,11 @@ export default function YouTubeManager({
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
+                  <IconActionButton
+                    icon={asset.published ? "unpublish" : "publish"}
+                    label={asset.published ? `Unpublish ${asset.title}` : `Publish ${asset.title}`}
                     onClick={() => void toggleField(asset, "published")}
-                    className="text-xs font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
-                  >
-                    {asset.published ? "Unpublish" : "Publish"}
-                  </button>
+                  />
                   <button
                     type="button"
                     onClick={() => void toggleField(asset, "featured")}

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 type BackButtonProps = {
   href: string;
@@ -8,9 +11,11 @@ type BackButtonProps = {
 
 export default function BackButton({
   href,
-  label = "Go back",
+  label,
   className = "",
 }: BackButtonProps) {
+  const t = useT();
+  label = label ?? t("Go back", "Retour");
   return (
     <Link
       href={href}

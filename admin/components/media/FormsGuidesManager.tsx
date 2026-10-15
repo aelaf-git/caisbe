@@ -5,6 +5,7 @@ import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import FrenchTranslationPanel from "@/components/translations/FrenchTranslationPanel";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
@@ -305,6 +306,17 @@ export default function FormsGuidesManager({
             </Button>
           ) : null}
         </div>
+      <div className="mt-6">
+      <FrenchTranslationPanel
+        entityType="media"
+        entityId={editingId}
+        english={{ title: title, description: description }}
+        fields={[
+              { name: "title", label: "Title" },
+              { name: "description", label: "Description", kind: "textarea", rows: 4 },
+        ]}
+      />
+      </div>
       </Card>
 
       <Card padding="none" className="overflow-x-auto">

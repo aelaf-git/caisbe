@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/auth";
 import { resolveUploadUrl } from "@/lib/mediaUrl";
+import { IconActionButton } from "@/components/ui/IconAction";
 
 const SUPPORTING_ACCEPT =
   ".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp";
@@ -108,14 +109,13 @@ export default function SupportingDocumentsPanel() {
                 </a>
                 <p className="text-xs text-caisbe-muted">{doc.label}</p>
               </div>
-              <button
-                type="button"
+              <IconActionButton
+                icon="trash"
+                tone="danger"
+                label={`Remove ${doc.file_name}`}
                 disabled={removingId === doc.id}
                 onClick={() => void removeDocument(doc.id)}
-                className="h-9 shrink-0 rounded-md border border-ifma-border bg-white px-3 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:bg-admin-surface-muted disabled:opacity-60"
-              >
-                {removingId === doc.id ? "Removing…" : "Remove"}
-              </button>
+              />
             </li>
           ))}
         </ul>

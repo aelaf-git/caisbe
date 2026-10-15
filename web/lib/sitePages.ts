@@ -1,7 +1,8 @@
 import type { NavSectionData } from "@/components/layout/nav-types";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, requestLocale } from "@/lib/api";
 import type { TopicPage } from "@/lib/data/site-pages";
 import { FALLBACK_HOME_FR, type Locale } from "@/lib/i18n";
+import { FR_SITE_PAGES } from "@/lib/i18n/content/sitePages.fr";
 
 export type SiteNavItem = {
   menu_label: string;
@@ -74,20 +75,31 @@ function toTopicPage(page: SitePageApi): TopicPage {
   };
 }
 
-export async function fetchPublishedSitePage(path: string): Promise<TopicPage | null> {
+/**
+ * Published Admin Pages entry in the visitor's language (French falls back to English
+ * per field on the API). When the API is unreachable, French reads the bundled copy.
+ */
+export async function fetchPublishedSitePage(
+  path: string,
+  locale?: Locale,
+): Promise<TopicPage | null> {
   try {
     const page = await apiFetch<SitePageApi>(
       `/site-pages/by-path?path=${encodeURIComponent(path)}`,
+      { locale },
     );
     return toTopicPage(page);
-  } catch {
-    return null;
+  } catch (error) {
+    const missing = error instanceof Error && error.message === "Page not found";
+    if (missing) return null;
+    const active = locale ?? (await requestLocale());
+    return active === "fr" ? (FR_SITE_PAGES[path] ?? null) : null;
   }
 }
 
-export async function fetchSiteNav(): Promise<SiteNavItem[]> {
+export async function fetchSiteNav(locale?: Locale): Promise<SiteNavItem[]> {
   try {
-    const data = await apiFetch<{ items: SiteNavItem[] }>("/site-pages/nav");
+    const data = await apiFetch<{ items: SiteNavItem[] }>("/site-pages/nav", { locale });
     return data.items ?? [];
   } catch {
     return [];

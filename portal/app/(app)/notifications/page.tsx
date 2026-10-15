@@ -6,6 +6,7 @@ import NotificationDialog, {
 } from "@/components/ui/NotificationDialog";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
+import { IconGlyph } from "@/components/ui/IconAction";
 
 type NotificationItem = NotificationDialogItem & {
   read_at: string | null;
@@ -138,7 +139,9 @@ export default function NotificationsPage() {
                       </h2>
                       <p className="mt-1 line-clamp-2 text-sm leading-6 text-caisbe-muted">{item.body}</p>
                     </div>
-                    <span className="shrink-0 pt-1 text-sm font-semibold text-caisbe-red">View</span>
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center text-caisbe-red" title="View" aria-hidden>
+                      <IconGlyph icon="view" />
+                    </span>
                   </button>
                 </li>
               );

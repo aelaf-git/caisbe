@@ -5,6 +5,7 @@ import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import FrenchTranslationPanel from "@/components/translations/FrenchTranslationPanel";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
@@ -14,6 +15,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import Tabs from "@/components/ui/Tabs";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { apiFetch, apiUpload, ApiError, type NewsPost } from "@/lib/auth";
+import { IconActionButton, IconActionLink } from "@/components/ui/IconAction";
 
 type NewsTab = "posts" | "links";
 
@@ -525,14 +527,12 @@ export default function NewsManager({
                             alt=""
                             className="h-14 w-20 object-cover border border-ifma-border"
                           />
-                          <Button
-                            variant="secondary"
-                            onClick={() =>
-                              setImageUrls((prev) => prev.filter((item) => item !== url))
-                            }
-                          >
-                            Remove
-                          </Button>
+                          <IconActionButton
+                            icon="trash"
+                            tone="danger"
+                            label="Remove image"
+                            onClick={() => setImageUrls((prev) => prev.filter((item) => item !== url))}
+                          />
                         </li>
                       ))}
                     </ul>
@@ -557,22 +557,13 @@ export default function NewsManager({
                           key={url}
                           className="flex flex-wrap items-center gap-2 text-sm text-caisbe-muted"
                         >
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-semibold text-caisbe-red hover:underline"
-                          >
-                            View video
-                          </a>
-                          <Button
-                            variant="secondary"
-                            onClick={() =>
-                              setVideoUrls((prev) => prev.filter((item) => item !== url))
-                            }
-                          >
-                            Remove
-                          </Button>
+                          <IconActionLink icon="view" external href={url} label="View video" />
+                          <IconActionButton
+                            icon="trash"
+                            tone="danger"
+                            label="Remove video"
+                            onClick={() => setVideoUrls((prev) => prev.filter((item) => item !== url))}
+                          />
                         </li>
                       ))}
                     </ul>
@@ -607,6 +598,19 @@ export default function NewsManager({
             ) : null}
           </div>
         </div>
+      <div className="mt-6">
+      <FrenchTranslationPanel
+        entityType="news"
+        entityId={editingId}
+        english={{ title: title, tag: tag, short_description: shortDescription, long_description: longDescription }}
+        fields={[
+              { name: "title", label: "Title" },
+              { name: "tag", label: "Tag" },
+              { name: "short_description", label: "Short description", kind: "textarea", rows: 3 },
+              { name: "long_description", label: "Full story", kind: "textarea", rows: 8 },
+        ]}
+      />
+      </div>
       </Card>
 
       <Card>
@@ -669,9 +673,11 @@ export default function NewsManager({
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="secondary" onClick={() => void togglePublished(post)}>
-                    {post.published ? "Unpublish" : "Publish"}
-                  </Button>
+                  <IconActionButton
+                    icon={post.published ? "unpublish" : "publish"}
+                    label={post.published ? `Unpublish ${post.title}` : `Publish ${post.title}`}
+                    onClick={() => void togglePublished(post)}
+                  />
                   <EditIconButton
                     label={`Edit ${post.title}`}
                     onClick={() => startEdit(post)}

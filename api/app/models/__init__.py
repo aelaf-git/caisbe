@@ -64,6 +64,7 @@ from app.models.site import (
     ForumThread,
     ForumReply,
     SitePage,
+    ContentTranslation,
 )
 
 
@@ -122,4 +123,5 @@ __all__ = [
     "ForumThread",
     "ForumReply",
     "SitePage",
+    "ContentTranslation",
 ]

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState, type ReactNode } from "react";
 import { useStudentSession } from "@/components/auth/useStudentSession";
 import { portalUrl } from "@/lib/api";
+import { HELP_FR } from "@/lib/i18n/content/help.fr";
+import { useLocale, useTranslate } from "@/lib/i18n/LocaleProvider";
 import {
   ACCOUNT_REQUESTS,
   CERTIFICATION_REQUESTS,
@@ -30,28 +32,36 @@ function loginToHelp() {
 }
 
 function NoticeLine({ notice }: { notice: Notice | null }) {
+  const L = useTranslate(HELP_FR);
+  const fr = useLocale() === "fr";
   if (!notice) return null;
   if ("error" in notice) return <p className="mt-3 text-sm text-caisbe-red">{notice.error}</p>;
   return (
     <p className="mt-3 text-sm text-caisbe-text">
-      Ticket {ticketNumber(notice.ticketId)} is open.{" "}
+      {fr ? "Le billet" : "Ticket"} {ticketNumber(notice.ticketId)} {fr ? "est ouvert." : "is open."}{" "}
       <a
         href={portalUrl(`/messages?thread=${notice.ticketId}`)}
         className="font-semibold text-caisbe-red hover:underline"
       >
-        View ticket in myCAISBE
+        {L("View ticket in myCAISBE")}
       </a>
     </p>
   );
 }
 
 export default function HelpSupportPage({
-  title = "Help and Support",
-  lead = "FAQs, technical tickets, and requests for courses, certificates, your account, and problems to report.",
+  title: titleProp,
+  lead: leadProp,
 }: {
   title?: string;
   lead?: string;
 }) {
+  const L = useTranslate(HELP_FR);
+  const fr = useLocale() === "fr";
+  const title = titleProp ?? L("Help and Support");
+  const lead =
+    leadProp ??
+    L("FAQs, technical tickets, and requests for courses, certificates, your account, and problems to report.");
   const { user, loading: sessionLoading } = useStudentSession();
   const [courses, setCourses] = useState<string[]>([]);
   const [threads, setThreads] = useState<SupportThread[]>([]);
@@ -129,7 +139,11 @@ export default function HelpSupportPage({
       setNotices((current) => ({
         ...current,
         [sectionId]: {
-          error: err instanceof StudentApiError ? err.detail : "Unable to submit this request.",
+          error: err instanceof StudentApiError
+            ? err.detail
+            : fr
+              ? "Impossible de soumettre cette demande."
+              : "Unable to submit this request.",
         },
       }));
       return false;
@@ -143,7 +157,7 @@ export default function HelpSupportPage({
       <section className="bg-[#f8fafc] py-12 sm:py-16">
         <div className="mx-auto max-w-7xl px-4">
           <p className="inline-flex rounded-full bg-caisbe-red/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark">
-            Support
+            {L("Support")}
           </p>
           <h1 className="font-hopewell-display mt-4 text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
             {title}
@@ -157,7 +171,7 @@ export default function HelpSupportPage({
                 href={portalUrl("/dashboard")}
                 className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
               >
-                Open myCAISBE
+                {L("Open myCAISBE")}
               </a>
             ) : (
               <button
@@ -165,18 +179,18 @@ export default function HelpSupportPage({
                 onClick={loginToHelp}
                 className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
               >
-                Log in to request support
+                {L("Log in to request support")}
               </button>
             )}
             <Link
               href="/resources/help-desk"
               className="inline-flex h-11 items-center rounded-full border border-ifma-border bg-white px-5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
             >
-              Open FAQs
+              {L("Open FAQs")}
             </Link>
           </div>
           {user ? (
-            <p className="mt-4 text-sm text-caisbe-muted">Signed in as {user.full_name}.</p>
+            <p className="mt-4 text-sm text-caisbe-muted">{fr ? "Connecté en tant que" : "Signed in as"} {user.full_name}.</p>
           ) : null}
         </div>
       </section>
@@ -185,58 +199,59 @@ export default function HelpSupportPage({
         <section id="faqs" className="scroll-mt-28 rounded-[20px] bg-white p-6 shadow-hopewell">
           <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">FAQs</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-caisbe-muted">
-            Common questions and answers are already published on the CAISBE Help Desk.
+            {L("Common questions and answers are already published on the CAISBE Help Desk.")}
           </p>
           <Link
             href="/resources/help-desk"
             className="mt-5 inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
           >
-            Open FAQs
+            {L("Open FAQs")}
           </Link>
         </section>
 
         {sessionLoading ? (
-          <p className="text-sm text-caisbe-muted">Checking your sign-in status…</p>
+          <p className="text-sm text-caisbe-muted">{fr ? "Vérification de votre connexion…" : "Checking your sign-in status…"}</p>
         ) : !user ? (
           <section
             id="request-support"
             className="scroll-mt-28 rounded-[20px] bg-white p-6 shadow-hopewell"
           >
             <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
-              Request support
+              {L("Request support")}
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-caisbe-muted">
-              Sign in to myCAISBE to open technical, course, certificate, account, and problem-report
-              requests. Support forms and your ticket history are available after you log in.
+              {L(
+                "Sign in to myCAISBE to open technical, course, certificate, account, and problem-report requests. Support forms and your ticket history are available after you log in.",
+              )}
             </p>
             <button
               type="button"
               onClick={loginToHelp}
               className="mt-5 inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
             >
-              Log in to request support
+              {L("Log in to request support")}
             </button>
           </section>
         ) : (
           <>
-            <nav className="flex flex-wrap gap-2" aria-label="Help and Support sections">
+            <nav className="flex flex-wrap gap-2" aria-label={L("Help and Support sections")}>
               {HELP_SECTIONS.map((section) => (
                 <a
                   key={section.id}
                   href={`#${section.id}`}
                   className="inline-flex rounded-full border border-ifma-border bg-white px-3 py-1.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
                 >
-                  {section.label}
+                  {L(section.label)}
                 </a>
               ))}
             </nav>
 
             <section id="technical" className="scroll-mt-28 rounded-[20px] bg-white p-6 shadow-hopewell">
               <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
-                Technical Support
+                {L("Technical Support")}
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-caisbe-muted">
-                Choose the problem you are seeing, describe what happened, and submit a ticket.
+                {L("Choose the problem you are seeing, describe what happened, and submit a ticket.")}
               </p>
               <form
                 onSubmit={(event) => {
@@ -250,19 +265,19 @@ export default function HelpSupportPage({
                 className="mt-5 max-w-2xl space-y-4"
               >
                 <label className="block text-sm font-semibold text-caisbe-text">
-                  Common technical problems
+                  {L("Common technical problems")}
                   <select
                     required
                     value={problem}
                     onChange={(event) => setProblem(event.target.value)}
                     className={fieldClass}
                   >
-                    <option value="">Select a problem</option>
+                    <option value="">{L("Select a problem")}</option>
                     {TECHNICAL_GROUPS.map((group) => (
-                      <optgroup key={group.label} label={group.label}>
+                      <optgroup key={group.label} label={L(group.label)}>
                         {group.options.map((option) => (
                           <option key={`${group.label}-${option}`} value={option}>
-                            {option}
+                            {L(option)}
                           </option>
                         ))}
                       </optgroup>
@@ -270,14 +285,14 @@ export default function HelpSupportPage({
                   </select>
                 </label>
                 <label className="block text-sm font-semibold text-caisbe-text">
-                  Details
+                  {L("Details")}
                   <textarea
                     required
                     rows={5}
                     value={technicalDetails}
                     onChange={(event) => setTechnicalDetails(event.target.value)}
                     className={fieldClass}
-                    placeholder="What were you trying to do, and what happened?"
+                    placeholder={L("What were you trying to do, and what happened?")}
                   />
                 </label>
                 <SubmitButton busy={busy === "technical"} signedIn label="Submit a ticket" />
@@ -287,8 +302,8 @@ export default function HelpSupportPage({
 
             <RequestTable
               id="course"
-              title="Course Support"
-              description="Ask for help with a course you are taking."
+              title={L("Course Support")}
+              description={L("Ask for help with a course you are taking.")}
               busy={busy === "course"}
               signedIn
               notice={notices.course ?? null}
@@ -315,7 +330,7 @@ export default function HelpSupportPage({
                             {courseTitle}
                           </option>
                         ))}
-                        <option value="Other course">Other course</option>
+                        <option value="Other course">{L("Other course")}</option>
                       </select>
                     ) : (
                       <input
@@ -323,7 +338,7 @@ export default function HelpSupportPage({
                         value={courseName}
                         onChange={(event) => setCourseName(event.target.value)}
                         className={fieldClass}
-                        placeholder="Course name"
+                        placeholder={L("Course name")}
                       />
                     ),
                 },
@@ -338,7 +353,7 @@ export default function HelpSupportPage({
                     >
                       {COURSE_REQUESTS.map((option) => (
                         <option key={option} value={option}>
-                          {option}
+                          {L(option)}
                         </option>
                       ))}
                     </select>
@@ -361,8 +376,8 @@ export default function HelpSupportPage({
 
             <RequestTable
               id="certification"
-              title="Certification Support"
-              description="Ask about a course certificate or your membership certificate."
+              title={L("Certification Support")}
+              description={L("Ask about a course certificate or your membership certificate.")}
               busy={busy === "certification"}
               signedIn
               notice={notices.certification ?? null}
@@ -388,7 +403,7 @@ export default function HelpSupportPage({
                       value={certificateName}
                       onChange={(event) => setCertificateName(event.target.value)}
                       className={fieldClass}
-                      placeholder="Program or certificate name"
+                      placeholder={L("Program or certificate name")}
                     />
                   ),
                 },
@@ -403,7 +418,7 @@ export default function HelpSupportPage({
                     >
                       {CERTIFICATION_REQUESTS.map((option) => (
                         <option key={option} value={option}>
-                          {option}
+                          {L(option)}
                         </option>
                       ))}
                     </select>
@@ -443,12 +458,12 @@ export default function HelpSupportPage({
 
             <RequestTable
               id="contact"
-              title="Contact CAISBE"
-              description="Send a message to CAISBE. It is delivered as a support ticket."
+              title={L("Contact CAISBE")}
+              description={L("Send a message to CAISBE. It is delivered as a support ticket.")}
               busy={busy === "contact"}
               signedIn
               notice={notices.contact ?? null}
-              submitLabel="Send message"
+              submitLabel={L("Send message")}
               onSubmit={(event) => {
                 event.preventDefault();
                 void sendTicket("contact", "Contact CAISBE", "general", contactSubject, [
@@ -485,12 +500,12 @@ export default function HelpSupportPage({
 
             <RequestTable
               id="report"
-              title="Report a Problem"
-              description="Tell CAISBE about something that is not working."
+              title={L("Report a Problem")}
+              description={L("Tell CAISBE about something that is not working.")}
               busy={busy === "report"}
               signedIn
               notice={notices.report ?? null}
-              submitLabel="Submit report"
+              submitLabel={L("Submit report")}
               onSubmit={(event) => {
                 event.preventDefault();
                 void sendTicket("report", "Report a Problem", "issue", reportWhat, [
@@ -507,7 +522,7 @@ export default function HelpSupportPage({
                       value={reportWhere}
                       onChange={(event) => setReportWhere(event.target.value)}
                       className={fieldClass}
-                      placeholder="Page, course, or exam"
+                      placeholder={L("Page, course, or exam")}
                     />
                   ),
                 },
@@ -541,12 +556,12 @@ export default function HelpSupportPage({
             <section className="overflow-hidden rounded-[20px] bg-white shadow-hopewell">
               <div className="border-b border-ifma-border-light px-6 py-4">
                 <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
-                  Your requests
+                  {L("Your requests")}
                 </h2>
-                <p className="mt-1 text-sm text-caisbe-muted">Tickets you have already sent to CAISBE.</p>
+                <p className="mt-1 text-sm text-caisbe-muted">{fr ? "Les billets que vous avez déjà envoyés au CAISBE." : "Tickets you have already sent to CAISBE."}</p>
               </div>
               {threads.length === 0 ? (
-                <p className="px-5 py-8 text-caisbe-muted">No requests yet.</p>
+                <p className="px-5 py-8 text-caisbe-muted">{fr ? "Aucune demande pour le moment." : "No requests yet."}</p>
               ) : (
                 <>
                   <ul className="divide-y divide-ifma-border-light md:hidden">
@@ -555,7 +570,7 @@ export default function HelpSupportPage({
                         <p className="break-words font-medium text-caisbe-text">{thread.subject}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                           <span className="capitalize text-caisbe-muted">
-                            {thread.status.replaceAll("_", " ")}
+                            {L(thread.status.replaceAll("_", " "))}
                           </span>
                           <a
                             href={portalUrl(`/messages?thread=${thread.id}`)}
@@ -576,7 +591,7 @@ export default function HelpSupportPage({
                               key={header}
                               className={`px-5 py-3 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark ${header === "Request" ? "" : "w-40 whitespace-nowrap"}`}
                             >
-                              {header}
+                              {L(header)}
                             </th>
                           ))}
                         </tr>
@@ -588,7 +603,7 @@ export default function HelpSupportPage({
                               {thread.subject}
                             </td>
                             <td className="whitespace-nowrap px-5 py-4 capitalize text-caisbe-muted">
-                              {thread.status.replaceAll("_", " ")}
+                              {L(thread.status.replaceAll("_", " "))}
                             </td>
                             <td className="whitespace-nowrap px-5 py-4">
                               <a
@@ -622,6 +637,7 @@ function SubmitButton({
   signedIn: boolean;
   label: string;
 }) {
+  const L = useTranslate(HELP_FR);
   if (!signedIn) {
     return (
       <button
@@ -629,7 +645,7 @@ function SubmitButton({
         onClick={loginToHelp}
         className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
       >
-        Log in to submit
+        {L("Log in to submit")}
       </button>
     );
   }
@@ -639,7 +655,7 @@ function SubmitButton({
       disabled={busy}
       className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
     >
-      {busy ? "Submitting…" : label}
+      {busy ? L("Submitting…") : L(label)}
     </button>
   );
 }
@@ -665,6 +681,7 @@ function RequestTable({
   onSubmit: (event: FormEvent) => void;
   submitLabel?: string;
 }) {
+  const L = useTranslate(HELP_FR);
   return (
     <section id={id} className="scroll-mt-28 overflow-hidden rounded-[20px] bg-white shadow-hopewell">
       <div className="border-b border-ifma-border-light px-6 py-4">
@@ -676,21 +693,21 @@ function RequestTable({
           <thead className="hidden md:table-header-group">
             <tr className="border-b border-ifma-border-light">
               <th className="w-56 px-5 py-3 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark">
-                Field
+                {L("Field")}
               </th>
               <th className="px-5 py-3 font-hopewell-display text-xs font-bold uppercase tracking-wider text-caisbe-text-dark">
-                Your request
+                {L("Your request")}
               </th>
             </tr>
           </thead>
           <tbody className="block divide-y divide-ifma-border-light md:table-row-group md:divide-y-0">
             {rows.map((row) => (
-              <tr key={row.label} className="block border-b border-ifma-border-light px-5 py-4 last:border-b-0 md:table-row md:px-0">
+              <tr key={L(row.label)} className="block border-b border-ifma-border-light px-5 py-4 last:border-b-0 md:table-row md:px-0">
                 <th
                   scope="row"
                   className="block pb-2 text-left font-semibold text-caisbe-text md:table-cell md:w-56 md:px-5 md:py-4 md:align-top"
                 >
-                  {row.label}
+                  {L(row.label)}
                 </th>
                 <td className="block min-w-0 md:table-cell md:px-5 md:py-4">{row.control}</td>
               </tr>
@@ -725,11 +742,12 @@ function AccountTable({
   setAccountDetails: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
 }) {
+  const L = useTranslate(HELP_FR);
   return (
     <RequestTable
       id="account"
-      title="Account Support"
-      description="Ask for help with your myCAISBE account, membership, or registration."
+      title={L("Account Support")}
+      description={L("Ask for help with your myCAISBE account, membership, or registration.")}
       busy={busy}
       signedIn={Boolean(user)}
       notice={notice}
@@ -738,7 +756,7 @@ function AccountTable({
         {
           label: "Account email",
           control: (
-            <p className="text-sm font-medium text-caisbe-text">{user?.email ?? "Shown after you sign in"}</p>
+            <p className="text-sm font-medium text-caisbe-text">{user?.email ?? L("Shown after you sign in")}</p>
           ),
         },
         {
@@ -752,7 +770,7 @@ function AccountTable({
             >
               {ACCOUNT_REQUESTS.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {L(option)}
                 </option>
               ))}
             </select>

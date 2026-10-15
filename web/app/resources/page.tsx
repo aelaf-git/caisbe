@@ -9,14 +9,17 @@ import { advocacyContent, mediaContent } from "@/lib/data/resources";
 import { resourcesPages } from "@/lib/data/site-pages";
 import { ticketsContent } from "@/lib/data/tickets";
 import { cmsTopicMetadata, cmsTopicPage } from "@/lib/cmsTopic";
-
-const fallbackDescription =
-  "Explore CAISBE resources including careers, advocacy, knowledge tools, and media.";
+import { getServerT } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerT();
+  const fallbackDescription = t(
+    "Explore CAISBE resources including careers, advocacy, knowledge tools, and media.",
+    "Explorez les ressources du CAISBE, y compris les carrières, le plaidoyer, les outils de connaissances et les médias.",
+  );
   return (
     (await cmsTopicMetadata("/resources", fallbackDescription)) ?? {
-      title: "Resources | CAISBE",
+      title: t("Resources | CAISBE", "Ressources | CAISBE"),
       description: fallbackDescription,
     }
   );
@@ -62,16 +65,20 @@ export default async function ResourcesPage() {
   const cms = await cmsTopicPage("/resources");
   if (cms) return cms;
 
+  const { t } = await getServerT();
   return (
     <>
       <SubsectionIndex
-        eyebrow="Resources"
-        title="Resources"
-        description="Tools, careers, advocacy, and member media for the CAISBE community."
+        eyebrow={t("Resources", "Ressources")}
+        title={t("Resources", "Ressources")}
+        description={t(
+          "Tools, careers, advocacy, and member media for the CAISBE community.",
+          "Outils, carrières, plaidoyer et médias pour les membres de la communauté du CAISBE.",
+        )}
         items={featuredResources}
       />
 
-      <ContentSection title="More Resources" wide>
+      <ContentSection title={t("More Resources", "Plus de ressources")} wide>
         <div className="grid gap-6 md:grid-cols-2">
           {resourcesPages.map((item, index) => (
             <ContentCard
