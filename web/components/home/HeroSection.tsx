@@ -91,12 +91,12 @@ export default function HeroSection({
 
   return (
     <section className="relative overflow-hidden bg-[#f8fafc]">
-      <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 py-12 sm:gap-10 sm:py-16 md:py-20 lg:grid-cols-2 lg:gap-16 lg:py-24">
+      <div className="mx-auto grid max-w-[90rem] items-center gap-8 px-4 py-10 sm:gap-10 sm:px-6 sm:py-14 lg:min-h-[min(46rem,calc(100svh-7rem))] lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-14 lg:px-10 lg:py-12 xl:gap-20">
         <div className="min-w-0">
-          <h1 className="font-hopewell-display text-3xl font-extrabold leading-[1.08] tracking-tight text-caisbe-text-dark sm:text-4xl md:text-5xl">
+          <h1 className="font-hopewell-display text-3xl font-extrabold leading-[1.08] tracking-tight text-caisbe-text-dark sm:text-4xl md:text-5xl xl:text-6xl">
             {heading || siteFullName}
           </h1>
-          <p className="mt-4 max-w-xl text-base leading-7 text-caisbe-muted sm:mt-5 sm:text-xl sm:leading-8">
+          <p className="mt-4 max-w-2xl text-base leading-7 text-caisbe-muted sm:mt-5 sm:text-xl sm:leading-8">
             {intro || heroIntro}
           </p>
           {buttonLabel === "" ? null : (
@@ -108,8 +108,8 @@ export default function HeroSection({
           )}
         </div>
 
-        <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[28px] shadow-[0_20px_45px_-12px_rgba(196,32,50,0.28)] sm:aspect-[5/4] lg:aspect-[4/5]">
+        <div className="relative mx-auto w-full max-w-2xl lg:max-w-none">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] shadow-[0_20px_45px_-12px_rgba(196,32,50,0.28)] sm:aspect-[16/10] lg:aspect-auto lg:h-[min(34rem,calc(100svh-12rem))] lg:min-h-[22rem]">
             {slides.map((slide, slideIndex) => {
               const active = slideIndex === index;
               const commonClass = `absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-700 ease-out ${

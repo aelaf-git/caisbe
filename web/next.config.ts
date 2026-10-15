@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+// Webpack dev builds use eval-based source maps and React Refresh, which need 'unsafe-eval'.
+const scriptSrc =
+  process.env.NODE_ENV === "development"
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    : "script-src 'self' 'unsafe-inline'";
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -8,7 +14,7 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
   {
     key: "Content-Security-Policy",
-    value: "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline'",
+    value: `base-uri 'self'; object-src 'none'; frame-ancestors 'none'; ${scriptSrc}`,
   },
 ];
 
