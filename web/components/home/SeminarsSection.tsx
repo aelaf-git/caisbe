@@ -81,14 +81,17 @@ export default async function SeminarsSection({
         {seminars.length === 0 ? (
           <p className="text-center text-base leading-7 text-caisbe-muted">{emptyMessage}</p>
         ) : (
-          <HorizontalCarousel label={heading} itemClassName="w-[min(85vw,20rem)] shrink-0 snap-start sm:w-[20rem]">
+          <HorizontalCarousel
+            label={heading}
+            itemClassName="w-[min(92vw,40rem)] shrink-0 snap-start sm:w-[min(85vw,42rem)] lg:w-[40rem]"
+          >
             {seminars.map((seminar) => {
               const coverUrl = seminar.cover_url?.trim() || null;
               return (
                 <Link
                   key={seminar.id}
                   href={`/professional-development/seminars/${seminar.id}/register`}
-                  className={`group relative flex h-full min-h-[18rem] flex-col overflow-hidden rounded-none shadow-hopewell transition duration-300 hover:-translate-y-1 ${
+                  className={`group relative flex h-full min-h-[22rem] flex-col overflow-hidden rounded-none shadow-hopewell transition duration-300 hover:-translate-y-1 sm:min-h-[26rem] ${
                     coverUrl
                       ? "bg-caisbe-text-dark"
                       : "bg-gradient-to-br from-[#3d3832] via-[#5c1a2e] to-[#7b1e3a]"
@@ -106,8 +109,8 @@ export default async function SeminarsSection({
                     className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-black/10"
                     aria-hidden
                   />
-                  <div className="relative flex h-full min-w-0 flex-col px-5 pb-5 pt-6 text-left text-white">
-                    <div className="space-y-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-white/90">
+                  <div className="relative flex h-full min-w-0 flex-col px-6 pb-6 pt-7 text-left text-white sm:px-8 sm:pb-8 sm:pt-9">
+                    <div className="space-y-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/90 sm:text-sm">
                       {seminar.event_date_label ? (
                         <p className="line-clamp-2 break-words">{seminar.event_date_label}</p>
                       ) : null}
@@ -115,10 +118,10 @@ export default async function SeminarsSection({
                         <p className="line-clamp-2 break-words">{seminar.event_format_label}</p>
                       ) : null}
                     </div>
-                    <h3 className="mt-auto pt-10 font-hopewell-display text-xl font-bold leading-snug break-words">
+                    <h3 className="mt-auto pt-12 font-hopewell-display text-2xl font-bold leading-snug break-words sm:text-3xl">
                       {seminar.title}
                     </h3>
-                    <p className="mt-4 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-white/85">
+                    <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-white/85 sm:text-sm">
                       {badgeLabel}
                     </p>
                   </div>

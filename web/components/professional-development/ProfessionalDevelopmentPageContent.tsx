@@ -89,6 +89,7 @@ export default async function ProfessionalDevelopmentPageContent() {
                   title={course.title}
                   meta={course.code}
                   description={courseShortSummary(course.description)}
+                  imageUrl={course.cover_url}
                   href={courseProgramPath(course.slug)}
                   hrefLabel={t("View Program", "Voir le programme")}
                   style={{ animationDelay: `${index * 70}ms` }}
