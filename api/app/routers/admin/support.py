@@ -293,6 +293,20 @@ def _validate_upload_url(url: str | None, *, field: str = "file") -> None:
         )
 
 
+def _validate_hero_file_url(url: str | None) -> None:
+    """Hero slides may use site static /images/… assets or media-library uploads."""
+    if not url or not url.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File URL is required.",
+        )
+    path = url.strip().split("?")[0]
+    lowered = path.lower()
+    if path.startswith("/images/") and any(lowered.endswith(ext) for ext in ALLOWED_UPLOAD_EXTENSIONS):
+        return
+    _validate_upload_url(url, field="File")
+
+
 def _normalize_hero_panel_fields(
     *,
     show_text_panel: bool,
@@ -369,7 +383,10 @@ def _normalize_media_fields(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="File URL is required for this media type.",
             )
-        _validate_upload_url(clean_file, field="File")
+        if cat == "hero":
+            _validate_hero_file_url(clean_file)
+        else:
+            _validate_upload_url(clean_file, field="File")
         if clean_cover:
             _validate_upload_url(clean_cover, field="Cover")
         base = {
