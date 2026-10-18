@@ -38,6 +38,12 @@ class MediaAsset(Base):
     external_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # Full blog post body (plain text).
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Homepage hero panel (unused for other media categories).
+    show_text_panel: Mapped[bool] = mapped_column(Boolean, default=True)
+    eyebrow: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    headline: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    cta_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    cta_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # hero | magazine | youtube | podcast | blog
     category: Mapped[str] = mapped_column(String(32), default="magazine", index=True)
     published: Mapped[bool] = mapped_column(Boolean, default=False, index=True)

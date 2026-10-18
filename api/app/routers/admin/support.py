@@ -293,6 +293,33 @@ def _validate_upload_url(url: str | None, *, field: str = "file") -> None:
         )
 
 
+def _normalize_hero_panel_fields(
+    *,
+    show_text_panel: bool,
+    eyebrow: str | None,
+    headline: str | None,
+    cta_label: str | None,
+    cta_url: str | None,
+) -> dict:
+    clean_url = (cta_url or "").strip() or None
+    if clean_url and not (
+        clean_url.startswith("/")
+        or clean_url.startswith("https://")
+        or clean_url.startswith("http://")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CTA URL must be a site path or http(s) link.",
+        )
+    return {
+        "show_text_panel": bool(show_text_panel),
+        "eyebrow": strip_plain_text(eyebrow) if eyebrow else None,
+        "headline": strip_plain_text(headline) if headline else None,
+        "cta_label": strip_plain_text(cta_label) if cta_label else None,
+        "cta_url": clean_url,
+    }
+
+
 def _normalize_media_fields(
     *,
     category: str,
@@ -302,6 +329,11 @@ def _normalize_media_fields(
     cover_url: str | None,
     external_url: str | None,
     body: str | None,
+    show_text_panel: bool = True,
+    eyebrow: str | None = None,
+    headline: str | None = None,
+    cta_label: str | None = None,
+    cta_url: str | None = None,
 ) -> dict:
     from app.services.media_channels import (
         CHANNEL_CATEGORIES,
@@ -337,7 +369,7 @@ def _normalize_media_fields(
         _validate_upload_url(clean_file, field="File")
         if clean_cover:
             _validate_upload_url(clean_cover, field="Cover")
-        return {
+        base = {
             "title": clean_title,
             "description": clean_description,
             "file_url": clean_file,
@@ -345,7 +377,23 @@ def _normalize_media_fields(
             "external_url": None,
             "body": None,
             "category": cat,
+            "show_text_panel": True,
+            "eyebrow": None,
+            "headline": None,
+            "cta_label": None,
+            "cta_url": None,
         }
+        if cat == "hero":
+            base.update(
+                _normalize_hero_panel_fields(
+                    show_text_panel=show_text_panel,
+                    eyebrow=eyebrow,
+                    headline=headline,
+                    cta_label=cta_label,
+                    cta_url=cta_url,
+                )
+            )
+        return base
 
     if cat == "youtube":
         video_id = extract_youtube_id(clean_external or "")

@@ -12,6 +12,7 @@ import ProgressBar from "@/components/ui/ProgressBar";
 import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
+import FrenchTranslationPanel from "@/components/translations/FrenchTranslationPanel";
 import { apiFetch, apiUpload, ApiError, type MediaAsset } from "@/lib/auth";
 
 const HERO_ACCEPT =
@@ -93,6 +94,12 @@ export default function HeroManager({
   const [title, setTitle] = useState("");
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState(0);
+  const [showTextPanel, setShowTextPanel] = useState(true);
+  const [eyebrow, setEyebrow] = useState("");
+  const [headline, setHeadline] = useState("");
+  const [description, setDescription] = useState("");
+  const [ctaLabel, setCtaLabel] = useState("");
+  const [ctaUrl, setCtaUrl] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [transitionSeconds, setTransitionSeconds] = useState(3);
   const [savedTransitionSeconds, setSavedTransitionSeconds] = useState(3);
@@ -109,8 +116,14 @@ export default function HeroManager({
       title: title.trim(),
       file_url: fileUrl,
       sort_order: sortOrder,
+      show_text_panel: showTextPanel,
+      eyebrow: eyebrow.trim(),
+      headline: headline.trim(),
+      description: description.trim(),
+      cta_label: ctaLabel.trim(),
+      cta_url: ctaUrl.trim(),
     }),
-    [title, fileUrl, sortOrder],
+    [title, fileUrl, sortOrder, showTextPanel, eyebrow, headline, description, ctaLabel, ctaUrl],
   );
   const { dirty, resetBaseline } = useDirtyForm(formValues);
 
@@ -141,10 +154,26 @@ export default function HeroManager({
     setTitle("");
     setFileUrl(null);
     setSortOrder(nextOrder);
+    setShowTextPanel(true);
+    setEyebrow("");
+    setHeadline("");
+    setDescription("");
+    setCtaLabel("");
+    setCtaUrl("");
     setFileProgress(0);
     setFormError(null);
     resetFileInput(fileInputRef);
-    resetBaseline({ title: "", file_url: null, sort_order: nextOrder });
+    resetBaseline({
+      title: "",
+      file_url: null,
+      sort_order: nextOrder,
+      show_text_panel: true,
+      eyebrow: "",
+      headline: "",
+      description: "",
+      cta_label: "",
+      cta_url: "",
+    });
   }
 
   function openAddForm() {
@@ -166,6 +195,12 @@ export default function HeroManager({
     setTitle(asset.title);
     setFileUrl(asset.file_url ?? null);
     setSortOrder(asset.sort_order);
+    setShowTextPanel(asset.show_text_panel !== false);
+    setEyebrow(asset.eyebrow ?? "");
+    setHeadline(asset.headline ?? "");
+    setDescription(asset.description ?? "");
+    setCtaLabel(asset.cta_label ?? "");
+    setCtaUrl(asset.cta_url ?? "");
     setFileProgress(0);
     setFormError(null);
     resetFileInput(fileInputRef);
@@ -173,6 +208,12 @@ export default function HeroManager({
       title: asset.title.trim(),
       file_url: asset.file_url ?? null,
       sort_order: asset.sort_order,
+      show_text_panel: asset.show_text_panel !== false,
+      eyebrow: (asset.eyebrow ?? "").trim(),
+      headline: (asset.headline ?? "").trim(),
+      description: (asset.description ?? "").trim(),
+      cta_label: (asset.cta_label ?? "").trim(),
+      cta_url: (asset.cta_url ?? "").trim(),
     });
     setShowForm(true);
     requestAnimationFrame(() => {
@@ -231,26 +272,31 @@ export default function HeroManager({
     setFormError(null);
     setSaving(true);
     try {
+      const panelPayload = {
+        title: title.trim(),
+        file_url: fileUrl,
+        sort_order: sortOrder,
+        show_text_panel: showTextPanel,
+        eyebrow: eyebrow.trim() || null,
+        headline: headline.trim() || null,
+        description: description.trim() || null,
+        cta_label: ctaLabel.trim() || null,
+        cta_url: ctaUrl.trim() || null,
+      };
       if (isEditing && editingId !== null) {
         await apiFetch(`/admin/media/${editingId}`, {
           method: "PATCH",
-          body: JSON.stringify({
-            title: title.trim(),
-            file_url: fileUrl,
-            sort_order: sortOrder,
-          }),
+          body: JSON.stringify(panelPayload),
         });
         onSuccess("Hero slide updated.");
       } else {
         await apiFetch("/admin/media", {
           method: "POST",
           body: JSON.stringify({
-            title: title.trim(),
-            file_url: fileUrl,
+            ...panelPayload,
             category: "hero",
             published: true,
             featured: false,
-            sort_order: sortOrder,
           }),
         });
         onSuccess("Hero slide published.");
@@ -371,8 +417,8 @@ export default function HeroManager({
               </h2>
               <p className="mt-1 text-sm text-caisbe-muted">
                 {isEditing
-                  ? "Update media or title, then save."
-                  : "Upload a file, add a title, then publish."}
+                  ? "Update media, panel copy, or turn the text panel off for media-only."
+                  : "Upload a file, optionally add panel copy, then publish."}
               </p>
             </div>
             <Button type="button" variant="secondary" disabled={uploading || saving} onClick={closeForm}>
@@ -459,7 +505,7 @@ export default function HeroManager({
             </FormField>
 
             <div className="space-y-4">
-              <FormField label="Title" hint="Alt text on the homepage">
+              <FormField label="Title" hint="Alt text / admin label (not the panel headline)">
                 <input
                   value={title}
                   onChange={(e) => {
@@ -480,6 +526,70 @@ export default function HeroManager({
                   disabled={uploading || saving}
                 />
               </FormField>
+              <label className="flex items-center gap-2 text-sm font-semibold text-caisbe-text-dark">
+                <input
+                  type="checkbox"
+                  checked={showTextPanel}
+                  onChange={(e) => setShowTextPanel(e.target.checked)}
+                  disabled={uploading || saving}
+                  className="h-4 w-4 rounded border-ifma-border text-caisbe-red focus:ring-caisbe-red"
+                />
+                Show text panel on this slide
+              </label>
+              {showTextPanel ? (
+                <>
+                  <FormField label="Eyebrow" hint="Small uppercase label above the headline">
+                    <input
+                      value={eyebrow}
+                      onChange={(e) => setEyebrow(e.target.value)}
+                      className={fieldClassName}
+                      placeholder="Membership"
+                      disabled={uploading || saving}
+                    />
+                  </FormField>
+                  <FormField label="Headline" hint="Main line in the left panel (e.g. CAISBE)">
+                    <input
+                      value={headline}
+                      onChange={(e) => setHeadline(e.target.value)}
+                      className={fieldClassName}
+                      placeholder="CAISBE"
+                      disabled={uploading || saving}
+                    />
+                  </FormField>
+                  <FormField label="Body" hint="Supporting sentence in the panel">
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className={`${fieldClassName} min-h-[6rem]`}
+                      rows={4}
+                      disabled={uploading || saving}
+                    />
+                  </FormField>
+                  <FormField label="CTA label">
+                    <input
+                      value={ctaLabel}
+                      onChange={(e) => setCtaLabel(e.target.value)}
+                      className={fieldClassName}
+                      placeholder="Join CAISBE"
+                      disabled={uploading || saving}
+                    />
+                  </FormField>
+                  <FormField label="CTA URL" hint="Site path (/membership) or full https URL">
+                    <input
+                      value={ctaUrl}
+                      onChange={(e) => setCtaUrl(e.target.value)}
+                      className={fieldClassName}
+                      placeholder="/membership"
+                      disabled={uploading || saving}
+                    />
+                  </FormField>
+                </>
+              ) : (
+                <p className="text-sm text-caisbe-muted">
+                  This slide will show media only (no left text box). Panel copy is kept if you turn
+                  the panel back on later.
+                </p>
+              )}
               <div className="flex flex-wrap gap-3 pt-1">
                 <SaveButton
                   dirty={dirty}
@@ -493,6 +603,26 @@ export default function HeroManager({
                 </Button>
               </div>
             </div>
+          </div>
+          <div className="mt-6">
+            <FrenchTranslationPanel
+              entityType="media"
+              entityId={editingId}
+              english={{
+                title,
+                description,
+                eyebrow,
+                headline,
+                cta_label: ctaLabel,
+              }}
+              fields={[
+                { name: "title", label: "Title (alt)" },
+                { name: "eyebrow", label: "Eyebrow" },
+                { name: "headline", label: "Headline" },
+                { name: "description", label: "Body", kind: "textarea", rows: 4 },
+                { name: "cta_label", label: "CTA label" },
+              ]}
+            />
           </div>
         </Card>
       ) : null}
@@ -539,7 +669,7 @@ export default function HeroManager({
                     className="h-full w-full object-cover"
                   />
                 ) : null}
-                <div className="absolute left-2 top-2">
+                <div className="absolute left-2 top-2 flex flex-wrap gap-1">
                   <button
                     type="button"
                     onClick={() => void togglePublished(asset)}
@@ -549,13 +679,21 @@ export default function HeroManager({
                       {asset.published ? "Published" : "Draft"}
                     </Badge>
                   </button>
+                  {asset.show_text_panel === false ? (
+                    <Badge tone="neutral">Media only</Badge>
+                  ) : null}
                 </div>
               </div>
               <div className="space-y-3 p-4">
                 <div>
-                  <p className="font-semibold text-caisbe-text-dark">{asset.title}</p>
+                  <p className="font-semibold text-caisbe-text-dark">
+                    {asset.show_text_panel !== false && asset.headline
+                      ? asset.headline
+                      : asset.title}
+                  </p>
                   <p className="mt-0.5 text-xs text-caisbe-muted">
                     {isVideoUrl(asset.file_url) ? "Video" : "Image"} · order {asset.sort_order}
+                    {asset.show_text_panel === false ? " · no text panel" : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2">

@@ -7,21 +7,48 @@ from app.services.settings import ensure_default_settings
 
 HERO_DEFAULTS_SEEDED_KEY = "hero_defaults_seeded"
 
-DEFAULT_HERO_ASSETS: list[dict[str, str | int]] = [
+DEFAULT_HERO_ASSETS: list[dict[str, str | int | bool]] = [
     {
         "title": "CAISBE campus and learning community",
         "file_url": "/images/hero_1.jpeg",
         "sort_order": 0,
+        "show_text_panel": True,
+        "eyebrow": "Membership",
+        "headline": "CAISBE",
+        "description": (
+            "Join a community of facility and property management professionals "
+            "building sustainable places across Canada and Africa."
+        ),
+        "cta_label": "Join CAISBE",
+        "cta_url": None,
     },
     {
         "title": "CAISBE students and professionals",
         "file_url": "/images/hero_2.jpeg",
         "sort_order": 1,
+        "show_text_panel": True,
+        "eyebrow": "Professional development",
+        "headline": "Build your FM career",
+        "description": (
+            "Certificate programs and learning formats that connect Canadian expertise "
+            "with African industry needs."
+        ),
+        "cta_label": "View programs",
+        "cta_url": "/professional-development",
     },
     {
         "title": "CAISBE built environment education",
         "file_url": "/images/hero_3.jpeg",
         "sort_order": 2,
+        "show_text_panel": True,
+        "eyebrow": "Community",
+        "headline": "Transforming buildings",
+        "description": (
+            "Education, standards, and membership that empower sustainable transformation "
+            "across buildings and infrastructure."
+        ),
+        "cta_label": "Learn more",
+        "cta_url": "/about",
     },
 ]
 
@@ -43,13 +70,18 @@ def ensure_default_hero_slides(db: Session) -> None:
             db.add(
                 MediaAsset(
                     title=str(item["title"]),
-                    description=None,
+                    description=str(item["description"]) if item.get("description") else None,
                     file_url=str(item["file_url"]),
                     cover_url=None,
                     category="hero",
                     published=True,
                     featured=False,
                     sort_order=int(item["sort_order"]),
+                    show_text_panel=bool(item.get("show_text_panel", True)),
+                    eyebrow=str(item["eyebrow"]) if item.get("eyebrow") else None,
+                    headline=str(item["headline"]) if item.get("headline") else None,
+                    cta_label=str(item["cta_label"]) if item.get("cta_label") else None,
+                    cta_url=str(item["cta_url"]) if item.get("cta_url") else None,
                 )
             )
 

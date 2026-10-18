@@ -63,7 +63,10 @@ def _media_type_from_url(url: str) -> str:
 
 
 @router.get("/hero", response_model=HeroCarouselOut)
-def get_hero_carousel(db: Session = Depends(get_db)) -> HeroCarouselOut:
+def get_hero_carousel(
+    lang: str = Query(default="en", max_length=12),
+    db: Session = Depends(get_db),
+) -> HeroCarouselOut:
     ensure_default_hero_slides(db)
     db.commit()
     transition = hero_transition_ms(db)
@@ -74,16 +77,30 @@ def get_hero_carousel(db: Session = Depends(get_db)) -> HeroCarouselOut:
         .all()
     )
     slides = [
-        HeroSlideOut(
-            id=row.id,
-            title=row.title,
-            file_url=row.file_url,
-            media_type=_media_type_from_url(row.file_url),
-        )
+        MediaAssetOut.model_validate(row)
         for row in rows
         if row.file_url
     ]
-    return HeroCarouselOut(transition_ms=transition, slides=slides)
+    slides = localize_many(db, "media", slides, lang)
+    return HeroCarouselOut(
+        transition_ms=transition,
+        slides=[
+            HeroSlideOut(
+                id=item.id,
+                title=item.title,
+                file_url=item.file_url or "",
+                media_type=_media_type_from_url(item.file_url or ""),
+                show_text_panel=bool(item.show_text_panel),
+                eyebrow=item.eyebrow,
+                headline=item.headline,
+                description=item.description,
+                cta_label=item.cta_label,
+                cta_url=item.cta_url,
+            )
+            for item in slides
+            if item.file_url
+        ],
+    )
 
 
 @router.get("/media", response_model=list[MediaAssetOut])

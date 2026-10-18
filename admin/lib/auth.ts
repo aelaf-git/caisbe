@@ -93,6 +93,11 @@ export type MediaAsset = {
   cover_url: string | null;
   external_url: string | null;
   body: string | null;
+  show_text_panel?: boolean;
+  eyebrow?: string | null;
+  headline?: string | null;
+  cta_label?: string | null;
+  cta_url?: string | null;
   category: string;
   published: boolean;
   featured: boolean;

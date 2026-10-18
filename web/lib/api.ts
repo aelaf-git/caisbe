@@ -93,6 +93,12 @@ export type HeroSlide = {
   title: string;
   file_url: string;
   media_type: "image" | "video" | string;
+  show_text_panel?: boolean;
+  eyebrow?: string | null;
+  headline?: string | null;
+  description?: string | null;
+  cta_label?: string | null;
+  cta_url?: string | null;
 };
 
 export type Seminar = {
@@ -139,6 +145,7 @@ const LOCALIZED_PATHS = [
   "/testimonials",
   "/media",
   "/courses",
+  "/hero",
 ];
 
 function isLocalizedPath(path: string): boolean {

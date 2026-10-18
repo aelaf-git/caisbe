@@ -12,22 +12,41 @@ const DEFAULT_SLIDES: HeroSlide[] = [
     title: "CAISBE campus and learning community",
     file_url: "/images/hero_1.jpeg",
     media_type: "image",
+    show_text_panel: true,
+    eyebrow: "Membership",
+    headline: "CAISBE",
+    description: null,
+    cta_label: null,
+    cta_url: null,
   },
   {
     id: "default-2",
     title: "CAISBE students and professionals",
     file_url: "/images/hero_2.jpeg",
     media_type: "image",
+    show_text_panel: true,
+    eyebrow: "Professional development",
+    headline: "Build your FM career",
+    description: null,
+    cta_label: null,
+    cta_url: "/professional-development",
   },
   {
     id: "default-3",
     title: "CAISBE built environment education",
     file_url: "/images/hero_3.jpeg",
     media_type: "image",
+    show_text_panel: false,
   },
 ];
 
 const DEFAULT_TRANSITION_MS = 3000;
+
+function resolveCtaHref(raw: string | null | undefined, fallback: string): string {
+  const value = (raw || "").trim();
+  if (!value) return fallback;
+  return value;
+}
 
 export default function HeroSection({
   heading,
@@ -91,8 +110,20 @@ export default function HeroSection({
     });
   }, [index, slides]);
 
-  const headline = heading || siteFullName;
+  const active = slides[index] ?? slides[0];
+  const showPanel = active?.show_text_panel !== false;
   const showControls = slides.length > 1;
+  const membershipHref = portalMembershipRegisterUrl();
+
+  const panelEyebrow =
+    active?.eyebrow?.trim() || t("Membership", "Adhésion");
+  const panelHeadline = active?.headline?.trim() || siteName;
+  const panelSubhead = heading || siteFullName;
+  const panelBody = active?.description?.trim() || intro || heroIntro;
+  const panelCtaLabel =
+    active?.cta_label?.trim() ||
+    (buttonLabel === "" ? "" : buttonLabel || `Join ${siteName}`);
+  const panelCtaHref = resolveCtaHref(active?.cta_url, membershipHref);
 
   function go(delta: -1 | 1) {
     setIndex((current) => (current + delta + slides.length) % slides.length);
@@ -100,11 +131,11 @@ export default function HeroSection({
 
   return (
     <section className="relative isolate min-h-[min(36rem,calc(100svh-6.5rem))] overflow-hidden bg-caisbe-text-dark sm:min-h-[min(42rem,calc(100svh-7rem))] lg:min-h-[min(46rem,calc(100svh-7rem))]">
-      <div className="absolute inset-0" aria-hidden>
+      <div className="absolute inset-0" aria-hidden={!showPanel}>
         {slides.map((slide, slideIndex) => {
-          const active = slideIndex === index;
+          const isActive = slideIndex === index;
           const commonClass = `absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-700 ease-out ${
-            active ? "opacity-100" : "opacity-0"
+            isActive ? "opacity-100" : "opacity-0"
           }`;
 
           if (slide.media_type === "video") {
@@ -120,7 +151,7 @@ export default function HeroSection({
                 loop
                 playsInline
                 className={commonClass}
-                aria-hidden={!active}
+                aria-hidden={!isActive}
               />
             );
           }
@@ -130,7 +161,7 @@ export default function HeroSection({
             <img
               key={slide.id}
               src={slide.file_url}
-              alt=""
+              alt={isActive ? slide.title || "" : ""}
               className={commonClass}
               fetchPriority={slideIndex === 0 ? "high" : "auto"}
             />
@@ -138,29 +169,37 @@ export default function HeroSection({
         })}
       </div>
 
-      <div className="relative mx-auto flex min-h-[inherit] max-w-[90rem] items-center px-4 py-14 sm:px-6 sm:py-16 lg:px-10 lg:py-20">
-        <div className="w-full max-w-xl bg-[#1a2332]/92 p-7 text-white shadow-[0_20px_50px_-20px_rgba(0,0,0,0.55)] backdrop-blur-[2px] sm:p-9 md:p-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/80">
-            {t("Membership", "Adhésion")}
-          </p>
-          <p className="mt-4 font-hopewell-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
-            {siteName}
-          </p>
-          <h1 className="mt-3 font-hopewell-display text-lg font-bold leading-snug tracking-tight text-white/95 sm:text-xl md:text-2xl">
-            {headline}
-          </h1>
-          <p className="mt-4 text-sm leading-7 text-white/85 sm:text-base sm:leading-7">
-            {intro || heroIntro}
-          </p>
-          {buttonLabel === "" ? null : (
-            <div className="mt-7">
-              <ButtonLink href={portalMembershipRegisterUrl()} variant="pill">
-                {buttonLabel || `Join ${siteName}`}
-              </ButtonLink>
-            </div>
-          )}
+      {showPanel ? (
+        <div className="relative mx-auto flex min-h-[inherit] max-w-[90rem] items-center px-4 py-14 sm:px-6 sm:py-16 lg:px-10 lg:py-20">
+          <div className="w-full max-w-xl bg-[#1a2332]/92 p-7 text-white shadow-[0_20px_50px_-20px_rgba(0,0,0,0.55)] backdrop-blur-[2px] sm:p-9 md:p-10">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/80">
+              {panelEyebrow}
+            </p>
+            <p className="mt-4 font-hopewell-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+              {panelHeadline}
+            </p>
+            {panelSubhead && panelSubhead !== panelHeadline ? (
+              <h1 className="mt-3 font-hopewell-display text-lg font-bold leading-snug tracking-tight text-white/95 sm:text-xl md:text-2xl">
+                {panelSubhead}
+              </h1>
+            ) : (
+              <h1 className="sr-only">{panelHeadline}</h1>
+            )}
+            <p className="mt-4 text-sm leading-7 text-white/85 sm:text-base sm:leading-7">
+              {panelBody}
+            </p>
+            {panelCtaLabel ? (
+              <div className="mt-7">
+                <ButtonLink href={panelCtaHref} variant="pill">
+                  {panelCtaLabel}
+                </ButtonLink>
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : (
+        <h1 className="sr-only">{active?.headline || active?.title || siteName}</h1>
+      )}
 
       {showControls ? (
         <>
