@@ -7,6 +7,8 @@ from app.services.settings import ensure_default_settings
 
 HERO_DEFAULTS_SEEDED_KEY = "hero_defaults_seeded"
 
+ORG_SUBHEADLINE = "Canada Africa Institute for the Sustainable Built Environment"
+
 DEFAULT_HERO_ASSETS: list[dict[str, str | int | bool]] = [
     {
         "title": "CAISBE campus and learning community",
@@ -15,6 +17,7 @@ DEFAULT_HERO_ASSETS: list[dict[str, str | int | bool]] = [
         "show_text_panel": True,
         "eyebrow": "Membership",
         "headline": "CAISBE",
+        "subheadline": ORG_SUBHEADLINE,
         "description": (
             "Join a community of facility and property management professionals "
             "building sustainable places across Canada and Africa."
@@ -29,6 +32,7 @@ DEFAULT_HERO_ASSETS: list[dict[str, str | int | bool]] = [
         "show_text_panel": True,
         "eyebrow": "Professional development",
         "headline": "Build your FM career",
+        "subheadline": ORG_SUBHEADLINE,
         "description": (
             "Certificate programs and learning formats that connect Canadian expertise "
             "with African industry needs."
@@ -43,6 +47,7 @@ DEFAULT_HERO_ASSETS: list[dict[str, str | int | bool]] = [
         "show_text_panel": True,
         "eyebrow": "Community",
         "headline": "Transforming buildings",
+        "subheadline": ORG_SUBHEADLINE,
         "description": (
             "Education, standards, and membership that empower sustainable transformation "
             "across buildings and infrastructure."
@@ -80,6 +85,7 @@ def ensure_default_hero_slides(db: Session) -> None:
                     show_text_panel=bool(item.get("show_text_panel", True)),
                     eyebrow=str(item["eyebrow"]) if item.get("eyebrow") else None,
                     headline=str(item["headline"]) if item.get("headline") else None,
+                    subheadline=str(item["subheadline"]) if item.get("subheadline") else None,
                     cta_label=str(item["cta_label"]) if item.get("cta_label") else None,
                     cta_url=str(item["cta_url"]) if item.get("cta_url") else None,
                 )

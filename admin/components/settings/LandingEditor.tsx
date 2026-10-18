@@ -194,11 +194,10 @@ export default function LandingEditor() {
       ) : (
         <>
 
-      <Card className="space-y-4">
-        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Hero</h2>
-        <TextArea label="Landing sentence" value={home.hero_intro} onChange={(hero_intro) => patch({ hero_intro })} rows={4} />
-        <TextInput label="Join button" value={home.hero_button} onChange={(hero_button) => patch({ hero_button })} />
-      </Card>
+      <p className="text-sm text-caisbe-muted">
+        Homepage carousel media and text panel copy are edited under{" "}
+        <span className="font-semibold text-caisbe-text-dark">Media library → Hero</span>.
+      </p>
 
       <Card className="space-y-4">
         <div className="flex items-center justify-between gap-3">

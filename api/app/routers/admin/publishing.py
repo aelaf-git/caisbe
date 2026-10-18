@@ -212,6 +212,7 @@ def admin_create_media(
         show_text_panel=payload.show_text_panel,
         eyebrow=payload.eyebrow,
         headline=payload.headline,
+        subheadline=payload.subheadline,
         cta_label=payload.cta_label,
         cta_url=payload.cta_url,
     )
@@ -225,6 +226,7 @@ def admin_create_media(
         show_text_panel=bool(fields.get("show_text_panel", True)),
         eyebrow=fields.get("eyebrow"),
         headline=fields.get("headline"),
+        subheadline=fields.get("subheadline"),
         cta_label=fields.get("cta_label"),
         cta_url=fields.get("cta_url"),
         category=fields["category"],
@@ -275,6 +277,7 @@ def admin_update_media(
         show_text_panel=data["show_text_panel"] if "show_text_panel" in data else asset.show_text_panel,
         eyebrow=data["eyebrow"] if "eyebrow" in data else asset.eyebrow,
         headline=data["headline"] if "headline" in data else asset.headline,
+        subheadline=data["subheadline"] if "subheadline" in data else asset.subheadline,
         cta_label=data["cta_label"] if "cta_label" in data else asset.cta_label,
         cta_url=data["cta_url"] if "cta_url" in data else asset.cta_url,
     )
@@ -288,6 +291,7 @@ def admin_update_media(
         asset.show_text_panel = bool(fields["show_text_panel"])
         asset.eyebrow = fields.get("eyebrow")
         asset.headline = fields.get("headline")
+        asset.subheadline = fields.get("subheadline")
         asset.cta_label = fields.get("cta_label")
         asset.cta_url = fields.get("cta_url")
     asset.category = fields["category"]

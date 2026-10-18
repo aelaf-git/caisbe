@@ -14,6 +14,7 @@ class MediaAssetOut(BaseModel):
     show_text_panel: bool = True
     eyebrow: str | None = None
     headline: str | None = None
+    subheadline: str | None = None
     cta_label: str | None = None
     cta_url: str | None = None
     category: str
@@ -35,6 +36,7 @@ class MediaAssetCreateIn(BaseModel):
     show_text_panel: bool = True
     eyebrow: str | None = Field(default=None, max_length=120)
     headline: str | None = Field(default=None, max_length=255)
+    subheadline: str | None = Field(default=None, max_length=512)
     cta_label: str | None = Field(default=None, max_length=120)
     cta_url: str | None = Field(default=None, max_length=1024)
     category: str = Field(default="magazine", max_length=32)
@@ -53,6 +55,7 @@ class MediaAssetUpdateIn(BaseModel):
     show_text_panel: bool | None = None
     eyebrow: str | None = Field(default=None, max_length=120)
     headline: str | None = Field(default=None, max_length=255)
+    subheadline: str | None = Field(default=None, max_length=512)
     cta_label: str | None = Field(default=None, max_length=120)
     cta_url: str | None = Field(default=None, max_length=1024)
     category: str | None = Field(default=None, max_length=32)
@@ -105,6 +108,7 @@ class HeroSlideOut(BaseModel):
     show_text_panel: bool = True
     eyebrow: str | None = None
     headline: str | None = None
+    subheadline: str | None = None
     description: str | None = None
     cta_label: str | None = None
     cta_url: str | None = None

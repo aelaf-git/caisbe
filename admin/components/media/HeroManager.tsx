@@ -97,6 +97,7 @@ export default function HeroManager({
   const [showTextPanel, setShowTextPanel] = useState(true);
   const [eyebrow, setEyebrow] = useState("");
   const [headline, setHeadline] = useState("");
+  const [subheadline, setSubheadline] = useState("");
   const [description, setDescription] = useState("");
   const [ctaLabel, setCtaLabel] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
@@ -119,11 +120,23 @@ export default function HeroManager({
       show_text_panel: showTextPanel,
       eyebrow: eyebrow.trim(),
       headline: headline.trim(),
+      subheadline: subheadline.trim(),
       description: description.trim(),
       cta_label: ctaLabel.trim(),
       cta_url: ctaUrl.trim(),
     }),
-    [title, fileUrl, sortOrder, showTextPanel, eyebrow, headline, description, ctaLabel, ctaUrl],
+    [
+      title,
+      fileUrl,
+      sortOrder,
+      showTextPanel,
+      eyebrow,
+      headline,
+      subheadline,
+      description,
+      ctaLabel,
+      ctaUrl,
+    ],
   );
   const { dirty, resetBaseline } = useDirtyForm(formValues);
 
@@ -157,6 +170,7 @@ export default function HeroManager({
     setShowTextPanel(true);
     setEyebrow("");
     setHeadline("");
+    setSubheadline("");
     setDescription("");
     setCtaLabel("");
     setCtaUrl("");
@@ -170,6 +184,7 @@ export default function HeroManager({
       show_text_panel: true,
       eyebrow: "",
       headline: "",
+      subheadline: "",
       description: "",
       cta_label: "",
       cta_url: "",
@@ -198,6 +213,7 @@ export default function HeroManager({
     setShowTextPanel(asset.show_text_panel !== false);
     setEyebrow(asset.eyebrow ?? "");
     setHeadline(asset.headline ?? "");
+    setSubheadline(asset.subheadline ?? "");
     setDescription(asset.description ?? "");
     setCtaLabel(asset.cta_label ?? "");
     setCtaUrl(asset.cta_url ?? "");
@@ -211,6 +227,7 @@ export default function HeroManager({
       show_text_panel: asset.show_text_panel !== false,
       eyebrow: (asset.eyebrow ?? "").trim(),
       headline: (asset.headline ?? "").trim(),
+      subheadline: (asset.subheadline ?? "").trim(),
       description: (asset.description ?? "").trim(),
       cta_label: (asset.cta_label ?? "").trim(),
       cta_url: (asset.cta_url ?? "").trim(),
@@ -279,6 +296,7 @@ export default function HeroManager({
         show_text_panel: showTextPanel,
         eyebrow: eyebrow.trim() || null,
         headline: headline.trim() || null,
+        subheadline: subheadline.trim() || null,
         description: description.trim() || null,
         cta_label: ctaLabel.trim() || null,
         cta_url: ctaUrl.trim() || null,
@@ -556,6 +574,18 @@ export default function HeroManager({
                       disabled={uploading || saving}
                     />
                   </FormField>
+                  <FormField
+                    label="Subheadline"
+                    hint="Longer line under the headline (e.g. full organization name)"
+                  >
+                    <input
+                      value={subheadline}
+                      onChange={(e) => setSubheadline(e.target.value)}
+                      className={fieldClassName}
+                      placeholder="Canada Africa Institute for the Sustainable Built Environment"
+                      disabled={uploading || saving}
+                    />
+                  </FormField>
                   <FormField label="Body" hint="Supporting sentence in the panel">
                     <textarea
                       value={description}
@@ -613,12 +643,14 @@ export default function HeroManager({
                 description,
                 eyebrow,
                 headline,
+                subheadline,
                 cta_label: ctaLabel,
               }}
               fields={[
                 { name: "title", label: "Title (alt)" },
                 { name: "eyebrow", label: "Eyebrow" },
                 { name: "headline", label: "Headline" },
+                { name: "subheadline", label: "Subheadline" },
                 { name: "description", label: "Body", kind: "textarea", rows: 4 },
                 { name: "cta_label", label: "CTA label" },
               ]}

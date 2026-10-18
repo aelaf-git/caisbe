@@ -31,7 +31,7 @@ ALLOWED_FIELDS: dict[str, tuple[str, ...]] = {
     "job": ("title", "summary", "description", "company", "location"),
     "seminar": ("title", "description"),
     "testimonial": ("quote", "role"),
-    "media": ("title", "description", "body", "eyebrow", "headline", "cta_label"),
+    "media": ("title", "description", "body", "eyebrow", "headline", "subheadline", "cta_label"),
     "course": ("title", "description"),
 }
 

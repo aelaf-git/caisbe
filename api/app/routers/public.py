@@ -93,6 +93,7 @@ def get_hero_carousel(
                 show_text_panel=bool(item.show_text_panel),
                 eyebrow=item.eyebrow,
                 headline=item.headline,
+                subheadline=item.subheadline,
                 description=item.description,
                 cta_label=item.cta_label,
                 cta_url=item.cta_url,

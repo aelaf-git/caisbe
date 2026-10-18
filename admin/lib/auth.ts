@@ -96,6 +96,7 @@ export type MediaAsset = {
   show_text_panel?: boolean;
   eyebrow?: string | null;
   headline?: string | null;
+  subheadline?: string | null;
   cta_label?: string | null;
   cta_url?: string | null;
   category: string;

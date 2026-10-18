@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ButtonLink from "@/components/ui/ButtonLink";
 import { fetchHeroCarousel, portalMembershipRegisterUrl, type HeroSlide } from "@/lib/api";
-import { heroIntro, siteFullName, siteName } from "@/lib/data/home";
+import { siteName } from "@/lib/data/home";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
 const DEFAULT_SLIDES: HeroSlide[] = [
@@ -15,8 +15,10 @@ const DEFAULT_SLIDES: HeroSlide[] = [
     show_text_panel: true,
     eyebrow: "Membership",
     headline: "CAISBE",
-    description: null,
-    cta_label: null,
+    subheadline: "Canada Africa Institute for the Sustainable Built Environment",
+    description:
+      "Join a community of facility and property management professionals building sustainable places across Canada and Africa.",
+    cta_label: "Join CAISBE",
     cta_url: null,
   },
   {
@@ -27,8 +29,10 @@ const DEFAULT_SLIDES: HeroSlide[] = [
     show_text_panel: true,
     eyebrow: "Professional development",
     headline: "Build your FM career",
-    description: null,
-    cta_label: null,
+    subheadline: "Canada Africa Institute for the Sustainable Built Environment",
+    description:
+      "Certificate programs and learning formats that connect Canadian expertise with African industry needs.",
+    cta_label: "View programs",
     cta_url: "/professional-development",
   },
   {
@@ -48,15 +52,7 @@ function resolveCtaHref(raw: string | null | undefined, fallback: string): strin
   return value;
 }
 
-export default function HeroSection({
-  heading,
-  intro,
-  buttonLabel,
-}: {
-  heading?: string | null;
-  intro?: string | null;
-  buttonLabel?: string | null;
-}) {
+export default function HeroSection() {
   const t = useT();
   const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES);
   const [transitionMs, setTransitionMs] = useState(DEFAULT_TRANSITION_MS);
@@ -115,14 +111,11 @@ export default function HeroSection({
   const showControls = slides.length > 1;
   const membershipHref = portalMembershipRegisterUrl();
 
-  const panelEyebrow =
-    active?.eyebrow?.trim() || t("Membership", "Adhésion");
+  const panelEyebrow = active?.eyebrow?.trim() || "";
   const panelHeadline = active?.headline?.trim() || siteName;
-  const panelSubhead = heading || siteFullName;
-  const panelBody = active?.description?.trim() || intro || heroIntro;
-  const panelCtaLabel =
-    active?.cta_label?.trim() ||
-    (buttonLabel === "" ? "" : buttonLabel || `Join ${siteName}`);
+  const panelSubhead = active?.subheadline?.trim() || "";
+  const panelBody = active?.description?.trim() || "";
+  const panelCtaLabel = active?.cta_label?.trim() || "";
   const panelCtaHref = resolveCtaHref(active?.cta_url, membershipHref);
 
   function go(delta: -1 | 1) {
@@ -172,10 +165,16 @@ export default function HeroSection({
       {showPanel ? (
         <div className="relative mx-auto flex min-h-[inherit] max-w-[90rem] items-center px-4 py-14 sm:px-6 sm:py-16 lg:px-10 lg:py-20">
           <div className="w-full max-w-xl bg-[#1a2332]/92 p-7 text-white shadow-[0_20px_50px_-20px_rgba(0,0,0,0.55)] backdrop-blur-[2px] sm:p-9 md:p-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/80">
-              {panelEyebrow}
-            </p>
-            <p className="mt-4 font-hopewell-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+            {panelEyebrow ? (
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/80">
+                {panelEyebrow}
+              </p>
+            ) : null}
+            <p
+              className={`font-hopewell-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl ${
+                panelEyebrow ? "mt-4" : ""
+              }`}
+            >
               {panelHeadline}
             </p>
             {panelSubhead && panelSubhead !== panelHeadline ? (
@@ -185,9 +184,11 @@ export default function HeroSection({
             ) : (
               <h1 className="sr-only">{panelHeadline}</h1>
             )}
-            <p className="mt-4 text-sm leading-7 text-white/85 sm:text-base sm:leading-7">
-              {panelBody}
-            </p>
+            {panelBody ? (
+              <p className="mt-4 text-sm leading-7 text-white/85 sm:text-base sm:leading-7">
+                {panelBody}
+              </p>
+            ) : null}
             {panelCtaLabel ? (
               <div className="mt-7">
                 <ButtonLink href={panelCtaHref} variant="pill">

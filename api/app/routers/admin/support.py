@@ -298,6 +298,7 @@ def _normalize_hero_panel_fields(
     show_text_panel: bool,
     eyebrow: str | None,
     headline: str | None,
+    subheadline: str | None,
     cta_label: str | None,
     cta_url: str | None,
 ) -> dict:
@@ -315,6 +316,7 @@ def _normalize_hero_panel_fields(
         "show_text_panel": bool(show_text_panel),
         "eyebrow": strip_plain_text(eyebrow) if eyebrow else None,
         "headline": strip_plain_text(headline) if headline else None,
+        "subheadline": strip_plain_text(subheadline) if subheadline else None,
         "cta_label": strip_plain_text(cta_label) if cta_label else None,
         "cta_url": clean_url,
     }
@@ -332,6 +334,7 @@ def _normalize_media_fields(
     show_text_panel: bool = True,
     eyebrow: str | None = None,
     headline: str | None = None,
+    subheadline: str | None = None,
     cta_label: str | None = None,
     cta_url: str | None = None,
 ) -> dict:
@@ -380,6 +383,7 @@ def _normalize_media_fields(
             "show_text_panel": True,
             "eyebrow": None,
             "headline": None,
+            "subheadline": None,
             "cta_label": None,
             "cta_url": None,
         }
@@ -389,6 +393,7 @@ def _normalize_media_fields(
                     show_text_panel=show_text_panel,
                     eyebrow=eyebrow,
                     headline=headline,
+                    subheadline=subheadline,
                     cta_label=cta_label,
                     cta_url=cta_url,
                 )

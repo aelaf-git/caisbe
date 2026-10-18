@@ -104,11 +104,7 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd(landing)) }}
       />
-      <HeroSection
-        heading={dict.siteFullName}
-        intro={landing?.hero_intro}
-        buttonLabel={landing?.hero_button}
-      />
+      <HeroSection />
       <StatsSection items={landing?.stats} />
       <AboutSection
         tagline={landing?.tagline}

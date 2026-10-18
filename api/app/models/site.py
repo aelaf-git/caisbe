@@ -42,6 +42,7 @@ class MediaAsset(Base):
     show_text_panel: Mapped[bool] = mapped_column(Boolean, default=True)
     eyebrow: Mapped[str | None] = mapped_column(String(120), nullable=True)
     headline: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    subheadline: Mapped[str | None] = mapped_column(String(512), nullable=True)
     cta_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
     cta_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # hero | magazine | youtube | podcast | blog
