@@ -375,10 +375,10 @@ export default function HeroManager({
     });
     if (!ok) return;
     try {
-      await apiFetch(`/admin/media/${asset.id}`, { method: "DELETE" });
+      await apiFetch<{ ok?: boolean }>(`/admin/media/${asset.id}`, { method: "DELETE" });
       if (editingId === asset.id) closeForm();
-      onSuccess("Hero slide deleted.");
       await onRefresh();
+      onSuccess("Hero slide deleted.");
     } catch (err) {
       onError(err instanceof ApiError ? err.detail : "Unable to delete slide.");
     }

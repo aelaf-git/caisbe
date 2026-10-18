@@ -416,12 +416,16 @@ export async function apiFetch<T>(
     throw await parseError(response);
   }
 
-  if (response.status === 204) {
+  if (response.status === 204 || response.status === 205) {
     return undefined as T;
   }
 
   const text = await response.text();
+  // Some proxies coerce 204 → 200 with an empty body on DELETE.
   if (!text.trim()) {
+    if (response.ok && (init?.method || "GET").toUpperCase() === "DELETE") {
+      return undefined as T;
+    }
     throw new ApiError(response.status, "Empty response from server.");
   }
   try {

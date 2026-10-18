@@ -317,17 +317,33 @@ def admin_update_media(
     return MediaAssetOut.model_validate(asset)
 
 
-@router.delete("/media/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/media/{asset_id}")
 def admin_delete_media(
     asset_id: int,
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> None:
+) -> dict[str, bool]:
+    from sqlalchemy.exc import SQLAlchemyError
+
+    from app.models import ContentTranslation
+
     asset = db.query(MediaAsset).filter(MediaAsset.id == asset_id).first()
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media asset not found")
-    db.delete(asset)
-    db.commit()
+    try:
+        db.query(ContentTranslation).filter(
+            ContentTranslation.entity_type == "media",
+            ContentTranslation.entity_id == asset_id,
+        ).delete(synchronize_session=False)
+        db.delete(asset)
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to delete this media item. Please try again.",
+        ) from exc
+    return {"ok": True}
 
 
 # --- Newsletter ---
