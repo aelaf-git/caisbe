@@ -12,6 +12,8 @@ import {
   type MembershipStatus,
 } from "@/lib/seminarRegistration";
 
+type PositionOption = (typeof POSITION_OPTIONS)[number];
+
 type Props = {
   seminar: Seminar;
 };
@@ -39,7 +41,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
   const [city, setCity] = useState("");
   const [stateProvince, setStateProvince] = useState("");
   const [country, setCountry] = useState("");
-  const [position, setPosition] = useState(POSITION_OPTIONS[0]);
+  const [position, setPosition] = useState<PositionOption>(POSITION_OPTIONS[0]);
   const [positionOther, setPositionOther] = useState("");
   const [membershipStatus, setMembershipStatus] =
     useState<MembershipStatus>("association_member");
@@ -329,7 +331,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
                       required
                       className={fieldClass}
                       value={position}
-                      onChange={(e) => setPosition(e.target.value)}
+                      onChange={(e) => setPosition(e.target.value as PositionOption)}
                     >
                       {POSITION_OPTIONS.map((option) => (
                         <option key={option} value={option}>

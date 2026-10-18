@@ -151,7 +151,30 @@ def _assignment_review_status(
 
 
 def _completed_assignment_ids(db: Session, user_id: int, assignment_ids: list[int]) -> set[int]:
-    return set(_assignment_review_status(db, user_id, assignment_ids).keys())
+    """Assignments that count toward progress / certificate: graded pass only."""
+    return {
+        block_id
+        for block_id, status in _assignment_review_status(db, user_id, assignment_ids).items()
+        if status == "passed"
+    }
+
+
+def _passed_quiz_ids(db: Session, user_id: int, quiz_ids: list[int]) -> set[int]:
+    if not quiz_ids:
+        return set()
+    return {
+        row[0]
+        for row in (
+            db.query(QuizAttempt.quiz_id)
+            .filter(
+                QuizAttempt.user_id == user_id,
+                QuizAttempt.quiz_id.in_(quiz_ids),
+                QuizAttempt.passed.is_(True),
+            )
+            .distinct()
+            .all()
+        )
+    }
 
 
 def _recompute_progress(db: Session, user: User, course: Course, enrollment: Enrollment) -> None:
@@ -167,13 +190,7 @@ def _recompute_progress(db: Session, user: User, course: Course, enrollment: Enr
             .filter(LessonProgress.user_id == user.id, LessonProgress.lesson_id.in_(lesson_ids))
             .count()
         )
-    if quiz_ids:
-        completed += (
-            db.query(QuizAttempt.quiz_id)
-            .filter(QuizAttempt.user_id == user.id, QuizAttempt.quiz_id.in_(quiz_ids))
-            .distinct()
-            .count()
-        )
+    completed += len(_passed_quiz_ids(db, user.id, quiz_ids))
     completed += len(_completed_assignment_ids(db, user.id, assignment_ids))
     enrollment.progress = int(round(100 * completed / total))
 
@@ -187,9 +204,32 @@ def _course_topics_complete(db: Session, user: User, course: Course) -> bool:
     return True
 
 
+def _course_quizzes_complete(db: Session, user: User, course: Course) -> bool:
+    _, quiz_ids, _ = _course_progress_units(db, course.id)
+    if not quiz_ids:
+        return True
+    return set(quiz_ids) <= _passed_quiz_ids(db, user.id, quiz_ids)
+
+
+def _course_assignments_complete(db: Session, user: User, course: Course) -> bool:
+    _, _, assignment_ids = _course_progress_units(db, course.id)
+    if not assignment_ids:
+        return True
+    return set(assignment_ids) <= _completed_assignment_ids(db, user.id, assignment_ids)
+
+
+def course_work_requirements_met(db: Session, user: User, course: Course) -> bool:
+    """Topics, chapter quizzes, and graded assignments — everything before the final exam."""
+    return (
+        _course_topics_complete(db, user, course)
+        and _course_quizzes_complete(db, user, course)
+        and _course_assignments_complete(db, user, course)
+    )
+
+
 def course_completion_requirements_met(db: Session, user: User, course: Course) -> bool:
-    """Certificate eligibility: all lessons done, plus final exam pass when configured."""
-    if not _course_topics_complete(db, user, course):
+    """Certificate eligibility: course work done, plus final exam pass when configured."""
+    if not course_work_requirements_met(db, user, course):
         return False
     if course.final_exam is not None and not _user_passed_final_exam(db, user, course):
         return False
@@ -450,14 +490,7 @@ def _progress_counts(db: Session, user: User, course: Course) -> dict[str, int |
             .filter(LessonProgress.user_id == user.id, LessonProgress.lesson_id.in_(lesson_ids))
             .count()
         )
-    quizzes_completed = 0
-    if quiz_ids:
-        quizzes_completed = (
-            db.query(QuizAttempt.quiz_id)
-            .filter(QuizAttempt.user_id == user.id, QuizAttempt.quiz_id.in_(quiz_ids))
-            .distinct()
-            .count()
-        )
+    quizzes_completed = len(_passed_quiz_ids(db, user.id, quiz_ids))
     return {
         "topics_completed": topics_completed,
         "topics_total": len(lesson_ids),
@@ -527,6 +560,24 @@ def _require_course_topics_complete(db: Session, user: User, course: Course) -> 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Complete every topic before the final exam.",
+        )
+
+
+def _require_course_work_complete(db: Session, user: User, course: Course) -> None:
+    if not _course_topics_complete(db, user, course):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complete every topic before the final exam.",
+        )
+    if not _course_quizzes_complete(db, user, course):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Pass every chapter quiz before the final exam.",
+        )
+    if not _course_assignments_complete(db, user, course):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Have every assignment graded as passed before the final exam.",
         )
 
 
@@ -858,6 +909,30 @@ def _close_expired_exam_session(db: Session, user: User, exam: FinalExam, now: d
     return attempt
 
 
+def _latest_submit_integrity(db: Session, user: User, exam: FinalExam) -> tuple[int, bool]:
+    event = (
+        db.query(ExamIntegrityEvent)
+        .filter(
+            ExamIntegrityEvent.user_id == user.id,
+            ExamIntegrityEvent.final_exam_id == exam.id,
+            ExamIntegrityEvent.event_type == "exam_submitted",
+        )
+        .order_by(ExamIntegrityEvent.id.desc())
+        .first()
+    )
+    if event is None or not (event.detail_json or "").strip():
+        return 0, False
+    try:
+        detail = json.loads(event.detail_json)
+    except json.JSONDecodeError:
+        return 0, False
+    if not isinstance(detail, dict):
+        return 0, False
+    violations = int(detail.get("violation_count") or 0)
+    locked_out = bool(detail.get("locked_out"))
+    return max(0, violations), locked_out
+
+
 def _exam_session_state(db: Session, user: User, exam: FinalExam, now: datetime) -> ExamSessionOut:
     _close_expired_exam_session(db, user, exam, now)
     session = _exam_session(db, user, exam)
@@ -866,6 +941,9 @@ def _exam_session_state(db: Session, user: User, exam: FinalExam, now: datetime)
         _ensure_exam_order(db, session, exam)
     latest = _latest_exam_attempt(db, user, exam)
     order = _exam_order(session) if in_progress else None
+    latest_violations, latest_locked = (0, False) if in_progress or latest is None else _latest_submit_integrity(
+        db, user, exam
+    )
     return ExamSessionOut(
         in_progress=in_progress,
         started_at=session.started_at if session else None,
@@ -873,6 +951,8 @@ def _exam_session_state(db: Session, user: User, exam: FinalExam, now: datetime)
         time_limit_minutes=exam.time_limit_minutes,
         latest_score=None if in_progress or latest is None else latest.score,
         latest_passed=None if in_progress or latest is None else latest.passed,
+        latest_integrity_violations=latest_violations,
+        latest_locked_out=latest_locked,
         order=order,
         questions=_student_questions_for_order(exam, order) if in_progress else [],
         secure_mode=bool(exam.secure_mode),
@@ -888,7 +968,7 @@ def _require_open_exam(db: Session, user: User, course: Course) -> FinalExam:
 
     enrollment = require_active_enrollment(db, user, course.id)
     require_exam_open(enrollment)
-    _require_course_topics_complete(db, user, course)
+    _require_course_work_complete(db, user, course)
     exam = course.final_exam
     if exam is None or not exam.questions:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Final exam not configured")

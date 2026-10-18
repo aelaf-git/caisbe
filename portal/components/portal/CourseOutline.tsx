@@ -188,10 +188,12 @@ export default function CourseOutline({
                   <li>
                     <ItemButton
                       type="reading"
+                      locked={!extrasOpen}
                       done={false}
                       active={selectionsEqual(selection, { kind: "chapter-readings", chapterId: chapter.id })}
                       label="Chapter readings"
                       onClick={() => {
+                        if (!extrasOpen) return;
                         onSelect({ kind: "chapter-readings", chapterId: chapter.id });
                       }}
                     />

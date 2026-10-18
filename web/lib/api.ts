@@ -121,6 +121,7 @@ export type Seminar = {
   id: number;
   title: string;
   description: string;
+  cover_url?: string | null;
   event_date_label?: string | null;
   event_time_label?: string | null;
   event_format_label?: string | null;

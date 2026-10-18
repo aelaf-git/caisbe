@@ -180,15 +180,7 @@ def get_course_detail(
         detail.final_exam.questions = []
 
     _, quiz_ids, assignment_ids = _course_progress_units(db, course_id)
-    done_quizzes = set()
-    if quiz_ids:
-        done_quizzes = {
-            row[0]
-            for row in db.query(QuizAttempt.quiz_id)
-            .filter(QuizAttempt.user_id == current_user.id, QuizAttempt.quiz_id.in_(quiz_ids))
-            .distinct()
-            .all()
-        }
+    done_quizzes = _passed_quiz_ids(db, current_user.id, quiz_ids)
     submissions = submission_map(db, current_user.id, assignment_ids)
     assignment_blocks = [
         block
@@ -220,7 +212,7 @@ def get_course_detail(
                 block.completed = block.quiz is not None and block.quiz.id in done_quizzes
             elif block.block_type == "assignment":
                 row = submissions.get(block.id)
-                block.completed = row is not None
+                block.completed = bool(row and row.status == "passed")
                 block.review_status = row.status if row else None
                 submitted_at = latest_submitted_at(row) if row else None
                 visible = grade_is_visible(row.status) if row else False

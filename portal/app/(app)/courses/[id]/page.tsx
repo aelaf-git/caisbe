@@ -295,7 +295,7 @@ export default function CoursePlayerPage() {
                 onToggleTopicComplete={() => void toggleTopicComplete()}
                 onReload={load}
                 onQuizResult={(result: QuizAttempt | null) => {
-                  setQuizPassed(result != null);
+                  setQuizPassed(Boolean(result?.passed));
                   if (result) void load();
                 }}
                 hasPrev={playlistIndex > 0}

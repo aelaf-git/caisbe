@@ -24,6 +24,7 @@ class SeminarOut(BaseModel):
     id: int
     title: str
     description: str
+    cover_url: str | None = None
     event_date_label: str | None = None
     event_time_label: str | None = None
     event_format_label: str | None = None
@@ -46,6 +47,7 @@ class SeminarOut(BaseModel):
 class SeminarCreateIn(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(min_length=1, max_length=4000)
+    cover_url: str | None = Field(default=None, max_length=1024)
     event_date_label: str | None = Field(default=None, max_length=255)
     event_time_label: str | None = Field(default=None, max_length=500)
     event_format_label: str | None = Field(default=None, max_length=500)
@@ -64,6 +66,7 @@ class SeminarCreateIn(BaseModel):
 class SeminarUpdateIn(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, min_length=1, max_length=4000)
+    cover_url: str | None = Field(default=None, max_length=1024)
     event_date_label: str | None = Field(default=None, max_length=255)
     event_time_label: str | None = Field(default=None, max_length=500)
     event_format_label: str | None = Field(default=None, max_length=500)

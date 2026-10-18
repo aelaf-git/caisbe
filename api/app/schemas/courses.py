@@ -418,6 +418,8 @@ class ExamSessionOut(BaseModel):
     time_limit_minutes: int | None = None
     latest_score: int | None = None
     latest_passed: bool | None = None
+    latest_integrity_violations: int = 0
+    latest_locked_out: bool = False
     order: ExamOrderOut | None = None
     questions: list[QuizQuestionStudentOut] = Field(default_factory=list)
     secure_mode: bool = True

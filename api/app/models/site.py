@@ -189,6 +189,7 @@ class Seminar(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text)
+    cover_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # Event details (admin-editable; drive the registration page)
     event_date_label: Mapped[str | None] = mapped_column(String(255), nullable=True)
     event_time_label: Mapped[str | None] = mapped_column(String(500), nullable=True)

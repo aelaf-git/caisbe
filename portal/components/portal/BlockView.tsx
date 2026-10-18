@@ -191,8 +191,10 @@ export default function BlockView({
     return (
       <QuizPlayer
         key={block.quiz.id}
+        quizId={block.quiz.id}
         title={block.quiz.title}
         questions={block.quiz.questions}
+        hydrateCompleted={Boolean(block.completed)}
         onResult={onQuizResult}
         onSubmit={async (answers) => {
           const result = await apiFetch<QuizAttempt>(`/me/quizzes/${block.quiz!.id}/submit`, {

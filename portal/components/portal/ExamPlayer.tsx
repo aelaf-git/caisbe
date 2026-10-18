@@ -164,8 +164,8 @@ export default function ExamPlayer({
         score: state.latest_score,
         passed: Boolean(state.latest_passed),
         certificateCode,
-        integrityViolations: 0,
-        lockedOut: false,
+        integrityViolations: state.latest_integrity_violations ?? 0,
+        lockedOut: Boolean(state.latest_locked_out),
       });
       return;
     }

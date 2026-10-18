@@ -12,8 +12,18 @@ import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/Fo
 import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
-import { apiFetch, ApiError, type Seminar, type SeminarRegistration } from "@/lib/auth";
+import { apiFetch, apiUpload, ApiError, type Seminar, type SeminarRegistration } from "@/lib/auth";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 import { IconActionButton } from "@/components/ui/IconAction";
+
+const COVER_ACCEPT = "image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif";
+const COVER_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
+
+function isCoverImage(file: File): boolean {
+  if (file.type.startsWith("image/")) return true;
+  const name = file.name.toLowerCase();
+  return [...COVER_EXTENSIONS].some((ext) => name.endsWith(ext));
+}
 
 type AskConfirm = (options: {
   title: string;
@@ -51,6 +61,7 @@ function emptyForm(itemCount: number) {
   return {
     title: "",
     description: "",
+    cover_url: null as string | null,
     event_date_label: "Thursday, November 12, 2026",
     event_time_label:
       "9:00 AM – 4:00 PM Eastern Time (ET) / 8:00 AM – 3:00 PM Central Time (CT) / 6:00 AM – 1:00 PM Pacific Time (PT)",
@@ -82,10 +93,13 @@ export default function SeminarsManager({
   askConfirm: AskConfirm;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [eventDateLabel, setEventDateLabel] = useState("");
   const [eventTimeLabel, setEventTimeLabel] = useState("");
   const [eventFormatLabel, setEventFormatLabel] = useState("");
@@ -104,6 +118,7 @@ export default function SeminarsManager({
     () => ({
       title: title.trim(),
       description: description.trim(),
+      cover_url: coverUrl,
       event_date_label: eventDateLabel.trim(),
       event_time_label: eventTimeLabel.trim(),
       event_format_label: eventFormatLabel.trim(),
@@ -118,6 +133,7 @@ export default function SeminarsManager({
     [
       title,
       description,
+      coverUrl,
       eventDateLabel,
       eventTimeLabel,
       eventFormatLabel,
@@ -135,6 +151,7 @@ export default function SeminarsManager({
   function applyForm(next: ReturnType<typeof emptyForm>) {
     setTitle(next.title);
     setDescription(next.description);
+    setCoverUrl(next.cover_url);
     setEventDateLabel(next.event_date_label);
     setEventTimeLabel(next.event_time_label);
     setEventFormatLabel(next.event_format_label);
@@ -145,9 +162,11 @@ export default function SeminarsManager({
     setStudentPrice(next.student_price);
     setPublished(next.published);
     setSortOrder(next.sort_order);
+    if (coverInputRef.current) coverInputRef.current.value = "";
     resetBaseline({
       title: next.title,
       description: next.description,
+      cover_url: next.cover_url,
       event_date_label: next.event_date_label,
       event_time_label: next.event_time_label,
       event_format_label: next.event_format_label,
@@ -172,6 +191,7 @@ export default function SeminarsManager({
     applyForm({
       title: item.title,
       description: item.description,
+      cover_url: item.cover_url || null,
       event_date_label: item.event_date_label || "",
       event_time_label: item.event_time_label || "",
       event_format_label: item.event_format_label || "",
@@ -184,6 +204,22 @@ export default function SeminarsManager({
       sort_order: String(item.sort_order),
     });
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function handleCoverFile(file: File) {
+    if (!isCoverImage(file)) {
+      onError("Cover must be a JPG, PNG, WebP, or GIF image.");
+      return;
+    }
+    setUploadingCover(true);
+    try {
+      const uploaded = await apiUpload("/admin/uploads", file, { folder: "seminars/covers" });
+      setCoverUrl(uploaded.url);
+    } catch (err) {
+      onError(err instanceof ApiError ? err.detail : "Unable to upload cover image.");
+    } finally {
+      setUploadingCover(false);
+    }
   }
 
   useEffect(() => {
@@ -220,6 +256,7 @@ export default function SeminarsManager({
     const body = {
       title: title.trim(),
       description: description.trim(),
+      cover_url: coverUrl,
       event_date_label: eventDateLabel.trim() || null,
       event_time_label: eventTimeLabel.trim() || null,
       event_format_label: eventFormatLabel.trim() || null,
@@ -308,6 +345,55 @@ export default function SeminarsManager({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+          </FormField>
+          <FormField
+            label="Cover image"
+            hint="Shown on the homepage upcoming seminars strip. Save the seminar after uploading."
+          >
+            <div className="overflow-hidden border border-ifma-border bg-admin-surface-muted/40">
+              <div className="relative aspect-video bg-[#f3f0ec]">
+                {coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={resolveUploadUrl(coverUrl) ?? coverUrl}
+                    alt="Seminar cover preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center px-4 text-center text-sm text-caisbe-muted">
+                    No cover image yet
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-3 border-t border-ifma-border-light bg-admin-surface px-4 py-3">
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept={COVER_ACCEPT}
+                  disabled={uploadingCover || saving}
+                  className="block w-full min-w-0 flex-1 text-sm text-caisbe-muted file:mr-3 file:rounded-md file:border-0 file:bg-caisbe-red file:px-3 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-wide file:text-white hover:file:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleCoverFile(file);
+                  }}
+                />
+                {coverUrl ? (
+                  <IconActionButton
+                    icon="trash"
+                    tone="danger"
+                    label="Remove cover image"
+                    disabled={uploadingCover || saving}
+                    onClick={() => {
+                      setCoverUrl(null);
+                      if (coverInputRef.current) coverInputRef.current.value = "";
+                    }}
+                  />
+                ) : null}
+                {uploadingCover ? (
+                  <span className="text-xs font-medium text-caisbe-muted">Uploading…</span>
+                ) : null}
+              </div>
+            </div>
           </FormField>
           <FormField label="Event date label">
             <input

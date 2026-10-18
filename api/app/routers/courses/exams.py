@@ -145,6 +145,8 @@ def precheck_final_exam(
         reasons.append("Your browser must support focus/visibility monitoring.")
     if not payload.camera_ok:
         reasons.append("Allow camera access for the identity check.")
+    if payload.multi_monitor:
+        reasons.append("Disconnect extra monitors before starting.")
 
     detail = {
         "rules_accepted": payload.rules_accepted,

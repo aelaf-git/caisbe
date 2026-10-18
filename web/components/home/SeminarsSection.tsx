@@ -82,30 +82,45 @@ export default async function SeminarsSection({
           <p className="text-center text-base leading-7 text-caisbe-muted">{emptyMessage}</p>
         ) : (
           <HorizontalCarousel label={heading} itemClassName="w-[min(85vw,20rem)] shrink-0 snap-start sm:w-[20rem]">
-            {seminars.map((seminar) => (
-              <Link
-                key={seminar.id}
-                href={`/professional-development/seminars/${seminar.id}/register`}
-                className="group relative flex h-full min-h-[18rem] flex-col overflow-hidden rounded-[20px] bg-gradient-to-br from-[#3d3832] via-[#5c1a2e] to-[#7b1e3a] shadow-hopewell transition duration-300 hover:-translate-y-1"
-              >
-                <div
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-black/10"
-                  aria-hidden
-                />
-                <div className="relative flex h-full flex-col px-5 pb-5 pt-6 text-left text-white">
-                  <div className="space-y-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-white/90">
-                    {seminar.event_date_label ? <p>{seminar.event_date_label}</p> : null}
-                    {seminar.event_format_label ? <p>{seminar.event_format_label}</p> : null}
+            {seminars.map((seminar) => {
+              const coverUrl = seminar.cover_url?.trim() || null;
+              return (
+                <Link
+                  key={seminar.id}
+                  href={`/professional-development/seminars/${seminar.id}/register`}
+                  className={`group relative flex h-full min-h-[18rem] flex-col overflow-hidden rounded-[20px] shadow-hopewell transition duration-300 hover:-translate-y-1 ${
+                    coverUrl
+                      ? "bg-caisbe-text-dark"
+                      : "bg-gradient-to-br from-[#3d3832] via-[#5c1a2e] to-[#7b1e3a]"
+                  }`}
+                >
+                  {coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={coverUrl}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : null}
+                  <div
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-black/10"
+                    aria-hidden
+                  />
+                  <div className="relative flex h-full flex-col px-5 pb-5 pt-6 text-left text-white">
+                    <div className="space-y-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-white/90">
+                      {seminar.event_date_label ? <p>{seminar.event_date_label}</p> : null}
+                      {seminar.event_format_label ? <p>{seminar.event_format_label}</p> : null}
+                    </div>
+                    <h3 className="mt-auto pt-10 font-hopewell-display text-xl font-bold leading-snug">
+                      {seminar.title}
+                    </h3>
+                    <p className="mt-4 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-white/85">
+                      {badgeLabel}
+                    </p>
                   </div>
-                  <h3 className="mt-auto pt-10 font-hopewell-display text-xl font-bold leading-snug">
-                    {seminar.title}
-                  </h3>
-                  <p className="mt-4 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-white/85">
-                    {badgeLabel}
-                  </p>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </HorizontalCarousel>
         )}
       </div>

@@ -15,6 +15,7 @@ from app.schemas.seminars import (
 from app.security.auth import require_admin
 
 _OPTIONAL_STR = {
+    "cover_url",
     "event_date_label",
     "event_time_label",
     "event_format_label",
@@ -47,6 +48,7 @@ def admin_create_seminar(
     row = Seminar(
         title=data["title"].strip(),
         description=data["description"].strip(),
+        cover_url=_clean_str(data.get("cover_url")),
         event_date_label=_clean_str(data.get("event_date_label")),
         event_time_label=_clean_str(data.get("event_time_label")),
         event_format_label=_clean_str(data.get("event_format_label")),

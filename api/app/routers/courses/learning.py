@@ -228,17 +228,21 @@ def submit_quiz(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
     require_active_enrollment(db, current_user, course_id)
 
-    existing = (
+    passed_existing = (
         db.query(QuizAttempt)
-        .filter(QuizAttempt.user_id == current_user.id, QuizAttempt.quiz_id == quiz.id)
-        .order_by(QuizAttempt.id.asc())
+        .filter(
+            QuizAttempt.user_id == current_user.id,
+            QuizAttempt.quiz_id == quiz.id,
+            QuizAttempt.passed.is_(True),
+        )
+        .order_by(QuizAttempt.id.desc())
         .first()
     )
-    if existing is not None:
-        stored = json.loads(existing.answers_json or "{}")
+    if passed_existing is not None:
+        stored = json.loads(passed_existing.answers_json or "{}")
         if not isinstance(stored, dict):
             stored = {}
-        checked = {}
+        checked: dict[str, int] = {}
         for key, value in stored.items():
             try:
                 checked[str(key)] = int(value)
@@ -247,15 +251,16 @@ def submit_quiz(
         _apply_progress(db, current_user, course_id)
         db.commit()
         return QuizAttemptOut(
-            id=existing.id,
-            score=existing.score,
+            id=passed_existing.id,
+            score=passed_existing.score,
             passed=True,
             certificate_code=None,
             reviews=_answer_reviews(quiz.questions, checked),
         )
 
     score, _, _ = _score_answers(quiz.questions, payload.answers)
-    passed = True
+    pass_mark = max(0, min(100, int(course.pass_percent or 70)))
+    passed = score >= pass_mark
     attempt = QuizAttempt(
         user_id=current_user.id,
         quiz_id=quiz.id,
@@ -274,6 +279,62 @@ def submit_quiz(
         passed=attempt.passed,
         certificate_code=None,
         reviews=_answer_reviews(quiz.questions, payload.answers),
+    )
+
+
+@router.get("/me/quizzes/{quiz_id}/latest", response_model=QuizAttemptOut)
+def latest_quiz_attempt(
+    quiz_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> QuizAttemptOut:
+    quiz = (
+        db.query(Quiz)
+        .options(joinedload(Quiz.questions).joinedload(QuizQuestion.choices), joinedload(Quiz.blocks))
+        .filter(Quiz.id == quiz_id)
+        .first()
+    )
+    if quiz is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
+
+    block = next((item for item in quiz.blocks if item.lesson_id or item.chapter_id), None)
+    if block is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quiz is not attached to a course")
+    if block.lesson_id is not None:
+        lesson = db.query(Lesson).options(joinedload(Lesson.chapter)).filter(Lesson.id == block.lesson_id).first()
+        if lesson is None or lesson.chapter is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
+        course_id = lesson.chapter.course_id
+    else:
+        chapter = db.query(Chapter).filter(Chapter.id == block.chapter_id).first()
+        if chapter is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+        course_id = chapter.course_id
+    require_active_enrollment(db, current_user, course_id)
+
+    attempt = (
+        db.query(QuizAttempt)
+        .filter(QuizAttempt.user_id == current_user.id, QuizAttempt.quiz_id == quiz.id)
+        .order_by(QuizAttempt.id.desc())
+        .first()
+    )
+    if attempt is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No quiz attempt yet.")
+    stored = json.loads(attempt.answers_json or "{}")
+    if not isinstance(stored, dict):
+        stored = {}
+    checked: dict[str, int] = {}
+    for key, value in stored.items():
+        try:
+            checked[str(key)] = int(value)
+        except (TypeError, ValueError):
+            continue
+    return QuizAttemptOut(
+        id=attempt.id,
+        score=attempt.score,
+        passed=attempt.passed,
+        certificate_code=None,
+        reviews=_answer_reviews(quiz.questions, checked),
     )
 
 

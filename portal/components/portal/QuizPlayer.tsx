@@ -1,29 +1,74 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { QuizAttempt, QuizQuestion } from "@/lib/lms";
-import { ApiError } from "@/lib/auth";
+import { apiFetch, ApiError } from "@/lib/auth";
 
 type QuizPlayerProps = {
+  quizId: number;
   title: string;
   questions: QuizQuestion[];
+  /** When true, load the latest attempt so scores/reviews survive navigation. */
+  hydrateCompleted?: boolean;
   onSubmit: (answers: Record<string, number>) => Promise<QuizAttempt>;
   onResult?: (result: QuizAttempt | null) => void;
 };
 
-export default function QuizPlayer({ title, questions, onSubmit, onResult }: QuizPlayerProps) {
+export default function QuizPlayer({
+  quizId,
+  title,
+  questions,
+  hydrateCompleted = false,
+  onSubmit,
+  onResult,
+}: QuizPlayerProps) {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<QuizAttempt | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingPrior, setLoadingPrior] = useState(hydrateCompleted);
 
   const reviews = result?.reviews ?? [];
   const revealed = reviews.length > 0;
+  const canRetry = Boolean(result && !result.passed);
 
   function applyResult(next: QuizAttempt | null) {
     setResult(next);
+    if (next?.reviews?.length) {
+      const restored: Record<string, number> = {};
+      for (const review of next.reviews) {
+        if (review.selected_choice_id != null) {
+          restored[String(review.question_id)] = review.selected_choice_id;
+        }
+      }
+      setAnswers(restored);
+    }
     onResult?.(next);
   }
+
+  useEffect(() => {
+    if (!hydrateCompleted) {
+      setLoadingPrior(false);
+      return;
+    }
+    let cancelled = false;
+    async function loadPrior() {
+      setLoadingPrior(true);
+      try {
+        const prior = await apiFetch<QuizAttempt>(`/me/quizzes/${quizId}/latest`);
+        if (!cancelled) applyResult(prior);
+      } catch {
+        if (!cancelled) applyResult(null);
+      } finally {
+        if (!cancelled) setLoadingPrior(false);
+      }
+    }
+    void loadPrior();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when quiz/completion changes
+  }, [quizId, hydrateCompleted]);
 
   async function handleSubmit() {
     const unanswered = questions.some((question) => answers[String(question.id)] == null);
@@ -44,6 +89,10 @@ export default function QuizPlayer({ title, questions, onSubmit, onResult }: Qui
 
   const answeredCount = questions.filter((question) => answers[String(question.id)] != null).length;
 
+  if (loadingPrior) {
+    return <p className="text-sm text-caisbe-muted">Loading quiz…</p>;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -52,7 +101,9 @@ export default function QuizPlayer({ title, questions, onSubmit, onResult }: Qui
           <h2 className="mt-1 font-display text-2xl font-semibold text-caisbe-text-dark">{title}</h2>
         </div>
         <span className="inline-flex items-center rounded-md border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-          {revealed ? "Checked" : `${answeredCount} of ${questions.length} answered`}
+          {revealed && !canRetry
+            ? "Checked"
+            : `${answeredCount} of ${questions.length} answered`}
         </span>
       </div>
 
@@ -60,7 +111,7 @@ export default function QuizPlayer({ title, questions, onSubmit, onResult }: Qui
         {questions.map((question, index) => {
           const review = reviews.find((item) => Number(item.question_id) === Number(question.id));
           return (
-            <fieldset key={question.id ?? question.prompt} className="space-y-3" disabled={revealed}>
+            <fieldset key={question.id ?? question.prompt} className="space-y-3" disabled={revealed && !canRetry}>
               <legend className="text-sm font-semibold text-caisbe-text-dark">
                 <span className="mr-2 text-caisbe-muted">{index + 1}.</span>
                 {question.prompt}
@@ -82,7 +133,7 @@ export default function QuizPlayer({ title, questions, onSubmit, onResult }: Qui
                             : selected
                               ? "border-caisbe-red bg-caisbe-red/5 text-caisbe-text-dark"
                               : "border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red/40"
-                      } ${revealed ? "cursor-default" : "cursor-pointer"}`}
+                      } ${revealed && !canRetry ? "cursor-default" : "cursor-pointer"}`}
                     >
                       <input
                         type="radio"
@@ -90,7 +141,7 @@ export default function QuizPlayer({ title, questions, onSubmit, onResult }: Qui
                         name={`q-${question.id}`}
                         checked={selected}
                         onChange={() => {
-                          if (choice.id == null || revealed) return;
+                          if (choice.id == null || (revealed && !canRetry)) return;
                           setAnswers((prev) => ({ ...prev, [String(question.id)]: choice.id! }));
                         }}
                       />
@@ -132,11 +183,34 @@ export default function QuizPlayer({ title, questions, onSubmit, onResult }: Qui
       {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
 
       {result ? (
-        <div className="rounded-md border border-ifma-border bg-[#fafaf8] px-4 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Score</p>
-          <p className="mt-1 font-display text-3xl font-semibold text-caisbe-text-dark">{result.score}%</p>
-          {result.certificate_code ? (
-            <p className="mt-2 text-sm text-caisbe-text">Certificate {result.certificate_code}</p>
+        <div className="space-y-3">
+          <div className="rounded-md border border-ifma-border bg-[#fafaf8] px-4 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Score</p>
+            <p className="mt-1 font-display text-3xl font-semibold text-caisbe-text-dark">{result.score}%</p>
+            <p
+              className={`mt-2 text-sm font-semibold ${
+                result.passed ? "text-admin-success" : "text-caisbe-red"
+              }`}
+            >
+              {result.passed ? "Passed" : "Not passed — you can try again."}
+            </p>
+            {result.certificate_code ? (
+              <p className="mt-2 text-sm text-caisbe-text">Certificate {result.certificate_code}</p>
+            ) : null}
+          </div>
+          {canRetry ? (
+            <button
+              type="button"
+              disabled={submitting || questions.length === 0}
+              onClick={() => {
+                setResult(null);
+                setAnswers({});
+                onResult?.(null);
+              }}
+              className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            >
+              Try again
+            </button>
           ) : null}
         </div>
       ) : (

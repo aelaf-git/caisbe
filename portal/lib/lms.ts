@@ -96,6 +96,8 @@ export type ExamSessionState = {
   time_limit_minutes: number | null;
   latest_score: number | null;
   latest_passed: boolean | null;
+  latest_integrity_violations?: number;
+  latest_locked_out?: boolean;
   order: ExamOrder | null;
   questions?: QuizQuestion[];
   secure_mode?: boolean;
