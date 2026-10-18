@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import CertificateQr from "@/components/certificates/CertificateQr";
+import BrandLogo from "@/components/layout/BrandLogo";
 import { cssPx } from "@/lib/cssLength";
 import { certFitPx, useCertificateContentFit } from "@/lib/fitCertificateContent";
 
@@ -14,7 +15,6 @@ export type MembershipCertificateDocumentProps = {
   membershipNumber: string;
   issuedAt: string;
   verifyUrl: string;
-  certificateCode?: string;
   issuedBy?: string;
   title?: string;
   body?: string;
@@ -63,7 +63,6 @@ export default function MembershipCertificateDocument({
   membershipNumber,
   issuedAt,
   verifyUrl,
-  certificateCode,
   issuedBy = "CAISBE",
   title = "Certificate of Membership",
   body,
@@ -170,14 +169,7 @@ export default function MembershipCertificateDocument({
           style={{ padding: "44px 72px 36px" }}
         >
           <header className="shrink-0">
-            <img
-              src="/images/logo.png"
-              alt="CAISBE"
-              width={2172}
-              height={724}
-              className="mx-auto mb-2 object-contain"
-              style={{ height: 44, width: "auto" }}
-            />
+            <BrandLogo alt="CAISBE" className="mx-auto mb-2 h-[44px] text-[44px]" />
             <p
               className="font-semibold uppercase text-[#7b1e3a]"
               style={{ fontSize: 14, letterSpacing: "0.16em", lineHeight: 1.35 }}
@@ -277,15 +269,6 @@ export default function MembershipCertificateDocument({
                 Issued By
               </p>
             </div>
-
-            {certificateCode ? (
-              <p
-                className="col-start-2 row-start-2 mt-1 w-full break-all text-center font-mono leading-tight text-[#5c5348]"
-                style={{ fontSize: 11 }}
-              >
-                {certificateCode}
-              </p>
-            ) : null}
           </footer>
         </div>
       </article>

@@ -1,10 +1,3 @@
-export type LeadershipPerson = {
-  role: string;
-  name: string;
-  credentials: string;
-  email: string;
-};
-
 export type AdvisoryMember = {
   name: string;
   shortName: string;
@@ -47,38 +40,6 @@ export const aboutContent = {
     title: "Our Leadership",
     intro:
       "CAISBE is led by practitioners and specialists advancing facility management, membership, regional coordination, advocacy, and technology.",
-    people: [
-      {
-        role: "Executive Director",
-        name: "Mr. Dawit Zegeyea",
-        credentials: "MCOM, CFM, FMP, SFP, SMT",
-        email: "dawit.zegeyea@caisbe.org",
-      },
-      {
-        role: "Membership Development and Support",
-        name: "Mr. Ramazani Mangaals",
-        credentials: "BA, FMP",
-        email: "ramazani.mangaals@caisbe.org",
-      },
-      {
-        role: "East Africa Secretariat Office",
-        name: "Mr. Okey Simisola",
-        credentials: "BSc, MA",
-        email: "okey.simisola@caisbe.org",
-      },
-      {
-        role: "Advocacy and International Relations",
-        name: "Mr. Yared Alemu",
-        credentials: "Dip, International Cooperation",
-        email: "yared.alemu@caisbe.org",
-      },
-      {
-        role: "IT Operations and Service Desk",
-        name: "Mr. Aelaf Eskinder",
-        credentials: "BSc, Software Engineering",
-        email: "aelaf.eskinder@caisbe.org",
-      },
-    ] satisfies LeadershipPerson[],
   },
   advisoryCouncil: {
     title: "Advisory Council — Honorary Members",

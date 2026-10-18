@@ -86,7 +86,7 @@ export default function HelpDeskPageContent({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t(helpDeskContent.searchPlaceholder, "Rechercher dans la FAQ…")}
-              className="w-full rounded-full border border-ifma-border bg-white py-3.5 pl-12 pr-5 text-base text-caisbe-text shadow-hopewell outline-none transition placeholder:text-caisbe-muted/70 focus:border-caisbe-red focus:ring-2 focus:ring-caisbe-red/20"
+              className="w-full rounded-none border border-ifma-border bg-white py-3.5 pl-12 pr-5 text-base text-caisbe-text shadow-hopewell outline-none transition placeholder:text-caisbe-muted/70 focus:border-caisbe-red focus:ring-2 focus:ring-caisbe-red/20"
             />
           </div>
         </label>
@@ -99,7 +99,7 @@ export default function HelpDeskPageContent({
 
         <div className="mt-6 grid gap-4">
           {filtered.length === 0 ? (
-            <div className="rounded-[20px] bg-white px-5 py-8 shadow-hopewell">
+            <div className="rounded-none bg-white px-5 py-8 shadow-hopewell">
               <p className="text-base leading-8 text-caisbe-text md:text-lg">
                 {t(
                   helpDeskContent.emptyResults,
@@ -116,7 +116,7 @@ export default function HelpDeskPageContent({
             filtered.map((faq) => (
               <details
                 key={faq.question}
-                className="group rounded-[20px] bg-white shadow-hopewell"
+                className="group rounded-none bg-white shadow-hopewell"
                 open={Boolean(deferredQuery)}
               >
                 <summary className="flex cursor-pointer list-none items-center gap-4 px-5 py-5 text-left marker:content-none [&::-webkit-details-marker]:hidden">

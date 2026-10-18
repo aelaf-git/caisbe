@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import BrandLogo from "@/components/layout/BrandLogo";
 import { apiFetch } from "@/lib/auth";
 import type { Cart } from "@/lib/commerce";
 import { siteUrl } from "@/lib/membershipApplication";
@@ -14,6 +14,8 @@ type NavItem = {
   label: string;
   icon: string;
   match?: "exact" | "prefix";
+  /** When set, opens a public-site URL instead of an in-app route. */
+  externalPath?: string;
 };
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
@@ -22,6 +24,12 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: "grid", match: "exact" },
       { href: "/guide", label: "User Guide", icon: "file", match: "exact" },
+      {
+        href: "/forms-and-guides",
+        label: "Forms and Guides",
+        icon: "file",
+        externalPath: "/resources/forms-and-guides",
+      },
     ],
   },
   {
@@ -201,15 +209,8 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
   return (
     <aside className={`flex h-full w-full flex-col bg-admin-surface shadow-hopewell-nav ${className}`}>
       <div className="px-5 py-5">
-        <Link href="/dashboard" onClick={onNavigate} className="flex flex-col gap-2">
-          <Image
-            src="/images/logo.png"
-            alt="CAISBE logo"
-            width={2172}
-            height={724}
-            priority
-            className="h-10 w-auto max-w-full object-contain"
-          />
+        <Link href="/dashboard" onClick={onNavigate} className="flex flex-col gap-2 overflow-visible pr-3">
+          <BrandLogo priority className="h-10 text-[2.5rem]" />
           <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-caisbe-red-dark">
             myCAISBE
           </p>
@@ -224,18 +225,14 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
             </p>
             <div className="space-y-1">
               {group.items.map((item) => {
-                const active = isActive(pathname, item);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={`flex items-center justify-between gap-2 rounded-full px-3 py-2.5 text-sm transition-colors ${
-                      active
-                        ? "bg-caisbe-red font-semibold text-white"
-                        : "text-caisbe-muted hover:bg-admin-surface-muted hover:text-caisbe-text"
-                    }`}
-                  >
+                const active = item.externalPath ? false : isActive(pathname, item);
+                const className = `flex items-center justify-between gap-2 rounded-none px-3 py-2.5 text-sm transition-colors ${
+                  active
+                    ? "bg-caisbe-red font-semibold text-white"
+                    : "text-caisbe-muted hover:bg-admin-surface-muted hover:text-caisbe-text"
+                }`;
+                const body = (
+                  <>
                     <span className="flex min-w-0 items-center gap-3">
                       <NavIcon name={item.icon} />
                       <span className="truncate">{item.label}</span>
@@ -255,6 +252,25 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
                         {unreadNotifications}
                       </span>
                     ) : null}
+                  </>
+                );
+                if (item.externalPath) {
+                  return (
+                    <a
+                      key={item.href}
+                      href={siteUrl(item.externalPath)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={onNavigate}
+                      className={className}
+                    >
+                      {body}
+                    </a>
+                  );
+                }
+                return (
+                  <Link key={item.href} href={item.href} onClick={onNavigate} className={className}>
+                    {body}
                   </Link>
                 );
               })}
@@ -275,7 +291,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
         </div>
         <a
           href={siteUrl("/")}
-          className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-ifma-border px-4 py-2 text-sm font-semibold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-none border border-ifma-border px-4 py-2 text-sm font-semibold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
         >
           Main page
         </a>
@@ -284,7 +300,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
           onClick={() => {
             void logout().then(() => router.push("/login"));
           }}
-          className="mt-3 inline-flex w-full items-center justify-center rounded-full border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-none border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
         >
           Logout
         </button>

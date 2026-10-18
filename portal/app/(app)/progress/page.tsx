@@ -38,7 +38,7 @@ export default function MyProgressPage() {
         description="Course progress, learning, assignments, exam eligibility, outstanding requirements, and certificates."
       />
       {error ? (
-        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           {error}
         </div>
       ) : null}

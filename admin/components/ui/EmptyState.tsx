@@ -12,7 +12,7 @@ export default function EmptyState({
   icon?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-48 flex-col items-center justify-center rounded-[20px] bg-admin-surface px-6 py-10 text-center shadow-hopewell">
+    <div className="flex min-h-48 flex-col items-center justify-center rounded-none bg-admin-surface px-6 py-10 text-center shadow-hopewell">
       <div className="flex h-11 w-11 items-center justify-center rounded-full bg-caisbe-red/10 text-caisbe-red">
         <span aria-hidden className="text-xl leading-none">
           {icon ?? "+"}

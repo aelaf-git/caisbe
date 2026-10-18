@@ -24,8 +24,16 @@ export function chapterExtrasUnlocked(course: CourseDetail, chapterIndex: number
   return topicsComplete(course.chapters[chapterIndex]?.lessons ?? []);
 }
 
+function chapterWorkComplete(course: CourseDetail, chapterIndex: number): boolean {
+  const chapter = course.chapters[chapterIndex];
+  if (!chapter || !topicsComplete(chapter.lessons)) return false;
+  return (chapter.blocks ?? [])
+    .filter((block) => block.block_type === "quiz" || block.block_type === "assignment")
+    .every((block) => Boolean(block.completed));
+}
+
 export function examUnlocked(course: CourseDetail): boolean {
-  return course.chapters.every((chapter) => topicsComplete(chapter.lessons));
+  return course.chapters.every((_, chapterIndex) => chapterWorkComplete(course, chapterIndex));
 }
 
 export function selectionUnlocked(course: CourseDetail, selection: NavSelection | null): boolean {
@@ -33,7 +41,7 @@ export function selectionUnlocked(course: CourseDetail, selection: NavSelection 
   if (selection.kind === "exam") return examUnlocked(course);
   if (selection.kind === "chapter-readings") {
     const chapterIndex = course.chapters.findIndex((chapter) => chapter.id === selection.chapterId);
-    return chapterIndex >= 0 && chapterUnlocked(course, chapterIndex);
+    return chapterIndex >= 0 && chapterExtrasUnlocked(course, chapterIndex);
   }
   if (selection.kind === "topic") {
     for (let chapterIndex = 0; chapterIndex < course.chapters.length; chapterIndex += 1) {

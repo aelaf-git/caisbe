@@ -11,6 +11,12 @@ class MediaAssetOut(BaseModel):
     cover_url: str | None = None
     external_url: str | None = None
     body: str | None = None
+    show_text_panel: bool = True
+    eyebrow: str | None = None
+    headline: str | None = None
+    subheadline: str | None = None
+    cta_label: str | None = None
+    cta_url: str | None = None
     category: str
     published: bool
     featured: bool
@@ -27,6 +33,12 @@ class MediaAssetCreateIn(BaseModel):
     cover_url: str | None = Field(default=None, max_length=1024)
     external_url: str | None = Field(default=None, max_length=1024)
     body: str | None = Field(default=None, max_length=100_000)
+    show_text_panel: bool = True
+    eyebrow: str | None = Field(default=None, max_length=120)
+    headline: str | None = Field(default=None, max_length=255)
+    subheadline: str | None = Field(default=None, max_length=512)
+    cta_label: str | None = Field(default=None, max_length=120)
+    cta_url: str | None = Field(default=None, max_length=1024)
     category: str = Field(default="magazine", max_length=32)
     published: bool = False
     featured: bool = False
@@ -40,6 +52,12 @@ class MediaAssetUpdateIn(BaseModel):
     cover_url: str | None = Field(default=None, max_length=1024)
     external_url: str | None = Field(default=None, max_length=1024)
     body: str | None = Field(default=None, max_length=100_000)
+    show_text_panel: bool | None = None
+    eyebrow: str | None = Field(default=None, max_length=120)
+    headline: str | None = Field(default=None, max_length=255)
+    subheadline: str | None = Field(default=None, max_length=512)
+    cta_label: str | None = Field(default=None, max_length=120)
+    cta_url: str | None = Field(default=None, max_length=1024)
     category: str | None = Field(default=None, max_length=32)
     published: bool | None = None
     featured: bool | None = None
@@ -82,11 +100,32 @@ class NewsletterSendOut(BaseModel):
     message: str
 
 
+class NewsletterPreviewIn(BaseModel):
+    subject: str = Field(default="", max_length=255)
+    body_html: str = Field(default="", max_length=100_000)
+
+
+class NewsletterPreviewOut(BaseModel):
+    html: str
+
+
+class NewsletterTemplateOut(BaseModel):
+    subject: str
+    body_html: str
+
+
 class HeroSlideOut(BaseModel):
     id: int | str
     title: str
     file_url: str
     media_type: str  # "image" | "video"
+    show_text_panel: bool = True
+    eyebrow: str | None = None
+    headline: str | None = None
+    subheadline: str | None = None
+    description: str | None = None
+    cta_label: str | None = None
+    cta_url: str | None = None
 
 
 class HeroCarouselOut(BaseModel):

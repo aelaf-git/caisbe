@@ -194,8 +194,8 @@ export default function MembershipCertificateTypesManager({
   if (loading) {
     return (
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <Skeleton className="h-72 rounded-[20px]" />
-        <Skeleton className="h-72 rounded-[20px]" />
+        <Skeleton className="h-72 rounded-none" />
+        <Skeleton className="h-72 rounded-none" />
       </div>
     );
   }
@@ -300,7 +300,7 @@ export default function MembershipCertificateTypesManager({
                 <div
                   role="group"
                   aria-label="Currency"
-                  className="flex h-11 w-full overflow-hidden rounded-full border border-ifma-border bg-admin-surface p-1"
+                  className="flex h-11 w-full overflow-hidden rounded-none border border-ifma-border bg-admin-surface p-1"
                 >
                   {CURRENCIES.map((option) => {
                     const selectedCurrency = currency === option;
@@ -310,7 +310,7 @@ export default function MembershipCertificateTypesManager({
                         type="button"
                         aria-pressed={selectedCurrency}
                         onClick={() => setCurrency(option)}
-                        className={`flex-1 rounded-full text-sm font-semibold uppercase tracking-wide transition-colors ${
+                        className={`flex-1 rounded-none text-sm font-semibold uppercase tracking-wide transition-colors ${
                           selectedCurrency
                             ? "bg-caisbe-red text-white"
                             : "text-caisbe-muted hover:text-caisbe-text"
@@ -369,7 +369,7 @@ export default function MembershipCertificateTypesManager({
                     currency || selected.currency,
                   )} · ${validityMonths || "12"} months`}
             </h3>
-            <div className="overflow-x-auto rounded-[20px] bg-admin-surface-muted/60 p-3 sm:p-5">
+            <div className="overflow-x-auto rounded-none bg-admin-surface-muted/60 p-3 sm:p-5">
               <div className="inline-block min-w-[900px]">
                 <MembershipCertificateDocument
                   studentName="Jane Doe"
@@ -377,7 +377,6 @@ export default function MembershipCertificateTypesManager({
                   issuedAt={issuedAtIso}
                   validUntil={previewValidUntil}
                   verifyUrl={`${portalBaseUrl()}/certificates/verify/CAISBE-MEM-SAMPLE01`}
-                  certificateCode="CAISBE-MEM-SAMPLE01"
                   title={title || selected.title}
                   body={previewBody}
                 />

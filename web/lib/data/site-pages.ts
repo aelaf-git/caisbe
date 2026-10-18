@@ -141,7 +141,7 @@ export const aboutPages: TopicPage[] = [
         items: [],
       },
     ],
-    { label: "Contact the Board Office", href: "/contact" },
+    { label: "Contact the Board of Directors Office", href: "/contact" },
   ),
   topic(
     "staff",

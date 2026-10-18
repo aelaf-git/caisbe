@@ -208,7 +208,7 @@ function AssignmentsWorkspace() {
             key={item.id}
             type="button"
             onClick={() => setFilter(item.id)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${
+            className={`rounded-none px-4 py-2 text-sm font-semibold ${
               filter === item.id
                 ? "bg-caisbe-red text-white"
                 : "border border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red"
@@ -225,7 +225,7 @@ function AssignmentsWorkspace() {
         </p>
       ) : null}
 
-      <section className="overflow-hidden rounded-[20px] border border-ifma-border bg-admin-surface shadow-hopewell">
+      <section className="overflow-hidden rounded-none border border-ifma-border bg-admin-surface shadow-hopewell">
         {loading ? (
           <p className="px-5 py-8 text-sm text-caisbe-muted">Loading assignments…</p>
         ) : visible.length === 0 ? (
@@ -417,7 +417,7 @@ function AssignmentDetailPanel({
   const instructionsHref = fileHref(detail.instructions_url);
 
   return (
-    <section className="space-y-6 rounded-[20px] border border-ifma-border bg-admin-surface p-5 shadow-hopewell md:p-6">
+    <section className="space-y-6 rounded-none border border-ifma-border bg-admin-surface p-5 shadow-hopewell md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">

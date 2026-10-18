@@ -79,7 +79,7 @@ export default function BlogPostPageContent({ id }: { id: number }) {
             <img
               src={post.cover_url}
               alt=""
-              className="aspect-[21/9] w-full max-w-4xl rounded-[20px] object-cover shadow-hopewell"
+              className="aspect-[21/9] w-full max-w-4xl rounded-none object-cover shadow-hopewell"
             />
           </div>
         </section>

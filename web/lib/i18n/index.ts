@@ -30,7 +30,7 @@ const NAV_LABEL_FR: Record<string, string> = {
   Membership: "Adhésion",
   "Membership Overview and Benefits": "Aperçu et avantages de l'adhésion",
   "Join / Register / Renew": "Adhérer / S'inscrire / Renouveler",
-  "Manage Account (login)": "Gérer mon compte (connexion)",
+  "Manage Account": "Gérer mon compte",
   "Types of Membership": "Types d'adhésion",
   Network: "Réseau",
   Overview: "Aperçu",
@@ -69,7 +69,6 @@ const NAV_LABEL_FR: Record<string, string> = {
   "About the Association": "À propos de l'association",
   "About Us": "Qui sommes-nous",
   "What is the Built Environment?": "Qu'est-ce que l'environnement bâti ?",
-  "Our Leadership": "Notre direction",
   Staff: "Équipe",
   Volunteering: "Bénévolat",
   // Footer headings & links
@@ -164,6 +163,9 @@ export type Dictionary = {
   certificates: {
     empty: string;
   };
+  seminars: {
+    empty: string;
+  };
   magazine: {
     empty: string;
     readIssue: string;
@@ -201,6 +203,7 @@ export type Dictionary = {
     subscribeHeading: string;
     subscribeSubtext: string;
     privacyPolicy: string;
+    corporateLine: string;
     copyright: (fullName: string) => string;
     newsletter: {
       emailLabel: string;
@@ -211,6 +214,10 @@ export type Dictionary = {
       invalidEmail: string;
       errorFallback: string;
     };
+  };
+  carousel: {
+    previous: string;
+    next: string;
   };
 };
 
@@ -235,6 +242,13 @@ const EN_DICT: Dictionary = {
   },
   certificates: {
     empty: "Certificate programs will appear here once published by CAISBE.",
+  },
+  seminars: {
+    empty: "Upcoming seminars will appear here once published by CAISBE.",
+  },
+  carousel: {
+    previous: "Previous",
+    next: "Next",
   },
   magazine: {
     empty: "New magazine issues will appear here once published by the CAISBE team.",
@@ -273,6 +287,8 @@ const EN_DICT: Dictionary = {
     subscribeHeading: "Subscribe to newsletter",
     subscribeSubtext: "Get magazine issues and CAISBE news by email.",
     privacyPolicy: "Privacy Policy",
+    corporateLine:
+      "CAISBE – Corporate No: 1750704-6 - CAISBE, Canada-Africa Institute for the Sustainable Built Environment (CAISBE) 815 4 Ave S, Calgary, AB, T2P 3G8 Canada",
     copyright: (fullName) => `Copyright © 2026 ${fullName}`,
     newsletter: {
       emailLabel: "Email",
@@ -309,6 +325,13 @@ const FR_DICT: Dictionary = {
   certificates: {
     empty:
       "Les programmes de certificat apparaîtront ici dès leur publication par le CAISBE.",
+  },
+  seminars: {
+    empty: "Les séminaires à venir apparaîtront ici dès leur publication par le CAISBE.",
+  },
+  carousel: {
+    previous: "Précédent",
+    next: "Suivant",
   },
   magazine: {
     empty:
@@ -349,6 +372,8 @@ const FR_DICT: Dictionary = {
     subscribeSubtext:
       "Recevez les numéros du magazine et les actualités du CAISBE par courriel.",
     privacyPolicy: "Politique de confidentialité",
+    corporateLine:
+      "CAISBE – N° d'entreprise : 1750704-6 - CAISBE, Institut Canada-Afrique pour l'environnement bâti durable (CAISBE) 815 4 Ave S, Calgary (Alberta) T2P 3G8 Canada",
     copyright: (fullName) => `Droits d'auteur © 2026 ${fullName}`,
     newsletter: {
       emailLabel: "Courriel",
@@ -407,6 +432,12 @@ export const FALLBACK_HOME_FR = {
   certificates_title: "Formez votre équipe en gestion des installations",
   certificates_subtitle: "Programmes de certification éducative de qualité",
   certificates_cta: "Voir tout",
+  seminars_title: "Séminaires à venir",
+  seminars_body_1:
+    "Le CAISBE offre les connaissances pratiques et les perspectives du secteur dont les professionnels ont besoin pour exceller en gestion du milieu de travail et des installations",
+  seminars_body_2:
+    "Faites progresser votre carrière avec une formation experte du CAISBE, un fournisseur de confiance en développement professionnel pour les professionnels et les employeurs de l'environnement bâti.",
+  seminars_cta: "En savoir plus sur nos séminaires",
   magazine_title: "Magazine CAISBE",
   magazine_subtitle:
     "Découvrez les derniers dossiers et analyses de la communauté CAISBE.",

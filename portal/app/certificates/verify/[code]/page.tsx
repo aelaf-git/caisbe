@@ -91,7 +91,6 @@ export default function VerifyCertificatePage() {
                 issuedAt={result.issued_at}
                 validUntil={result.expires_at}
                 verifyUrl={verifyUrl}
-                certificateCode={result.certificate_code}
                 issuedBy={result.issued_by}
               />
             ) : (
@@ -100,7 +99,6 @@ export default function VerifyCertificatePage() {
                 courseTitle={result.course_title || "Course"}
                 issuedAt={result.issued_at}
                 verifyUrl={verifyUrl}
-                certificateCode={result.certificate_code}
                 issuedBy={result.issued_by}
               />
             )}

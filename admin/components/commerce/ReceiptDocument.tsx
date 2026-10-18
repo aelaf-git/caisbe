@@ -1,5 +1,7 @@
 "use client";
 
+import BrandLogo from "@/components/layout/BrandLogo";
+
 export type ReceiptLine = {
   title: string;
   unit_price_cents: number;
@@ -84,13 +86,7 @@ export default function ReceiptDocument({
       <div className="px-8 py-8 sm:px-10">
         <header className="flex flex-wrap items-start justify-between gap-6">
           <div>
-            <img
-              src="/images/logo.png"
-              alt="CAISBE"
-              width={2172}
-              height={724}
-              className="h-12 w-auto object-contain"
-            />
+            <BrandLogo alt="CAISBE" className="h-12 text-[3rem]" />
             <p className="mt-3 max-w-xs text-xs leading-5 text-[#5f6b7a]">{INSTITUTE}</p>
           </div>
           <div className="text-left sm:text-right">

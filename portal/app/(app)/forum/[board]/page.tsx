@@ -76,11 +76,11 @@ export default function ForumBoardPage() {
       {board ? (
         <>
           {board.threads.length === 0 ? (
-            <p className="rounded-[20px] border border-dashed border-ifma-border bg-admin-surface px-6 py-10 text-center text-sm text-caisbe-muted">
+            <p className="rounded-none border border-dashed border-ifma-border bg-admin-surface px-6 py-10 text-center text-sm text-caisbe-muted">
               No discussions yet.
             </p>
           ) : (
-            <ul className="overflow-hidden rounded-[20px] border border-ifma-border bg-admin-surface shadow-hopewell">
+            <ul className="overflow-hidden rounded-none border border-ifma-border bg-admin-surface shadow-hopewell">
               {board.threads.map((thread) => (
                 <li key={thread.id} className="border-b border-ifma-border last:border-b-0">
                   <Link href={`/forum/${board.slug}/${thread.id}`} className="block px-5 py-4 hover:bg-admin-canvas">
@@ -108,7 +108,7 @@ export default function ForumBoardPage() {
           )}
 
           {board.member_can_start ? (
-            <section className="rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell">
+            <section className="rounded-none border border-ifma-border bg-admin-surface p-6 shadow-hopewell">
               <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Start a discussion</h2>
               <form onSubmit={(event) => void startDiscussion(event)} className="mt-4 flex flex-col gap-4">
                 <label className="block text-sm font-semibold text-caisbe-text">
@@ -143,7 +143,7 @@ export default function ForumBoardPage() {
               </form>
             </section>
           ) : (
-            <p className="rounded-[20px] border border-ifma-border bg-admin-surface px-5 py-4 text-sm text-caisbe-muted">
+            <p className="rounded-none border border-ifma-border bg-admin-surface px-5 py-4 text-sm text-caisbe-muted">
               Announcements are posted by CAISBE staff. You can read them here.
             </p>
           )}

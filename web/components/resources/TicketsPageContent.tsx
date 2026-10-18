@@ -137,7 +137,7 @@ export default function TicketsPageContent({
           ) : tickets === null ? (
             <p className="max-w-2xl leading-7 text-caisbe-muted">{fr ? "Chargement des billets…" : "Loading tickets…"}</p>
           ) : (
-            <div className="overflow-hidden rounded-[20px] bg-white shadow-hopewell">
+            <div className="overflow-hidden rounded-none bg-white shadow-hopewell">
               <ul className="divide-y divide-ifma-border-light md:hidden">
                 {tickets?.map((ticket) => (
                   <li key={ticket.id}>

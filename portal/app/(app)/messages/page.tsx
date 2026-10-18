@@ -195,14 +195,14 @@ function MessagesPageInner() {
               setSelectedId(null);
               setMessages([]);
             }}
-            className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+            className="inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
           >
             Submit Your Ticket
           </button>
         }
       />
 
-      <section className="overflow-hidden rounded-[20px] border border-ifma-border bg-admin-surface shadow-hopewell">
+      <section className="overflow-hidden rounded-none border border-ifma-border bg-admin-surface shadow-hopewell">
         {threads.length === 0 ? (
           <p className="px-5 py-10 text-caisbe-muted">
             No tickets yet. Submit a support ticket below to report an issue or resolve a question.
@@ -288,7 +288,7 @@ function MessagesPageInner() {
       </section>
 
       {composing ? (
-        <section className="rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell">
+        <section className="rounded-none border border-ifma-border bg-admin-surface p-6 shadow-hopewell">
           <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">
             Submit Your Ticket
           </h2>
@@ -353,7 +353,7 @@ function MessagesPageInner() {
       ) : null}
 
       {selected && !composing ? (
-        <section className="flex min-h-[360px] flex-col rounded-[20px] border border-ifma-border bg-admin-surface shadow-hopewell">
+        <section className="flex min-h-[360px] flex-col rounded-none border border-ifma-border bg-admin-surface shadow-hopewell">
           <header className="border-b border-ifma-border px-5 py-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
               {ticketNumber(selected.id)} · {SUPPORT_KIND_LABELS[selected.kind]} ·{" "}
@@ -391,7 +391,7 @@ function MessagesPageInner() {
           ) : (
             <form
               onSubmit={(e) => void sendReply(e)}
-              className="flex gap-2 border-t border-ifma-border p-4"
+              className="flex flex-col gap-2 border-t border-ifma-border p-4 sm:flex-row sm:items-end"
             >
               <textarea
                 required
@@ -399,12 +399,12 @@ function MessagesPageInner() {
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 placeholder="Write a reply…"
-                className="min-h-[44px] flex-1 rounded-md border border-ifma-border bg-admin-canvas px-3 py-2 text-sm"
+                className="min-h-[44px] min-w-0 flex-1 rounded-md border border-ifma-border bg-admin-canvas px-3 py-2 text-sm"
               />
               <button
                 type="submit"
                 disabled={busy || !reply.trim()}
-                className="self-end rounded-md border-2 border-caisbe-red bg-caisbe-red px-4 py-2 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+                className="w-full self-end rounded-md border-2 border-caisbe-red bg-caisbe-red px-4 py-2 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
               >
                 Send
               </button>
@@ -414,7 +414,7 @@ function MessagesPageInner() {
       ) : null}
 
       {!composing && !selected ? (
-        <section className="rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell">
+        <section className="rounded-none border border-ifma-border bg-admin-surface p-6 shadow-hopewell">
           <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">
             Submit Your Ticket
           </h2>
@@ -428,7 +428,7 @@ function MessagesPageInner() {
               setSelectedId(null);
               setMessages([]);
             }}
-            className="mt-6 inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+            className="mt-6 inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
           >
             Submit Your Ticket
           </button>

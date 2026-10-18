@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EditIconButton } from "@/components/ui/IconPencil";
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import Badge from "@/components/ui/Badge";
@@ -12,8 +12,18 @@ import FormField, { fieldClassName, textAreaClassName } from "@/components/ui/Fo
 import SaveButton from "@/components/ui/SaveButton";
 import Skeleton from "@/components/ui/Skeleton";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
-import { apiFetch, ApiError, type Seminar } from "@/lib/auth";
+import { apiFetch, apiUpload, ApiError, type Seminar, type SeminarRegistration } from "@/lib/auth";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 import { IconActionButton } from "@/components/ui/IconAction";
+
+const COVER_ACCEPT = "image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif";
+const COVER_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
+
+function isCoverImage(file: File): boolean {
+  if (file.type.startsWith("image/")) return true;
+  const name = file.name.toLowerCase();
+  return [...COVER_EXTENSIONS].some((ext) => name.endsWith(ext));
+}
 
 type AskConfirm = (options: {
   title: string;
@@ -21,10 +31,47 @@ type AskConfirm = (options: {
   confirmLabel?: string;
 }) => Promise<boolean>;
 
+function dollarsToCents(value: string) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.round(n * 100);
+}
+
+function centsToDollars(cents: number) {
+  return String((cents || 0) / 100);
+}
+
+function toDatetimeLocalValue(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function fromDatetimeLocalValue(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
 function emptyForm(itemCount: number) {
   return {
     title: "",
     description: "",
+    cover_url: null as string | null,
+    event_date_label: "Thursday, November 12, 2026",
+    event_time_label:
+      "9:00 AM – 4:00 PM Eastern Time (ET) / 8:00 AM – 3:00 PM Central Time (CT) / 6:00 AM – 1:00 PM Pacific Time (PT)",
+    event_format_label:
+      "Hybrid – In-person in Chicago, IL, with a live virtual option for remote attendees",
+    event_starts_at: "",
+    registration_enabled: true,
+    member_price: "50",
+    non_member_price: "75",
+    student_price: "40",
     published: true,
     sort_order: String(itemCount),
   };
@@ -46,54 +93,159 @@ export default function SeminarsManager({
   askConfirm: AskConfirm;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [eventDateLabel, setEventDateLabel] = useState("");
+  const [eventTimeLabel, setEventTimeLabel] = useState("");
+  const [eventFormatLabel, setEventFormatLabel] = useState("");
+  const [eventStartsAt, setEventStartsAt] = useState("");
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [memberPrice, setMemberPrice] = useState("50");
+  const [nonMemberPrice, setNonMemberPrice] = useState("75");
+  const [studentPrice, setStudentPrice] = useState("40");
   const [published, setPublished] = useState(true);
   const [sortOrder, setSortOrder] = useState("0");
+  const [registrations, setRegistrations] = useState<SeminarRegistration[]>([]);
+  const [regsLoading, setRegsLoading] = useState(false);
 
   const isEditing = editingId !== null;
   const formValues = useMemo(
     () => ({
       title: title.trim(),
       description: description.trim(),
+      cover_url: coverUrl,
+      event_date_label: eventDateLabel.trim(),
+      event_time_label: eventTimeLabel.trim(),
+      event_format_label: eventFormatLabel.trim(),
+      event_starts_at: eventStartsAt,
+      registration_enabled: registrationEnabled,
+      member_price: memberPrice.trim(),
+      non_member_price: nonMemberPrice.trim(),
+      student_price: studentPrice.trim(),
       published,
       sort_order: String(Number(sortOrder) || 0),
     }),
-    [title, description, published, sortOrder],
+    [
+      title,
+      description,
+      coverUrl,
+      eventDateLabel,
+      eventTimeLabel,
+      eventFormatLabel,
+      eventStartsAt,
+      registrationEnabled,
+      memberPrice,
+      nonMemberPrice,
+      studentPrice,
+      published,
+      sortOrder,
+    ],
   );
   const { dirty, resetBaseline } = useDirtyForm(formValues);
 
-  function clearForm() {
-    const next = emptyForm(items.length);
-    setEditingId(null);
+  function applyForm(next: ReturnType<typeof emptyForm>) {
     setTitle(next.title);
     setDescription(next.description);
+    setCoverUrl(next.cover_url);
+    setEventDateLabel(next.event_date_label);
+    setEventTimeLabel(next.event_time_label);
+    setEventFormatLabel(next.event_format_label);
+    setEventStartsAt(next.event_starts_at);
+    setRegistrationEnabled(next.registration_enabled);
+    setMemberPrice(next.member_price);
+    setNonMemberPrice(next.non_member_price);
+    setStudentPrice(next.student_price);
     setPublished(next.published);
     setSortOrder(next.sort_order);
+    if (coverInputRef.current) coverInputRef.current.value = "";
     resetBaseline({
       title: next.title,
       description: next.description,
+      cover_url: next.cover_url,
+      event_date_label: next.event_date_label,
+      event_time_label: next.event_time_label,
+      event_format_label: next.event_format_label,
+      event_starts_at: next.event_starts_at,
+      registration_enabled: next.registration_enabled,
+      member_price: next.member_price,
+      non_member_price: next.non_member_price,
+      student_price: next.student_price,
       published: next.published,
       sort_order: String(Number(next.sort_order) || 0),
     });
   }
 
+  function clearForm() {
+    setEditingId(null);
+    setRegistrations([]);
+    applyForm(emptyForm(items.length));
+  }
+
   function startEdit(item: Seminar) {
     setEditingId(item.id);
-    setTitle(item.title);
-    setDescription(item.description);
-    setPublished(item.published);
-    setSortOrder(String(item.sort_order));
-    resetBaseline({
-      title: item.title.trim(),
-      description: item.description.trim(),
+    applyForm({
+      title: item.title,
+      description: item.description,
+      cover_url: item.cover_url || null,
+      event_date_label: item.event_date_label || "",
+      event_time_label: item.event_time_label || "",
+      event_format_label: item.event_format_label || "",
+      event_starts_at: toDatetimeLocalValue(item.event_starts_at),
+      registration_enabled: item.registration_enabled ?? true,
+      member_price: centsToDollars(item.member_price_cents ?? 5000),
+      non_member_price: centsToDollars(item.non_member_price_cents ?? 7500),
+      student_price: centsToDollars(item.student_price_cents ?? 4000),
       published: item.published,
-      sort_order: String(item.sort_order || 0),
+      sort_order: String(item.sort_order),
     });
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  async function handleCoverFile(file: File) {
+    if (!isCoverImage(file)) {
+      onError("Cover must be a JPG, PNG, WebP, or GIF image.");
+      return;
+    }
+    setUploadingCover(true);
+    try {
+      const uploaded = await apiUpload("/admin/uploads", file, { folder: "seminars/covers" });
+      setCoverUrl(uploaded.url);
+    } catch (err) {
+      onError(err instanceof ApiError ? err.detail : "Unable to upload cover image.");
+    } finally {
+      setUploadingCover(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!editingId) {
+      setRegistrations([]);
+      return;
+    }
+    let cancelled = false;
+    async function loadRegs() {
+      setRegsLoading(true);
+      try {
+        const rows = await apiFetch<SeminarRegistration[]>(
+          `/admin/seminars/${editingId}/registrations`,
+        );
+        if (!cancelled) setRegistrations(rows);
+      } catch {
+        if (!cancelled) setRegistrations([]);
+      } finally {
+        if (!cancelled) setRegsLoading(false);
+      }
+    }
+    void loadRegs();
+    return () => {
+      cancelled = true;
+    };
+  }, [editingId]);
 
   async function handleSave() {
     if (!dirty) return;
@@ -104,6 +256,15 @@ export default function SeminarsManager({
     const body = {
       title: title.trim(),
       description: description.trim(),
+      cover_url: coverUrl,
+      event_date_label: eventDateLabel.trim() || null,
+      event_time_label: eventTimeLabel.trim() || null,
+      event_format_label: eventFormatLabel.trim() || null,
+      event_starts_at: fromDatetimeLocalValue(eventStartsAt),
+      registration_enabled: registrationEnabled,
+      member_price_cents: dollarsToCents(memberPrice),
+      non_member_price_cents: dollarsToCents(nonMemberPrice),
+      student_price_cents: dollarsToCents(studentPrice),
       published,
       sort_order: Number(sortOrder) || 0,
     };
@@ -147,7 +308,7 @@ export default function SeminarsManager({
   async function deleteItem(item: Seminar) {
     const ok = await askConfirm({
       title: "Remove seminar?",
-      description: `${item.title} will be removed from the certificate programs page.`,
+      description: `${item.title} will be removed from the homepage upcoming strip and Professional development.`,
       confirmLabel: "Remove",
     });
     if (!ok) return;
@@ -170,34 +331,159 @@ export default function SeminarsManager({
               {isEditing ? "Edit seminar" : "Add seminar"}
             </h2>
             <p className="mt-1 text-sm text-caisbe-muted">
-              Published seminars appear at the bottom of the certificate programs page.
+              Manage seminar events, pricing, and registration here. Published seminars appear on the homepage
+              upcoming strip and under Professional development. Homepage strip heading and paragraphs are edited
+              in Homepage upcoming strip above.
             </p>
           </div>
           <FormField label="Title">
-            <input className={fieldClassName} value={title} onChange={(event) => setTitle(event.target.value)} />
+            <input className={fieldClassName} value={title} onChange={(e) => setTitle(e.target.value)} />
           </FormField>
           <FormField label="Description">
             <textarea
               className={`${textAreaClassName} min-h-28`}
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </FormField>
-          <div className="grid gap-4 md:grid-cols-2">
+          <FormField
+            label="Cover image"
+            hint="Shown on the homepage upcoming seminars strip. Save the seminar after uploading."
+          >
+            <div className="overflow-hidden border border-ifma-border bg-admin-surface-muted/40">
+              <div className="relative aspect-video bg-[#f3f0ec]">
+                {coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={resolveUploadUrl(coverUrl) ?? coverUrl}
+                    alt="Seminar cover preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center px-4 text-center text-sm text-caisbe-muted">
+                    No cover image yet
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-3 border-t border-ifma-border-light bg-admin-surface px-4 py-3">
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept={COVER_ACCEPT}
+                  disabled={uploadingCover || saving}
+                  className="block w-full min-w-0 flex-1 text-sm text-caisbe-muted file:mr-3 file:rounded-md file:border-0 file:bg-caisbe-red file:px-3 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-wide file:text-white hover:file:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleCoverFile(file);
+                  }}
+                />
+                {coverUrl ? (
+                  <IconActionButton
+                    icon="trash"
+                    tone="danger"
+                    label="Remove cover image"
+                    disabled={uploadingCover || saving}
+                    onClick={() => {
+                      setCoverUrl(null);
+                      if (coverInputRef.current) coverInputRef.current.value = "";
+                    }}
+                  />
+                ) : null}
+                {uploadingCover ? (
+                  <span className="text-xs font-medium text-caisbe-muted">Uploading…</span>
+                ) : null}
+              </div>
+            </div>
+          </FormField>
+          <FormField label="Event date label">
+            <input
+              className={fieldClassName}
+              value={eventDateLabel}
+              onChange={(e) => setEventDateLabel(e.target.value)}
+              placeholder="Thursday, November 12, 2026"
+            />
+          </FormField>
+          <FormField label="Event time label">
+            <textarea
+              className={`${textAreaClassName} min-h-20`}
+              value={eventTimeLabel}
+              onChange={(e) => setEventTimeLabel(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Format / location label">
+            <textarea
+              className={`${textAreaClassName} min-h-20`}
+              value={eventFormatLabel}
+              onChange={(e) => setEventFormatLabel(e.target.value)}
+            />
+          </FormField>
+          <FormField
+            label="Event starts"
+            hint="Homepage upcoming strip uses this time. Leave blank to keep the seminar eligible until you unpublish it."
+          >
+            <input
+              type="datetime-local"
+              className={fieldClassName}
+              value={eventStartsAt}
+              onChange={(e) => setEventStartsAt(e.target.value)}
+            />
+          </FormField>
+          <div className="grid gap-4 md:grid-cols-3">
+            <FormField label="Member price (USD)">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                className={fieldClassName}
+                value={memberPrice}
+                onChange={(e) => setMemberPrice(e.target.value)}
+              />
+            </FormField>
+            <FormField label="Non-member price (USD)">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                className={fieldClassName}
+                value={nonMemberPrice}
+                onChange={(e) => setNonMemberPrice(e.target.value)}
+              />
+            </FormField>
+            <FormField label="Student price (USD)">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                className={fieldClassName}
+                value={studentPrice}
+                onChange={(e) => setStudentPrice(e.target.value)}
+              />
+            </FormField>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
             <FormField label="Sort order" hint="Lower numbers appear first.">
               <input
                 type="number"
                 className={fieldClassName}
                 value={sortOrder}
-                onChange={(event) => setSortOrder(event.target.value)}
+                onChange={(e) => setSortOrder(e.target.value)}
               />
             </FormField>
             <label className="flex items-end gap-2 pb-3 text-sm font-semibold text-caisbe-text">
               <input
                 type="checkbox"
                 className="h-4 w-4 accent-caisbe-red"
+                checked={registrationEnabled}
+                onChange={(e) => setRegistrationEnabled(e.target.checked)}
+              />
+              Registration open
+            </label>
+            <label className="flex items-end gap-2 pb-3 text-sm font-semibold text-caisbe-text">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-caisbe-red"
                 checked={published}
-                onChange={(event) => setPublished(event.target.checked)}
+                onChange={(e) => setPublished(e.target.checked)}
               />
               Published
             </label>
@@ -216,22 +502,64 @@ export default function SeminarsManager({
             ) : null}
           </div>
         </div>
-      <div className="mt-6">
-      <FrenchTranslationPanel
-        entityType="seminar"
-        entityId={editingId}
-        english={{ title: title, description: description }}
-        fields={[
+        <div className="mt-6">
+          <FrenchTranslationPanel
+            entityType="seminar"
+            entityId={editingId}
+            english={{
+              title,
+              description,
+              event_date_label: eventDateLabel,
+              event_time_label: eventTimeLabel,
+              event_format_label: eventFormatLabel,
+            }}
+            fields={[
               { name: "title", label: "Title" },
               { name: "description", label: "Description", kind: "textarea", rows: 5 },
-        ]}
-      />
-      </div>
+              { name: "event_date_label", label: "Event date" },
+              { name: "event_time_label", label: "Event time", kind: "textarea", rows: 3 },
+              { name: "event_format_label", label: "Format", kind: "textarea", rows: 3 },
+            ]}
+          />
+        </div>
       </Card>
+
+      {isEditing ? (
+        <Card>
+          <div className="p-6">
+            <h2 className="text-lg font-semibold text-caisbe-text-dark">Registrations</h2>
+            {regsLoading ? (
+              <div className="mt-4 space-y-3">
+                <Skeleton className="h-16" />
+              </div>
+            ) : registrations.length === 0 ? (
+              <p className="mt-3 text-sm text-caisbe-muted">No registrations yet.</p>
+            ) : (
+              <ul className="mt-4 divide-y divide-ifma-border">
+                {registrations.map((row) => (
+                  <li key={row.id} className="py-3 text-sm">
+                    <p className="break-words font-semibold text-caisbe-text-dark">
+                      {row.first_name} {row.last_name} · {row.email}
+                    </p>
+                    <p className="mt-1 text-caisbe-muted">
+                      {row.membership_status.replaceAll("_", " ")} · {row.attendance.replaceAll("_", " ")} ·{" "}
+                      ${(row.amount_cents / 100).toFixed(0)} · {row.status}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Card>
+      ) : null}
 
       <Card>
         <div className="p-6">
           <h2 className="text-lg font-semibold text-caisbe-text-dark">Current seminars</h2>
+          <p className="mt-1 text-sm text-caisbe-muted">
+            Card content for the homepage and Professional development. Strip title and paragraphs are edited in
+            Homepage upcoming strip above.
+          </p>
           {loading ? (
             <div className="mt-4 space-y-3">
               <Skeleton className="h-20" />
@@ -240,7 +568,7 @@ export default function SeminarsManager({
           ) : items.length === 0 ? (
             <EmptyState
               title="No seminars yet"
-              description="Add a seminar to show it under certificate programs."
+              description="Add a seminar to show it on the homepage upcoming strip and under Professional development."
             />
           ) : (
             <ul className="mt-4 divide-y divide-ifma-border">
@@ -249,9 +577,15 @@ export default function SeminarsManager({
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-caisbe-text-dark">{item.title}</p>
                     <p className="mt-1 text-sm leading-6 text-caisbe-text">{item.description}</p>
-                    <div className="mt-2">
+                    {item.event_date_label ? (
+                      <p className="mt-1 text-xs text-caisbe-muted">{item.event_date_label}</p>
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap gap-2">
                       <Badge tone={item.published ? "success" : "neutral"}>
                         {item.published ? "Published" : "Hidden"}
+                      </Badge>
+                      <Badge tone={item.registration_enabled ? "success" : "neutral"}>
+                        {item.registration_enabled ? "Registration open" : "Registration closed"}
                       </Badge>
                     </div>
                   </div>

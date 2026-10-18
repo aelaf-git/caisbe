@@ -16,14 +16,14 @@ export default function PrintableFormToolbar({ kind }: { kind: "application" | "
             <a
               href="/forms/caisbe-membership-registration.pdf"
               download="CAISBE-Membership-Registration.pdf"
-              className="rounded-full bg-caisbe-red px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-none bg-caisbe-red px-4 py-2 text-sm font-semibold text-white"
             >
               {t("Download PDF form", "Télécharger le formulaire PDF")}
             </a>
             <a
               href="/forms/caisbe-membership-registration.docx"
               download="CAISBE-Membership-Registration.docx"
-              className="rounded-full border-2 border-caisbe-red bg-white px-4 py-2 text-sm font-semibold text-caisbe-red"
+              className="rounded-none border-2 border-caisbe-red bg-white px-4 py-2 text-sm font-semibold text-caisbe-red"
             >
               {t("Download Word form", "Télécharger le formulaire Word")}
             </a>
@@ -34,8 +34,8 @@ export default function PrintableFormToolbar({ kind }: { kind: "application" | "
           onClick={() => window.print()}
           className={
             kind === "application"
-              ? "rounded-full border-2 border-caisbe-red bg-white px-4 py-2 text-sm font-semibold text-caisbe-red"
-              : "rounded-full bg-caisbe-red px-4 py-2 text-sm font-semibold text-white"
+              ? "rounded-none border-2 border-caisbe-red bg-white px-4 py-2 text-sm font-semibold text-caisbe-red"
+              : "rounded-none bg-caisbe-red px-4 py-2 text-sm font-semibold text-white"
           }
         >
           {t("Print / Save PDF", "Imprimer / Enregistrer en PDF")}

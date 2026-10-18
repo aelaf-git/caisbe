@@ -73,7 +73,7 @@ export default async function NewsPageContent() {
             {posts.map((post, index) => (
               <article
                 key={post.id}
-                className="overflow-hidden rounded-[20px] bg-white shadow-hopewell"
+                className="overflow-hidden rounded-none bg-white shadow-hopewell"
                 style={{ animationDelay: `${index * 70}ms` }}
               >
                 <div className="grid gap-0 md:grid-cols-[minmax(0,18rem)_1fr]">
@@ -106,6 +106,11 @@ export default async function NewsPageContent() {
                     ) : (
                       <div className="flex-1" />
                     )}
+                    {post.source_label && post.external_url ? (
+                      <p className="mt-3 text-xs text-caisbe-muted">
+                        {t("From", "De")} {post.tag || post.source_label}
+                      </p>
+                    ) : null}
                     {post.external_url ? (
                       <a
                         href={post.external_url}
@@ -113,7 +118,9 @@ export default async function NewsPageContent() {
                         rel="noopener noreferrer"
                         className="mt-5 text-sm font-semibold uppercase tracking-wide text-caisbe-red hover:underline"
                       >
-                        {t("Open article", "Ouvrir l’article")}
+                        {post.source_label
+                          ? t("Read on source", "Lire sur la source")
+                          : t("Open article", "Ouvrir l’article")}
                       </a>
                     ) : (
                       <Link

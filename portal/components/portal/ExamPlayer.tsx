@@ -164,8 +164,8 @@ export default function ExamPlayer({
         score: state.latest_score,
         passed: Boolean(state.latest_passed),
         certificateCode,
-        integrityViolations: 0,
-        lockedOut: false,
+        integrityViolations: state.latest_integrity_violations ?? 0,
+        lockedOut: Boolean(state.latest_locked_out),
       });
       return;
     }
@@ -359,7 +359,7 @@ export default function ExamPlayer({
       <div className="space-y-5">
         {liveQuestions.map((question, index) => (
           <fieldset key={question.id ?? question.prompt} className="space-y-3" disabled={submitting}>
-            <legend className="text-sm font-semibold text-caisbe-text-dark">
+            <legend className="text-sm font-semibold break-words text-caisbe-text-dark">
               <span className="mr-2 text-caisbe-muted">{index + 1}.</span>
               {question.prompt}
             </legend>

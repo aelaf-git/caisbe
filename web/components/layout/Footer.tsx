@@ -154,7 +154,11 @@ export default async function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-white/25 pt-6 text-base font-semibold text-white sm:flex-row sm:items-center sm:justify-between">
+        <p className="mt-8 max-w-4xl text-sm font-medium leading-6 text-white/75">
+          {dict.footer.corporateLine}
+        </p>
+
+        <div className="mt-8 flex flex-col gap-3 border-t border-white/25 pt-6 text-base font-semibold text-white sm:flex-row sm:items-center sm:justify-between">
           <p>{dict.footer.copyright(dict.siteFullName)}</p>
           <Link
             href="/privacy-policy"

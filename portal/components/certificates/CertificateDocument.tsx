@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import CertificateQr from "@/components/certificates/CertificateQr";
+import BrandLogo from "@/components/layout/BrandLogo";
 import { cssPx } from "@/lib/cssLength";
 import {
   CERTIFICATE_HEIGHT_PX,
@@ -14,7 +15,6 @@ export type CertificateDocumentProps = {
   courseTitle: string;
   issuedAt: string;
   verifyUrl: string;
-  certificateCode?: string;
   issuedBy?: string;
 };
 
@@ -60,7 +60,6 @@ export default function CertificateDocument({
   courseTitle,
   issuedAt,
   verifyUrl,
-  certificateCode,
   issuedBy = "CAISBE",
 }: CertificateDocumentProps) {
   const issuedLabel = formatIssueDate(issuedAt);
@@ -152,14 +151,7 @@ export default function CertificateDocument({
           style={{ padding: "44px 72px 36px" }}
         >
           <header className="shrink-0">
-            <img
-              src="/images/logo.png"
-              alt="CAISBE"
-              width={2172}
-              height={724}
-              className="mx-auto mb-2 object-contain"
-              style={{ height: 44, width: "auto" }}
-            />
+            <BrandLogo alt="CAISBE" className="mx-auto mb-2 h-[44px] text-[44px]" />
             <h1
               className="font-[family-name:var(--font-cinzel)] font-bold uppercase text-[#c9a227]"
               style={{ fontSize: 50, letterSpacing: "0.06em", lineHeight: 1.05 }}
@@ -247,15 +239,6 @@ export default function CertificateDocument({
                 Issued By
               </p>
             </div>
-
-            {certificateCode ? (
-              <p
-                className="col-start-2 row-start-2 mt-1 w-full break-all text-center font-mono leading-tight text-[#5c5348]"
-                style={{ fontSize: 11 }}
-              >
-                {certificateCode}
-              </p>
-            ) : null}
           </footer>
         </div>
       </article>

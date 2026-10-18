@@ -37,6 +37,10 @@ export type HomeLanding = {
   certificates_title: string;
   certificates_subtitle: string;
   certificates_cta: string;
+  seminars_title: string;
+  seminars_body_1: string;
+  seminars_body_2: string;
+  seminars_cta: string;
   magazine_title: string;
   magazine_subtitle: string;
   magazine_cta: string;

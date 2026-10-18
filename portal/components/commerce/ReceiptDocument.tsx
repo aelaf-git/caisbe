@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/layout/BrandLogo";
 import { formatMoney, type OrderItemRow } from "@/lib/commerce";
 
 export type ReceiptDocumentProps = {
@@ -60,13 +61,7 @@ export default function ReceiptDocument({
       <div className="px-8 py-8 sm:px-10">
         <header className="flex flex-wrap items-start justify-between gap-6">
           <div>
-            <img
-              src="/images/logo.png"
-              alt="CAISBE"
-              width={2172}
-              height={724}
-              className="h-12 w-auto object-contain"
-            />
+            <BrandLogo alt="CAISBE" className="h-12 text-[3rem]" />
             <p className="mt-3 max-w-xs text-xs leading-5 text-[#5f6b7a]">{INSTITUTE}</p>
           </div>
           <div className="text-left sm:text-right">
@@ -105,26 +100,28 @@ export default function ReceiptDocument({
           {studentEmail ? <p className="text-sm text-[#5f6b7a]">{studentEmail}</p> : null}
         </section>
 
-        <table className="mt-6 w-full text-left text-sm">
-          <thead>
-            <tr className="bg-[#7b1e3a] text-white">
-              <th className="px-3 py-2 font-semibold">Description</th>
-              <th className="px-3 py-2 text-right font-semibold">Qty</th>
-              <th className="px-3 py-2 text-right font-semibold">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => (
-              <tr key={`${item.title}-${index}`} className="border-b border-[#e5e7eb]">
-                <td className="px-3 py-3">{lineTitle(item.title)}</td>
-                <td className="px-3 py-3 text-right tabular-nums">{item.quantity || 1}</td>
-                <td className="px-3 py-3 text-right tabular-nums">
-                  {formatMoney(item.unit_price_cents * (item.quantity || 1), currency)}
-                </td>
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <table className="mt-6 min-w-[20rem] w-full text-left text-sm">
+            <thead>
+              <tr className="bg-[#7b1e3a] text-white">
+                <th className="px-3 py-2 font-semibold">Description</th>
+                <th className="px-3 py-2 text-right font-semibold">Qty</th>
+                <th className="px-3 py-2 text-right font-semibold">Amount</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((item, index) => (
+                <tr key={`${item.title}-${index}`} className="border-b border-[#e5e7eb]">
+                  <td className="px-3 py-3 break-words">{lineTitle(item.title)}</td>
+                  <td className="px-3 py-3 text-right tabular-nums">{item.quantity || 1}</td>
+                  <td className="px-3 py-3 text-right tabular-nums">
+                    {formatMoney(item.unit_price_cents * (item.quantity || 1), currency)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <dl className="ml-auto mt-6 w-full max-w-xs space-y-2 text-sm">
           <div className="flex justify-between gap-4">

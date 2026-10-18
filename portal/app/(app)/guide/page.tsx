@@ -14,7 +14,7 @@ export default function StudentGuidePage() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="inline-flex h-11 items-center rounded-full border-2 border-caisbe-red px-5 text-sm font-bold text-caisbe-red hover:bg-caisbe-red hover:text-white print:hidden"
+            className="inline-flex h-11 items-center rounded-none border-2 border-caisbe-red px-5 text-sm font-bold text-caisbe-red hover:bg-caisbe-red hover:text-white print:hidden"
           >
             Print guide
           </button>
@@ -25,7 +25,7 @@ export default function StudentGuidePage() {
         {studentGuideSections.map((section, index) => (
           <li
             key={section.title}
-            className="rounded-[20px] border border-ifma-border bg-admin-surface p-5 shadow-hopewell sm:p-6"
+            className="rounded-none border border-ifma-border bg-admin-surface p-5 shadow-hopewell sm:p-6"
           >
             <h2 className="font-hopewell-display text-lg font-bold text-caisbe-text-dark">
               {index + 1}. {section.title}

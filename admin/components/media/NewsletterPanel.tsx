@@ -61,6 +61,9 @@ export default function NewsletterPanel({
   const [editorKey, setEditorKey] = useState(0);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
   const [attachments, setAttachments] = useState<NewsletterAttachment[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [removingId, setRemovingId] = useState<number | null>(null);
@@ -138,6 +141,54 @@ export default function NewsletterPanel({
     setAttachments((current) => current.filter((item) => item.file_url !== fileUrl));
   }
 
+  async function insertCaisbeTemplate() {
+    if (hasRichTextContent(bodyHtml) || subject.trim()) {
+      const ok = await askConfirm({
+        title: "Replace with CAISBE template?",
+        description: "This replaces the current subject and message with the branded starter template.",
+        confirmLabel: "Insert template",
+      });
+      if (!ok) return;
+    }
+    setLoadingTemplate(true);
+    try {
+      const template = await apiFetch<{ subject: string; body_html: string }>(
+        "/admin/newsletter/template",
+      );
+      setSubject(template.subject);
+      setBodyHtml(template.body_html);
+      setEditorKey((key) => key + 1);
+      setPreviewHtml(null);
+      onSuccess("CAISBE newsletter template inserted.");
+    } catch (err) {
+      onError(err instanceof ApiError ? err.detail : "Unable to load template.");
+    } finally {
+      setLoadingTemplate(false);
+    }
+  }
+
+  async function previewNewsletter() {
+    if (!hasRichTextContent(bodyHtml)) {
+      onError("Add a message body before previewing.");
+      return;
+    }
+    setPreviewing(true);
+    try {
+      const result = await apiFetch<{ html: string }>("/admin/newsletter/preview", {
+        method: "POST",
+        body: JSON.stringify({
+          subject: subject.trim() || "CAISBE Newsletter",
+          body_html: bodyHtml.trim(),
+        }),
+      });
+      setPreviewHtml(result.html);
+    } catch (err) {
+      onError(err instanceof ApiError ? err.detail : "Unable to preview newsletter.");
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
   async function sendNewsletter() {
     if (!subject.trim()) {
       onError("Subject is required.");
@@ -166,6 +217,7 @@ export default function NewsletterPanel({
       setBodyHtml("");
       setEditorKey((key) => key + 1);
       setAttachments([]);
+      setPreviewHtml(null);
       onSuccess(result.message);
       await onRefresh();
     } catch (err) {
@@ -197,16 +249,44 @@ export default function NewsletterPanel({
       </div>
 
       <Card>
-        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Send newsletter</h2>
-        <p className="mt-1 text-sm text-caisbe-muted">
-          Mark subscribers below, then send. Only marked addresses receive the email.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">
+              Send newsletter
+            </h2>
+            <p className="mt-1 text-sm text-caisbe-muted">
+              Mark subscribers below, then send. Emails use the same CAISBE logo shell as
+              autoresponses.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={loadingTemplate || sending || uploading}
+              onClick={() => void insertCaisbeTemplate()}
+            >
+              {loadingTemplate ? "Loading…" : "Insert CAISBE template"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={previewing || sending || uploading}
+              onClick={() => void previewNewsletter()}
+            >
+              {previewing ? "Previewing…" : "Preview"}
+            </Button>
+          </div>
+        </div>
 
         <div className="mt-6 space-y-4">
           <FormField label="Subject">
             <input
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
+              onChange={(e) => {
+                setSubject(e.target.value);
+                setPreviewHtml(null);
+              }}
               className={fieldClassName}
               placeholder="CAISBE Newsletter — March 2026"
             />
@@ -219,10 +299,27 @@ export default function NewsletterPanel({
             <RichTextEditor
               key={editorKey}
               value={bodyHtml}
-              onChange={setBodyHtml}
+              onChange={(html) => {
+                setBodyHtml(html);
+                setPreviewHtml(null);
+              }}
               placeholder="Write your newsletter…"
             />
           </div>
+
+          {previewHtml ? (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+                Branded preview
+              </p>
+              <iframe
+                title="Newsletter preview"
+                srcDoc={previewHtml}
+                className="h-[28rem] w-full rounded-md border border-ifma-border bg-[#f4f6f9]"
+                sandbox=""
+              />
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">

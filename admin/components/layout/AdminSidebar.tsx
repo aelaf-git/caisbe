@@ -1,15 +1,15 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import BrandLogo from "@/components/layout/BrandLogo";
 
 type NavItem = {
   href: string;
   label: string;
   icon: string;
-  match?: "exact" | "prefix" | "courses";
+  match?: "exact" | "prefix" | "courses" | "media-forms";
 };
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
@@ -34,12 +34,14 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/events", label: "Events", icon: "calendar" },
       { href: "/news", label: "News", icon: "megaphone" },
       { href: "/testimonials", label: "Testimonials", icon: "quote" },
+      { href: "/leadership", label: "Leadership", icon: "users" },
       { href: "/support", label: "Tickets", icon: "chat" },
       { href: "/forum", label: "Forum", icon: "forum" },
       { href: "/contact-messages", label: "Contact", icon: "mail" },
       { href: "/notifications", label: "Notifications", icon: "bell" },
       { href: "/jobs", label: "Job board", icon: "briefcase" },
       { href: "/media", label: "Media library", icon: "image" },
+      { href: "/media?tab=forms", label: "Forms & Guides", icon: "file", match: "media-forms" },
       { href: "/site-activity", label: "Site activity", icon: "activity" },
       { href: "/reports", label: "Reports", icon: "chart" },
       { href: "/payments", label: "Payments", icon: "card" },
@@ -55,7 +57,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
-function isActive(pathname: string, item: NavItem) {
+function isActive(pathname: string, item: NavItem, search = "") {
   if (item.href === "/settings") {
     return (
       pathname === "/settings" ||
@@ -64,11 +66,18 @@ function isActive(pathname: string, item: NavItem) {
       pathname.startsWith("/pages/")
     );
   }
+  if (item.match === "media-forms") {
+    return pathname === "/media" && new URLSearchParams(search).get("tab") === "forms";
+  }
   if (item.match === "exact") {
     return pathname === item.href;
   }
   if (item.match === "courses") {
     return pathname === "/courses" || /^\/courses\/(?!new$)[^/]+$/.test(pathname);
+  }
+  // Media library stays active for /media unless the Forms & Guides tab is selected.
+  if (item.href === "/media") {
+    return pathname === "/media" && new URLSearchParams(search).get("tab") !== "forms";
   }
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
@@ -110,20 +119,15 @@ function NavIcon({ name }: { name: string }) {
 export default function AdminSidebar({ className = "", onNavigate }: AdminSidebarProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const search = searchParams.toString();
 
   return (
     <aside className={`flex h-full w-full flex-col bg-admin-surface shadow-hopewell-nav ${className}`}>
       <div className="px-5 py-5">
-        <Link href="/dashboard" onClick={onNavigate} className="flex flex-col gap-2">
-          <Image
-            src="/images/logo.png"
-            alt="CAISBE logo"
-            width={2172}
-            height={724}
-            priority
-            className="h-10 w-auto max-w-full object-contain"
-          />
+        <Link href="/dashboard" onClick={onNavigate} className="flex flex-col gap-2 overflow-visible pr-3">
+          <BrandLogo priority className="h-10 text-[2.5rem]" />
           <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-caisbe-red-dark">
             Admin
           </p>
@@ -138,13 +142,13 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
             </p>
             <div className="space-y-1">
               {group.items.map((item) => {
-                const active = isActive(pathname, item);
+                const active = isActive(pathname, item, search);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    className={`flex items-center gap-3 rounded-full px-3 py-2.5 text-sm transition-colors ${
+                    className={`flex items-center gap-3 rounded-none px-3 py-2.5 text-sm transition-colors ${
                       active
                         ? "bg-caisbe-red font-semibold text-white"
                         : "text-caisbe-muted hover:bg-admin-surface-muted hover:text-caisbe-text"
@@ -175,7 +179,7 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
           onClick={() => {
             void logout().then(() => router.push("/login"));
           }}
-          className="mt-3 inline-flex items-center justify-center rounded-full border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
+          className="mt-3 inline-flex items-center justify-center rounded-none border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
         >
           Logout
         </button>

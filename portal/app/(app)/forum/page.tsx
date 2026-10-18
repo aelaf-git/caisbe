@@ -42,7 +42,7 @@ export default function ForumHomePage() {
       {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
       <div className="space-y-6">
         {categories.map((category) => (
-          <section key={category.id} className="overflow-hidden rounded-[20px] bg-admin-surface shadow-hopewell">
+          <section key={category.id} className="overflow-hidden rounded-none bg-admin-surface shadow-hopewell">
             <h2 className="font-display bg-caisbe-red px-5 py-3 text-lg font-bold text-white">
               {category.title}
             </h2>

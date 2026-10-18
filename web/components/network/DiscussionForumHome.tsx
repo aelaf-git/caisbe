@@ -51,7 +51,7 @@ export default function DiscussionForumHome() {
           {categories.map((category) => (
             <section
               key={category.id}
-              className="overflow-hidden rounded-[20px] bg-white shadow-hopewell"
+              className="overflow-hidden rounded-none bg-white shadow-hopewell"
             >
               <h3 className="font-hopewell-display bg-caisbe-red px-5 py-3 text-lg font-bold text-white">
                 {category.title}

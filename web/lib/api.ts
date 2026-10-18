@@ -56,6 +56,20 @@ export type JobPosting = {
   is_expired: boolean;
 };
 
+export type LeadershipPerson = {
+  id: number;
+  name: string;
+  role: string;
+  credentials: string | null;
+  bio: string | null;
+  email: string | null;
+  photo_url: string | null;
+  published: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type NewsPost = {
   id: number;
   title: string;
@@ -67,6 +81,7 @@ export type NewsPost = {
   image_urls: string[];
   video_urls: string[];
   tag: string | null;
+  source_label?: string | null;
   posted_on: string;
   published: boolean;
   featured: boolean;
@@ -93,12 +108,31 @@ export type HeroSlide = {
   title: string;
   file_url: string;
   media_type: "image" | "video" | string;
+  show_text_panel?: boolean;
+  eyebrow?: string | null;
+  headline?: string | null;
+  subheadline?: string | null;
+  description?: string | null;
+  cta_label?: string | null;
+  cta_url?: string | null;
 };
 
 export type Seminar = {
   id: number;
   title: string;
   description: string;
+  cover_url?: string | null;
+  event_date_label?: string | null;
+  event_time_label?: string | null;
+  event_format_label?: string | null;
+  event_starts_at?: string | null;
+  registration_closes_at?: string | null;
+  registration_enabled?: boolean;
+  member_price_cents?: number;
+  non_member_price_cents?: number;
+  student_price_cents?: number;
+  capacity_in_person?: number | null;
+  capacity_virtual?: number | null;
   published: boolean;
   sort_order: number;
 };
@@ -136,9 +170,11 @@ const LOCALIZED_PATHS = [
   "/events",
   "/jobs",
   "/seminars",
+  "/leadership",
   "/testimonials",
   "/media",
   "/courses",
+  "/hero",
 ];
 
 function isLocalizedPath(path: string): boolean {
@@ -272,12 +308,30 @@ export async function fetchActiveJobs(options?: {
   });
 }
 
+export async function fetchJob(
+  jobId: number,
+  locale?: Locale,
+): Promise<JobPosting> {
+  return apiFetch<JobPosting>(`/jobs/${jobId}`, { locale });
+}
+
 export async function fetchPublishedSeminars(locale?: Locale): Promise<Seminar[]> {
   return apiFetch<Seminar[]>("/seminars", { locale });
 }
 
+export async function fetchPublishedSeminar(
+  seminarId: number,
+  locale?: Locale,
+): Promise<Seminar> {
+  return apiFetch<Seminar>(`/seminars/${seminarId}`, { locale });
+}
+
 export async function fetchPublishedTestimonials(locale?: Locale): Promise<Testimonial[]> {
   return apiFetch<Testimonial[]>("/testimonials", { locale });
+}
+
+export async function fetchPublishedLeadership(locale?: Locale): Promise<LeadershipPerson[]> {
+  return apiFetch<LeadershipPerson[]>("/leadership", { locale });
 }
 
 export async function fetchPublishedNews(options?: {

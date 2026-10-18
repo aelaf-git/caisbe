@@ -1,11 +1,22 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.config import settings
 from app.db import get_db
-from app.models import CartItem, Course, Invoice, Order, Payment, SavedCard, User
+from app.models import (
+    CartItem,
+    Course,
+    Invoice,
+    Order,
+    Payment,
+    SavedCard,
+    SeminarRegistration,
+    User,
+)
 from app.schemas.commerce import (
     CartItemIn,
     CartItemOut,
@@ -544,4 +555,25 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dic
                     payment_intent,
                     amount_total=amount_total,
                 )
+            else:
+                # Guest seminar checkout (no Order/Payment row).
+                registration = (
+                    db.query(SeminarRegistration)
+                    .filter(SeminarRegistration.stripe_session_id == session_id)
+                    .first()
+                )
+                if registration is None:
+                    reg_id = metadata.get("seminar_registration_id")
+                    if reg_id:
+                        registration = (
+                            db.query(SeminarRegistration)
+                            .filter(SeminarRegistration.id == int(reg_id))
+                            .first()
+                        )
+                        if registration:
+                            registration.stripe_session_id = session_id
+                if registration and registration.status != "paid":
+                    registration.status = "paid"
+                    registration.paid_at = datetime.now(timezone.utc)
+                    db.commit()
     return {"received": "ok"}

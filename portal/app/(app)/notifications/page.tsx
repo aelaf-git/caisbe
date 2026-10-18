@@ -90,7 +90,7 @@ export default function NotificationsPage() {
               type="button"
               disabled={busy}
               onClick={() => void markAllRead()}
-              className="inline-flex h-11 items-center rounded-full border-2 border-ifma-border px-5 text-sm font-bold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red disabled:opacity-60"
+              className="inline-flex h-11 items-center rounded-none border-2 border-ifma-border px-5 text-sm font-bold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red disabled:opacity-60"
             >
               Mark all read
             </button>
@@ -99,12 +99,12 @@ export default function NotificationsPage() {
       />
 
       {error ? (
-        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           {error}
         </div>
       ) : null}
 
-      <section className="rounded-[20px] border border-ifma-border bg-admin-surface shadow-hopewell">
+      <section className="rounded-none border border-ifma-border bg-admin-surface shadow-hopewell">
         {!data ? (
           <p className="p-6 text-sm text-caisbe-muted">Loading notifications…</p>
         ) : data.items.length === 0 ? (

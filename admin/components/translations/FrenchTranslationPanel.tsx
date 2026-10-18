@@ -14,6 +14,7 @@ export type TranslationEntityType =
   | "job"
   | "seminar"
   | "testimonial"
+  | "leadership"
   | "media"
   | "course";
 
@@ -153,7 +154,7 @@ export default function FrenchTranslationPanel({
 
   if (entityId === null) {
     return (
-      <div className="rounded-[20px] border border-dashed border-ifma-border bg-admin-surface-muted p-4 text-sm text-caisbe-muted">
+      <div className="rounded-none border border-dashed border-ifma-border bg-admin-surface-muted p-4 text-sm text-caisbe-muted">
         <p className="font-semibold text-caisbe-text">{title}</p>
         <p className="mt-1">Save the English version first, then reopen it to add the French text.</p>
       </div>
@@ -161,7 +162,7 @@ export default function FrenchTranslationPanel({
   }
 
   return (
-    <section className="space-y-4 rounded-[20px] border border-ifma-border bg-admin-surface-muted p-4">
+    <section className="space-y-4 rounded-none border border-ifma-border bg-admin-surface-muted p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-caisbe-text">{title}</h3>
@@ -205,7 +206,7 @@ export default function FrenchTranslationPanel({
                     setField(field.name, next);
                   }
                   return (
-                    <div key={index} className="grid gap-3 rounded-[16px] bg-admin-surface p-3 md:grid-cols-2">
+                    <div key={index} className="grid gap-3 rounded-none bg-admin-surface p-3 md:grid-cols-2">
                       <div className="space-y-1 text-sm text-caisbe-muted">
                         <p className="text-xs font-semibold uppercase tracking-wide">English</p>
                         <p className="font-semibold text-caisbe-text">{section.title}</p>
@@ -259,7 +260,7 @@ export default function FrenchTranslationPanel({
           <div key={field.name} className="grid gap-3 md:grid-cols-2">
             <div className="text-sm">
               <p className="mb-1.5 font-semibold text-caisbe-text">{field.label} (English)</p>
-              <p className="whitespace-pre-wrap rounded-[16px] bg-admin-surface px-4 py-3 text-caisbe-muted">
+              <p className="whitespace-pre-wrap rounded-none bg-admin-surface px-4 py-3 text-caisbe-muted">
                 {englishValue || "—"}
               </p>
             </div>

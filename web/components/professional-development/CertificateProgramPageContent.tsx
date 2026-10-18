@@ -39,7 +39,7 @@ export default async function CertificateProgramPageContent({
             src={course.cover_url}
             alt=""
             draggable={false}
-            className="mt-8 aspect-video w-full max-w-2xl rounded-[20px] object-cover shadow-hopewell"
+            className="mt-8 aspect-video w-full max-w-2xl rounded-none object-cover shadow-hopewell"
           />
         ) : null}
         <p className="mt-6 max-w-2xl text-sm leading-6 text-caisbe-muted">

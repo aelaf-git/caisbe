@@ -108,7 +108,7 @@ export default function ReceiptPage() {
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex h-11 items-center rounded-full border-2 border-ifma-border bg-white px-6 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+              className="inline-flex h-11 items-center rounded-none border-2 border-ifma-border bg-white px-6 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
             >
               Print
             </button>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import BrandLogo from "@/components/layout/BrandLogo";
 import MembershipApplicationForm from "@/components/membership/MembershipApplicationForm";
 import { safeNextPath } from "@/lib/membershipApplication";
 
@@ -55,14 +56,7 @@ function RegisterForm() {
 
       <div className="bg-admin-canvas px-4 py-10 sm:px-10 lg:px-12">
         <div className="mx-auto w-full max-w-3xl">
-          <Image
-            src="/images/logo.png"
-            alt="CAISBE logo"
-            width={2172}
-            height={724}
-            priority
-            className="h-16 w-auto object-contain sm:h-20"
-          />
+          <BrandLogo priority className="h-16 text-[4rem] sm:h-20 sm:text-[5rem]" />
           {pendingEmail ? (
             <div className="mt-8 rounded-md border border-ifma-border bg-admin-surface p-6 shadow-brand-card">
               <h1 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">

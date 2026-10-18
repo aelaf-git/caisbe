@@ -35,7 +35,7 @@ export default function Tabs<T extends string>({
               {item.count !== undefined ? (
                 <span className="rounded-full bg-ifma-border-light px-2 py-0.5 text-xs">{item.count}</span>
               ) : null}
-              {active ? <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-caisbe-red" /> : null}
+              {active ? <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-none bg-caisbe-red" /> : null}
             </button>
           );
         })}

@@ -94,7 +94,7 @@ function CartInner() {
         actions={
           <Link
             href="/courses"
-            className="inline-flex h-11 items-center rounded-full border-2 border-ifma-border px-5 text-sm font-bold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+            className="inline-flex h-11 items-center rounded-none border-2 border-ifma-border px-5 text-sm font-bold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
           >
             Browse courses
           </Link>
@@ -102,12 +102,12 @@ function CartInner() {
       />
 
       {cancelled ? (
-        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           Checkout was cancelled. Your cart is unchanged — try again when ready.
         </div>
       ) : null}
       {error ? (
-        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           {error}
         </div>
       ) : null}
@@ -115,18 +115,18 @@ function CartInner() {
       {!cart ? (
         <p className="text-sm text-caisbe-muted">Loading cart…</p>
       ) : items.length === 0 ? (
-        <section className="rounded-[20px] bg-white p-6 shadow-hopewell">
+        <section className="rounded-none bg-white p-6 shadow-hopewell">
           <p className="text-sm text-caisbe-muted">Your cart is empty.</p>
           <Link
             href="/courses"
-            className="mt-4 inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+            className="mt-4 inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark"
           >
             Browse courses
           </Link>
         </section>
       ) : (
         <>
-          <section className="rounded-[20px] bg-white shadow-hopewell">
+          <section className="rounded-none bg-white shadow-hopewell">
             <div className="border-b border-ifma-border-light px-6 py-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
                 {items.length} course{items.length === 1 ? "" : "s"}
@@ -165,7 +165,7 @@ function CartInner() {
             </div>
           </section>
 
-          <section className="rounded-[20px] border-2 border-caisbe-red/30 bg-white p-6 shadow-hopewell">
+          <section className="rounded-none border-2 border-caisbe-red/30 bg-white p-6 shadow-hopewell">
             <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
               Payment
             </p>
@@ -185,7 +185,7 @@ function CartInner() {
               type="button"
               disabled={busy}
               onClick={() => void buy()}
-              className="mt-5 inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+              className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
             >
               {busy ? "Buying…" : `Buy now · ${formatMoney(cart.subtotal_cents, cart.currency)}`}
             </button>

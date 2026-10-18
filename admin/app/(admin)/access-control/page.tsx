@@ -233,7 +233,7 @@ export default function AccessControlPage() {
           <a
             key={section.id}
             href={`#${section.id}`}
-            className="inline-flex rounded-full border border-ifma-border bg-admin-surface px-3 py-1.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+            className="inline-flex rounded-none border border-ifma-border bg-admin-surface px-3 py-1.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
           >
             {section.label}
           </a>
@@ -245,7 +245,7 @@ export default function AccessControlPage() {
           {notices.map((notice) => (
             <div
               key={notice.id}
-              className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-text"
+              className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-text"
             >
               <p className="font-semibold text-caisbe-text-dark">{notice.title}</p>
               <p className="mt-1 leading-6">{notice.body}</p>
@@ -525,7 +525,7 @@ function EnrollmentTable({
                     type="button"
                     disabled={busy === key}
                     onClick={() => onToggle(row)}
-                    className="inline-flex h-9 items-center rounded-full border-2 border-caisbe-red px-4 text-sm font-bold text-caisbe-red hover:bg-caisbe-red hover:text-white disabled:opacity-60"
+                    className="inline-flex h-9 items-center rounded-none border-2 border-caisbe-red px-4 text-sm font-bold text-caisbe-red hover:bg-caisbe-red hover:text-white disabled:opacity-60"
                   >
                     {busy === key ? "Saving…" : value === "restricted" ? "Allow" : "Restrict"}
                   </button>

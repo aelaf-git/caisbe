@@ -38,6 +38,13 @@ class MediaAsset(Base):
     external_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # Full blog post body (plain text).
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Homepage hero panel (unused for other media categories).
+    show_text_panel: Mapped[bool] = mapped_column(Boolean, default=True)
+    eyebrow: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    headline: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    subheadline: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    cta_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    cta_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # hero | magazine | youtube | podcast | blog
     category: Mapped[str] = mapped_column(String(32), default="magazine", index=True)
     published: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
@@ -162,6 +169,8 @@ class NewsPost(Base):
     image_urls: Mapped[list | None] = mapped_column(JSON, nullable=True)
     video_urls: Mapped[list | None] = mapped_column(JSON, nullable=True)
     tag: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Set for industry RSS imports (e.g. facilities_dive); null for admin-authored posts.
+    source_label: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     posted_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     published: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     featured: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -180,12 +189,85 @@ class Seminar(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text)
+    cover_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    # Event details (admin-editable; drive the registration page)
+    event_date_label: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    event_time_label: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    event_format_label: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    event_starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    registration_closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    registration_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    member_price_cents: Mapped[int] = mapped_column(Integer, default=5000)
+    non_member_price_cents: Mapped[int] = mapped_column(Integer, default=7500)
+    student_price_cents: Mapped[int] = mapped_column(Integer, default=4000)
+    capacity_in_person: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    capacity_virtual: Mapped[int | None] = mapped_column(Integer, nullable=True)
     published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    registrations: Mapped[list["SeminarRegistration"]] = relationship(back_populates="seminar")
+    access_tokens: Mapped[list["SeminarAccessToken"]] = relationship(back_populates="seminar")
+
+
+class SeminarAccessToken(Base):
+    """Email magic-link gate before the seminar registration form unlocks."""
+
+    __tablename__ = "seminar_access_tokens"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    seminar_id: Mapped[int] = mapped_column(ForeignKey("seminars.id", ondelete="CASCADE"), index=True)
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    seminar: Mapped["Seminar"] = relationship(back_populates="access_tokens")
+
+
+class SeminarRegistration(Base):
+    """Paid or pending seminar registration submitted after email verification."""
+
+    __tablename__ = "seminar_registrations"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    seminar_id: Mapped[int] = mapped_column(ForeignKey("seminars.id", ondelete="CASCADE"), index=True)
+    # pending_payment | paid | cancelled
+    status: Mapped[str] = mapped_column(String(32), default="pending_payment", index=True)
+    first_name: Mapped[str] = mapped_column(String(120))
+    last_name: Mapped[str] = mapped_column(String(120))
+    preferred_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    phone: Mapped[str] = mapped_column(String(60))
+    job_title: Mapped[str] = mapped_column(String(160))
+    company: Mapped[str] = mapped_column(String(200))
+    city: Mapped[str] = mapped_column(String(120))
+    state_province: Mapped[str] = mapped_column(String(120))
+    country: Mapped[str] = mapped_column(String(120))
+    position: Mapped[str] = mapped_column(String(120))
+    position_other: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    # association_member | non_member | student
+    membership_status: Mapped[str] = mapped_column(String(40))
+    member_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    earning_ceu: Mapped[bool] = mapped_column(Boolean, default=False)
+    designations: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # in_person | virtual
+    attendance: Mapped[str] = mapped_column(String(32))
+    accommodations: Mapped[str | None] = mapped_column(Text, nullable=True)
+    amount_cents: Mapped[int] = mapped_column(Integer, default=0)
+    currency: Mapped[str] = mapped_column(String(8), default="usd")
+    stripe_session_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    seminar: Mapped["Seminar"] = relationship(back_populates="registrations")
 
 
 class Testimonial(Base):
@@ -197,6 +279,26 @@ class Testimonial(Base):
     quote: Mapped[str] = mapped_column(Text)
     name: Mapped[str] = mapped_column(String(120))
     role: Mapped[str] = mapped_column(String(160))
+    published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class LeadershipPerson(Base):
+    """People shown in the About page leadership section."""
+
+    __tablename__ = "leadership_people"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    role: Mapped[str] = mapped_column(String(160))
+    credentials: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

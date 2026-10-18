@@ -238,10 +238,10 @@ export default function YouTubeManager({
               <img
                 src={preview}
                 alt=""
-                className="aspect-video max-w-md rounded-[16px] object-cover shadow-hopewell"
+                className="aspect-video max-w-md rounded-none object-cover shadow-hopewell"
               />
             ) : (
-              <div className="flex aspect-video max-w-md items-center justify-center rounded-[16px] border border-dashed border-ifma-border bg-admin-surface-muted/40 text-sm text-caisbe-muted">
+              <div className="flex aspect-video max-w-md items-center justify-center rounded-none border border-dashed border-ifma-border bg-admin-surface-muted/40 text-sm text-caisbe-muted">
                 Thumbnail preview
               </div>
             )}

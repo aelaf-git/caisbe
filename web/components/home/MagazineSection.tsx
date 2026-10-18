@@ -1,5 +1,6 @@
 import { sectionSpacingClassName } from "@/components/pages/ContentPage";
 import ButtonLink from "@/components/ui/ButtonLink";
+import HorizontalCarousel from "@/components/ui/HorizontalCarousel";
 import { fetchPublishedMagazines, type MediaAsset } from "@/lib/api";
 
 export default async function MagazineSection({
@@ -23,15 +24,15 @@ export default async function MagazineSection({
     if (featured.length === 0) {
       featured = await fetchPublishedMagazines();
     }
-    issues = featured.slice(0, 3);
+    issues = featured.slice(0, 8);
   } catch {
     issues = [];
   }
 
   return (
     <section className={`bg-white ${sectionSpacingClassName}`}>
-      <div className="mx-auto max-w-7xl px-4">
-        <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="mx-auto max-w-[90rem] px-4 sm:px-6 lg:px-10">
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
               {title}
@@ -46,15 +47,13 @@ export default async function MagazineSection({
         </div>
 
         {issues.length === 0 ? (
-          <p className="text-base text-caisbe-muted">
-            {emptyMessage}
-          </p>
+          <p className="text-base text-caisbe-muted">{emptyMessage}</p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <HorizontalCarousel label={title}>
             {issues.map((issue) => (
               <article
                 key={issue.id}
-                className="flex flex-col overflow-hidden rounded-[20px] bg-white shadow-hopewell transition duration-300 hover:-translate-y-1"
+                className="flex h-full flex-col overflow-hidden rounded-none bg-[#f8fafc] shadow-hopewell transition duration-300 hover:-translate-y-1"
               >
                 {issue.cover_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -65,9 +64,7 @@ export default async function MagazineSection({
                   />
                 ) : (
                   <div className="flex aspect-video items-center justify-center bg-[#f7f9fa]">
-                    <span className="text-base font-semibold text-caisbe-red">
-                      {badgeLabel}
-                    </span>
+                    <span className="text-base font-semibold text-caisbe-red">{badgeLabel}</span>
                   </div>
                 )}
                 <div className="flex flex-1 flex-col p-5">
@@ -94,7 +91,7 @@ export default async function MagazineSection({
                 </div>
               </article>
             ))}
-          </div>
+          </HorizontalCarousel>
         )}
       </div>
     </section>

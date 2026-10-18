@@ -15,7 +15,7 @@ function ResourceChip({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center rounded-full border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+      className="inline-flex items-center rounded-none border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
     >
       {label}
     </a>
@@ -77,7 +77,7 @@ export default function BlockView({
   if (block.block_type === "text" || block.block_type === "subtopic") {
     const title = heading ?? block.title;
     return (
-      <div className="prose prose-sm max-w-none text-caisbe-text prose-headings:font-display prose-headings:text-caisbe-text-dark prose-a:text-caisbe-red">
+      <div className="prose prose-sm max-w-none break-words text-caisbe-text prose-headings:font-display prose-headings:text-caisbe-text-dark prose-a:text-caisbe-red prose-img:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:w-full prose-table:overflow-x-auto">
         {title ? <h3 className="mb-2 text-lg font-semibold">{title}</h3> : null}
         {block.body ? (
           <div dangerouslySetInnerHTML={{ __html: sanitizeCoursePresentation(block.body) }} />
@@ -191,8 +191,10 @@ export default function BlockView({
     return (
       <QuizPlayer
         key={block.quiz.id}
+        quizId={block.quiz.id}
         title={block.quiz.title}
         questions={block.quiz.questions}
+        hydrateCompleted={Boolean(block.completed)}
         onResult={onQuizResult}
         onSubmit={async (answers) => {
           const result = await apiFetch<QuizAttempt>(`/me/quizzes/${block.quiz!.id}/submit`, {
@@ -546,7 +548,7 @@ export function TopicSections({
     <div className="space-y-6">
       {topic.body ? (
         <div
-          className="prose prose-sm max-w-none text-caisbe-text prose-headings:font-display prose-headings:text-caisbe-text-dark"
+          className="prose prose-sm max-w-none break-words text-caisbe-text prose-headings:font-display prose-headings:text-caisbe-text-dark prose-img:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:w-full prose-table:overflow-x-auto"
           dangerouslySetInnerHTML={{ __html: sanitizeCoursePresentation(topic.body) }}
         />
       ) : null}

@@ -75,6 +75,7 @@ export default function NewsManager({
   const formRef = useRef<HTMLDivElement>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [syncingRss, setSyncingRss] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [tab, setTab] = useState<NewsTab>("posts");
@@ -349,25 +350,62 @@ export default function NewsManager({
     }
   }
 
+  async function syncIndustryFeeds() {
+    setSyncingRss(true);
+    try {
+      const result = await apiFetch<{
+        created: number;
+        updated: number;
+        skipped: number;
+        sources: string[];
+        errors: string[];
+      }>("/admin/news/sync-rss", { method: "POST" });
+      const parts = [
+        `${result.created} new`,
+        `${result.updated} updated`,
+        `${result.skipped} skipped`,
+      ];
+      if (result.errors?.length) {
+        parts.push(`${result.errors.length} feed error(s)`);
+      }
+      onSuccess(`Industry feeds synced: ${parts.join(", ")}.`);
+      await onRefresh();
+    } catch (err) {
+      onError(err instanceof ApiError ? err.detail : "Unable to sync industry feeds.");
+    } finally {
+      setSyncingRss(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <Tabs
-        ariaLabel="News sections"
-        value={tab}
-        onChange={changeTab}
-        items={[
-          {
-            id: "posts",
-            label: "Posts",
-            count: posts.filter((post) => !isLinkPost(post)).length,
-          },
-          {
-            id: "links",
-            label: "Links",
-            count: posts.filter((post) => isLinkPost(post)).length,
-          },
-        ]}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Tabs
+          ariaLabel="News sections"
+          value={tab}
+          onChange={changeTab}
+          items={[
+            {
+              id: "posts",
+              label: "Posts",
+              count: posts.filter((post) => !isLinkPost(post)).length,
+            },
+            {
+              id: "links",
+              label: "Links",
+              count: posts.filter((post) => isLinkPost(post)).length,
+            },
+          ]}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={syncingRss || loading || saving || uploading}
+          onClick={() => void syncIndustryFeeds()}
+        >
+          {syncingRss ? "Syncing…" : "Sync industry feeds"}
+        </Button>
+      </div>
 
       <Card>
         <div ref={formRef} className="space-y-4 p-6">
@@ -647,6 +685,7 @@ export default function NewsManager({
                       {post.published ? "Published" : "Draft"}
                     </Badge>
                     {post.featured ? <Badge tone="brand">Featured</Badge> : null}
+                    {post.source_label ? <Badge tone="neutral">RSS</Badge> : null}
                     {isLinkPost(post) ? <Badge tone="neutral">Link</Badge> : null}
                   </div>
                   <p className="mt-1 text-sm text-caisbe-muted">

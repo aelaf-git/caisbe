@@ -34,11 +34,11 @@ export function PageHero({
         <p className="inline-flex max-w-full rounded-full bg-caisbe-red/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark sm:px-4">
           {eyebrow}
         </p>
-        <h1 className="font-hopewell-display mt-4 max-w-3xl text-2xl font-extrabold tracking-tight text-caisbe-text-dark sm:text-3xl md:text-4xl">
+        <h1 className="font-hopewell-display mt-4 max-w-3xl break-words text-2xl font-extrabold tracking-tight text-caisbe-text-dark sm:text-3xl md:text-4xl">
           {title}
         </h1>
         {lead ? (
-          <p className="mt-4 max-w-2xl text-base leading-7 text-caisbe-text sm:mt-6 sm:text-lg sm:leading-8">
+          <p className="mt-4 max-w-2xl break-words text-base leading-7 text-caisbe-text sm:mt-6 sm:text-lg sm:leading-8">
             {lead}
           </p>
         ) : null}
@@ -112,7 +112,7 @@ export function FeatureList({
       {items.map((item) => (
         <li
           key={item}
-          className={`flex min-h-14 w-full items-center rounded-[20px] border border-black/5 bg-white px-5 py-4 text-base font-medium leading-7 shadow-hopewell sm:[&:last-child:nth-child(odd)]:col-span-2 sm:text-lg sm:leading-8 ${color}`}
+          className={`flex min-h-14 w-full items-center rounded-none border border-black/5 bg-white px-5 py-4 text-base font-medium leading-7 shadow-hopewell sm:[&:last-child:nth-child(odd)]:col-span-2 sm:text-lg sm:leading-8 ${color}`}
         >
           {item}
         </li>
@@ -125,6 +125,8 @@ type ContentCardProps = {
   title: string;
   description?: string;
   meta?: string;
+  /** Optional cover image shown above the card body. */
+  imageUrl?: string | null;
   href?: string;
   hrefLabel?: string;
   children?: React.ReactNode;
@@ -136,38 +138,52 @@ export function ContentCard({
   title,
   description,
   meta,
+  imageUrl,
   href,
   hrefLabel,
   children,
   className = "",
   style,
 }: ContentCardProps) {
+  const cover = imageUrl?.trim() || null;
+
   return (
     <article
       style={style}
-      className={`flex flex-col rounded-[20px] bg-white p-6 shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in ${className}`}
+      className={`flex flex-col overflow-hidden rounded-none bg-white shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in ${className}`}
     >
-      {meta ? (
-        <p className="text-xs font-semibold uppercase tracking-wider text-caisbe-red">
-          {meta}
-        </p>
+      {cover ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={cover}
+          alt=""
+          draggable={false}
+          className="aspect-[16/9] w-full object-cover"
+        />
       ) : null}
-      <h3
-        className={`font-hopewell-display text-xl font-bold text-caisbe-text-dark ${meta ? "mt-2" : ""}`}
-      >
-        {title}
-      </h3>
-      {description ? (
-        <p className="mt-3 flex-1 text-sm leading-7 text-caisbe-text">
-          {description}
-        </p>
-      ) : null}
-      {children}
-      {href ? (
-        <ButtonLink href={href} variant="text" className="mt-6">
-          {hrefLabel ?? <T en="Learn More" fr="En savoir plus" />}
-        </ButtonLink>
-      ) : null}
+      <div className="flex flex-1 flex-col p-6">
+        {meta ? (
+          <p className="text-xs font-semibold uppercase tracking-wider text-caisbe-red">
+            {meta}
+          </p>
+        ) : null}
+        <h3
+          className={`font-hopewell-display text-xl font-bold break-words text-caisbe-text-dark ${meta ? "mt-2" : ""}`}
+        >
+          {title}
+        </h3>
+        {description ? (
+          <p className="mt-3 flex-1 break-words text-sm leading-7 text-caisbe-text">
+            {description}
+          </p>
+        ) : null}
+        {children}
+        {href ? (
+          <ButtonLink href={href} variant="text" className="mt-6">
+            {hrefLabel ?? <T en="Learn More" fr="En savoir plus" />}
+          </ButtonLink>
+        ) : null}
+      </div>
     </article>
   );
 }

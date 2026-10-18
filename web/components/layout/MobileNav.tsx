@@ -56,7 +56,7 @@ function MobileNavSection({
         <Link
           href={section.href}
           onClick={onNavigate}
-          className="min-w-0 flex-1 rounded-full px-4 py-3 text-left text-sm font-semibold text-caisbe-text-dark hover:bg-[#f8fafc]"
+          className="min-w-0 flex-1 rounded-none px-4 py-3 text-left text-sm font-semibold text-caisbe-text-dark hover:bg-[#f8fafc]"
         >
           {section.label}
         </Link>
@@ -71,7 +71,7 @@ function MobileNavSection({
         </button>
       </div>
       {isOpen ? (
-        <div className="mb-2 space-y-5 rounded-[20px] bg-[#f8fafc] px-4 py-4">
+        <div className="mb-2 space-y-5 rounded-none bg-[#f8fafc] px-4 py-4">
           {section.groups.map((group) => (
             <div key={group.title}>
               <Link
@@ -87,7 +87,7 @@ function MobileNavSection({
                     <Link
                       href={link.href}
                       onClick={onNavigate}
-                      className="block rounded-full px-3 py-1.5 text-sm text-caisbe-text transition-colors hover:bg-white hover:text-caisbe-red"
+                      className="block rounded-none px-3 py-1.5 text-sm text-caisbe-text transition-colors hover:bg-white hover:text-caisbe-red"
                     >
                       {link.label}
                     </Link>
@@ -140,7 +140,7 @@ export default function MobileNav({
       <button
         type="button"
         onClick={() => setMobileOpen((prev) => !prev)}
-        className="inline-flex items-center justify-center rounded-full border border-caisbe-red p-2 text-caisbe-red transition-colors hover:bg-caisbe-red/5"
+        className="inline-flex items-center justify-center rounded-none border border-caisbe-red p-2 text-caisbe-red transition-colors hover:bg-caisbe-red/5"
         aria-expanded={mobileOpen}
         aria-controls="mobile-site-menu"
         aria-label={mobileOpen ? dict.mobileNav.closeMenu : dict.mobileNav.openMenu}
@@ -186,7 +186,7 @@ export default function MobileNav({
                     <Link
                       href={link.href}
                       onClick={closeMenu}
-                      className="block rounded-full px-3 py-2.5 text-sm font-medium text-caisbe-text hover:bg-[#f8fafc] hover:text-caisbe-red"
+                      className="block rounded-none px-3 py-2.5 text-sm font-medium text-caisbe-text hover:bg-[#f8fafc] hover:text-caisbe-red"
                     >
                       {link.label}
                     </Link>

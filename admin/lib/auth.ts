@@ -93,6 +93,12 @@ export type MediaAsset = {
   cover_url: string | null;
   external_url: string | null;
   body: string | null;
+  show_text_panel?: boolean;
+  eyebrow?: string | null;
+  headline?: string | null;
+  subheadline?: string | null;
+  cta_label?: string | null;
+  cta_url?: string | null;
   category: string;
   published: boolean;
   featured: boolean;
@@ -146,8 +152,50 @@ export type Seminar = {
   id: number;
   title: string;
   description: string;
+  cover_url: string | null;
+  event_date_label: string | null;
+  event_time_label: string | null;
+  event_format_label: string | null;
+  event_starts_at: string | null;
+  registration_closes_at: string | null;
+  registration_enabled: boolean;
+  member_price_cents: number;
+  non_member_price_cents: number;
+  student_price_cents: number;
+  capacity_in_person: number | null;
+  capacity_virtual: number | null;
   published: boolean;
   sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SeminarRegistration = {
+  id: number;
+  seminar_id: number;
+  status: string;
+  first_name: string;
+  last_name: string;
+  preferred_name: string | null;
+  email: string;
+  phone: string;
+  job_title: string;
+  company: string;
+  city: string;
+  state_province: string;
+  country: string;
+  position: string;
+  position_other: string | null;
+  membership_status: string;
+  member_id: string | null;
+  earning_ceu: boolean;
+  designations: string | null;
+  attendance: string;
+  accommodations: string | null;
+  amount_cents: number;
+  currency: string;
+  checkout_url?: string | null;
+  paid_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -157,6 +205,20 @@ export type Testimonial = {
   quote: string;
   name: string;
   role: string;
+  published: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeadershipPerson = {
+  id: number;
+  name: string;
+  role: string;
+  credentials: string | null;
+  bio: string | null;
+  email: string | null;
+  photo_url: string | null;
   published: boolean;
   sort_order: number;
   created_at: string;
@@ -207,6 +269,7 @@ export type NewsPost = {
   image_urls: string[];
   video_urls: string[];
   tag: string | null;
+  source_label?: string | null;
   posted_on: string;
   published: boolean;
   featured: boolean;
@@ -410,12 +473,16 @@ export async function apiFetch<T>(
     throw await parseError(response);
   }
 
-  if (response.status === 204) {
+  if (response.status === 204 || response.status === 205) {
     return undefined as T;
   }
 
   const text = await response.text();
+  // Some proxies coerce 204 → 200 with an empty body on DELETE.
   if (!text.trim()) {
+    if (response.ok && (init?.method || "GET").toUpperCase() === "DELETE") {
+      return undefined as T;
+    }
     throw new ApiError(response.status, "Empty response from server.");
   }
   try {

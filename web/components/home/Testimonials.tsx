@@ -1,4 +1,5 @@
 import { sectionSpacingClassName } from "@/components/pages/ContentPage";
+import HorizontalCarousel from "@/components/ui/HorizontalCarousel";
 import { fetchPublishedTestimonials } from "@/lib/api";
 import { testimonials, testimonialsIntro } from "@/lib/data/home";
 
@@ -25,29 +26,29 @@ export default async function Testimonials({
   if (items.length === 0) return null;
 
   const shownEyebrow = eyebrow ?? testimonialsIntro.eyebrow;
+  const heading = title ?? testimonialsIntro.title;
 
   return (
     <section className={`bg-[#f8fafc] ${sectionSpacingClassName}`}>
-      <div className="mx-auto max-w-7xl px-4">
-        <div className="mb-10 motion-safe:animate-page-fade-in">
+      <div className="mx-auto max-w-[90rem] px-4 sm:px-6 lg:px-10">
+        <div className="mb-8 motion-safe:animate-page-fade-in">
           {shownEyebrow ? (
             <p className="inline-flex rounded-full bg-caisbe-red/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-caisbe-red-dark">
               {shownEyebrow}
             </p>
           ) : null}
           <h2 className="font-hopewell-display mt-4 text-3xl font-extrabold tracking-tight text-caisbe-text-dark md:text-4xl">
-            {title ?? testimonialsIntro.title}
+            {heading}
           </h2>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {items.map((item, index) => (
+        <HorizontalCarousel label={heading} itemClassName="w-[min(88vw,28rem)] shrink-0 snap-start sm:w-[28rem]">
+          {items.map((item) => (
             <blockquote
               key={item.id}
-              className="rounded-[20px] bg-white p-6 shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in md:p-8"
-              style={{ animationDelay: `${index * 80}ms` }}
+              className="flex h-full flex-col rounded-none bg-white p-6 shadow-hopewell transition duration-300 hover:-translate-y-1 md:p-8"
             >
-              <p className="text-base leading-7 text-caisbe-text md:text-lg">
+              <p className="flex-1 text-base leading-7 text-caisbe-text md:text-lg">
                 &ldquo;{item.quote}&rdquo;
               </p>
               <footer className="mt-4">
@@ -56,7 +57,7 @@ export default async function Testimonials({
               </footer>
             </blockquote>
           ))}
-        </div>
+        </HorizontalCarousel>
       </div>
     </section>
   );

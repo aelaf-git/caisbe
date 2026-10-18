@@ -43,7 +43,6 @@ export default function CertificatePreview({
                 courseTitle={courseTitle}
                 issuedAt={issuedAt}
                 verifyUrl={completionVerify}
-                certificateCode={SAMPLE_COMPLETION_CODE}
               />
             </div>
           </div>
@@ -63,7 +62,6 @@ export default function CertificatePreview({
                 membershipNumber={SAMPLE_MEMBERSHIP_NUMBER}
                 issuedAt={issuedAt}
                 verifyUrl={membershipVerify}
-                certificateCode={SAMPLE_MEMBERSHIP_CODE}
               />
             </div>
           </div>

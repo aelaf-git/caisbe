@@ -98,9 +98,12 @@ from app.schemas.media import (
     MediaAssetOut,
     MediaAssetUpdateIn,
     NewsletterCampaignOut,
+    NewsletterPreviewIn,
+    NewsletterPreviewOut,
     NewsletterSendIn,
     NewsletterSendOut,
     NewsletterSubscriberOut,
+    NewsletterTemplateOut,
 )
 from app.schemas.events import (
     IndustryEventCreateIn,
@@ -209,6 +212,12 @@ def admin_create_media(
         cover_url=payload.cover_url,
         external_url=payload.external_url,
         body=payload.body,
+        show_text_panel=payload.show_text_panel,
+        eyebrow=payload.eyebrow,
+        headline=payload.headline,
+        subheadline=payload.subheadline,
+        cta_label=payload.cta_label,
+        cta_url=payload.cta_url,
     )
     asset = MediaAsset(
         title=fields["title"],
@@ -217,6 +226,12 @@ def admin_create_media(
         cover_url=fields["cover_url"],
         external_url=fields["external_url"],
         body=fields["body"],
+        show_text_panel=bool(fields.get("show_text_panel", True)),
+        eyebrow=fields.get("eyebrow"),
+        headline=fields.get("headline"),
+        subheadline=fields.get("subheadline"),
+        cta_label=fields.get("cta_label"),
+        cta_url=fields.get("cta_url"),
         category=fields["category"],
         published=payload.published,
         featured=payload.featured,
@@ -262,6 +277,12 @@ def admin_update_media(
         cover_url=data["cover_url"] if "cover_url" in data else asset.cover_url,
         external_url=data["external_url"] if "external_url" in data else asset.external_url,
         body=data["body"] if "body" in data else asset.body,
+        show_text_panel=data["show_text_panel"] if "show_text_panel" in data else asset.show_text_panel,
+        eyebrow=data["eyebrow"] if "eyebrow" in data else asset.eyebrow,
+        headline=data["headline"] if "headline" in data else asset.headline,
+        subheadline=data["subheadline"] if "subheadline" in data else asset.subheadline,
+        cta_label=data["cta_label"] if "cta_label" in data else asset.cta_label,
+        cta_url=data["cta_url"] if "cta_url" in data else asset.cta_url,
     )
     asset.title = fields["title"]
     asset.description = fields["description"]
@@ -269,6 +290,13 @@ def admin_update_media(
     asset.cover_url = fields["cover_url"]
     asset.external_url = fields["external_url"]
     asset.body = fields["body"]
+    if "show_text_panel" in fields:
+        asset.show_text_panel = bool(fields["show_text_panel"])
+        asset.eyebrow = fields.get("eyebrow")
+        asset.headline = fields.get("headline")
+        asset.subheadline = fields.get("subheadline")
+        asset.cta_label = fields.get("cta_label")
+        asset.cta_url = fields.get("cta_url")
     asset.category = fields["category"]
     if "published" in data:
         asset.published = bool(data["published"])
@@ -292,17 +320,33 @@ def admin_update_media(
     return MediaAssetOut.model_validate(asset)
 
 
-@router.delete("/media/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/media/{asset_id}")
 def admin_delete_media(
     asset_id: int,
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> None:
+) -> dict[str, bool]:
+    from sqlalchemy.exc import SQLAlchemyError
+
+    from app.models import ContentTranslation
+
     asset = db.query(MediaAsset).filter(MediaAsset.id == asset_id).first()
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media asset not found")
-    db.delete(asset)
-    db.commit()
+    try:
+        db.query(ContentTranslation).filter(
+            ContentTranslation.entity_type == "media",
+            ContentTranslation.entity_id == asset_id,
+        ).delete(synchronize_session=False)
+        db.delete(asset)
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to delete this media item. Please try again.",
+        ) from exc
+    return {"ok": True}
 
 
 # --- Newsletter ---
@@ -416,6 +460,36 @@ def admin_send_notification_broadcast(
         recipient_count=broadcast.recipient_count,
         message=f"Notification sent to {broadcast.recipient_count} registered member(s).",
     )
+
+
+@router.get("/newsletter/template", response_model=NewsletterTemplateOut)
+def admin_newsletter_template(
+    _: User = Depends(require_admin),
+) -> NewsletterTemplateOut:
+    from app.services.email_layout import newsletter_starter_body_html, newsletter_starter_subject
+
+    return NewsletterTemplateOut(
+        subject=newsletter_starter_subject(),
+        body_html=newsletter_starter_body_html(),
+    )
+
+
+@router.post("/newsletter/preview", response_model=NewsletterPreviewOut)
+def admin_newsletter_preview(
+    payload: NewsletterPreviewIn,
+    _: User = Depends(require_admin),
+) -> NewsletterPreviewOut:
+    from app.services.email_layout import wrap_email_html
+
+    subject = (payload.subject or "").strip() or "CAISBE Newsletter"
+    body_html = sanitize_html(payload.body_html) or "<p></p>"
+    html_body = wrap_email_html(
+        body_html,
+        heading=subject,
+        eyebrow="CAISBE Newsletter",
+        include_signoff=False,
+    )
+    return NewsletterPreviewOut(html=html_body)
 
 
 @router.post("/newsletter/send", response_model=NewsletterSendOut)

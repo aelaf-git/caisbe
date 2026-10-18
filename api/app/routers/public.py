@@ -17,6 +17,7 @@ from app.models import (
     ContactMessage,
     IndustryEvent,
     JobPosting,
+    LeadershipPerson,
     MediaAsset,
     MembershipApplication,
     MembershipCertificateType,
@@ -38,12 +39,23 @@ from app.schemas.media import (
 from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.schemas.events import IndustryEventOut
 from app.schemas.jobs import JobPostingOut
+from app.schemas.leadership import LeadershipPersonOut
 from app.schemas.membership_certificates import MembershipCertificateTypePublicOut
 from app.schemas.news import NewsPostOut
-from app.schemas.seminars import SeminarOut
+from app.schemas.seminars import (
+    SeminarAccessOut,
+    SeminarAccessRequestIn,
+    SeminarAccessVerifyIn,
+    SeminarOut,
+    SeminarRegistrationConfirmIn,
+    SeminarRegistrationIn,
+    SeminarRegistrationOut,
+)
 from app.schemas.testimonials import TestimonialOut
+from app.services import seminar_registration as seminar_reg
 from app.services.analytics import record_site_visit
 from app.services.commerce import apply_profile_fields, normalize_membership_type
+from app.services.email import EmailDeliveryError
 from app.services.membership import is_student_membership
 from app.services.hero import ensure_default_hero_slides
 from app.services.settings import hero_transition_ms
@@ -63,7 +75,10 @@ def _media_type_from_url(url: str) -> str:
 
 
 @router.get("/hero", response_model=HeroCarouselOut)
-def get_hero_carousel(db: Session = Depends(get_db)) -> HeroCarouselOut:
+def get_hero_carousel(
+    lang: str = Query(default="en", max_length=12),
+    db: Session = Depends(get_db),
+) -> HeroCarouselOut:
     ensure_default_hero_slides(db)
     db.commit()
     transition = hero_transition_ms(db)
@@ -74,16 +89,31 @@ def get_hero_carousel(db: Session = Depends(get_db)) -> HeroCarouselOut:
         .all()
     )
     slides = [
-        HeroSlideOut(
-            id=row.id,
-            title=row.title,
-            file_url=row.file_url,
-            media_type=_media_type_from_url(row.file_url),
-        )
+        MediaAssetOut.model_validate(row)
         for row in rows
         if row.file_url
     ]
-    return HeroCarouselOut(transition_ms=transition, slides=slides)
+    slides = localize_many(db, "media", slides, lang)
+    return HeroCarouselOut(
+        transition_ms=transition,
+        slides=[
+            HeroSlideOut(
+                id=item.id,
+                title=item.title,
+                file_url=item.file_url or "",
+                media_type=_media_type_from_url(item.file_url or ""),
+                show_text_panel=bool(item.show_text_panel),
+                eyebrow=item.eyebrow,
+                headline=item.headline,
+                subheadline=item.subheadline,
+                description=item.description,
+                cta_label=item.cta_label,
+                cta_url=item.cta_url,
+            )
+            for item in slides
+            if item.file_url
+        ],
+    )
 
 
 @router.get("/media", response_model=list[MediaAssetOut])
@@ -163,6 +193,30 @@ def list_active_jobs(
     return localize_many(db, "job", out, lang)
 
 
+@router.get("/jobs/{job_id}", response_model=JobPostingOut)
+def get_active_job(
+    job_id: int,
+    lang: str = Query(default="en", max_length=12),
+    db: Session = Depends(get_db),
+) -> JobPostingOut:
+    """Single published job that has not reached its expiry date."""
+    now = datetime.now(timezone.utc)
+    row = (
+        db.query(JobPosting)
+        .filter(
+            JobPosting.id == job_id,
+            JobPosting.published.is_(True),
+            JobPosting.expires_on >= now,
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    item = JobPostingOut.model_validate(row)
+    item.is_expired = False
+    return localize_one(db, "job", item, lang)
+
+
 @router.get("/seminars", response_model=list[SeminarOut])
 def list_published_seminars(
     lang: str = Query(default="en", max_length=12),
@@ -177,6 +231,87 @@ def list_published_seminars(
     return localize_many(db, "seminar", [SeminarOut.model_validate(row) for row in rows], lang)
 
 
+@router.get("/seminars/{seminar_id}", response_model=SeminarOut)
+def get_published_seminar(
+    seminar_id: int,
+    lang: str = Query(default="en", max_length=12),
+    db: Session = Depends(get_db),
+) -> SeminarOut:
+    row = seminar_reg.get_published_seminar(db, seminar_id)
+    return localize_one(db, "seminar", SeminarOut.model_validate(row), lang)
+
+
+@router.post("/seminars/{seminar_id}/access")
+@limiter.limit("10/minute")
+def request_seminar_access(
+    request: Request,
+    seminar_id: int,
+    payload: SeminarAccessRequestIn,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    seminar = seminar_reg.get_published_seminar(db, seminar_id)
+    try:
+        seminar_reg.request_access(db, seminar, str(payload.email))
+    except EmailDeliveryError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    return {
+        "message": "Check your email for a link to continue seminar registration.",
+    }
+
+
+@router.post("/seminars/{seminar_id}/access/verify", response_model=SeminarAccessOut)
+@limiter.limit("20/minute")
+def verify_seminar_access(
+    request: Request,
+    seminar_id: int,
+    payload: SeminarAccessVerifyIn,
+    db: Session = Depends(get_db),
+) -> SeminarAccessOut:
+    seminar_reg.get_published_seminar(db, seminar_id)
+    row = seminar_reg.verify_access_token(db, seminar_id, payload.token)
+    return SeminarAccessOut(
+        email=row.email,
+        seminar_id=seminar_id,
+        access_token=payload.token,
+        message="Email verified. You can complete registration.",
+    )
+
+
+@router.post(
+    "/seminars/{seminar_id}/register",
+    response_model=SeminarRegistrationOut,
+    status_code=status.HTTP_201_CREATED,
+)
+@limiter.limit("10/minute")
+def submit_seminar_registration(
+    request: Request,
+    seminar_id: int,
+    payload: SeminarRegistrationIn,
+    db: Session = Depends(get_db),
+) -> SeminarRegistrationOut:
+    seminar = seminar_reg.get_published_seminar(db, seminar_id)
+    row, checkout_url = seminar_reg.create_registration(db, seminar, payload)
+    out = SeminarRegistrationOut.model_validate(row)
+    out.checkout_url = checkout_url
+    return out
+
+
+@router.post("/seminars/registrations/confirm", response_model=SeminarRegistrationOut)
+@limiter.limit("20/minute")
+def confirm_seminar_registration_payment(
+    request: Request,
+    payload: SeminarRegistrationConfirmIn,
+    registration_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+) -> SeminarRegistrationOut:
+    row = seminar_reg.confirm_seminar_payment(
+        db,
+        registration_id=registration_id,
+        session_id=payload.session_id,
+    )
+    return SeminarRegistrationOut.model_validate(row)
+
+
 @router.get("/testimonials", response_model=list[TestimonialOut])
 def list_published_testimonials(
     lang: str = Query(default="en", max_length=12),
@@ -189,6 +324,25 @@ def list_published_testimonials(
         .all()
     )
     return localize_many(db, "testimonial", [TestimonialOut.model_validate(row) for row in rows], lang)
+
+
+@router.get("/leadership", response_model=list[LeadershipPersonOut])
+def list_published_leadership(
+    lang: str = Query(default="en", max_length=12),
+    db: Session = Depends(get_db),
+) -> list[LeadershipPersonOut]:
+    rows = (
+        db.query(LeadershipPerson)
+        .filter(LeadershipPerson.published.is_(True))
+        .order_by(LeadershipPerson.sort_order.asc(), LeadershipPerson.id.asc())
+        .all()
+    )
+    return localize_many(
+        db,
+        "leadership",
+        [LeadershipPersonOut.model_validate(row) for row in rows],
+        lang,
+    )
 
 
 @router.get("/news", response_model=list[NewsPostOut])

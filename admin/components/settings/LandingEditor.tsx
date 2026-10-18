@@ -25,6 +25,10 @@ export type HomeLanding = {
   certificates_title: string;
   certificates_subtitle: string;
   certificates_cta: string;
+  seminars_title: string;
+  seminars_body_1: string;
+  seminars_body_2: string;
+  seminars_cta: string;
   magazine_title: string;
   magazine_subtitle: string;
   magazine_cta: string;
@@ -151,13 +155,14 @@ export default function LandingEditor() {
       {dialog}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-caisbe-muted">
-          Edit the words on the public homepage, including the statistics strip under the hero. Course cards, magazine
-          issues, hero photos, and testimonial quotes stay in Courses, Media, and Testimonials.
+          Edit the words on the public homepage, including the statistics strip. Course cards, magazine issues, hero
+          photos, and testimonial quotes stay in Courses, Media, and Testimonials. Homepage upcoming seminars strip
+          copy and seminar events are edited under Learning → Seminars.
         </p>
         <div
           role="tablist"
           aria-label="Landing page language"
-          className="inline-flex rounded-full border border-ifma-border bg-white p-1"
+          className="inline-flex rounded-none border border-ifma-border bg-white p-1"
         >
           {(
             [
@@ -173,7 +178,7 @@ export default function LandingEditor() {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setActiveLang(option.code)}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                className={`rounded-none px-4 py-1.5 text-sm font-semibold transition ${
                   active
                     ? "bg-caisbe-red text-white shadow-sm"
                     : "text-caisbe-text hover:text-caisbe-red"
@@ -194,11 +199,10 @@ export default function LandingEditor() {
       ) : (
         <>
 
-      <Card className="space-y-4">
-        <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Hero</h2>
-        <TextArea label="Landing sentence" value={home.hero_intro} onChange={(hero_intro) => patch({ hero_intro })} rows={4} />
-        <TextInput label="Join button" value={home.hero_button} onChange={(hero_button) => patch({ hero_button })} />
-      </Card>
+      <p className="text-sm text-caisbe-muted">
+        Homepage carousel media and text panel copy are edited under{" "}
+        <span className="font-semibold text-caisbe-text-dark">Media library → Hero</span>.
+      </p>
 
       <Card className="space-y-4">
         <div className="flex items-center justify-between gap-3">

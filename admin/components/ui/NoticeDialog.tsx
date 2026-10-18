@@ -69,7 +69,7 @@ export default function NoticeDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="relative z-[101] w-full max-w-md rounded-2xl border border-ifma-border bg-admin-surface p-6 shadow-brand-card sm:p-7"
+        className="relative z-[101] w-full max-w-md rounded-none border border-ifma-border bg-admin-surface p-6 shadow-brand-card sm:p-7"
       >
         <div
           className={`flex size-11 items-center justify-center rounded-full text-xl font-semibold ${TONE_BADGE[tone]}`}

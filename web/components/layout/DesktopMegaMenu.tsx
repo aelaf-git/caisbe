@@ -98,7 +98,7 @@ function DropdownPanel({
         width: position.width,
         maxWidth: `calc(100vw - ${VIEWPORT_PADDING * 2}px)`,
       }}
-      className="font-hopewell z-[100] max-h-[calc(100vh-5rem)] overflow-x-hidden overflow-y-auto rounded-[20px] bg-white py-6 shadow-hopewell"
+      className="font-hopewell z-[100] max-h-[calc(100vh-5rem)] overflow-x-hidden overflow-y-auto rounded-none bg-white py-6 shadow-hopewell"
     >
       <div className={`grid gap-6 px-5 ${gridClass}`}>
         {groups.map((group) => (
@@ -116,7 +116,7 @@ function DropdownPanel({
                   <Link
                     href={link.href}
                     onClick={onNavigate}
-                    className="block rounded-full px-3 py-1.5 text-sm leading-5 break-words text-caisbe-text transition-colors hover:bg-[#f8fafc] hover:text-caisbe-red"
+                    className="block rounded-none px-3 py-1.5 text-sm leading-5 break-words text-caisbe-text transition-colors hover:bg-[#f8fafc] hover:text-caisbe-red"
                   >
                     {link.label}
                   </Link>

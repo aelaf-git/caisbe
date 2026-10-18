@@ -46,7 +46,7 @@ export default function NotificationDialog({
   const relatedHref = item.link ? relatedPageHref(item.link) : null;
   const externalLink = Boolean(relatedHref && /^https?:\/\//i.test(relatedHref));
   const linkClassName =
-    "inline-flex h-11 items-center justify-center rounded-full border-2 border-caisbe-red bg-admin-surface px-6 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white";
+    "inline-flex h-11 items-center justify-center rounded-none border-2 border-caisbe-red bg-admin-surface px-6 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -61,7 +61,7 @@ export default function NotificationDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="relative z-[101] w-full max-w-lg rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-7"
+        className="relative z-[101] w-full max-w-lg rounded-none border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-7"
       >
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-admin-surface-muted px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-caisbe-text">
@@ -101,7 +101,7 @@ export default function NotificationDialog({
             ref={closeRef}
             type="button"
             onClick={onClose}
-            className="inline-flex h-11 items-center justify-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white transition hover:bg-caisbe-red-dark"
+            className="inline-flex h-11 items-center justify-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white transition hover:bg-caisbe-red-dark"
           >
             Close
           </button>

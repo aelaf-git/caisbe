@@ -143,7 +143,7 @@ export default function MyProgressSection({
                 : `/courses/${enrollment.course.id}`;
             const actionLabel = enrollment.status === "pending_payment" ? "Complete payment" : "Continue course";
             return (
-              <li key={enrollment.id} className="rounded-[16px] border border-ifma-border-light px-4 py-5 sm:px-5">
+              <li key={enrollment.id} className="rounded-none border border-ifma-border-light px-4 py-5 sm:px-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <Link
@@ -228,7 +228,7 @@ export default function MyProgressSection({
                     </ul>
                     <Link
                       href={courseHref}
-                      className="mt-4 inline-flex h-10 items-center rounded-full bg-caisbe-red px-4 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+                      className="mt-4 inline-flex h-10 items-center rounded-none bg-caisbe-red px-4 text-sm font-bold text-white hover:bg-caisbe-red-dark"
                     >
                       {actionLabel}
                     </Link>
@@ -237,7 +237,7 @@ export default function MyProgressSection({
                   <div className="mt-5 border-t border-ifma-border-light pt-4">
                     <Link
                       href={`/certificates/${enrollment.certificate_code}`}
-                      className="inline-flex h-10 items-center rounded-full bg-caisbe-red px-4 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+                      className="inline-flex h-10 items-center rounded-none bg-caisbe-red px-4 text-sm font-bold text-white hover:bg-caisbe-red-dark"
                     >
                       View certificate
                     </Link>

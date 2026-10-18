@@ -6,12 +6,22 @@ import { ContentCard, ContentSection } from "@/components/pages/ContentPage";
 import { fetchActiveJobs, type JobPosting } from "@/lib/api";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 
+const TEASER_LIMIT = 220;
+
 function formatDate(iso: string, locale: string) {
   return new Date(iso).toLocaleDateString(locale === "fr" ? "fr-CA" : "en-CA", {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
+}
+
+function jobTeaser(job: JobPosting): string | undefined {
+  const raw = (job.summary || job.description || "").trim();
+  if (!raw) return undefined;
+  if (raw.length <= TEASER_LIMIT) return raw;
+  const trimmed = raw.slice(0, TEASER_LIMIT - 1).replace(/\s+\S*$/, "").trim();
+  return `${trimmed || raw.slice(0, TEASER_LIMIT - 1)}…`;
 }
 
 export default function JobBoardList({
@@ -73,9 +83,9 @@ export default function JobBoardList({
                 key={job.id}
                 title={job.title}
                 meta={`${job.employment_type}${job.featured ? (fr ? " · En vedette" : " · Featured") : ""}`}
-                description={job.summary ?? undefined}
-                href={job.apply_url || "/contact"}
-                hrefLabel={job.apply_url ? (fr ? "Postuler / Voir" : "Apply / View") : fr ? "Se renseigner" : "Inquire"}
+                description={jobTeaser(job)}
+                href={`/careers/jobs/${job.id}`}
+                hrefLabel={fr ? "Voir les détails" : "View details"}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <dl className="mt-4 space-y-1 text-sm text-caisbe-muted">
@@ -101,23 +111,7 @@ export default function JobBoardList({
                     </dt>
                     <dd className="inline">{formatDate(job.posted_on, locale)}</dd>
                   </div>
-                  <div>
-                    <dt className="inline font-semibold text-caisbe-text">
-                      {fr ? "Expire le : " : "Expires: "}
-                    </dt>
-                    <dd className="inline">{formatDate(job.expires_on, locale)}</dd>
-                  </div>
                 </dl>
-                {job.attachment_url ? (
-                  <a
-                    href={job.attachment_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 inline-flex text-sm font-semibold uppercase tracking-wide text-caisbe-red transition-colors hover:text-caisbe-red-dark"
-                  >
-                    {fr ? "Télécharger l’offre" : "Download posting"}
-                  </a>
-                ) : null}
               </ContentCard>
             ))}
           </div>

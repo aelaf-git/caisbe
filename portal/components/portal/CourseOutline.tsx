@@ -156,7 +156,7 @@ export default function CourseOutline({
               }}
               className="flex w-full items-center justify-between gap-2 px-2 py-3 text-left disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+              <span className="min-w-0 flex-1 break-words text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
                 {chapterIndex + 1}. {chapter.title}
                 {chapterOpen ? "" : " · Locked"}
               </span>
@@ -188,10 +188,12 @@ export default function CourseOutline({
                   <li>
                     <ItemButton
                       type="reading"
+                      locked={!extrasOpen}
                       done={false}
                       active={selectionsEqual(selection, { kind: "chapter-readings", chapterId: chapter.id })}
                       label="Chapter readings"
                       onClick={() => {
+                        if (!extrasOpen) return;
                         onSelect({ kind: "chapter-readings", chapterId: chapter.id });
                       }}
                     />
