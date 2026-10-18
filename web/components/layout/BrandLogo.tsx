@@ -1,5 +1,8 @@
 type BrandLogoProps = {
-  /** Height utilities for the logo wrapper (e.g. `h-10 sm:h-12`). */
+  /**
+   * Height + matching font-size so ® scales (0.28em of logo height).
+   * Example: `h-10 text-[2.5rem]` or `h-16 text-[4rem] sm:h-20 sm:text-[5rem]`.
+   */
   className?: string;
   priority?: boolean;
   alt?: string;
@@ -8,9 +11,9 @@ type BrandLogoProps = {
   height?: number;
 };
 
-/** CAISBE wordmark with ® at the top-right, sized as ~28% of logo height. */
+/** CAISBE wordmark with ® at the top-right of the mark, proportional to logo size. */
 export default function BrandLogo({
-  className = "h-10",
+  className = "h-10 text-[2.5rem]",
   priority = false,
   alt = "CAISBE registered trademark logo",
   src,
@@ -19,7 +22,7 @@ export default function BrandLogo({
 }: BrandLogoProps) {
   return (
     <span
-      className={`relative inline-flex aspect-[2172/724] shrink-0 [container-type:size] pr-[0.35em] ${className}`.trim()}
+      className={`relative inline-flex w-fit max-w-full shrink-0 leading-none ${className}`.trim()}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -33,7 +36,7 @@ export default function BrandLogo({
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute top-0 right-0 translate-x-[15%] -translate-y-[20%] font-serif text-[length:28cqh] font-bold leading-none text-caisbe-red"
+        className="pointer-events-none absolute top-0 left-full -translate-y-[22%] pl-[0.04em] font-serif text-[0.28em] font-bold leading-none text-caisbe-red"
       >
         ®
       </span>

@@ -68,7 +68,7 @@ export const FR_SITE_PAGES: Record<string, TopicPage> = {
         "items": []
       }
     ],
-    "ctaLabel": "Joindre le bureau du conseil",
+    "ctaLabel": "Joindre le bureau du conseil d'administration",
     "ctaHref": "/contact"
   },
   "/about/brand-assets": {

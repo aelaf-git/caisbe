@@ -75,6 +75,9 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+SUMMARY_LIMIT = 240
+
+
 def _strip_html(value: str | None, *, limit: int = 4000) -> str | None:
     if not value:
         return None
@@ -83,6 +86,17 @@ def _strip_html(value: str | None, *, limit: int = 4000) -> str | None:
     if not text:
         return None
     return text[:limit]
+
+
+def _short_summary(value: str | None, *, limit: int = SUMMARY_LIMIT) -> str | None:
+    """Plain-text teaser for listing cards; full text belongs in description."""
+    text = _strip_html(value, limit=max(limit * 4, 1000))
+    if not text:
+        return None
+    if len(text) <= limit:
+        return text
+    trimmed = text[: limit - 1].rsplit(" ", 1)[0].rstrip(" ,;:-")
+    return f"{trimmed or text[: limit - 1]}…"
 
 
 def _normalize_employment_type(value: str | None) -> str:
@@ -187,8 +201,11 @@ def fetch_curated_drafts() -> list[JobDraft]:
                 company=(str(item.get("company") or "").strip() or None),
                 location=(str(item.get("location") or "").strip() or None),
                 employment_type=str(item.get("employment_type") or "full-time"),
-                summary=_strip_html(str(item.get("summary") or "") or None, limit=4000),
-                description=_strip_html(str(item.get("description") or "") or None, limit=20000),
+                summary=_short_summary(str(item.get("summary") or item.get("description") or "") or None),
+                description=_strip_html(
+                    str(item.get("description") or item.get("summary") or "") or None,
+                    limit=20000,
+                ),
                 apply_url=(str(item.get("apply_url") or "").strip() or None),
                 posted_on=posted,
                 expires_on=_expiry_from(posted),
@@ -223,8 +240,11 @@ def fetch_remote_feed_drafts(client: httpx.Client) -> list[JobDraft]:
                 company=(str(item.get("company") or "").strip() or None),
                 location=(str(item.get("location") or "").strip() or None),
                 employment_type=str(item.get("employment_type") or "full-time"),
-                summary=_strip_html(str(item.get("summary") or item.get("description") or "") or None),
-                description=_strip_html(str(item.get("description") or "") or None, limit=20000),
+                summary=_short_summary(str(item.get("summary") or item.get("description") or "") or None),
+                description=_strip_html(
+                    str(item.get("description") or item.get("summary") or "") or None,
+                    limit=20000,
+                ),
                 apply_url=(str(item.get("apply_url") or item.get("url") or "").strip() or None),
                 posted_on=posted,
                 expires_on=_expiry_from(posted),
@@ -298,7 +318,7 @@ def fetch_adzuna_drafts(client: httpx.Client) -> list[JobDraft]:
                     company=company,
                     location=location,
                     employment_type=str(item.get("contract_time") or item.get("contract_type") or "full-time"),
-                    summary=_strip_html(str(item.get("description") or "") or None),
+                    summary=_short_summary(str(item.get("description") or "") or None),
                     description=_strip_html(str(item.get("description") or "") or None, limit=20000),
                     apply_url=(str(item.get("redirect_url") or "").strip() or None),
                     posted_on=posted,
@@ -342,7 +362,7 @@ def fetch_arbeitnow_drafts(client: httpx.Client) -> list[JobDraft]:
                     company=(str(item.get("company_name") or "").strip() or None),
                     location=(str(item.get("location") or "").strip() or None),
                     employment_type="full-time" if item.get("remote") else "full-time",
-                    summary=_strip_html(str(item.get("description") or "") or None),
+                    summary=_short_summary(str(item.get("description") or "") or None),
                     description=_strip_html(str(item.get("description") or "") or None, limit=20000),
                     apply_url=(str(item.get("url") or "").strip() or None),
                     posted_on=posted,

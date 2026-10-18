@@ -14,6 +14,7 @@ export type TranslationEntityType =
   | "job"
   | "seminar"
   | "testimonial"
+  | "leadership"
   | "media"
   | "course";
 

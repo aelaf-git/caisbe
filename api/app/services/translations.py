@@ -13,6 +13,7 @@ from app.models import (
     Course,
     IndustryEvent,
     JobPosting,
+    LeadershipPerson,
     MediaAsset,
     NewsPost,
     Seminar,
@@ -31,6 +32,7 @@ ALLOWED_FIELDS: dict[str, tuple[str, ...]] = {
     "job": ("title", "summary", "description", "company", "location"),
     "seminar": ("title", "description"),
     "testimonial": ("quote", "role"),
+    "leadership": ("name", "role", "credentials", "bio"),
     "media": ("title", "description", "body", "eyebrow", "headline", "subheadline", "cta_label"),
     "course": ("title", "description"),
 }
@@ -44,6 +46,7 @@ ENTITY_MODELS = {
     "job": JobPosting,
     "seminar": Seminar,
     "testimonial": Testimonial,
+    "leadership": LeadershipPerson,
     "media": MediaAsset,
     "course": Course,
 }

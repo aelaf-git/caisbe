@@ -17,6 +17,7 @@ from app.models import (
     ContactMessage,
     IndustryEvent,
     JobPosting,
+    LeadershipPerson,
     MediaAsset,
     MembershipApplication,
     MembershipCertificateType,
@@ -38,6 +39,7 @@ from app.schemas.media import (
 from app.schemas.auth import MembershipApplicationIn, MembershipApplicationOut
 from app.schemas.events import IndustryEventOut
 from app.schemas.jobs import JobPostingOut
+from app.schemas.leadership import LeadershipPersonOut
 from app.schemas.membership_certificates import MembershipCertificateTypePublicOut
 from app.schemas.news import NewsPostOut
 from app.schemas.seminars import SeminarOut
@@ -181,6 +183,30 @@ def list_active_jobs(
     return localize_many(db, "job", out, lang)
 
 
+@router.get("/jobs/{job_id}", response_model=JobPostingOut)
+def get_active_job(
+    job_id: int,
+    lang: str = Query(default="en", max_length=12),
+    db: Session = Depends(get_db),
+) -> JobPostingOut:
+    """Single published job that has not reached its expiry date."""
+    now = datetime.now(timezone.utc)
+    row = (
+        db.query(JobPosting)
+        .filter(
+            JobPosting.id == job_id,
+            JobPosting.published.is_(True),
+            JobPosting.expires_on >= now,
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    item = JobPostingOut.model_validate(row)
+    item.is_expired = False
+    return localize_one(db, "job", item, lang)
+
+
 @router.get("/seminars", response_model=list[SeminarOut])
 def list_published_seminars(
     lang: str = Query(default="en", max_length=12),
@@ -207,6 +233,25 @@ def list_published_testimonials(
         .all()
     )
     return localize_many(db, "testimonial", [TestimonialOut.model_validate(row) for row in rows], lang)
+
+
+@router.get("/leadership", response_model=list[LeadershipPersonOut])
+def list_published_leadership(
+    lang: str = Query(default="en", max_length=12),
+    db: Session = Depends(get_db),
+) -> list[LeadershipPersonOut]:
+    rows = (
+        db.query(LeadershipPerson)
+        .filter(LeadershipPerson.published.is_(True))
+        .order_by(LeadershipPerson.sort_order.asc(), LeadershipPerson.id.asc())
+        .all()
+    )
+    return localize_many(
+        db,
+        "leadership",
+        [LeadershipPersonOut.model_validate(row) for row in rows],
+        lang,
+    )
 
 
 @router.get("/news", response_model=list[NewsPostOut])

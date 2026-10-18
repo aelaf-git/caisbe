@@ -34,6 +34,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/events", label: "Events", icon: "calendar" },
       { href: "/news", label: "News", icon: "megaphone" },
       { href: "/testimonials", label: "Testimonials", icon: "quote" },
+      { href: "/leadership", label: "Leadership", icon: "users" },
       { href: "/support", label: "Tickets", icon: "chat" },
       { href: "/forum", label: "Forum", icon: "forum" },
       { href: "/contact-messages", label: "Contact", icon: "mail" },
@@ -125,8 +126,8 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
   return (
     <aside className={`flex h-full w-full flex-col bg-admin-surface shadow-hopewell-nav ${className}`}>
       <div className="px-5 py-5">
-        <Link href="/dashboard" onClick={onNavigate} className="flex flex-col gap-2">
-          <BrandLogo priority className="h-10 max-w-full" />
+        <Link href="/dashboard" onClick={onNavigate} className="flex flex-col gap-2 overflow-visible pr-3">
+          <BrandLogo priority className="h-10 text-[2.5rem]" />
           <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-caisbe-red-dark">
             Admin
           </p>

@@ -9,7 +9,7 @@ export const aboutContent = {
   seoTitle:
     "About CAISBE | Canada Africa Institute for the Sustainable Built Environment (CAISBE)",
   metaDescription:
-    "Learn about CAISBE mission, accreditation, and commitment to raising professional FM standards.",
+    "Learn about CAISBE mission, leadership, accreditation, and commitment to raising professional FM standards.",
   primaryTagline: "Global Knowledge. African Impact.",
   programTagline: "Transforming Buildings. Empowering Communities",
   eyebrow: "About Us",
@@ -35,6 +35,11 @@ export const aboutContent = {
       "Events, conferences, and knowledge sharing",
       "Advocacy and Policy dialogue",
     ],
+  },
+  leadership: {
+    title: "Our Leadership",
+    intro:
+      "CAISBE is led by practitioners and specialists advancing facility management, membership, regional coordination, advocacy, and technology.",
   },
   advisoryCouncil: {
     title: "Advisory Council — Honorary Members",

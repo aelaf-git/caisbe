@@ -56,6 +56,20 @@ export type JobPosting = {
   is_expired: boolean;
 };
 
+export type LeadershipPerson = {
+  id: number;
+  name: string;
+  role: string;
+  credentials: string | null;
+  bio: string | null;
+  email: string | null;
+  photo_url: string | null;
+  published: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type NewsPost = {
   id: number;
   title: string;
@@ -281,12 +295,23 @@ export async function fetchActiveJobs(options?: {
   });
 }
 
+export async function fetchJob(
+  jobId: number,
+  locale?: Locale,
+): Promise<JobPosting> {
+  return apiFetch<JobPosting>(`/jobs/${jobId}`, { locale });
+}
+
 export async function fetchPublishedSeminars(locale?: Locale): Promise<Seminar[]> {
   return apiFetch<Seminar[]>("/seminars", { locale });
 }
 
 export async function fetchPublishedTestimonials(locale?: Locale): Promise<Testimonial[]> {
   return apiFetch<Testimonial[]>("/testimonials", { locale });
+}
+
+export async function fetchPublishedLeadership(locale?: Locale): Promise<LeadershipPerson[]> {
+  return apiFetch<LeadershipPerson[]>("/leadership", { locale });
 }
 
 export async function fetchPublishedNews(options?: {

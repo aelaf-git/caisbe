@@ -169,6 +169,20 @@ export type Testimonial = {
   updated_at: string;
 };
 
+export type LeadershipPerson = {
+  id: number;
+  name: string;
+  role: string;
+  credentials: string | null;
+  bio: string | null;
+  email: string | null;
+  photo_url: string | null;
+  published: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ContactMessage = {
   id: number;
   first_name: string;

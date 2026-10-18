@@ -10,6 +10,7 @@ from app.routers.admin import (  # noqa: F401
     credentials,
     events,
     jobs,
+    leadership,
     membership,
     news,
     operations,

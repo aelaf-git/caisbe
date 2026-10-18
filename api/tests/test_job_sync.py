@@ -12,7 +12,9 @@ from app.models import JobPosting, User
 from app.security.auth import hash_password
 from app.services.job_sync import (
     SOURCE_CURATED,
+    SUMMARY_LIMIT,
     JobDraft,
+    _short_summary,
     fetch_curated_drafts,
     sync_jobs,
     upsert_job_draft,
@@ -108,3 +110,19 @@ def test_admin_sync_endpoint_and_public_list(client: TestClient, db: Session) ->
     assert len(jobs) >= 3
     assert all(job.get("title") for job in jobs)
     assert all(not job.get("is_expired", False) for job in jobs)
+
+    detail = client.get(f"/api/jobs/{jobs[0]['id']}")
+    assert detail.status_code == 200
+    assert detail.json()["id"] == jobs[0]["id"]
+    assert detail.json()["title"] == jobs[0]["title"]
+
+    missing = client.get("/api/jobs/999999")
+    assert missing.status_code == 404
+
+
+def test_short_summary_truncates_long_text() -> None:
+    long = "Facilities managers oversee building operations. " * 20
+    summary = _short_summary(long)
+    assert summary is not None
+    assert len(summary) <= SUMMARY_LIMIT + 1
+    assert summary.endswith("…")

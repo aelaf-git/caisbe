@@ -4,8 +4,76 @@ import {
   PageHero,
 } from "@/components/pages/ContentPage";
 import { aboutContent } from "@/lib/data/about";
+import { fetchPublishedLeadership, type LeadershipPerson } from "@/lib/api";
+import { getServerLocale } from "@/lib/i18n/server";
 
-export default function AboutPageContent() {
+function personInitials(name: string) {
+  return name
+    .replace(/\b(Mr|Ms|Mrs|Dr)\.?\s+/gi, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function LeadershipCard({
+  person,
+  index,
+}: {
+  person: LeadershipPerson;
+  index: number;
+}) {
+  const bio = person.bio?.trim() || person.credentials;
+  return (
+    <article
+      className="flex flex-col rounded-[20px] bg-white p-6 shadow-hopewell motion-safe:animate-page-fade-in"
+      style={{ animationDelay: `${index * 60}ms` }}
+    >
+      <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-caisbe-red/30 bg-caisbe-red/5">
+        {person.photo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={person.photo_url}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span className="font-hopewell-display text-lg font-bold tracking-wide text-caisbe-red">
+            {personInitials(person.name)}
+          </span>
+        )}
+      </div>
+      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-caisbe-red">
+        {person.role}
+      </p>
+      <h3 className="font-hopewell-display mt-3 text-xl font-bold tracking-tight text-caisbe-text-dark">
+        {person.name}
+      </h3>
+      {bio ? (
+        <p className="mt-2 text-sm font-medium leading-6 text-caisbe-text">{bio}</p>
+      ) : null}
+      {person.email ? (
+        <a
+          href={`mailto:${person.email}`}
+          className="mt-5 text-sm font-semibold text-caisbe-red transition-colors hover:text-caisbe-red-dark"
+        >
+          {person.email}
+        </a>
+      ) : null}
+    </article>
+  );
+}
+
+export default async function AboutPageContent() {
+  const locale = await getServerLocale();
+  let people: LeadershipPerson[] = [];
+  try {
+    people = await fetchPublishedLeadership(locale);
+  } catch {
+    people = [];
+  }
+
   const {
     primaryTagline,
     programTagline,
@@ -15,6 +83,7 @@ export default function AboutPageContent() {
     mission,
     vision,
     whatWeDo,
+    leadership,
     advisoryCouncil,
     builtEnvironment,
   } = aboutContent;
@@ -65,6 +134,21 @@ export default function AboutPageContent() {
           ))}
         </ul>
       </ContentSection>
+
+      {people.length > 0 ? (
+        <ContentSection
+          id="leadership"
+          title={leadership.title}
+          description={leadership.intro}
+          wide
+        >
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {people.map((person, index) => (
+              <LeadershipCard key={person.id} person={person} index={index} />
+            ))}
+          </div>
+        </ContentSection>
+      ) : null}
 
       <ContentSection
         id="advisory-council"
