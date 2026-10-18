@@ -139,6 +139,22 @@ class HomeLandingIn(BaseModel):
     certificates_title: str = Field(default="Build Your FM Team", max_length=160)
     certificates_subtitle: str = Field(default="Quality Educational Certification programs", max_length=240)
     certificates_cta: str = Field(default="View All", max_length=80)
+    seminars_title: str = Field(default="Upcoming seminars", max_length=160)
+    seminars_body_1: str = Field(
+        default=(
+            "CAISBE delivers the practical knowledge and industry insight professionals need to excel in "
+            "workplace and facilities management"
+        ),
+        max_length=500,
+    )
+    seminars_body_2: str = Field(
+        default=(
+            "Advance your career with expert training from CAISBE, a trusted provider of professional "
+            "development for built environment professionals and employers."
+        ),
+        max_length=500,
+    )
+    seminars_cta: str = Field(default="Find out more about our seminars", max_length=80)
     magazine_title: str = Field(default="CAISBE Magazine", max_length=160)
     magazine_subtitle: str = Field(
         default="Read the latest features and insights from across the CAISBE community.",
@@ -287,6 +303,16 @@ DEFAULT_HOME_FR = HomeLandingIn(
     certificates_title="Formez votre équipe en gestion des installations",
     certificates_subtitle="Programmes de certification éducative de qualité",
     certificates_cta="Voir tout",
+    seminars_title="Séminaires à venir",
+    seminars_body_1=(
+        "Le CAISBE offre les connaissances pratiques et les perspectives du secteur dont les professionnels "
+        "ont besoin pour exceller en gestion du milieu de travail et des installations"
+    ),
+    seminars_body_2=(
+        "Faites progresser votre carrière avec une formation experte du CAISBE, un fournisseur de confiance "
+        "en développement professionnel pour les professionnels et les employeurs de l'environnement bâti."
+    ),
+    seminars_cta="En savoir plus sur nos séminaires",
     magazine_title="Magazine CAISBE",
     magazine_subtitle="Découvrez les derniers dossiers et analyses de la communauté CAISBE.",
     magazine_cta="Voir tous les numéros",

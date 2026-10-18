@@ -163,6 +163,9 @@ export type Dictionary = {
   certificates: {
     empty: string;
   };
+  seminars: {
+    empty: string;
+  };
   magazine: {
     empty: string;
     readIssue: string;
@@ -239,6 +242,9 @@ const EN_DICT: Dictionary = {
   },
   certificates: {
     empty: "Certificate programs will appear here once published by CAISBE.",
+  },
+  seminars: {
+    empty: "Upcoming seminars will appear here once published by CAISBE.",
   },
   carousel: {
     previous: "Previous",
@@ -319,6 +325,9 @@ const FR_DICT: Dictionary = {
   certificates: {
     empty:
       "Les programmes de certificat apparaîtront ici dès leur publication par le CAISBE.",
+  },
+  seminars: {
+    empty: "Les séminaires à venir apparaîtront ici dès leur publication par le CAISBE.",
   },
   carousel: {
     previous: "Précédent",
@@ -423,6 +432,12 @@ export const FALLBACK_HOME_FR = {
   certificates_title: "Formez votre équipe en gestion des installations",
   certificates_subtitle: "Programmes de certification éducative de qualité",
   certificates_cta: "Voir tout",
+  seminars_title: "Séminaires à venir",
+  seminars_body_1:
+    "Le CAISBE offre les connaissances pratiques et les perspectives du secteur dont les professionnels ont besoin pour exceller en gestion du milieu de travail et des installations",
+  seminars_body_2:
+    "Faites progresser votre carrière avec une formation experte du CAISBE, un fournisseur de confiance en développement professionnel pour les professionnels et les employeurs de l'environnement bâti.",
+  seminars_cta: "En savoir plus sur nos séminaires",
   magazine_title: "Magazine CAISBE",
   magazine_subtitle:
     "Découvrez les derniers dossiers et analyses de la communauté CAISBE.",

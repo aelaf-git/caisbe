@@ -42,10 +42,20 @@ from app.schemas.jobs import JobPostingOut
 from app.schemas.leadership import LeadershipPersonOut
 from app.schemas.membership_certificates import MembershipCertificateTypePublicOut
 from app.schemas.news import NewsPostOut
-from app.schemas.seminars import SeminarOut
+from app.schemas.seminars import (
+    SeminarAccessOut,
+    SeminarAccessRequestIn,
+    SeminarAccessVerifyIn,
+    SeminarOut,
+    SeminarRegistrationConfirmIn,
+    SeminarRegistrationIn,
+    SeminarRegistrationOut,
+)
 from app.schemas.testimonials import TestimonialOut
+from app.services import seminar_registration as seminar_reg
 from app.services.analytics import record_site_visit
 from app.services.commerce import apply_profile_fields, normalize_membership_type
+from app.services.email import EmailDeliveryError
 from app.services.membership import is_student_membership
 from app.services.hero import ensure_default_hero_slides
 from app.services.settings import hero_transition_ms
@@ -219,6 +229,87 @@ def list_published_seminars(
         .all()
     )
     return localize_many(db, "seminar", [SeminarOut.model_validate(row) for row in rows], lang)
+
+
+@router.get("/seminars/{seminar_id}", response_model=SeminarOut)
+def get_published_seminar(
+    seminar_id: int,
+    lang: str = Query(default="en", max_length=12),
+    db: Session = Depends(get_db),
+) -> SeminarOut:
+    row = seminar_reg.get_published_seminar(db, seminar_id)
+    return localize_one(db, "seminar", SeminarOut.model_validate(row), lang)
+
+
+@router.post("/seminars/{seminar_id}/access")
+@limiter.limit("10/minute")
+def request_seminar_access(
+    request: Request,
+    seminar_id: int,
+    payload: SeminarAccessRequestIn,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    seminar = seminar_reg.get_published_seminar(db, seminar_id)
+    try:
+        seminar_reg.request_access(db, seminar, str(payload.email))
+    except EmailDeliveryError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    return {
+        "message": "Check your email for a link to continue seminar registration.",
+    }
+
+
+@router.post("/seminars/{seminar_id}/access/verify", response_model=SeminarAccessOut)
+@limiter.limit("20/minute")
+def verify_seminar_access(
+    request: Request,
+    seminar_id: int,
+    payload: SeminarAccessVerifyIn,
+    db: Session = Depends(get_db),
+) -> SeminarAccessOut:
+    seminar_reg.get_published_seminar(db, seminar_id)
+    row = seminar_reg.verify_access_token(db, seminar_id, payload.token)
+    return SeminarAccessOut(
+        email=row.email,
+        seminar_id=seminar_id,
+        access_token=payload.token,
+        message="Email verified. You can complete registration.",
+    )
+
+
+@router.post(
+    "/seminars/{seminar_id}/register",
+    response_model=SeminarRegistrationOut,
+    status_code=status.HTTP_201_CREATED,
+)
+@limiter.limit("10/minute")
+def submit_seminar_registration(
+    request: Request,
+    seminar_id: int,
+    payload: SeminarRegistrationIn,
+    db: Session = Depends(get_db),
+) -> SeminarRegistrationOut:
+    seminar = seminar_reg.get_published_seminar(db, seminar_id)
+    row, checkout_url = seminar_reg.create_registration(db, seminar, payload)
+    out = SeminarRegistrationOut.model_validate(row)
+    out.checkout_url = checkout_url
+    return out
+
+
+@router.post("/seminars/registrations/confirm", response_model=SeminarRegistrationOut)
+@limiter.limit("20/minute")
+def confirm_seminar_registration_payment(
+    request: Request,
+    payload: SeminarRegistrationConfirmIn,
+    registration_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+) -> SeminarRegistrationOut:
+    row = seminar_reg.confirm_seminar_payment(
+        db,
+        registration_id=registration_id,
+        session_id=payload.session_id,
+    )
+    return SeminarRegistrationOut.model_validate(row)
 
 
 @router.get("/testimonials", response_model=list[TestimonialOut])

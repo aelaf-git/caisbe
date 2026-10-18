@@ -32,7 +32,9 @@ export default async function ProfessionalDevelopmentPageContent() {
     courses = [];
   }
 
-  let seminars: { title: string; description: string }[] = [...fallbackSeminars];
+  let seminars: { id?: number; title: string; description: string }[] = [
+    ...fallbackSeminars,
+  ];
   try {
     seminars = await fetchPublishedSeminars();
   } catch {
@@ -116,12 +118,20 @@ export default async function ProfessionalDevelopmentPageContent() {
           <div className="grid gap-6 md:grid-cols-2">
             {seminars.map((seminar, index) => (
               <ContentCard
-                key={seminar.title}
+                key={seminar.id ?? seminar.title}
                 title={seminar.title}
                 meta={t("Seminar", "Séminaire")}
                 description={seminar.description}
-                href="/contact"
-                hrefLabel={t("Inquire", "Se renseigner")}
+                href={
+                  seminar.id
+                    ? `/professional-development/seminars/${seminar.id}/register`
+                    : "/contact"
+                }
+                hrefLabel={
+                  seminar.id
+                    ? t("Register", "S’inscrire")
+                    : t("Inquire", "Se renseigner")
+                }
                 style={{ animationDelay: `${index * 70}ms` }}
               />
             ))}

@@ -25,6 +25,10 @@ export type HomeLanding = {
   certificates_title: string;
   certificates_subtitle: string;
   certificates_cta: string;
+  seminars_title: string;
+  seminars_body_1: string;
+  seminars_body_2: string;
+  seminars_cta: string;
   magazine_title: string;
   magazine_subtitle: string;
   magazine_cta: string;
@@ -151,8 +155,9 @@ export default function LandingEditor() {
       {dialog}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-caisbe-muted">
-          Edit the words on the public homepage, including the statistics strip under the hero. Course cards, magazine
-          issues, hero photos, and testimonial quotes stay in Courses, Media, and Testimonials.
+          Edit the words on the public homepage, including the statistics strip. Course cards, magazine issues, hero
+          photos, and testimonial quotes stay in Courses, Media, and Testimonials. Homepage upcoming seminars strip
+          copy and seminar events are edited under Learning → Seminars.
         </p>
         <div
           role="tablist"

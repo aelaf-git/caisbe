@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import SeminarsHomepageCopy from "@/components/seminars/SeminarsHomepageCopy";
 import SeminarsManager from "@/components/seminars/SeminarsManager";
 import Alert from "@/components/ui/Alert";
 import PageHeader from "@/components/ui/PageHeader";
@@ -37,8 +38,10 @@ export default function SeminarsAdminPage() {
       <PageHeader
         eyebrow="Learning"
         title="Seminars"
-        description="Add or remove the seminars shown under certificate programs."
+        description="Homepage strip copy, seminar events, pricing, and registrations — all in one place."
       />
+
+      <SeminarsHomepageCopy />
 
       {error ? <Alert tone="error">{error}</Alert> : null}
 

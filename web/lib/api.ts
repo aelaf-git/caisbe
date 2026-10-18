@@ -121,6 +121,17 @@ export type Seminar = {
   id: number;
   title: string;
   description: string;
+  event_date_label?: string | null;
+  event_time_label?: string | null;
+  event_format_label?: string | null;
+  event_starts_at?: string | null;
+  registration_closes_at?: string | null;
+  registration_enabled?: boolean;
+  member_price_cents?: number;
+  non_member_price_cents?: number;
+  student_price_cents?: number;
+  capacity_in_person?: number | null;
+  capacity_virtual?: number | null;
   published: boolean;
   sort_order: number;
 };
@@ -158,6 +169,7 @@ const LOCALIZED_PATHS = [
   "/events",
   "/jobs",
   "/seminars",
+  "/leadership",
   "/testimonials",
   "/media",
   "/courses",
@@ -304,6 +316,13 @@ export async function fetchJob(
 
 export async function fetchPublishedSeminars(locale?: Locale): Promise<Seminar[]> {
   return apiFetch<Seminar[]>("/seminars", { locale });
+}
+
+export async function fetchPublishedSeminar(
+  seminarId: number,
+  locale?: Locale,
+): Promise<Seminar> {
+  return apiFetch<Seminar>(`/seminars/${seminarId}`, { locale });
 }
 
 export async function fetchPublishedTestimonials(locale?: Locale): Promise<Testimonial[]> {

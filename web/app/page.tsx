@@ -5,6 +5,7 @@ import ContactSection from "@/components/home/ContactSection";
 import HeroSection from "@/components/home/HeroSection";
 import MagazineSection from "@/components/home/MagazineSection";
 import OfficesSection from "@/components/home/OfficesSection";
+import SeminarsSection from "@/components/home/SeminarsSection";
 import StatsSection from "@/components/home/StatsSection";
 import SustainabilitySection from "@/components/home/SustainabilitySection";
 import Testimonials from "@/components/home/Testimonials";
@@ -118,6 +119,13 @@ export default async function Home() {
         subtitle={landing?.certificates_subtitle}
         cta={landing?.certificates_cta}
         emptyMessage={dict.certificates.empty}
+      />
+      <SeminarsSection
+        title={landing?.seminars_title}
+        body1={landing?.seminars_body_1}
+        body2={landing?.seminars_body_2}
+        cta={landing?.seminars_cta}
+        emptyMessage={dict.seminars.empty}
       />
       <MagazineSection
         title={landing?.magazine_title}
