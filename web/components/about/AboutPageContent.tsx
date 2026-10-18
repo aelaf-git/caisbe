@@ -27,7 +27,7 @@ function LeadershipCard({
   const bio = person.bio?.trim() || person.credentials;
   return (
     <article
-      className="flex flex-col rounded-[20px] bg-white p-6 shadow-hopewell motion-safe:animate-page-fade-in"
+      className="flex flex-col rounded-none bg-white p-6 shadow-hopewell motion-safe:animate-page-fade-in"
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-caisbe-red/30 bg-caisbe-red/5">
@@ -126,7 +126,7 @@ export default async function AboutPageContent() {
           {whatWeDo.items.map((item) => (
             <li
               key={item}
-              className="flex min-h-14 w-full items-center rounded-[20px] border border-black/5 bg-white px-5 py-4 text-base font-semibold leading-7 text-caisbe-text-dark shadow-hopewell sm:text-lg sm:leading-8 sm:[&:last-child:nth-child(odd)]:col-span-2"
+              className="flex min-h-14 w-full items-center rounded-none border border-black/5 bg-white px-5 py-4 text-base font-semibold leading-7 text-caisbe-text-dark shadow-hopewell sm:text-lg sm:leading-8 sm:[&:last-child:nth-child(odd)]:col-span-2"
             >
               <span className="mr-2 inline-block h-2 w-2 rounded-full bg-caisbe-red align-middle" />
               {item}
@@ -161,7 +161,7 @@ export default async function AboutPageContent() {
           {advisoryCouncil.members.map((member, index) => (
             <article
               key={member.name}
-              className="flex flex-col items-center rounded-[20px] bg-white p-5 shadow-hopewell text-center motion-safe:animate-page-fade-in"
+              className="flex flex-col items-center rounded-none bg-white p-5 shadow-hopewell text-center motion-safe:animate-page-fade-in"
               style={{ animationDelay: `${index * 60}ms` }}
             >
               <div

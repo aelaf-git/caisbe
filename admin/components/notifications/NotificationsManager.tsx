@@ -83,7 +83,7 @@ export default function NotificationsManager({
                     key={option.id}
                     type="button"
                     onClick={() => setKind(option.id)}
-                    className={`rounded-full border-2 px-4 py-2 text-sm font-bold transition ${
+                    className={`rounded-none border-2 px-4 py-2 text-sm font-bold transition ${
                       selected
                         ? "border-caisbe-red bg-caisbe-red text-white"
                         : "border-ifma-border bg-admin-surface-muted text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
@@ -146,7 +146,7 @@ export default function NotificationsManager({
             />
           </div>
         ) : (
-          <ul className="mt-4 divide-y divide-ifma-border-light overflow-hidden rounded-[16px] border border-ifma-border-light">
+          <ul className="mt-4 divide-y divide-ifma-border-light overflow-hidden rounded-none border border-ifma-border-light">
             {broadcasts.map((row) => (
               <li key={row.id} className="bg-admin-surface-muted/40 px-4 py-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">

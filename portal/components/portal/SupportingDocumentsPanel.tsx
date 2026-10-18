@@ -128,7 +128,7 @@ export default function SupportingDocumentsPanel() {
           multiple
           accept={SUPPORTING_ACCEPT}
           disabled={uploading}
-          className="mt-2 block w-full text-sm font-normal text-caisbe-text file:mr-3 file:rounded-full file:border-0 file:bg-caisbe-red file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white disabled:opacity-60"
+          className="mt-2 block w-full text-sm font-normal text-caisbe-text file:mr-3 file:rounded-none file:border-0 file:bg-caisbe-red file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white disabled:opacity-60"
           onChange={(e) => void uploadFiles(e.target.files)}
         />
       </label>

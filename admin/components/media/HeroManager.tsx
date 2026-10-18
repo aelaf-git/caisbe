@@ -705,7 +705,7 @@ export default function HeroManager({
                   <button
                     type="button"
                     onClick={() => void togglePublished(asset)}
-                    className="rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-caisbe-red/15"
+                    className="rounded-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-caisbe-red/15"
                   >
                     <Badge tone={asset.published ? "success" : "neutral"}>
                       {asset.published ? "Published" : "Draft"}

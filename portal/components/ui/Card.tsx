@@ -14,7 +14,7 @@ export default function Card({ padding = "md", className = "", ...props }: CardP
 
   return (
     <div
-      className={`rounded-[20px] bg-admin-surface shadow-hopewell ${spacing} ${className}`}
+      className={`rounded-none bg-admin-surface shadow-hopewell ${spacing} ${className}`}
       {...props}
     />
   );

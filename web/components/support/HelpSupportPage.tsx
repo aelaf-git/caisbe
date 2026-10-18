@@ -169,7 +169,7 @@ export default function HelpSupportPage({
             {sessionLoading ? null : user ? (
               <a
                 href={portalUrl("/dashboard")}
-                className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+                className="inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
               >
                 {L("Open myCAISBE")}
               </a>
@@ -177,14 +177,14 @@ export default function HelpSupportPage({
               <button
                 type="button"
                 onClick={loginToHelp}
-                className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+                className="inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
               >
                 {L("Log in to request support")}
               </button>
             )}
             <Link
               href="/resources/help-desk"
-              className="inline-flex h-11 items-center rounded-full border border-ifma-border bg-white px-5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+              className="inline-flex h-11 items-center rounded-none border border-ifma-border bg-white px-5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
             >
               {L("Open FAQs")}
             </Link>
@@ -196,14 +196,14 @@ export default function HelpSupportPage({
       </section>
 
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-12">
-        <section id="faqs" className="scroll-mt-28 rounded-[20px] bg-white p-6 shadow-hopewell">
+        <section id="faqs" className="scroll-mt-28 rounded-none bg-white p-6 shadow-hopewell">
           <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">FAQs</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-caisbe-muted">
             {L("Common questions and answers are already published on the CAISBE Help Desk.")}
           </p>
           <Link
             href="/resources/help-desk"
-            className="mt-5 inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+            className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
           >
             {L("Open FAQs")}
           </Link>
@@ -214,7 +214,7 @@ export default function HelpSupportPage({
         ) : !user ? (
           <section
             id="request-support"
-            className="scroll-mt-28 rounded-[20px] bg-white p-6 shadow-hopewell"
+            className="scroll-mt-28 rounded-none bg-white p-6 shadow-hopewell"
           >
             <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
               {L("Request support")}
@@ -227,7 +227,7 @@ export default function HelpSupportPage({
             <button
               type="button"
               onClick={loginToHelp}
-              className="mt-5 inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+              className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
             >
               {L("Log in to request support")}
             </button>
@@ -239,14 +239,14 @@ export default function HelpSupportPage({
                 <a
                   key={section.id}
                   href={`#${section.id}`}
-                  className="inline-flex rounded-full border border-ifma-border bg-white px-3 py-1.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+                  className="inline-flex rounded-none border border-ifma-border bg-white px-3 py-1.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
                 >
                   {L(section.label)}
                 </a>
               ))}
             </nav>
 
-            <section id="technical" className="scroll-mt-28 rounded-[20px] bg-white p-6 shadow-hopewell">
+            <section id="technical" className="scroll-mt-28 rounded-none bg-white p-6 shadow-hopewell">
               <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
                 {L("Technical Support")}
               </h2>
@@ -553,7 +553,7 @@ export default function HelpSupportPage({
               ]}
             />
 
-            <section className="overflow-hidden rounded-[20px] bg-white shadow-hopewell">
+            <section className="overflow-hidden rounded-none bg-white shadow-hopewell">
               <div className="border-b border-ifma-border-light px-6 py-4">
                 <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
                   {L("Your requests")}
@@ -643,7 +643,7 @@ function SubmitButton({
       <button
         type="button"
         onClick={loginToHelp}
-        className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+        className="inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
       >
         {L("Log in to submit")}
       </button>
@@ -653,7 +653,7 @@ function SubmitButton({
     <button
       type="submit"
       disabled={busy}
-      className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+      className="inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
     >
       {busy ? L("Submitting…") : L(label)}
     </button>
@@ -683,7 +683,7 @@ function RequestTable({
 }) {
   const L = useTranslate(HELP_FR);
   return (
-    <section id={id} className="scroll-mt-28 overflow-hidden rounded-[20px] bg-white shadow-hopewell">
+    <section id={id} className="scroll-mt-28 overflow-hidden rounded-none bg-white shadow-hopewell">
       <div className="border-b border-ifma-border-light px-6 py-4">
         <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">{title}</h2>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-caisbe-muted">{description}</p>

@@ -31,7 +31,7 @@ function MemberPathCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`rounded-[20px] p-6 text-left shadow-hopewell transition duration-300 hover:-translate-y-1 ${
+      className={`rounded-none p-6 text-left shadow-hopewell transition duration-300 hover:-translate-y-1 ${
         selected
           ? "bg-admin-surface-muted ring-2 ring-caisbe-red"
           : "bg-admin-surface"
@@ -137,7 +137,7 @@ function MembershipPageInner() {
         <div className="border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">{error}</div>
       ) : null}
 
-      <section className="rounded-[20px] bg-white p-6 shadow-hopewell">
+      <section className="rounded-none bg-white p-6 shadow-hopewell">
         <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Current type</p>
         <h2 className="mt-1 font-display text-2xl font-semibold text-caisbe-text-dark">
           {membershipTypeLabel(user?.membership_type || "student")}
@@ -250,7 +250,7 @@ function MembershipPageInner() {
       {pendingType ? (
         <section
           id="membership-payment"
-          className="rounded-[20px] border-2 border-caisbe-red/30 bg-white p-6 shadow-hopewell"
+          className="rounded-none border-2 border-caisbe-red/30 bg-white p-6 shadow-hopewell"
         >
           <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
             Payment required
@@ -278,7 +278,7 @@ function MembershipPageInner() {
             type="button"
             disabled={paying || typeof pendingPrice !== "number"}
             onClick={() => void startMembershipPayment()}
-            className="mt-5 inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
           >
             {paying
               ? "Confirming…"

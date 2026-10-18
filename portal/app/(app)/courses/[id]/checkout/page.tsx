@@ -99,12 +99,12 @@ function CourseCheckoutInner() {
       </div>
 
       {cancelled ? (
-        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           Checkout was cancelled. You can try again below.
         </div>
       ) : null}
       {error ? (
-        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           <p>{error}</p>
           {/already have this course/i.test(error) ? (
             <Link href="/courses" className="mt-2 inline-flex font-semibold underline">
@@ -115,7 +115,7 @@ function CourseCheckoutInner() {
       ) : null}
 
       {course ? (
-        <section className="rounded-[20px] bg-white p-6 shadow-hopewell">
+        <section className="rounded-none bg-white p-6 shadow-hopewell">
           <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">{course.code}</p>
           <h2 className="mt-1 font-display text-xl font-semibold text-caisbe-text-dark">{course.title}</h2>
           {quote ? (
@@ -135,7 +135,7 @@ function CourseCheckoutInner() {
         <p className="text-sm text-caisbe-muted">Loading course…</p>
       )}
 
-      <section className="rounded-[20px] border-2 border-caisbe-red/30 bg-white p-6 shadow-hopewell">
+      <section className="rounded-none border-2 border-caisbe-red/30 bg-white p-6 shadow-hopewell">
         <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Payment</p>
         <h2 className="mt-1 font-display text-2xl font-semibold text-caisbe-text-dark">Buy this course</h2>
         <p className="mt-2 text-sm leading-6 text-caisbe-muted">
@@ -153,7 +153,7 @@ function CourseCheckoutInner() {
           type="button"
           disabled={busy || !course}
           onClick={() => void buy()}
-          className="mt-5 inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+          className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
         >
           {busy
             ? "Buying…"

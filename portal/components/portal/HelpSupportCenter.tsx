@@ -56,7 +56,7 @@ export function HelpSupportCard() {
           <li key={section.id}>
             <Link
               href={`/support#${section.id}`}
-              className="inline-flex rounded-full border border-ifma-border px-3 py-1.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+              className="inline-flex rounded-none border border-ifma-border px-3 py-1.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
             >
               {section.label}
             </Link>
@@ -163,27 +163,27 @@ export default function HelpSupportCenter() {
           <a
             key={section.id}
             href={`#${section.id}`}
-            className="inline-flex rounded-full border border-ifma-border bg-admin-surface px-3 py-1.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+            className="inline-flex rounded-none border border-ifma-border bg-admin-surface px-3 py-1.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
           >
             {section.label}
           </a>
         ))}
       </nav>
 
-      <section id="faqs" className="scroll-mt-24 rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell">
+      <section id="faqs" className="scroll-mt-24 rounded-none border border-ifma-border bg-admin-surface p-6 shadow-hopewell">
         <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">FAQs</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-caisbe-muted">
           Common questions and answers are already published on the CAISBE Help Desk.
         </p>
         <a
           href={siteUrl("/resources/help-desk")}
-          className="mt-5 inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+          className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
         >
           Open FAQs
         </a>
       </section>
 
-      <section id="technical" className="scroll-mt-24 rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell">
+      <section id="technical" className="scroll-mt-24 rounded-none border border-ifma-border bg-admin-surface p-6 shadow-hopewell">
         <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Technical Support</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-caisbe-muted">
           Choose the problem you are seeing, describe what happened, and submit a ticket.
@@ -223,7 +223,7 @@ export default function HelpSupportCenter() {
           <button
             type="submit"
             disabled={busy === "technical"}
-            className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            className="inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
           >
             {busy === "technical" ? "Submitting…" : "Submit a ticket"}
           </button>
@@ -513,7 +513,7 @@ export default function HelpSupportCenter() {
         ]}
       />
 
-      <section className="overflow-hidden rounded-[20px] border border-ifma-border bg-admin-surface shadow-hopewell">
+      <section className="overflow-hidden rounded-none border border-ifma-border bg-admin-surface shadow-hopewell">
         <div className="border-b border-ifma-border-light px-6 py-4">
           <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Your requests</h2>
           <p className="mt-1 text-sm text-caisbe-muted">Tickets you have already sent to CAISBE.</p>
@@ -593,7 +593,7 @@ function RequestTable({
   submitLabel?: string;
 }) {
   return (
-    <section id={id} className="scroll-mt-24 overflow-hidden rounded-[20px] border border-ifma-border bg-admin-surface shadow-hopewell">
+    <section id={id} className="scroll-mt-24 overflow-hidden rounded-none border border-ifma-border bg-admin-surface shadow-hopewell">
       <div className="border-b border-ifma-border-light px-6 py-4">
         <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">{title}</h2>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-caisbe-muted">{description}</p>
@@ -628,7 +628,7 @@ function RequestTable({
           <button
             type="submit"
             disabled={busy}
-            className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            className="inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
           >
             {busy ? "Submitting…" : submitLabel}
           </button>

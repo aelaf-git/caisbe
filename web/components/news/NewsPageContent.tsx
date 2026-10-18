@@ -73,7 +73,7 @@ export default async function NewsPageContent() {
             {posts.map((post, index) => (
               <article
                 key={post.id}
-                className="overflow-hidden rounded-[20px] bg-white shadow-hopewell"
+                className="overflow-hidden rounded-none bg-white shadow-hopewell"
                 style={{ animationDelay: `${index * 70}ms` }}
               >
                 <div className="grid gap-0 md:grid-cols-[minmax(0,18rem)_1fr]">

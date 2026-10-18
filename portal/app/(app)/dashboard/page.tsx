@@ -32,7 +32,7 @@ function UnreadNotificationsBanner() {
   if (unread <= 0) return null;
 
   return (
-    <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-text">
+    <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-text">
       You have {unread} unread notification{unread === 1 ? "" : "s"}.{" "}
       <Link href="/notifications" className="font-semibold text-caisbe-red hover:underline">
         View notifications
@@ -231,7 +231,7 @@ export default function StudentDashboardPage() {
         actions={
           <Link
             href="/courses"
-            className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+            className="inline-flex h-11 items-center rounded-none bg-caisbe-red px-5 text-sm font-bold text-white hover:bg-caisbe-red-dark"
           >
             Browse courses
           </Link>
@@ -239,7 +239,7 @@ export default function StudentDashboardPage() {
       />
 
       {error ? (
-        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           {error}
         </div>
       ) : null}

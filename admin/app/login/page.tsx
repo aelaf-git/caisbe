@@ -73,7 +73,7 @@ export default function AdminLoginPage() {
       </div>
 
       <div className="flex flex-col justify-center bg-admin-canvas px-4 py-10 sm:px-10 lg:px-16">
-        <div className="mx-auto w-full max-w-md rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-8">
+        <div className="mx-auto w-full max-w-md rounded-none border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-8">
           <BrandLogo priority className="h-20 text-[5rem] sm:h-24 sm:text-[6rem]" />
           <h1 className="font-hopewell-display mt-6 text-2xl font-extrabold tracking-tight text-caisbe-text-dark">
             Admin login

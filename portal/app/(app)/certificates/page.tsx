@@ -60,12 +60,12 @@ export default function StudentCertificatesPage() {
       />
 
       {error ? (
-        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           {error}
         </div>
       ) : null}
 
-      <section className="rounded-[20px] bg-white shadow-hopewell">
+      <section className="rounded-none bg-white shadow-hopewell">
         <div className="border-b border-ifma-border-light px-6 py-4">
           <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Membership</h2>
           <p className="mt-1 text-sm text-caisbe-muted">
@@ -105,7 +105,7 @@ export default function StudentCertificatesPage() {
         )}
       </section>
 
-      <section className="rounded-[20px] bg-white shadow-hopewell">
+      <section className="rounded-none bg-white shadow-hopewell">
         <div className="border-b border-ifma-border-light px-6 py-4">
           <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Course completion</h2>
           <p className="mt-1 text-sm text-caisbe-muted">

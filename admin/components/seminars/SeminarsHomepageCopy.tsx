@@ -118,7 +118,7 @@ export default function SeminarsHomepageCopy() {
           <div
             role="tablist"
             aria-label="Homepage seminars strip language"
-            className="inline-flex rounded-full border border-ifma-border bg-white p-1"
+            className="inline-flex rounded-none border border-ifma-border bg-white p-1"
           >
             {(
               [
@@ -134,7 +134,7 @@ export default function SeminarsHomepageCopy() {
                   role="tab"
                   aria-selected={active}
                   onClick={() => setActiveLang(option.code)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                  className={`rounded-none px-4 py-1.5 text-sm font-semibold transition ${
                     active
                       ? "bg-caisbe-red text-white shadow-sm"
                       : "text-caisbe-text hover:text-caisbe-red"

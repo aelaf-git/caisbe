@@ -31,7 +31,7 @@ export default function AuthNav({ layout = "bar", labels }: AuthNavProps) {
           href={portalMembershipLoginUrl()}
           className={
             stack
-              ? "inline-flex h-11 items-center justify-center rounded-full border border-ifma-border text-sm font-semibold text-caisbe-text transition-colors hover:border-caisbe-red hover:text-caisbe-red"
+              ? "inline-flex h-11 items-center justify-center rounded-none border border-ifma-border text-sm font-semibold text-caisbe-text transition-colors hover:border-caisbe-red hover:text-caisbe-red"
               : "inline-flex h-8 items-center font-medium text-caisbe-text transition-colors hover:text-caisbe-red"
           }
         >
@@ -39,7 +39,7 @@ export default function AuthNav({ layout = "bar", labels }: AuthNavProps) {
         </a>
         <a
           href={portalMembershipRegisterUrl()}
-          className="inline-flex h-9 items-center justify-center rounded-full bg-caisbe-red px-4 text-base font-bold text-white transition hover:bg-caisbe-red-dark"
+          className="inline-flex h-9 items-center justify-center rounded-none bg-caisbe-red px-4 text-base font-bold text-white transition hover:bg-caisbe-red-dark"
         >
           {registerLabel}
         </a>
@@ -54,7 +54,7 @@ export default function AuthNav({ layout = "bar", labels }: AuthNavProps) {
       </span>
       <a
         href={portalUrl("/dashboard")}
-        className="inline-flex h-9 items-center justify-center rounded-full bg-caisbe-red px-4 text-sm font-bold text-white transition hover:bg-caisbe-red-dark"
+        className="inline-flex h-9 items-center justify-center rounded-none bg-caisbe-red px-4 text-sm font-bold text-white transition hover:bg-caisbe-red-dark"
       >
         myCAISBE
       </a>
@@ -67,7 +67,7 @@ export default function AuthNav({ layout = "bar", labels }: AuthNavProps) {
         }}
         className={
           stack
-            ? "inline-flex h-11 items-center justify-center rounded-full border border-ifma-border text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+            ? "inline-flex h-11 items-center justify-center rounded-none border border-ifma-border text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
             : "inline-flex h-8 items-center text-sm font-medium text-caisbe-text hover:text-caisbe-red"
         }
       >

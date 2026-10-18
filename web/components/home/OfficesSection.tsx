@@ -24,7 +24,7 @@ export default function OfficesSection({
           {shown.map((office, index) => (
             <div
               key={office.region}
-              className="overflow-hidden rounded-[20px] bg-white shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in"
+              className="overflow-hidden rounded-none bg-white shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in"
               style={{ animationDelay: `${index * 80}ms` }}
             >
               <div className="aspect-video w-full bg-[#f7f9fa]">

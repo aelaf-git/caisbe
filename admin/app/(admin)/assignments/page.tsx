@@ -130,7 +130,7 @@ export default function AssignmentsPage() {
             key={value}
             type="button"
             onClick={() => setFilter(value)}
-            className={`inline-flex h-10 items-center rounded-full border-2 px-4 text-sm font-bold transition ${
+            className={`inline-flex h-10 items-center rounded-none border-2 px-4 text-sm font-bold transition ${
               filter === value
                 ? "border-caisbe-red bg-caisbe-red text-white"
                 : "border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
@@ -194,7 +194,7 @@ export default function AssignmentsPage() {
                       </p>
                     </div>
                     <span
-                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+                      className={`shrink-0 rounded-none px-3 py-1 text-xs font-bold uppercase tracking-wide ${
                         row.status === "passed"
                           ? "bg-admin-success-soft text-admin-success"
                           : row.status === "failed"

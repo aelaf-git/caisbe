@@ -33,7 +33,7 @@ function ForgotPasswordForm() {
 
   return (
     <section className="flex min-h-screen flex-1 items-center justify-center bg-admin-canvas px-4 py-10">
-      <div className="w-full max-w-md rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-8">
+      <div className="w-full max-w-md rounded-none border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-8">
         <BrandLogo priority className="h-16 text-[4rem] sm:h-20 sm:text-[5rem]" />
         <h1 className="font-hopewell-display mt-6 text-2xl font-extrabold tracking-tight text-caisbe-text-dark">
           Forgot password
@@ -68,14 +68,14 @@ function ForgotPasswordForm() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface-muted px-4 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red"
+                  className="h-12 w-full rounded-none border border-ifma-border bg-admin-surface-muted px-4 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red"
                 />
               </div>
               {error ? <p className="text-sm text-caisbe-red">{error}</p> : null}
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex min-w-[180px] items-center justify-center rounded-full bg-caisbe-red px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark disabled:opacity-60"
+                className="inline-flex min-w-[180px] items-center justify-center rounded-none bg-caisbe-red px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark disabled:opacity-60"
               >
                 {submitting ? "Sending…" : "Send reset link"}
               </button>

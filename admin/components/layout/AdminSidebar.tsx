@@ -148,7 +148,7 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    className={`flex items-center gap-3 rounded-full px-3 py-2.5 text-sm transition-colors ${
+                    className={`flex items-center gap-3 rounded-none px-3 py-2.5 text-sm transition-colors ${
                       active
                         ? "bg-caisbe-red font-semibold text-white"
                         : "text-caisbe-muted hover:bg-admin-surface-muted hover:text-caisbe-text"
@@ -179,7 +179,7 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
           onClick={() => {
             void logout().then(() => router.push("/login"));
           }}
-          className="mt-3 inline-flex items-center justify-center rounded-full border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
+          className="mt-3 inline-flex items-center justify-center rounded-none border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
         >
           Logout
         </button>

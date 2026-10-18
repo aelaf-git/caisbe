@@ -53,7 +53,7 @@ export default async function MagazineSection({
             {issues.map((issue) => (
               <article
                 key={issue.id}
-                className="flex h-full flex-col overflow-hidden rounded-[20px] bg-[#f8fafc] shadow-hopewell transition duration-300 hover:-translate-y-1"
+                className="flex h-full flex-col overflow-hidden rounded-none bg-[#f8fafc] shadow-hopewell transition duration-300 hover:-translate-y-1"
               >
                 {issue.cover_url ? (
                   // eslint-disable-next-line @next/next/no-img-element

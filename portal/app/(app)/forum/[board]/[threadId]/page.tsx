@@ -82,7 +82,7 @@ export default function ForumThreadPage() {
 
       {thread ? (
         <>
-          <article className="rounded-[20px] border border-ifma-border bg-admin-surface px-5 py-4 shadow-hopewell">
+          <article className="rounded-none border border-ifma-border bg-admin-surface px-5 py-4 shadow-hopewell">
             <p className="whitespace-pre-wrap text-sm leading-6 text-caisbe-text">{thread.body}</p>
           </article>
           <section className="space-y-3">
@@ -93,7 +93,7 @@ export default function ForumThreadPage() {
               thread.replies.map((item) => (
                 <article
                   key={item.id}
-                  className="rounded-[20px] border border-ifma-border bg-admin-surface px-5 py-4"
+                  className="rounded-none border border-ifma-border bg-admin-surface px-5 py-4"
                 >
                   <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
                     {item.author_name} · {formatForumTime(item.created_at)}
@@ -104,13 +104,13 @@ export default function ForumThreadPage() {
             )}
           </section>
           {thread.locked ? (
-            <p className="rounded-[20px] border border-ifma-border bg-admin-surface px-5 py-4 text-sm text-caisbe-muted">
+            <p className="rounded-none border border-ifma-border bg-admin-surface px-5 py-4 text-sm text-caisbe-muted">
               This discussion is locked. New replies are closed.
             </p>
           ) : (
             <form
               onSubmit={(event) => void sendReply(event)}
-              className="rounded-[20px] border border-ifma-border bg-admin-surface p-5 shadow-hopewell"
+              className="rounded-none border border-ifma-border bg-admin-surface p-5 shadow-hopewell"
             >
               <label className="block text-sm font-semibold text-caisbe-text">
                 Reply

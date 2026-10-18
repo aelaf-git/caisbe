@@ -28,7 +28,7 @@ export default async function PartnersPageContent() {
           {benefits.map((benefit) => (
             <li
               key={benefit.title}
-              className="rounded-[20px] bg-white px-5 py-5 shadow-hopewell"
+              className="rounded-none bg-white px-5 py-5 shadow-hopewell"
             >
               <h3 className="font-hopewell-display text-lg font-bold text-caisbe-text-dark">
                 {benefit.title}
@@ -44,7 +44,7 @@ export default async function PartnersPageContent() {
           {steps.map((step, index) => (
             <li
               key={step.title}
-              className="rounded-[20px] bg-white px-5 py-5 shadow-hopewell"
+              className="rounded-none bg-white px-5 py-5 shadow-hopewell"
             >
               <p className="text-xs font-bold uppercase tracking-wider text-caisbe-red">
                 {t("Step", "Étape")} {index + 1}

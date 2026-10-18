@@ -88,7 +88,7 @@ export default async function SeminarsSection({
                 <Link
                   key={seminar.id}
                   href={`/professional-development/seminars/${seminar.id}/register`}
-                  className={`group relative flex h-full min-h-[18rem] flex-col overflow-hidden rounded-[20px] shadow-hopewell transition duration-300 hover:-translate-y-1 ${
+                  className={`group relative flex h-full min-h-[18rem] flex-col overflow-hidden rounded-none shadow-hopewell transition duration-300 hover:-translate-y-1 ${
                     coverUrl
                       ? "bg-caisbe-text-dark"
                       : "bg-gradient-to-br from-[#3d3832] via-[#5c1a2e] to-[#7b1e3a]"

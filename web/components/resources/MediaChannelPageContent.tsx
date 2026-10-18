@@ -112,7 +112,7 @@ export default function MediaChannelPageContent({
                 return (
                   <article
                     key={row.id}
-                    className="flex flex-col overflow-hidden rounded-[20px] bg-white shadow-hopewell"
+                    className="flex flex-col overflow-hidden rounded-none bg-white shadow-hopewell"
                   >
                     {row.cover_url ? (
                       // eslint-disable-next-line @next/next/no-img-element

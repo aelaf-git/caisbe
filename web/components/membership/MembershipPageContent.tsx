@@ -54,7 +54,7 @@ export function BecomeAMemberContent({
         lead={lead ?? page.description}
       />
       <ContentSection wide>
-        <div className="mx-auto max-w-2xl rounded-[20px] bg-white p-8 text-center shadow-hopewell">
+        <div className="mx-auto max-w-2xl rounded-none bg-white p-8 text-center shadow-hopewell">
           <h2 className="font-hopewell-display text-2xl font-extrabold text-caisbe-text-dark">
             {t("Login or create your student account", "Connectez-vous ou créez votre compte étudiant")}
           </h2>

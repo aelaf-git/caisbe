@@ -23,8 +23,8 @@ export function buttonStyles({
       "border-2 border-caisbe-red bg-caisbe-red text-white hover:border-caisbe-red-dark hover:bg-caisbe-red-dark focus-visible:ring-caisbe-red/25",
   };
   const sizes: Record<ButtonSize, string> = {
-    sm: "h-9 gap-2 rounded-full px-4 text-xs",
-    md: "h-11 gap-2 rounded-full px-6 text-sm",
+    sm: "h-9 gap-2 rounded-none px-4 text-xs",
+    md: "h-11 gap-2 rounded-none px-6 text-sm",
   };
 
   return `inline-flex items-center justify-center font-bold transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-50 ${sizes[size]} ${variants[variant]} ${className}`;

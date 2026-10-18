@@ -105,7 +105,7 @@ function PortalLoginForm() {
       </div>
 
       <div className="flex flex-col justify-center bg-admin-canvas px-4 py-10 sm:px-10 lg:px-16">
-        <div className="mx-auto w-full max-w-md rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-8">
+        <div className="mx-auto w-full max-w-md rounded-none border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-8">
           <BrandLogo priority className="h-20 text-[5rem] sm:h-24 sm:text-[6rem]" />
           <h1 className="font-hopewell-display mt-6 text-2xl font-extrabold tracking-tight text-caisbe-text-dark">
             Sign in to myCAISBE
@@ -123,7 +123,7 @@ function PortalLoginForm() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface-muted px-4 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red"
+                className="h-12 w-full rounded-none border border-ifma-border bg-admin-surface-muted px-4 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red"
               />
             </div>
             <div>
@@ -138,7 +138,7 @@ function PortalLoginForm() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 w-full rounded-full border border-ifma-border bg-admin-surface-muted px-4 pr-12 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red"
+                  className="h-12 w-full rounded-none border border-ifma-border bg-admin-surface-muted px-4 pr-12 text-sm text-caisbe-text outline-none placeholder:text-caisbe-muted/70 focus:border-caisbe-red"
                 />
                 <button
                   type="button"
@@ -211,7 +211,7 @@ function PortalLoginForm() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex min-w-[180px] items-center justify-center rounded-full bg-caisbe-red px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark disabled:opacity-60"
+                className="inline-flex min-w-[180px] items-center justify-center rounded-none bg-caisbe-red px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-caisbe-red-dark disabled:opacity-60"
               >
                 {submitting ? "Signing in…" : "Sign in"}
               </button>

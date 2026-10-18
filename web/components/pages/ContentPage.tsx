@@ -112,7 +112,7 @@ export function FeatureList({
       {items.map((item) => (
         <li
           key={item}
-          className={`flex min-h-14 w-full items-center rounded-[20px] border border-black/5 bg-white px-5 py-4 text-base font-medium leading-7 shadow-hopewell sm:[&:last-child:nth-child(odd)]:col-span-2 sm:text-lg sm:leading-8 ${color}`}
+          className={`flex min-h-14 w-full items-center rounded-none border border-black/5 bg-white px-5 py-4 text-base font-medium leading-7 shadow-hopewell sm:[&:last-child:nth-child(odd)]:col-span-2 sm:text-lg sm:leading-8 ${color}`}
         >
           {item}
         </li>
@@ -150,7 +150,7 @@ export function ContentCard({
   return (
     <article
       style={style}
-      className={`flex flex-col overflow-hidden rounded-[20px] bg-white shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in ${className}`}
+      className={`flex flex-col overflow-hidden rounded-none bg-white shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in ${className}`}
     >
       {cover ? (
         // eslint-disable-next-line @next/next/no-img-element

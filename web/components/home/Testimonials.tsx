@@ -46,7 +46,7 @@ export default async function Testimonials({
           {items.map((item) => (
             <blockquote
               key={item.id}
-              className="flex h-full flex-col rounded-[20px] bg-white p-6 shadow-hopewell transition duration-300 hover:-translate-y-1 md:p-8"
+              className="flex h-full flex-col rounded-none bg-white p-6 shadow-hopewell transition duration-300 hover:-translate-y-1 md:p-8"
             >
               <p className="flex-1 text-base leading-7 text-caisbe-text md:text-lg">
                 &ldquo;{item.quote}&rdquo;

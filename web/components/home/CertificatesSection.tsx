@@ -60,7 +60,7 @@ export default async function CertificatesSection({
               <Link
                 key={course.id}
                 href={courseProgramPath(course.slug)}
-                className="flex h-full flex-col overflow-hidden rounded-[20px] bg-[#f8fafc] shadow-hopewell transition duration-300 hover:-translate-y-1"
+                className="flex h-full flex-col overflow-hidden rounded-none bg-[#f8fafc] shadow-hopewell transition duration-300 hover:-translate-y-1"
               >
                 {course.cover_url ? (
                   // eslint-disable-next-line @next/next/no-img-element

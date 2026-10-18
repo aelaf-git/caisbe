@@ -185,8 +185,8 @@ export default function ContactMessagesManager({
   if (loading) {
     return (
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <Skeleton className="h-80 rounded-[20px]" />
-        <Skeleton className="h-80 rounded-[20px]" />
+        <Skeleton className="h-80 rounded-none" />
+        <Skeleton className="h-80 rounded-none" />
       </div>
     );
   }
@@ -214,7 +214,7 @@ export default function ContactMessagesManager({
               key={id}
               type="button"
               onClick={() => setStatusFilter(id)}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
+              className={`inline-flex items-center gap-2 rounded-none px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
                 active
                   ? "bg-caisbe-red text-white"
                   : "bg-admin-surface-muted text-caisbe-muted hover:text-caisbe-text"
@@ -332,7 +332,7 @@ export default function ContactMessagesManager({
                 <Badge tone={STATUS_TONES[selected.status] ?? "neutral"}>{selected.status}</Badge>
               </div>
 
-              <dl className="grid gap-3 rounded-[16px] bg-admin-surface-muted/70 px-4 py-3 text-sm sm:grid-cols-2">
+              <dl className="grid gap-3 rounded-none bg-admin-surface-muted/70 px-4 py-3 text-sm sm:grid-cols-2">
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-caisbe-muted">Company</dt>
                   <dd className="mt-0.5 font-medium text-caisbe-text">{selected.company || "—"}</dd>
@@ -349,7 +349,7 @@ export default function ContactMessagesManager({
 
               <div>
                 <p className="text-sm font-semibold text-caisbe-text-dark">Message</p>
-                <p className="mt-2 whitespace-pre-wrap rounded-[16px] border border-ifma-border-light bg-admin-surface-muted px-4 py-3 text-sm leading-6 text-caisbe-text">
+                <p className="mt-2 whitespace-pre-wrap rounded-none border border-ifma-border-light bg-admin-surface-muted px-4 py-3 text-sm leading-6 text-caisbe-text">
                   {selected.comments}
                 </p>
               </div>
@@ -357,7 +357,7 @@ export default function ContactMessagesManager({
               {selected.admin_reply ? (
                 <div>
                   <p className="text-sm font-semibold text-caisbe-text-dark">Previous reply</p>
-                  <p className="mt-2 whitespace-pre-wrap rounded-[16px] border border-caisbe-red/15 bg-caisbe-red/5 px-4 py-3 text-sm leading-6 text-caisbe-text">
+                  <p className="mt-2 whitespace-pre-wrap rounded-none border border-caisbe-red/15 bg-caisbe-red/5 px-4 py-3 text-sm leading-6 text-caisbe-text">
                     {selected.admin_reply}
                   </p>
                   {selected.replied_at ? (

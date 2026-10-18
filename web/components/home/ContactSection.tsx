@@ -137,7 +137,7 @@ export default function ContactSection({
             />
           </div>
           <div
-            className="rounded-[20px] bg-white p-5 shadow-hopewell motion-safe:animate-page-fade-in md:p-8"
+            className="rounded-none bg-white p-5 shadow-hopewell motion-safe:animate-page-fade-in md:p-8"
             style={{ animationDelay: "120ms" }}
           >
             <ContactForm cta={shownCta} heading={shownFormHeading} labels={labels?.form} />
@@ -168,7 +168,7 @@ export default function ContactSection({
             {shownOffices.map((office, index) => (
               <div
                 key={office.region}
-                className="overflow-hidden rounded-[20px] bg-white shadow-hopewell motion-safe:animate-page-fade-in"
+                className="overflow-hidden rounded-none bg-white shadow-hopewell motion-safe:animate-page-fade-in"
                 style={{ animationDelay: `${index * 70}ms` }}
               >
                 <div className="aspect-[16/10] w-full bg-[#fafafa]">

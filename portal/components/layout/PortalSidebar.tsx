@@ -226,7 +226,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
             <div className="space-y-1">
               {group.items.map((item) => {
                 const active = item.externalPath ? false : isActive(pathname, item);
-                const className = `flex items-center justify-between gap-2 rounded-full px-3 py-2.5 text-sm transition-colors ${
+                const className = `flex items-center justify-between gap-2 rounded-none px-3 py-2.5 text-sm transition-colors ${
                   active
                     ? "bg-caisbe-red font-semibold text-white"
                     : "text-caisbe-muted hover:bg-admin-surface-muted hover:text-caisbe-text"
@@ -291,7 +291,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
         </div>
         <a
           href={siteUrl("/")}
-          className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-ifma-border px-4 py-2 text-sm font-semibold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-none border border-ifma-border px-4 py-2 text-sm font-semibold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
         >
           Main page
         </a>
@@ -300,7 +300,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
           onClick={() => {
             void logout().then(() => router.push("/login"));
           }}
-          className="mt-3 inline-flex w-full items-center justify-center rounded-full border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-none border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
         >
           Logout
         </button>

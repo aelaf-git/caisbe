@@ -66,7 +66,7 @@ export default function FormsGuidesPageContent({
                 : "Forms and guides will appear here once published in the admin media library."}
             </p>
           ) : (
-            <ul className="mt-8 divide-y divide-ifma-border-light overflow-hidden rounded-[20px] bg-white shadow-hopewell">
+            <ul className="mt-8 divide-y divide-ifma-border-light overflow-hidden rounded-none bg-white shadow-hopewell">
               {items.map((item) => (
                 <li
                   key={item.id}

@@ -193,7 +193,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
       >
         {coverUrl ? (
           <figure className="mt-8 max-w-3xl">
-            <div className="overflow-hidden rounded-[20px] bg-caisbe-text-dark shadow-hopewell ring-1 ring-black/5">
+            <div className="overflow-hidden rounded-none bg-caisbe-text-dark shadow-hopewell ring-1 ring-black/5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={coverUrl}
@@ -264,7 +264,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
                 <button
                   type="submit"
                   disabled={gateBusy}
-                  className="inline-flex w-full items-center justify-center rounded-full bg-caisbe-red px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
+                  className="inline-flex w-full items-center justify-center rounded-none bg-caisbe-red px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
                 >
                   {gateBusy ? "Sending…" : "Send registration link"}
                 </button>
@@ -483,7 +483,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
                   </label>
                 </fieldset>
 
-                <div className="rounded-[20px] border border-ifma-border bg-[#fafafa] p-4 sm:p-6">
+                <div className="rounded-none border border-ifma-border bg-[#fafafa] p-4 sm:p-6">
                   <h3 className="font-hopewell-display text-lg font-bold text-caisbe-text-dark">
                     Investment
                   </h3>
@@ -528,7 +528,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex w-full items-center justify-center rounded-full bg-caisbe-red px-6 py-3 text-sm font-semibold text-white transition hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
+                  className="inline-flex w-full items-center justify-center rounded-none bg-caisbe-red px-6 py-3 text-sm font-semibold text-white transition hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
                 >
                   {submitting ? "Submitting…" : `Continue to payment (${formatUsd(selectedRate)})`}
                 </button>

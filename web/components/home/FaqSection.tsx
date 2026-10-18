@@ -28,7 +28,7 @@ export default function FaqSection() {
           {faqs.map((faq) => (
             <details
               key={faq.question}
-              className="group rounded-[20px] bg-white shadow-hopewell"
+              className="group rounded-none bg-white shadow-hopewell"
             >
               <summary className="flex cursor-pointer list-none items-center gap-4 px-5 py-5 text-left marker:content-none [&::-webkit-details-marker]:hidden">
                 <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-caisbe-red/10 text-caisbe-red transition-transform group-open:rotate-180">

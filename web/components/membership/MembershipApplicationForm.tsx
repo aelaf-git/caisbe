@@ -233,7 +233,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
   return (
     <form
       onSubmit={(e) => void submit(e)}
-      className="mt-8 rounded-[20px] bg-white p-6 shadow-hopewell md:p-8"
+      className="mt-8 rounded-none bg-white p-6 shadow-hopewell md:p-8"
     >
       <h2 className="font-hopewell-display text-3xl font-extrabold tracking-tight text-caisbe-text-dark">
         {title}
@@ -250,7 +250,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
         <button
           type="button"
           onClick={() => setMode("online")}
-          className={`rounded-full border-2 px-4 py-3 text-left text-sm font-semibold ${
+          className={`rounded-none border-2 px-4 py-3 text-left text-sm font-semibold ${
             mode === "online"
               ? "border-caisbe-red bg-caisbe-red/5 text-caisbe-red"
               : "border-ifma-border text-caisbe-text hover:border-caisbe-red"
@@ -261,7 +261,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
         <button
           type="button"
           onClick={() => setMode("upload")}
-          className={`rounded-full border-2 px-4 py-3 text-left text-sm font-semibold ${
+          className={`rounded-none border-2 px-4 py-3 text-left text-sm font-semibold ${
             mode === "upload"
               ? "border-caisbe-red bg-caisbe-red/5 text-caisbe-red"
               : "border-ifma-border text-caisbe-text hover:border-caisbe-red"
@@ -272,7 +272,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       </div>
 
       {mode === "upload" ? (
-        <div className="mt-4 rounded-[20px] bg-[#f8fafc] px-4 py-4 text-sm text-caisbe-text">
+        <div className="mt-4 rounded-none bg-[#f8fafc] px-4 py-4 text-sm text-caisbe-text">
           <p className="font-semibold text-caisbe-text-dark">
             {isRenewal ? "Renewal form" : "Membership form"}
           </p>
@@ -313,7 +313,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
               type="file"
               accept=".pdf,.doc,.docx,application/pdf"
               required
-              className="mt-2 block w-full text-sm font-normal text-caisbe-text file:mr-3 file:rounded-full file:border-0 file:bg-caisbe-red file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+              className="mt-2 block w-full text-sm font-normal text-caisbe-text file:mr-3 file:rounded-none file:border-0 file:bg-caisbe-red file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </label>
@@ -446,7 +446,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
       ) : null}
 
       {mode === "online" ? (
-      <label className="mt-8 flex gap-3 rounded-[20px] bg-caisbe-text-dark px-4 py-4 text-sm leading-6 text-white">
+      <label className="mt-8 flex gap-3 rounded-none bg-caisbe-text-dark px-4 py-4 text-sm leading-6 text-white">
         <input
           type="checkbox"
           className="mt-1 h-4 w-4 accent-caisbe-red"
@@ -461,7 +461,7 @@ export default function MembershipApplicationForm({ kind }: { kind: Kind }) {
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+          className="inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
         >
           {busy
             ? "Submitting…"

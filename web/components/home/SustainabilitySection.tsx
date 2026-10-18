@@ -33,7 +33,7 @@ export default function SustainabilitySection({
           {cards.map((item, index) => (
             <article
               key={item.title}
-              className="rounded-[20px] bg-white p-6 text-left shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in"
+              className="rounded-none bg-white p-6 text-left shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in"
               style={{ animationDelay: `${index * 70}ms` }}
             >
               <h3 className="font-hopewell-display text-lg font-bold text-caisbe-text-dark">

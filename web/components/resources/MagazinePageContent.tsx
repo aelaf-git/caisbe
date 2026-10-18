@@ -62,7 +62,7 @@ export default function MagazinePageContent({
               {issues.map((issue) => (
                 <article
                   key={issue.id}
-                  className="flex flex-col overflow-hidden rounded-[20px] bg-white shadow-hopewell"
+                  className="flex flex-col overflow-hidden rounded-none bg-white shadow-hopewell"
                 >
                   {issue.cover_url ? (
                     // eslint-disable-next-line @next/next/no-img-element

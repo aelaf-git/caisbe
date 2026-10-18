@@ -21,7 +21,7 @@ export default function CoursePlayerHeader({
       <div className="flex flex-wrap items-center gap-3 px-4 py-3 md:px-6">
         <Link
           href="/courses"
-          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border-2 border-ifma-border px-4 text-sm font-bold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
+          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-none border-2 border-ifma-border px-4 text-sm font-bold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
         >
           <svg
             className="h-4 w-4"
@@ -43,7 +43,7 @@ export default function CoursePlayerHeader({
           <button
             type="button"
             onClick={onToggleOutline}
-            className="inline-flex h-10 items-center gap-2 rounded-full border-2 border-ifma-border px-4 text-sm font-bold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
+            className="inline-flex h-10 items-center gap-2 rounded-none border-2 border-ifma-border px-4 text-sm font-bold text-caisbe-text transition hover:border-caisbe-red hover:text-caisbe-red"
             aria-expanded={outlineOpen}
             aria-controls="course-outline-panel"
             title={outlineOpen ? "Hide course content" : "Show course content"}
@@ -92,7 +92,7 @@ export default function CoursePlayerHeader({
         {certificateCode ? (
           <Link
             href={`/certificates/${certificateCode}`}
-            className="shrink-0 rounded-full border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
+            className="shrink-0 rounded-none border-2 border-caisbe-red px-4 py-2 text-sm font-bold text-caisbe-red transition hover:bg-caisbe-red hover:text-white"
           >
             Certificate
           </Link>

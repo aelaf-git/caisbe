@@ -258,7 +258,7 @@ export default function BlogManager({
             ) : null}
             {coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={coverUrl} alt="" className="mt-3 aspect-[16/9] max-w-md rounded-[16px] object-cover" />
+              <img src={coverUrl} alt="" className="mt-3 aspect-[16/9] max-w-md rounded-none object-cover" />
             ) : null}
           </FormField>
           <label className="flex items-center gap-2 text-sm font-medium text-caisbe-text">

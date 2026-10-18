@@ -60,12 +60,12 @@ function SuccessInner() {
       <PageHeader eyebrow="Checkout" title={headline} description={body} />
 
       {error ? (
-        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           {error}
         </div>
       ) : null}
 
-      <section className="rounded-[20px] bg-white p-6 shadow-hopewell">
+      <section className="rounded-none bg-white p-6 shadow-hopewell">
         {order ? (
           <div className="space-y-4">
             <p className="text-sm text-caisbe-muted">
@@ -93,7 +93,7 @@ function SuccessInner() {
           {order ? (
             <Link
               href={`/account/receipts/${encodeURIComponent(order.number)}`}
-              className="inline-flex h-11 items-center rounded-full border-2 border-ifma-border bg-white px-6 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+              className="inline-flex h-11 items-center rounded-none border-2 border-ifma-border bg-white px-6 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
             >
               View receipt
             </Link>
@@ -101,14 +101,14 @@ function SuccessInner() {
           {isMembership ? (
             <Link
               href="/membership"
-              className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+              className="inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark"
             >
               View membership
             </Link>
           ) : (
             <Link
               href="/courses"
-              className="inline-flex h-11 items-center rounded-full bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark"
+              className="inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark"
             >
               Go to my courses
             </Link>

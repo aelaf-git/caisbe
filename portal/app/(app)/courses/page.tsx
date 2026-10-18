@@ -63,7 +63,7 @@ export default function StudentCoursesPage() {
         actions={
           <Link
             href="/cart"
-            className="inline-flex h-11 items-center rounded-full border-2 border-ifma-border px-5 text-sm font-bold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+            className="inline-flex h-11 items-center rounded-none border-2 border-ifma-border px-5 text-sm font-bold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
           >
             View cart
           </Link>
@@ -71,7 +71,7 @@ export default function StudentCoursesPage() {
       />
 
       {error ? (
-        <div className="rounded-[20px] border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           {error}
         </div>
       ) : null}

@@ -15,7 +15,7 @@ function ResourceChip({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center rounded-full border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
+      className="inline-flex items-center rounded-none border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red"
     >
       {label}
     </a>
