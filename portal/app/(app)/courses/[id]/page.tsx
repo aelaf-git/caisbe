@@ -246,7 +246,7 @@ export default function CoursePlayerPage() {
         </p>
       ) : null}
 
-      <div className="relative flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 min-w-0 flex-1 overflow-x-hidden">
         <aside
           id="course-outline-panel"
           className={`z-10 overflow-hidden border-ifma-border-light bg-white transition-[width,transform,opacity] duration-200 ease-out ${

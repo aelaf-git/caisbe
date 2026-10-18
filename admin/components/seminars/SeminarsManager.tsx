@@ -538,7 +538,7 @@ export default function SeminarsManager({
               <ul className="mt-4 divide-y divide-ifma-border">
                 {registrations.map((row) => (
                   <li key={row.id} className="py-3 text-sm">
-                    <p className="font-semibold text-caisbe-text-dark">
+                    <p className="break-words font-semibold text-caisbe-text-dark">
                       {row.first_name} {row.last_name} · {row.email}
                     </p>
                     <p className="mt-1 text-caisbe-muted">

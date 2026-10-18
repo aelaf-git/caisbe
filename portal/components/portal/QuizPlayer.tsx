@@ -112,7 +112,7 @@ export default function QuizPlayer({
           const review = reviews.find((item) => Number(item.question_id) === Number(question.id));
           return (
             <fieldset key={question.id ?? question.prompt} className="space-y-3" disabled={revealed && !canRetry}>
-              <legend className="text-sm font-semibold text-caisbe-text-dark">
+              <legend className="text-sm font-semibold break-words text-caisbe-text-dark">
                 <span className="mr-2 text-caisbe-muted">{index + 1}.</span>
                 {question.prompt}
               </legend>

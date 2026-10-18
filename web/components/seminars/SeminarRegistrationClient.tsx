@@ -190,23 +190,23 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
         backHref="/professional-development"
         backLabel="Back to professional development"
       >
-        <dl className="mt-6 max-w-3xl space-y-2 text-sm leading-6 text-caisbe-text">
+        <dl className="mt-6 max-w-3xl space-y-3 text-sm leading-6 text-caisbe-text">
           {seminar.event_date_label ? (
             <div>
-              <dt className="inline font-semibold text-caisbe-text-dark">Date: </dt>
-              <dd className="inline">{seminar.event_date_label}</dd>
+              <dt className="font-semibold text-caisbe-text-dark">Date</dt>
+              <dd className="mt-0.5 break-words">{seminar.event_date_label}</dd>
             </div>
           ) : null}
           {seminar.event_time_label ? (
             <div>
-              <dt className="inline font-semibold text-caisbe-text-dark">Time: </dt>
-              <dd className="inline">{seminar.event_time_label}</dd>
+              <dt className="font-semibold text-caisbe-text-dark">Time</dt>
+              <dd className="mt-0.5 break-words">{seminar.event_time_label}</dd>
             </div>
           ) : null}
           {seminar.event_format_label ? (
             <div>
-              <dt className="inline font-semibold text-caisbe-text-dark">Format: </dt>
-              <dd className="inline">{seminar.event_format_label}</dd>
+              <dt className="font-semibold text-caisbe-text-dark">Format</dt>
+              <dd className="mt-0.5 break-words">{seminar.event_format_label}</dd>
             </div>
           ) : null}
         </dl>
@@ -246,7 +246,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
                 <button
                   type="submit"
                   disabled={gateBusy}
-                  className="inline-flex items-center rounded-full bg-caisbe-red px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-caisbe-red-dark disabled:opacity-60"
+                  className="inline-flex w-full items-center justify-center rounded-full bg-caisbe-red px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
                 >
                   {gateBusy ? "Sending…" : "Send registration link"}
                 </button>
@@ -311,7 +311,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
                     Company / organization name *
                     <input required className={fieldClass} value={company} onChange={(e) => setCompany(e.target.value)} />
                   </label>
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <label className="block text-sm font-semibold">
                       City *
                       <input required className={fieldClass} value={city} onChange={(e) => setCity(e.target.value)} />
@@ -320,7 +320,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
                       State / province *
                       <input required className={fieldClass} value={stateProvince} onChange={(e) => setStateProvince(e.target.value)} />
                     </label>
-                    <label className="block text-sm font-semibold">
+                    <label className="block text-sm font-semibold sm:col-span-2 lg:col-span-1">
                       Country *
                       <input required className={fieldClass} value={country} onChange={(e) => setCountry(e.target.value)} />
                     </label>
@@ -465,32 +465,34 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
                   </label>
                 </fieldset>
 
-                <div className="rounded-[20px] border border-ifma-border bg-[#fafafa] p-6">
+                <div className="rounded-[20px] border border-ifma-border bg-[#fafafa] p-4 sm:p-6">
                   <h3 className="font-hopewell-display text-lg font-bold text-caisbe-text-dark">
                     Investment
                   </h3>
-                  <table className="mt-4 w-full max-w-md text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-ifma-border text-caisbe-muted">
-                        <th className="py-2 font-semibold">Registration category</th>
-                        <th className="py-2 font-semibold">Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-caisbe-text">
-                      <tr className="border-b border-ifma-border/70">
-                        <td className="py-2">Association member</td>
-                        <td className="py-2 font-semibold">{formatUsd(memberCents)}</td>
-                      </tr>
-                      <tr className="border-b border-ifma-border/70">
-                        <td className="py-2">Non-member</td>
-                        <td className="py-2 font-semibold">{formatUsd(nonMemberCents)}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2">Student / emerging professional</td>
-                        <td className="py-2 font-semibold">{formatUsd(studentCents)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full min-w-[16rem] max-w-md text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-ifma-border text-caisbe-muted">
+                          <th className="py-2 pr-4 font-semibold">Registration category</th>
+                          <th className="py-2 font-semibold">Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-caisbe-text">
+                        <tr className="border-b border-ifma-border/70">
+                          <td className="py-2 pr-4">Association member</td>
+                          <td className="py-2 font-semibold">{formatUsd(memberCents)}</td>
+                        </tr>
+                        <tr className="border-b border-ifma-border/70">
+                          <td className="py-2 pr-4">Non-member</td>
+                          <td className="py-2 font-semibold">{formatUsd(nonMemberCents)}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 pr-4">Student / emerging professional</td>
+                          <td className="py-2 font-semibold">{formatUsd(studentCents)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                   <p className="mt-4 text-sm text-caisbe-text">
                     Your selected rate: <strong>{formatUsd(selectedRate)}</strong>
                   </p>
@@ -508,7 +510,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center rounded-full bg-caisbe-red px-6 py-3 text-sm font-semibold text-white transition hover:bg-caisbe-red-dark disabled:opacity-60"
+                  className="inline-flex w-full items-center justify-center rounded-full bg-caisbe-red px-6 py-3 text-sm font-semibold text-white transition hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
                 >
                   {submitting ? "Submitting…" : `Continue to payment (${formatUsd(selectedRate)})`}
                 </button>

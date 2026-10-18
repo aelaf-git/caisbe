@@ -34,11 +34,11 @@ export function PageHero({
         <p className="inline-flex max-w-full rounded-full bg-caisbe-red/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-caisbe-red-dark sm:px-4">
           {eyebrow}
         </p>
-        <h1 className="font-hopewell-display mt-4 max-w-3xl text-2xl font-extrabold tracking-tight text-caisbe-text-dark sm:text-3xl md:text-4xl">
+        <h1 className="font-hopewell-display mt-4 max-w-3xl break-words text-2xl font-extrabold tracking-tight text-caisbe-text-dark sm:text-3xl md:text-4xl">
           {title}
         </h1>
         {lead ? (
-          <p className="mt-4 max-w-2xl text-base leading-7 text-caisbe-text sm:mt-6 sm:text-lg sm:leading-8">
+          <p className="mt-4 max-w-2xl break-words text-base leading-7 text-caisbe-text sm:mt-6 sm:text-lg sm:leading-8">
             {lead}
           </p>
         ) : null}

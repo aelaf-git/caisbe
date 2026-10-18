@@ -144,12 +144,12 @@ export default function LessonStage({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
         <button
           type="button"
           disabled={!hasPrev}
           onClick={onPrev}
-          className="rounded-md border border-ifma-border bg-admin-surface px-4 py-2.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red disabled:opacity-40"
+          className="w-full rounded-md border border-ifma-border bg-admin-surface px-4 py-2.5 text-sm font-semibold text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red disabled:opacity-40 sm:w-auto sm:justify-self-start"
         >
           Previous
         </button>
@@ -160,8 +160,8 @@ export default function LessonStage({
             onClick={onToggleTopicComplete}
             className={
               activeTopic.completed
-                ? "rounded-md border-2 border-ifma-border bg-admin-surface px-6 py-2.5 text-sm font-semibold uppercase text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red disabled:opacity-60"
-                : "rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+                ? "w-full rounded-md border-2 border-ifma-border bg-admin-surface px-6 py-2.5 text-sm font-semibold uppercase text-caisbe-text hover:border-caisbe-red hover:text-caisbe-red disabled:opacity-60 sm:w-auto sm:justify-self-center"
+                : "w-full rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto sm:justify-self-center"
             }
           >
             {busy
@@ -171,13 +171,13 @@ export default function LessonStage({
                 : "Mark topic complete"}
           </button>
         ) : (
-          <span />
+          <span className="hidden sm:block" />
         )}
         <button
           type="button"
           disabled={!hasNext}
           onClick={onNext}
-          className="rounded-md border-2 border-caisbe-red bg-admin-surface px-4 py-2.5 text-sm font-semibold text-caisbe-red hover:bg-caisbe-red hover:text-white disabled:opacity-40"
+          className="w-full rounded-md border-2 border-caisbe-red bg-admin-surface px-4 py-2.5 text-sm font-semibold text-caisbe-red hover:bg-caisbe-red hover:text-white disabled:opacity-40 sm:w-auto sm:justify-self-end"
         >
           Next
         </button>

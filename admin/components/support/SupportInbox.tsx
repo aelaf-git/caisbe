@@ -249,19 +249,22 @@ export default function SupportInbox() {
                   Conversation closed. Reopen to reply.
                 </p>
               ) : (
-                <form onSubmit={(e) => void sendReply(e)} className="flex gap-2 border-t border-ifma-border p-4">
+                <form
+                  onSubmit={(e) => void sendReply(e)}
+                  className="flex flex-col gap-2 border-t border-ifma-border p-4 sm:flex-row sm:items-end"
+                >
                   <textarea
                     required
                     rows={2}
                     value={reply}
                     onChange={(e) => setReply(e.target.value)}
                     placeholder="Reply to student…"
-                    className="min-h-[44px] flex-1 rounded-md border border-ifma-border bg-admin-canvas px-3 py-2 text-sm"
+                    className="min-h-[44px] min-w-0 flex-1 rounded-md border border-ifma-border bg-admin-canvas px-3 py-2 text-sm"
                   />
                   <button
                     type="submit"
                     disabled={busy || !reply.trim()}
-                    className="self-end rounded-md border-2 border-caisbe-red bg-caisbe-red px-4 py-2 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+                    className="w-full self-end rounded-md border-2 border-caisbe-red bg-caisbe-red px-4 py-2 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60 sm:w-auto"
                   >
                     Send
                   </button>

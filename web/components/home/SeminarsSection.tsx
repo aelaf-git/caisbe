@@ -106,12 +106,16 @@ export default async function SeminarsSection({
                     className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-black/10"
                     aria-hidden
                   />
-                  <div className="relative flex h-full flex-col px-5 pb-5 pt-6 text-left text-white">
+                  <div className="relative flex h-full min-w-0 flex-col px-5 pb-5 pt-6 text-left text-white">
                     <div className="space-y-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-white/90">
-                      {seminar.event_date_label ? <p>{seminar.event_date_label}</p> : null}
-                      {seminar.event_format_label ? <p>{seminar.event_format_label}</p> : null}
+                      {seminar.event_date_label ? (
+                        <p className="line-clamp-2 break-words">{seminar.event_date_label}</p>
+                      ) : null}
+                      {seminar.event_format_label ? (
+                        <p className="line-clamp-2 break-words">{seminar.event_format_label}</p>
+                      ) : null}
                     </div>
-                    <h3 className="mt-auto pt-10 font-hopewell-display text-xl font-bold leading-snug">
+                    <h3 className="mt-auto pt-10 font-hopewell-display text-xl font-bold leading-snug break-words">
                       {seminar.title}
                     </h3>
                     <p className="mt-4 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-white/85">
