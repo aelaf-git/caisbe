@@ -180,6 +180,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
   }
 
   const unlocked = Boolean(accessToken && verifiedEmail);
+  const coverUrl = seminar.cover_url?.trim() || null;
 
   return (
     <>
@@ -190,7 +191,24 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
         backHref="/professional-development"
         backLabel="Back to professional development"
       >
-        <dl className="mt-6 max-w-3xl space-y-3 text-sm leading-6 text-caisbe-text">
+        {coverUrl ? (
+          <figure className="mt-8 max-w-3xl">
+            <div className="overflow-hidden rounded-[20px] bg-caisbe-text-dark shadow-hopewell ring-1 ring-black/5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverUrl}
+                alt=""
+                draggable={false}
+                className="aspect-[16/9] w-full object-cover"
+              />
+            </div>
+          </figure>
+        ) : null}
+        <dl
+          className={`max-w-3xl space-y-3 text-sm leading-6 text-caisbe-text ${
+            coverUrl ? "mt-8" : "mt-6"
+          }`}
+        >
           {seminar.event_date_label ? (
             <div>
               <dt className="font-semibold text-caisbe-text-dark">Date</dt>
