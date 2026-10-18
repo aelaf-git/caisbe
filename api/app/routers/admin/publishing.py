@@ -98,9 +98,12 @@ from app.schemas.media import (
     MediaAssetOut,
     MediaAssetUpdateIn,
     NewsletterCampaignOut,
+    NewsletterPreviewIn,
+    NewsletterPreviewOut,
     NewsletterSendIn,
     NewsletterSendOut,
     NewsletterSubscriberOut,
+    NewsletterTemplateOut,
 )
 from app.schemas.events import (
     IndustryEventCreateIn,
@@ -457,6 +460,36 @@ def admin_send_notification_broadcast(
         recipient_count=broadcast.recipient_count,
         message=f"Notification sent to {broadcast.recipient_count} registered member(s).",
     )
+
+
+@router.get("/newsletter/template", response_model=NewsletterTemplateOut)
+def admin_newsletter_template(
+    _: User = Depends(require_admin),
+) -> NewsletterTemplateOut:
+    from app.services.email_layout import newsletter_starter_body_html, newsletter_starter_subject
+
+    return NewsletterTemplateOut(
+        subject=newsletter_starter_subject(),
+        body_html=newsletter_starter_body_html(),
+    )
+
+
+@router.post("/newsletter/preview", response_model=NewsletterPreviewOut)
+def admin_newsletter_preview(
+    payload: NewsletterPreviewIn,
+    _: User = Depends(require_admin),
+) -> NewsletterPreviewOut:
+    from app.services.email_layout import wrap_email_html
+
+    subject = (payload.subject or "").strip() or "CAISBE Newsletter"
+    body_html = sanitize_html(payload.body_html) or "<p></p>"
+    html_body = wrap_email_html(
+        body_html,
+        heading=subject,
+        eyebrow="CAISBE Newsletter",
+        include_signoff=False,
+    )
+    return NewsletterPreviewOut(html=html_body)
 
 
 @router.post("/newsletter/send", response_model=NewsletterSendOut)

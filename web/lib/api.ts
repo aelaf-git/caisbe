@@ -67,6 +67,7 @@ export type NewsPost = {
   image_urls: string[];
   video_urls: string[];
   tag: string | null;
+  source_label?: string | null;
   posted_on: string;
   published: boolean;
   featured: boolean;

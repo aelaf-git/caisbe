@@ -70,6 +70,15 @@ class Settings(BaseSettings):
     adzuna_app_id: str = ""
     adzuna_app_key: str = ""
     adzuna_country: str = "ca"
+    # Industry news RSS → public /news as external-link cards.
+    news_rss_sync_enabled: bool = True
+    news_rss_interval_hours: int = 6
+    news_rss_sync_on_startup: bool = True
+    news_rss_max_per_feed: int = 20
+    news_rss_facilities_dive_url: str = "https://www.facilitiesdive.com/feeds/news/"
+    news_rss_facilitiesnet_url: str = (
+        "https://www.facilitiesnet.com/rss/facilitiesnetarticles.aspx"
+    )
 
     @field_validator("database_url", mode="before")
     @classmethod

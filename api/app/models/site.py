@@ -169,6 +169,8 @@ class NewsPost(Base):
     image_urls: Mapped[list | None] = mapped_column(JSON, nullable=True)
     video_urls: Mapped[list | None] = mapped_column(JSON, nullable=True)
     tag: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Set for industry RSS imports (e.g. facilities_dive); null for admin-authored posts.
+    source_label: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     posted_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     published: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     featured: Mapped[bool] = mapped_column(Boolean, default=False)

@@ -160,6 +160,17 @@ def admin_list_news(
     return [_news_out(row) for row in rows]
 
 
+@router.post("/news/sync-rss")
+def admin_sync_news_rss(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.services.news_rss_sync import sync_news_rss
+
+    result = sync_news_rss(db)
+    return result.as_dict()
+
+
 @router.post("/news", response_model=NewsPostOut, status_code=status.HTTP_201_CREATED)
 def admin_create_news(
     payload: NewsPostCreateIn,

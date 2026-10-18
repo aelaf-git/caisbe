@@ -31,6 +31,7 @@ class NewsPostOut(BaseModel):
     image_urls: list[str] = Field(default_factory=list)
     video_urls: list[str] = Field(default_factory=list)
     tag: str | None = None
+    source_label: str | None = None
     posted_on: datetime
     published: bool
     featured: bool

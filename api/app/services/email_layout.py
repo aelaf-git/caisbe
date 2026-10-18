@@ -212,3 +212,28 @@ def portal_certificate_url(certificate_code: str) -> str:
     base = portal_base_url()
     code = quote(str(certificate_code).strip(), safe="-._~")
     return f"{base}/certificates/{code}"
+
+
+def newsletter_starter_body_html() -> str:
+    """Default inner HTML for the Admin newsletter composer (wrapped on send)."""
+    membership = f"{web_base_url()}/membership"
+    return f"""
+<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:{BRAND_TEXT};">
+  Hello,
+</p>
+<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:{BRAND_TEXT};">
+  Here are the latest updates from CAISBE — membership news, learning opportunities,
+  and highlights for facility and property management professionals.
+</p>
+<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:{BRAND_TEXT};">
+  <!-- Replace this paragraph with your newsletter content. -->
+</p>
+{cta_button("Join CAISBE", membership)}
+<p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:{BRAND_MUTED};">
+  Thank you for being part of the CAISBE community.
+</p>
+""".strip()
+
+
+def newsletter_starter_subject() -> str:
+    return "CAISBE Newsletter"

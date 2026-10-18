@@ -57,6 +57,26 @@ def _run_job_sync() -> None:
         db.close()
 
 
+def _run_news_rss_sync() -> None:
+    from app.services.news_rss_sync import sync_news_rss
+
+    db = SessionLocal()
+    try:
+        result = sync_news_rss(db)
+        logger.info(
+            "News RSS sync complete created=%s updated=%s skipped=%s sources=%s errors=%s",
+            result.created,
+            result.updated,
+            result.skipped,
+            result.sources,
+            result.errors,
+        )
+    except Exception:  # noqa: BLE001 — keep API up if sync fails
+        logger.exception("News RSS sync failed")
+    finally:
+        db.close()
+
+
 async def _job_sync_loop(stop: asyncio.Event) -> None:
     hours = max(1, int(settings.job_sync_interval_hours or 12))
     while not stop.is_set():
@@ -65,6 +85,16 @@ async def _job_sync_loop(stop: asyncio.Event) -> None:
             break
         except TimeoutError:
             await asyncio.to_thread(_run_job_sync)
+
+
+async def _news_rss_sync_loop(stop: asyncio.Event) -> None:
+    hours = max(1, int(settings.news_rss_interval_hours or 6))
+    while not stop.is_set():
+        try:
+            await asyncio.wait_for(stop.wait(), timeout=hours * 3600)
+            break
+        except TimeoutError:
+            await asyncio.to_thread(_run_news_rss_sync)
 
 
 @asynccontextmanager
@@ -100,6 +130,12 @@ async def lifespan(_: FastAPI):
         background_tasks.append(asyncio.create_task(_job_sync_loop(stop)))
     elif settings.job_sync_enabled:
         logger.info("Job sync is running in another API process")
+    if settings.news_rss_sync_enabled and is_leader:
+        if settings.news_rss_sync_on_startup:
+            background_tasks.append(asyncio.create_task(asyncio.to_thread(_run_news_rss_sync)))
+        background_tasks.append(asyncio.create_task(_news_rss_sync_loop(stop)))
+    elif settings.news_rss_sync_enabled:
+        logger.info("News RSS sync is running in another API process")
     try:
         yield
     finally:

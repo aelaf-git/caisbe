@@ -100,6 +100,20 @@ class NewsletterSendOut(BaseModel):
     message: str
 
 
+class NewsletterPreviewIn(BaseModel):
+    subject: str = Field(default="", max_length=255)
+    body_html: str = Field(default="", max_length=100_000)
+
+
+class NewsletterPreviewOut(BaseModel):
+    html: str
+
+
+class NewsletterTemplateOut(BaseModel):
+    subject: str
+    body_html: str
+
+
 class HeroSlideOut(BaseModel):
     id: int | str
     title: str

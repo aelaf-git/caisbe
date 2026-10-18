@@ -47,7 +47,9 @@ export default async function NewsDetailPage({ params }: PageProps) {
           <>
             {post.external_url ? (
               <ButtonLink href={post.external_url} variant="primary">
-                {t("Open article", "Ouvrir l’article")}
+                {post.source_label
+                  ? t("Read on source", "Lire sur la source")
+                  : t("Open article", "Ouvrir l’article")}
               </ButtonLink>
             ) : null}
             <ButtonLink href="/news" variant={post.external_url ? "secondary" : "primary"}>
@@ -64,6 +66,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
         <p className="mt-6 text-sm font-semibold text-caisbe-muted">
           {formatNewsDate(post.posted_on, locale)}
           {post.tag ? ` · ${post.tag}` : ""}
+          {post.source_label ? ` · ${t("Industry feed", "Fil d’actualité")}` : ""}
         </p>
       </PageHero>
 
