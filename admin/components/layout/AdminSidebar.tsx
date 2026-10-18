@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 type NavItem = {
   href: string;
   label: string;
   icon: string;
-  match?: "exact" | "prefix" | "courses";
+  match?: "exact" | "prefix" | "courses" | "media-forms";
 };
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
@@ -40,6 +40,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/notifications", label: "Notifications", icon: "bell" },
       { href: "/jobs", label: "Job board", icon: "briefcase" },
       { href: "/media", label: "Media library", icon: "image" },
+      { href: "/media?tab=forms", label: "Forms & Guides", icon: "file", match: "media-forms" },
       { href: "/site-activity", label: "Site activity", icon: "activity" },
       { href: "/reports", label: "Reports", icon: "chart" },
       { href: "/payments", label: "Payments", icon: "card" },
@@ -55,7 +56,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
-function isActive(pathname: string, item: NavItem) {
+function isActive(pathname: string, item: NavItem, search = "") {
   if (item.href === "/settings") {
     return (
       pathname === "/settings" ||
@@ -64,11 +65,18 @@ function isActive(pathname: string, item: NavItem) {
       pathname.startsWith("/pages/")
     );
   }
+  if (item.match === "media-forms") {
+    return pathname === "/media" && new URLSearchParams(search).get("tab") === "forms";
+  }
   if (item.match === "exact") {
     return pathname === item.href;
   }
   if (item.match === "courses") {
     return pathname === "/courses" || /^\/courses\/(?!new$)[^/]+$/.test(pathname);
+  }
+  // Media library stays active for /media unless the Forms & Guides tab is selected.
+  if (item.href === "/media") {
+    return pathname === "/media" && new URLSearchParams(search).get("tab") !== "forms";
   }
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
@@ -110,7 +118,9 @@ function NavIcon({ name }: { name: string }) {
 export default function AdminSidebar({ className = "", onNavigate }: AdminSidebarProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const search = searchParams.toString();
 
   return (
     <aside className={`flex h-full w-full flex-col bg-admin-surface shadow-hopewell-nav ${className}`}>
@@ -138,7 +148,7 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
             </p>
             <div className="space-y-1">
               {group.items.map((item) => {
-                const active = isActive(pathname, item);
+                const active = isActive(pathname, item, search);
                 return (
                   <Link
                     key={item.href}

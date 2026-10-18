@@ -377,7 +377,6 @@ export default function MembershipCertificateTypesManager({
                   issuedAt={issuedAtIso}
                   validUntil={previewValidUntil}
                   verifyUrl={`${portalBaseUrl()}/certificates/verify/CAISBE-MEM-SAMPLE01`}
-                  certificateCode="CAISBE-MEM-SAMPLE01"
                   title={title || selected.title}
                   body={previewBody}
                 />

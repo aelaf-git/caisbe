@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import BlogManager from "@/components/media/BlogManager";
 import FormsGuidesManager from "@/components/media/FormsGuidesManager";
 import HeroManager from "@/components/media/HeroManager";
@@ -30,8 +31,25 @@ type Tab =
   | "blog"
   | "newsletter";
 
+const TABS: Tab[] = [
+  "hero",
+  "magazines",
+  "forms",
+  "youtube",
+  "podcasts",
+  "blog",
+  "newsletter",
+];
+
+function tabFromQuery(raw: string | null): Tab {
+  return raw && (TABS as string[]).includes(raw) ? (raw as Tab) : "hero";
+}
+
 export default function MediaPage() {
-  const [tab, setTab] = useState<Tab>("hero");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = tabFromQuery(searchParams.get("tab"));
   const [heroAssets, setHeroAssets] = useState<MediaAsset[]>([]);
   const [magazineAssets, setMagazineAssets] = useState<MediaAsset[]>([]);
   const [formAssets, setFormAssets] = useState<MediaAsset[]>([]);
@@ -42,6 +60,15 @@ export default function MediaPage() {
   const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  function selectTab(next: Tab) {
+    setError(null);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "hero") params.delete("tab");
+    else params.set("tab", next);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { notice, dialog: noticeDialog } = useNoticeDialog();
 
@@ -122,10 +149,7 @@ export default function MediaPage() {
           { id: "newsletter", label: "Newsletter", count: subscribers.length },
         ]}
         value={tab}
-        onChange={(next) => {
-          setTab(next as Tab);
-          setError(null);
-        }}
+        onChange={(next) => selectTab(next as Tab)}
         ariaLabel="Media sections"
       />
 

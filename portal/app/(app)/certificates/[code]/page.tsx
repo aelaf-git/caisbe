@@ -75,7 +75,6 @@ export default function CertificatePage() {
           courseTitle={cert.program_name || cert.course.title}
           issuedAt={cert.issued_at}
           verifyUrl={verifyUrl}
-          certificateCode={cert.certificate_code}
           issuedBy={cert.issued_by}
         />
       </div>

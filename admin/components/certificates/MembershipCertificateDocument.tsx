@@ -14,7 +14,6 @@ export type MembershipCertificateDocumentProps = {
   membershipNumber: string;
   issuedAt: string;
   verifyUrl: string;
-  certificateCode?: string;
   issuedBy?: string;
   title?: string;
   body?: string;
@@ -63,7 +62,6 @@ export default function MembershipCertificateDocument({
   membershipNumber,
   issuedAt,
   verifyUrl,
-  certificateCode,
   issuedBy = "CAISBE",
   title = "Certificate of Membership",
   body,
@@ -233,15 +231,6 @@ export default function MembershipCertificateDocument({
                 Issued By
               </p>
             </div>
-
-            {certificateCode ? (
-              <p
-                className="col-start-2 row-start-2 mt-1 w-full break-all text-center font-mono leading-tight text-[#5c5348]"
-                style={{ fontSize: 11 }}
-              >
-                {certificateCode}
-              </p>
-            ) : null}
           </footer>
         </div>
       </article>

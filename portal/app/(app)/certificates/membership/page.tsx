@@ -114,7 +114,6 @@ export default function MembershipCertificatePage() {
           issuedAt={cert.issued_at}
           validUntil={cert.expires_at}
           verifyUrl={verifyUrl}
-          certificateCode={cert.certificate_code}
           issuedBy={cert.issued_by}
           title={cert.title}
           body={cert.body ?? undefined}

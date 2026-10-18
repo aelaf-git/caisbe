@@ -14,6 +14,8 @@ type NavItem = {
   label: string;
   icon: string;
   match?: "exact" | "prefix";
+  /** When set, opens a public-site URL instead of an in-app route. */
+  externalPath?: string;
 };
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
@@ -22,6 +24,12 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: "grid", match: "exact" },
       { href: "/guide", label: "User Guide", icon: "file", match: "exact" },
+      {
+        href: "/forms-and-guides",
+        label: "Forms and Guides",
+        icon: "file",
+        externalPath: "/resources/forms-and-guides",
+      },
     ],
   },
   {
@@ -224,18 +232,14 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
             </p>
             <div className="space-y-1">
               {group.items.map((item) => {
-                const active = isActive(pathname, item);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={`flex items-center justify-between gap-2 rounded-full px-3 py-2.5 text-sm transition-colors ${
-                      active
-                        ? "bg-caisbe-red font-semibold text-white"
-                        : "text-caisbe-muted hover:bg-admin-surface-muted hover:text-caisbe-text"
-                    }`}
-                  >
+                const active = item.externalPath ? false : isActive(pathname, item);
+                const className = `flex items-center justify-between gap-2 rounded-full px-3 py-2.5 text-sm transition-colors ${
+                  active
+                    ? "bg-caisbe-red font-semibold text-white"
+                    : "text-caisbe-muted hover:bg-admin-surface-muted hover:text-caisbe-text"
+                }`;
+                const body = (
+                  <>
                     <span className="flex min-w-0 items-center gap-3">
                       <NavIcon name={item.icon} />
                       <span className="truncate">{item.label}</span>
@@ -255,6 +259,25 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
                         {unreadNotifications}
                       </span>
                     ) : null}
+                  </>
+                );
+                if (item.externalPath) {
+                  return (
+                    <a
+                      key={item.href}
+                      href={siteUrl(item.externalPath)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={onNavigate}
+                      className={className}
+                    >
+                      {body}
+                    </a>
+                  );
+                }
+                return (
+                  <Link key={item.href} href={item.href} onClick={onNavigate} className={className}>
+                    {body}
                   </Link>
                 );
               })}

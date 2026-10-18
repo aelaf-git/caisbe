@@ -201,6 +201,7 @@ export type Dictionary = {
     subscribeHeading: string;
     subscribeSubtext: string;
     privacyPolicy: string;
+    corporateLine: string;
     copyright: (fullName: string) => string;
     newsletter: {
       emailLabel: string;
@@ -211,6 +212,10 @@ export type Dictionary = {
       invalidEmail: string;
       errorFallback: string;
     };
+  };
+  carousel: {
+    previous: string;
+    next: string;
   };
 };
 
@@ -235,6 +240,10 @@ const EN_DICT: Dictionary = {
   },
   certificates: {
     empty: "Certificate programs will appear here once published by CAISBE.",
+  },
+  carousel: {
+    previous: "Previous",
+    next: "Next",
   },
   magazine: {
     empty: "New magazine issues will appear here once published by the CAISBE team.",
@@ -273,6 +282,8 @@ const EN_DICT: Dictionary = {
     subscribeHeading: "Subscribe to newsletter",
     subscribeSubtext: "Get magazine issues and CAISBE news by email.",
     privacyPolicy: "Privacy Policy",
+    corporateLine:
+      "CAISBE – Corporate No: 1750704-6 - CAISBE, Canada-Africa Institute for the Sustainable Built Environment (CAISBE) 815 4 Ave S, Calgary, AB, T2P 3G8 Canada",
     copyright: (fullName) => `Copyright © 2026 ${fullName}`,
     newsletter: {
       emailLabel: "Email",
@@ -309,6 +320,10 @@ const FR_DICT: Dictionary = {
   certificates: {
     empty:
       "Les programmes de certificat apparaîtront ici dès leur publication par le CAISBE.",
+  },
+  carousel: {
+    previous: "Précédent",
+    next: "Suivant",
   },
   magazine: {
     empty:
@@ -349,6 +364,8 @@ const FR_DICT: Dictionary = {
     subscribeSubtext:
       "Recevez les numéros du magazine et les actualités du CAISBE par courriel.",
     privacyPolicy: "Politique de confidentialité",
+    corporateLine:
+      "CAISBE – N° d'entreprise : 1750704-6 - CAISBE, Institut Canada-Afrique pour l'environnement bâti durable (CAISBE) 815 4 Ave S, Calgary (Alberta) T2P 3G8 Canada",
     copyright: (fullName) => `Droits d'auteur © 2026 ${fullName}`,
     newsletter: {
       emailLabel: "Courriel",
