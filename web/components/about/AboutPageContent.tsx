@@ -15,7 +15,6 @@ export default function AboutPageContent() {
     mission,
     vision,
     whatWeDo,
-    leadership,
     advisoryCouncil,
     builtEnvironment,
   } = aboutContent;
@@ -65,39 +64,6 @@ export default function AboutPageContent() {
             </li>
           ))}
         </ul>
-      </ContentSection>
-
-      <ContentSection
-        id="leadership"
-        title={leadership.title}
-        description={leadership.intro}
-        wide
-      >
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {leadership.people.map((person, index) => (
-            <article
-              key={person.email}
-              className="flex flex-col rounded-[20px] bg-white p-6 shadow-hopewell motion-safe:animate-page-fade-in"
-              style={{ animationDelay: `${index * 60}ms` }}
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-caisbe-red">
-                {person.role}
-              </p>
-              <h3 className="font-hopewell-display mt-3 text-xl font-bold tracking-tight text-caisbe-text-dark">
-                {person.name}
-              </h3>
-              <p className="mt-2 text-sm font-medium leading-6 text-caisbe-text">
-                {person.credentials}
-              </p>
-              <a
-                href={`mailto:${person.email}`}
-                className="mt-5 text-sm font-semibold text-caisbe-red transition-colors hover:text-caisbe-red-dark"
-              >
-                {person.email}
-              </a>
-            </article>
-          ))}
-        </div>
       </ContentSection>
 
       <ContentSection

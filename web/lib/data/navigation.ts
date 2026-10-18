@@ -69,7 +69,7 @@ const rawNavigation: readonly RawNavSection[] = [
             href: "/membership/join",
           },
           {
-            label: "Manage Account (login)",
+            label: "Manage Account",
             href: PORTAL_LOGIN,
           },
           {
@@ -227,7 +227,6 @@ const rawNavigation: readonly RawNavSection[] = [
             label: "What is the Built Environment?",
             href: "/about/what-is-built-environment",
           },
-          { label: "Our Leadership", href: "/about#leadership" },
           { label: "Staff", href: "/about/staff" },
           { label: "Volunteering", href: "/about/volunteering" },
         ],

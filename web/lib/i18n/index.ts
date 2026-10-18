@@ -30,7 +30,7 @@ const NAV_LABEL_FR: Record<string, string> = {
   Membership: "Adhésion",
   "Membership Overview and Benefits": "Aperçu et avantages de l'adhésion",
   "Join / Register / Renew": "Adhérer / S'inscrire / Renouveler",
-  "Manage Account (login)": "Gérer mon compte (connexion)",
+  "Manage Account": "Gérer mon compte",
   "Types of Membership": "Types d'adhésion",
   Network: "Réseau",
   Overview: "Aperçu",
@@ -69,7 +69,6 @@ const NAV_LABEL_FR: Record<string, string> = {
   "About the Association": "À propos de l'association",
   "About Us": "Qui sommes-nous",
   "What is the Built Environment?": "Qu'est-ce que l'environnement bâti ?",
-  "Our Leadership": "Notre direction",
   Staff: "Équipe",
   Volunteering: "Bénévolat",
   // Footer headings & links
