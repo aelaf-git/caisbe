@@ -169,12 +169,7 @@ export default function MembershipCertificateDocument({
           style={{ padding: "44px 72px 36px" }}
         >
           <header className="shrink-0">
-            <BrandLogo
-              alt="CAISBE"
-              wrapperClassName="mx-auto mb-2"
-              className="object-contain"
-              style={{ height: 44, width: "auto" }}
-            />
+            <BrandLogo alt="CAISBE" className="mx-auto mb-2 h-[44px]" />
             <p
               className="font-semibold uppercase text-[#7b1e3a]"
               style={{ fontSize: 14, letterSpacing: "0.16em", lineHeight: 1.35 }}

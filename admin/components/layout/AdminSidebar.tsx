@@ -126,7 +126,7 @@ export default function AdminSidebar({ className = "", onNavigate }: AdminSideba
     <aside className={`flex h-full w-full flex-col bg-admin-surface shadow-hopewell-nav ${className}`}>
       <div className="px-5 py-5">
         <Link href="/dashboard" onClick={onNavigate} className="flex flex-col gap-2">
-          <BrandLogo priority className="h-10 w-auto max-w-full object-contain" />
+          <BrandLogo priority className="h-10 max-w-full" />
           <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-caisbe-red-dark">
             Admin
           </p>

@@ -34,7 +34,7 @@ function ForgotPasswordForm() {
   return (
     <section className="flex min-h-screen flex-1 items-center justify-center bg-admin-canvas px-4 py-10">
       <div className="w-full max-w-md rounded-[20px] border border-ifma-border bg-admin-surface p-6 shadow-hopewell sm:p-8">
-        <BrandLogo priority className="h-16 w-auto object-contain sm:h-20" />
+        <BrandLogo priority className="h-16 sm:h-20" />
         <h1 className="font-hopewell-display mt-6 text-2xl font-extrabold tracking-tight text-caisbe-text-dark">
           Forgot password
         </h1>

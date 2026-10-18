@@ -151,12 +151,7 @@ export default function CertificateDocument({
           style={{ padding: "44px 72px 36px" }}
         >
           <header className="shrink-0">
-            <BrandLogo
-              alt="CAISBE"
-              wrapperClassName="mx-auto mb-2"
-              className="object-contain"
-              style={{ height: 44, width: "auto" }}
-            />
+            <BrandLogo alt="CAISBE" className="mx-auto mb-2 h-[44px]" />
             <h1
               className="font-[family-name:var(--font-cinzel)] font-bold uppercase text-[#c9a227]"
               style={{ fontSize: 50, letterSpacing: "0.06em", lineHeight: 1.05 }}
