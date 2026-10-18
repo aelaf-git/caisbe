@@ -170,7 +170,16 @@ def wrap_email_html(
           <tr>
             <td align="left" style="vertical-align:middle;">
               <a href="{site_url}" style="text-decoration:none;display:inline-block;">
-                <img src="{logo}" alt="CAISBE" width="150" style="display:block;border:0;max-width:150px;height:auto;" />
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                  <tr>
+                    <td style="vertical-align:middle;padding:0;">
+                      <img src="{logo}" alt="CAISBE" width="150" style="display:block;border:0;max-width:150px;height:auto;" />
+                    </td>
+                    <td style="vertical-align:top;padding:0 0 0 2px;font-family:Georgia,'Times New Roman',serif;font-size:12px;font-weight:700;line-height:1;color:{BRAND_RED};">
+                      ®
+                    </td>
+                  </tr>
+                </table>
               </a>
             </td>
             {eyebrow_cell}

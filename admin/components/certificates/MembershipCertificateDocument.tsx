@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import BrandLogo from "@/components/layout/BrandLogo";
 import { cssPx } from "@/lib/cssLength";
 import { certFitPx, useCertificateContentFit } from "@/lib/fitCertificateContent";
 
@@ -122,12 +123,10 @@ export default function MembershipCertificateDocument({
           style={{ padding: "44px 72px 36px" }}
         >
           <header className="shrink-0">
-            <img
-              src="/images/logo.png"
+            <BrandLogo
               alt="CAISBE"
-              width={2172}
-              height={724}
-              className="mx-auto mb-2 object-contain"
+              wrapperClassName="mx-auto mb-2"
+              className="object-contain"
               style={{ height: 44, width: "auto" }}
             />
             <p

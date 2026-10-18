@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import BrandLogo from "@/components/layout/BrandLogo";
 import { apiFetch } from "@/lib/auth";
 import type { Cart } from "@/lib/commerce";
 import { siteUrl } from "@/lib/membershipApplication";
@@ -210,14 +210,7 @@ export default function PortalSidebar({ className = "", onNavigate }: PortalSide
     <aside className={`flex h-full w-full flex-col bg-admin-surface shadow-hopewell-nav ${className}`}>
       <div className="px-5 py-5">
         <Link href="/dashboard" onClick={onNavigate} className="flex flex-col gap-2">
-          <Image
-            src="/images/logo.png"
-            alt="CAISBE logo"
-            width={2172}
-            height={724}
-            priority
-            className="h-10 w-auto max-w-full object-contain"
-          />
+          <BrandLogo priority className="h-10 w-auto max-w-full object-contain" />
           <p className="inline-flex w-fit rounded-full bg-caisbe-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-caisbe-red-dark">
             myCAISBE
           </p>

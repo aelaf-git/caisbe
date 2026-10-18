@@ -25,10 +25,9 @@ function LogoMark({
         decoding="async"
         fetchPriority={fetchPriority}
       />
-      {/* ® sits above the wordmark (near mid-letters), matching brand mark-up. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute left-[58%] top-0 -translate-x-1/2 -translate-y-[35%] font-serif text-[0.62em] font-bold leading-none text-caisbe-red sm:text-[0.72em]"
+        className="pointer-events-none absolute -right-0.5 top-0 -translate-y-[20%] font-serif text-[0.62em] font-bold leading-none text-caisbe-red sm:-right-1 sm:text-[0.72em]"
       >
         ®
       </span>
