@@ -32,9 +32,12 @@ export default async function ProfessionalDevelopmentPageContent() {
     courses = [];
   }
 
-  let seminars: { id?: number; title: string; description: string }[] = [
-    ...fallbackSeminars,
-  ];
+  let seminars: {
+    id?: number;
+    title: string;
+    description: string;
+    cover_url?: string | null;
+  }[] = [...fallbackSeminars];
   try {
     seminars = await fetchPublishedSeminars();
   } catch {
@@ -122,6 +125,7 @@ export default async function ProfessionalDevelopmentPageContent() {
                 title={seminar.title}
                 meta={t("Seminar", "Séminaire")}
                 description={seminar.description}
+                imageUrl={seminar.cover_url}
                 href={
                   seminar.id
                     ? `/professional-development/seminars/${seminar.id}/register`

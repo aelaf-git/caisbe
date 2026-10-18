@@ -125,6 +125,8 @@ type ContentCardProps = {
   title: string;
   description?: string;
   meta?: string;
+  /** Optional cover image shown above the card body. */
+  imageUrl?: string | null;
   href?: string;
   hrefLabel?: string;
   children?: React.ReactNode;
@@ -136,38 +138,52 @@ export function ContentCard({
   title,
   description,
   meta,
+  imageUrl,
   href,
   hrefLabel,
   children,
   className = "",
   style,
 }: ContentCardProps) {
+  const cover = imageUrl?.trim() || null;
+
   return (
     <article
       style={style}
-      className={`flex flex-col rounded-[20px] bg-white p-6 shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in ${className}`}
+      className={`flex flex-col overflow-hidden rounded-[20px] bg-white shadow-hopewell transition duration-300 hover:-translate-y-1 motion-safe:animate-page-fade-in ${className}`}
     >
-      {meta ? (
-        <p className="text-xs font-semibold uppercase tracking-wider text-caisbe-red">
-          {meta}
-        </p>
+      {cover ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={cover}
+          alt=""
+          draggable={false}
+          className="aspect-[16/9] w-full object-cover"
+        />
       ) : null}
-      <h3
-        className={`font-hopewell-display text-xl font-bold text-caisbe-text-dark ${meta ? "mt-2" : ""}`}
-      >
-        {title}
-      </h3>
-      {description ? (
-        <p className="mt-3 flex-1 text-sm leading-7 text-caisbe-text">
-          {description}
-        </p>
-      ) : null}
-      {children}
-      {href ? (
-        <ButtonLink href={href} variant="text" className="mt-6">
-          {hrefLabel ?? <T en="Learn More" fr="En savoir plus" />}
-        </ButtonLink>
-      ) : null}
+      <div className="flex flex-1 flex-col p-6">
+        {meta ? (
+          <p className="text-xs font-semibold uppercase tracking-wider text-caisbe-red">
+            {meta}
+          </p>
+        ) : null}
+        <h3
+          className={`font-hopewell-display text-xl font-bold break-words text-caisbe-text-dark ${meta ? "mt-2" : ""}`}
+        >
+          {title}
+        </h3>
+        {description ? (
+          <p className="mt-3 flex-1 break-words text-sm leading-7 text-caisbe-text">
+            {description}
+          </p>
+        ) : null}
+        {children}
+        {href ? (
+          <ButtonLink href={href} variant="text" className="mt-6">
+            {hrefLabel ?? <T en="Learn More" fr="En savoir plus" />}
+          </ButtonLink>
+        ) : null}
+      </div>
     </article>
   );
 }
