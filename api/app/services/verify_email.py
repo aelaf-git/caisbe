@@ -6,6 +6,8 @@ import html
 import logging
 from urllib.parse import quote
 
+from sqlalchemy.orm import Session
+
 from app.config import settings
 from app.security.auth import EMAIL_VERIFY_HOURS
 from app.services.email import EmailDeliveryError, send_email
@@ -30,7 +32,9 @@ def send_verification_email(
     full_name: str,
     raw_token: str,
     next_path: str = "/membership",
-) -> None:
+    pending_registration_id: int | None = None,
+    db: Session | None = None,
+) -> int | None:
     if settings.is_production and not settings.resend_api_key.strip():
         raise EmailDeliveryError("Email delivery is not configured.")
 
@@ -51,9 +55,13 @@ def send_verification_email(
         heading="Verify Your Email Address",
         eyebrow="myCAISBE Portal",
     )
-    send_email(
+    return send_email(
         to=to,
         subject="Verify your email to open your CAISBE account",
         html_body=html_body,
         purpose="system",
+        template_key="verify_email",
+        related_type="pending_registration" if pending_registration_id else None,
+        related_id=pending_registration_id,
+        db=db,
     )

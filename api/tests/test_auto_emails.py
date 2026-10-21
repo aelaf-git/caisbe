@@ -158,6 +158,26 @@ def test_sender_bodies_use_standard_copy_and_logo() -> None:
         assert "24–48 hours" in send.call_args.kwargs["html_body"]
         assert send.call_args.kwargs["purpose"] == "contact"
 
+    with patch("app.services.exam_access_request_admin_email.send_email") as send:
+        from app.services.exam_access_request_admin_email import send_exam_access_request_admin_emails
+
+        send_exam_access_request_admin_emails(
+            admin_emails=["admin@example.com", "admin@example.com", "ops@example.com"],
+            trainee_name="Ada Lovelace",
+            trainee_email="ada@example.com",
+            course_title="FM Basics",
+            completed_at=datetime(2026, 4, 1, tzinfo=timezone.utc),
+        )
+        assert send.call_count == 2
+        assert send.call_args.kwargs["subject"] == "Exam access requested — Ada Lovelace · FM Basics"
+        body = send.call_args.kwargs["html_body"]
+        assert "Hello Admin" in body
+        assert "Ada Lovelace" in body
+        assert "FM Basics" in body
+        assert "Grant Exam Access" in body
+        assert "/access-control" in body
+        assert send.call_args.kwargs["purpose"] == "system"
+
 
 def test_newsletter_subscribe_sends_success_email(client: TestClient, db: Session) -> None:
     with patch("app.services.newsletter_subscribed_email.send_email") as send:

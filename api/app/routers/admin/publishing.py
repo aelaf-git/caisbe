@@ -533,6 +533,16 @@ def admin_send_newsletter(
     from app.services.email_layout import wrap_email_html
     from app.services.newsletter_unsubscribe import unsubscribe_footer_html
 
+    # Persist campaign before the send loop so each outbound row can link to it.
+    campaign = NewsletterCampaign(
+        subject=subject,
+        body_html=body_html,
+        recipient_count=0,
+        sent_by_id=admin.id,
+    )
+    db.add(campaign)
+    db.flush()
+
     failed: list[str] = []
     sent_count = 0
     for row in subscribers:
@@ -553,24 +563,24 @@ def admin_send_newsletter(
                 html_body=recipient_html,
                 purpose="newsletter",
                 attachments=attachments,
+                template_key="newsletter_campaign",
+                related_type="newsletter_campaign",
+                related_id=campaign.id,
+                triggered_by_user_id=admin.id,
+                db=db,
             )
             sent_count += 1
         except EmailDeliveryError:
             failed.append(row.email)
 
     if sent_count == 0:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Unable to deliver newsletter to any recipient. Check Resend settings.",
         )
 
-    campaign = NewsletterCampaign(
-        subject=subject,
-        body_html=body_html,
-        recipient_count=sent_count,
-        sent_by_id=admin.id,
-    )
-    db.add(campaign)
+    campaign.recipient_count = sent_count
     db.commit()
     db.refresh(campaign)
 

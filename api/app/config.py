@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     portal_public_url: str = "http://localhost:3002"
     # Public marketing site (news, events, jobs, media) — used in student notification links.
     web_public_url: str = "http://localhost:3000"
+    # Admin dashboard — used in access-control email CTAs.
+    admin_public_url: str = "http://localhost:3001"
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_publishable_key: str = ""

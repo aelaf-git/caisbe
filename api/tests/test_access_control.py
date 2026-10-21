@@ -76,7 +76,7 @@ def test_payment_enrolls_immediately_and_notifies_admins(client: TestClient, db:
     )
     assert enrollment.status == "enrolled"
     assert enrollment.course_access == "allowed"
-    assert enrollment.exam_access == "allowed"
+    assert enrollment.exam_access == "restricted"
 
     notice = (
         db.query(Notification)
@@ -126,22 +126,23 @@ def test_admin_can_restrict_exam_access(client: TestClient, db: Session) -> None
     _user(db, email="exam-admin@example.com", role="admin", name="Exam Admin")
     student = _user(db, email="exam-student@example.com")
     course = _course(db)
-    db.add(Enrollment(user_id=student.id, course_id=course.id, status="enrolled", progress=100))
+    db.add(
+        Enrollment(
+            user_id=student.id,
+            course_id=course.id,
+            status="enrolled",
+            progress=100,
+            exam_access="restricted",
+        )
+    )
     db.commit()
     admin_headers = _auth(_login(client, "exam-admin@example.com"))
     student_headers = _auth(_login(client, student.email))
     enrollment_id = db.query(Enrollment).filter(Enrollment.user_id == student.id).one().id
 
-    restricted = client.patch(
-        f"/api/admin/access-control/enrollments/{enrollment_id}",
-        headers=admin_headers,
-        json={"exam_access": "restricted"},
-    )
-    assert restricted.status_code == 200, restricted.text
-
     blocked = client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=student_headers)
     assert blocked.status_code == 403
-    assert "restricted access to this exam" in blocked.json()["detail"]
+    assert "exam access is pending" in blocked.json()["detail"].lower()
 
     client.patch(
         f"/api/admin/access-control/enrollments/{enrollment_id}",
@@ -150,7 +151,10 @@ def test_admin_can_restrict_exam_access(client: TestClient, db: Session) -> None
     )
     released = client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=student_headers)
     assert released.status_code != 403
-    assert "restricted" not in released.json()["detail"].lower()
+    detail = released.json().get("detail")
+    if isinstance(detail, str):
+        assert "pending" not in detail.lower()
+        assert "restricted" not in detail.lower()
 
 
 def test_suspension_blocks_login_and_existing_session(client: TestClient, db: Session) -> None:

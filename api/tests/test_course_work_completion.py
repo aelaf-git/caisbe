@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ from app.models import (
     FinalExam,
     Lesson,
     LessonProgress,
+    Notification,
     Quiz,
     QuizAttempt,
     QuizChoice,
@@ -156,7 +158,15 @@ def test_quiz_uses_course_pass_percent_and_allows_retry(client: TestClient, db: 
 def test_exam_blocked_until_quiz_and_assignment_passed(client: TestClient, db: Session) -> None:
     student = _student(db, "exam-gate@example.com")
     course, lesson, quiz, assignment, exam = _course_with_work(db)
-    db.add(Enrollment(user_id=student.id, course_id=course.id, status="enrolled", progress=0))
+    db.add(
+        Enrollment(
+            user_id=student.id,
+            course_id=course.id,
+            status="enrolled",
+            progress=0,
+            exam_access="allowed",
+        )
+    )
     db.commit()
     headers = _login(client, student.email)
 
@@ -269,3 +279,82 @@ def test_certificate_requires_passed_assignment(client: TestClient, db: Session)
     issued = client.get(f"/api/courses/{course.id}", headers=headers)
     assert issued.status_code == 200
     assert issued.json()["certificate_code"]
+
+
+def test_course_work_complete_notifies_admins_once(client: TestClient, db: Session) -> None:
+    admin = User(
+        full_name="Exam Admin",
+        email="exam-notify-admin@example.com",
+        phone="+15555550999",
+        country="Canada",
+        city="Toronto",
+        hashed_password=hash_password(STRONG_PASSWORD),
+        role="admin",
+        membership_status="active",
+        email_verified_at=datetime.now(timezone.utc),
+    )
+    db.add(admin)
+    student = _student(db, "exam-notify-student@example.com")
+    course, lesson, quiz, assignment, _exam = _course_with_work(db)
+    db.add(
+        Enrollment(
+            user_id=student.id,
+            course_id=course.id,
+            status="enrolled",
+            progress=0,
+            exam_access="restricted",
+        )
+    )
+    question = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz.id).one()
+    right = (
+        db.query(QuizChoice)
+        .filter(QuizChoice.question_id == question.id, QuizChoice.is_correct.is_(True))
+        .one()
+    )
+    db.add(LessonProgress(user_id=student.id, lesson_id=lesson.id))
+    db.add(
+        QuizAttempt(
+            user_id=student.id,
+            quiz_id=quiz.id,
+            score=100,
+            passed=True,
+            answers_json=f'{{"{question.id}": {right.id}}}',
+        )
+    )
+    db.add(
+        AssignmentSubmission(
+            user_id=student.id,
+            content_block_id=assignment.id,
+            body="Done",
+            status="passed",
+            score=100,
+        )
+    )
+    db.commit()
+    headers = _login(client, student.email)
+
+    with patch("app.services.exam_access_request_admin_email.send_email") as send:
+        first = client.post(f"/api/me/lessons/{lesson.id}/complete", headers=headers)
+        assert first.status_code == 200, first.text
+        assert send.call_count == 1
+        assert send.call_args.kwargs["to"] == admin.email
+        assert "Exam access requested" in send.call_args.kwargs["subject"]
+        assert course.title in send.call_args.kwargs["html_body"]
+
+        second = client.post(f"/api/me/lessons/{lesson.id}/complete", headers=headers)
+        assert second.status_code == 200
+        assert send.call_count == 1
+
+    enrollment = (
+        db.query(Enrollment)
+        .filter(Enrollment.user_id == student.id, Enrollment.course_id == course.id)
+        .one()
+    )
+    assert enrollment.exam_access_requested_at is not None
+    notice = (
+        db.query(Notification)
+        .filter(Notification.user_id == admin.id, Notification.kind == "access")
+        .filter(Notification.title == "Exam access requested")
+        .one()
+    )
+    assert notice.link == "/access-control"

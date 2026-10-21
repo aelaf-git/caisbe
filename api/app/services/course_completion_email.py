@@ -23,6 +23,8 @@ def send_course_completion_email(
     full_name: str,
     course_title: str,
     certificate_code: str,
+    certificate_id: int | None = None,
+    enrollment_id: int | None = None,
 ) -> None:
     recipient = (to or "").strip()
     if not recipient:
@@ -46,9 +48,14 @@ def send_course_completion_email(
         heading="Certificate of Completion Ready",
         eyebrow="myCAISBE Credentials",
     )
+    related_type = "certificate" if certificate_id else ("enrollment" if enrollment_id else None)
+    related_id = certificate_id if certificate_id else enrollment_id
     send_email(
         to=recipient,
         subject=f"Congratulations! You've Completed {course_title.strip() or 'your course'}",
         html_body=html_body,
         purpose="system",
+        template_key="course_completion",
+        related_type=related_type,
+        related_id=related_id,
     )

@@ -229,8 +229,13 @@ def create_support_thread(
             send_request_received_email(
                 to=current_user.email,
                 full_name=current_user.full_name,
+                related_type="support_thread",
+                related_id=thread.id,
+                db=db,
             )
+            db.commit()
         except EmailDeliveryError as exc:
+            db.commit()  # keep failed outbound_emails row
             logger.error(
                 "Request-received email delivery failed for support thread %s (%s): %s",
                 thread.id,
@@ -238,6 +243,7 @@ def create_support_thread(
                 exc,
             )
         except Exception:
+            db.rollback()
             logger.exception("Request-received email failed for support thread %s", thread.id)
     loaded = _load_thread(db, thread.id)
     assert loaded is not None

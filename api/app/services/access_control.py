@@ -8,7 +8,10 @@ from sqlalchemy.orm import Session
 from app.models import Enrollment, LoginEvent, User
 
 COURSE_RESTRICTED_DETAIL = "CAISBE has restricted access to this course. Contact support."
-EXAM_RESTRICTED_DETAIL = "CAISBE has restricted access to this exam. Contact support."
+EXAM_RESTRICTED_DETAIL = (
+    "Exam access is pending. After you finish all modules, CAISBE reviews your progress "
+    "and grants exam access from the admin dashboard."
+)
 ACCOUNT_SUSPENDED_DETAIL = "Your account is suspended. Contact CAISBE."
 
 ACCESS_VALUES = {"allowed", "restricted"}

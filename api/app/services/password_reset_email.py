@@ -6,6 +6,8 @@ import html
 import logging
 from urllib.parse import quote
 
+from sqlalchemy.orm import Session
+
 from app.config import settings
 from app.security.auth import PASSWORD_RESET_HOURS
 from app.services.email import EmailDeliveryError, send_email
@@ -24,7 +26,8 @@ def send_password_reset_email(
     to: str,
     full_name: str,
     raw_token: str,
-) -> None:
+    db: Session | None = None,
+) -> int | None:
     if settings.is_production and not settings.resend_api_key.strip():
         raise EmailDeliveryError("Email delivery is not configured.")
 
@@ -45,9 +48,11 @@ def send_password_reset_email(
         heading="Reset Your Password",
         eyebrow="myCAISBE Portal",
     )
-    send_email(
+    return send_email(
         to=to,
         subject="Reset your CAISBE password",
         html_body=html_body,
         purpose="system",
+        template_key="password_reset",
+        db=db,
     )

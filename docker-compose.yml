@@ -39,6 +39,8 @@ services:
       DATABASE_URL: postgresql+psycopg://caisbe:caisbe@postgres:5432/caisbe
       UPLOAD_DIR: ./uploads
       PORTAL_PUBLIC_URL: http://localhost:3002
+      ADMIN_PUBLIC_URL: http://localhost:3001
+      WEB_PUBLIC_URL: http://localhost:3000
     volumes:
       - uploads:/app/uploads
     depends_on:

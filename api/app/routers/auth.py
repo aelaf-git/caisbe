@@ -289,6 +289,7 @@ async def register(request: Request, db: Session = Depends(get_db)) -> RegisterP
             full_name=pending.full_name,
             raw_token=raw_token,
             next_path="/membership",
+            pending_registration_id=pending.id,
         )
     except Exception as exc:
         db.query(PendingRegistration).filter(PendingRegistration.id == pending.id).delete()
@@ -442,6 +443,7 @@ def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -
                 full_name=pending.full_name,
                 raw_token=raw_token,
                 next_path="/membership",
+                pending_registration_id=pending.id,
             )
         except Exception:
             pass
@@ -514,6 +516,7 @@ def forgot_password(
                 full_name=pending.full_name,
                 raw_token=raw_token,
                 next_path="/membership",
+                pending_registration_id=pending.id,
             )
         except Exception:
             pass

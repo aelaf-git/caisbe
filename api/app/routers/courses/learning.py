@@ -131,6 +131,7 @@ def complete_lesson(
     # reload course with chapters for progress
     course = _load_published_course(db, course.id)
     _recompute_progress(db, current_user, course, enrollment)
+    maybe_notify_exam_access_request(db, current_user, course, enrollment)
 
     certificate_code: str | None = None
     if course_completion_requirements_met(db, current_user, course):

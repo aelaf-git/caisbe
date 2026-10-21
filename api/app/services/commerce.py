@@ -242,6 +242,7 @@ def _ensure_enrollment(db: Session, user: User, course: Course, status_value: st
             course_id=course.id,
             status=status_value,
             progress=0,
+            exam_access="restricted",
         )
         db.add(enrollment)
         db.flush()
@@ -402,6 +403,8 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
                     full_name=user.full_name,
                     course_title=course.title,
                     start_date=enrollment.enrolled_at or now,
+                    order_id=order.id,
+                    enrollment_id=enrollment.id,
                 )
             except EmailDeliveryError as exc:
                 logger.error(
@@ -427,6 +430,7 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
                         currency=order.currency,
                         transaction_id=transaction_id,
                         paid_at=order.paid_at or now,
+                        order_id=order.id,
                     )
                 except EmailDeliveryError as exc:
                     logger.error(
@@ -449,6 +453,7 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
                 order_number=order.number,
                 amount_cents=paid,
                 currency=order.currency,
+                order_id=order.id,
             )
         except EmailDeliveryError as exc:
             logger.error(
@@ -863,6 +868,8 @@ def refund_payment(db: Session, payment: Payment, admin: User) -> None:
                     full_name=user.full_name,
                     course_title=course.title,
                     cancelled_at=payment.reviewed_at or datetime.now(timezone.utc),
+                    order_id=payment.order_id,
+                    enrollment_id=enrollment.id if enrollment else None,
                 )
             except EmailDeliveryError as exc:
                 logger.error(

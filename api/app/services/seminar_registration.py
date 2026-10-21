@@ -94,6 +94,9 @@ def send_seminar_access_email(*, to: str, seminar_title: str, raw_token: str, se
         subject=f"Continue registration: {seminar_title}",
         html_body=html_body,
         purpose="system",
+        template_key="seminar_access",
+        related_type="seminar",
+        related_id=seminar_id,
     )
 
 

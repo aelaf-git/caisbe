@@ -360,6 +360,29 @@ class SupportMessage(Base):
     sender: Mapped["User"] = relationship(foreign_keys=[sender_user_id])
 
 
+class OutboundEmail(Base):
+    """Archive of every transactional email attempted via send_email()."""
+
+    __tablename__ = "outbound_emails"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="sent")  # sent | skipped_dev | failed
+    purpose: Mapped[str] = mapped_column(String(32), default="system")
+    template_key: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    from_address: Mapped[str] = mapped_column(String(255))
+    to_address: Mapped[str] = mapped_column(String(255), index=True)
+    subject: Mapped[str] = mapped_column(String(500))
+    html_body: Mapped[str] = mapped_column(Text)
+    reply_to: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    provider: Mapped[str] = mapped_column(String(32), default="resend")
+    provider_message_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    related_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    related_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    triggered_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+
 class ContactMessage(Base):
     """Public Contact Us form submissions for admin review and reply."""
 
@@ -382,6 +405,31 @@ class ContactMessage(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    replies: Mapped[list["ContactMessageReply"]] = relationship(
+        back_populates="contact_message",
+        cascade="all, delete-orphan",
+        order_by="ContactMessageReply.id",
+    )
+
+
+class ContactMessageReply(Base):
+    """Inbound or outbound message in a public contact conversation."""
+
+    __tablename__ = "contact_message_replies"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    contact_message_id: Mapped[int] = mapped_column(
+        ForeignKey("contact_messages.id", ondelete="CASCADE"),
+        index=True,
+    )
+    direction: Mapped[str] = mapped_column(String(16))  # inbound | outbound
+    body: Mapped[str] = mapped_column(Text)
+    sent_by_admin_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    outbound_email_id: Mapped[int | None] = mapped_column(ForeignKey("outbound_emails.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    contact_message: Mapped["ContactMessage"] = relationship(back_populates="replies")
 
 
 class Notification(Base):

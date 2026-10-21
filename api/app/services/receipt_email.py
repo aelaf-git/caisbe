@@ -32,6 +32,7 @@ def send_receipt_email(
     order_number: str,
     amount_cents: int,
     currency: str = "usd",
+    order_id: int | None = None,
 ) -> None:
     url = receipt_url(order_number)
     if not settings.resend_api_key.strip():
@@ -63,4 +64,7 @@ def send_receipt_email(
         subject=f"Your CAISBE receipt {order_number}",
         html_body=html_body,
         purpose="system",
+        template_key="receipt",
+        related_type="order" if order_id else None,
+        related_id=order_id,
     )

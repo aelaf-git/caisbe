@@ -20,6 +20,8 @@ def send_course_registration_email(
     course_title: str,
     start_date: datetime | None,
     duration: str = "Self-paced",
+    order_id: int | None = None,
+    enrollment_id: int | None = None,
 ) -> None:
     recipient = (to or "").strip()
     if not recipient:
@@ -51,9 +53,14 @@ def send_course_registration_email(
         heading="Course Registration Confirmed",
         eyebrow="myCAISBE Courses",
     )
+    related_type = "enrollment" if enrollment_id else ("order" if order_id else None)
+    related_id = enrollment_id if enrollment_id else order_id
     send_email(
         to=recipient,
         subject=f"Course Registration Confirmed – {course_title.strip() or 'CAISBE Course'}",
         html_body=html_body,
         purpose="system",
+        template_key="course_registration",
+        related_type=related_type,
+        related_id=related_id,
     )

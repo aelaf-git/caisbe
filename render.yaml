@@ -75,6 +75,8 @@ services:
         value: https://portal.caisbe.org
       - key: WEB_PUBLIC_URL
         value: https://caisbe.org
+      - key: ADMIN_PUBLIC_URL
+        value: https://admin.caisbe.org
       - key: CORS_ALLOWED_ORIGINS
         # Include www.* — Cloudflare may redirect admin/portal to www hosts.
         value: https://caisbe.org,https://www.caisbe.org,https://admin.caisbe.org,https://www.admin.caisbe.org,https://portal.caisbe.org,https://www.portal.caisbe.org

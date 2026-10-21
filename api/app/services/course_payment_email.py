@@ -22,6 +22,7 @@ def send_course_payment_email(
     currency: str,
     transaction_id: str,
     paid_at: datetime | None,
+    order_id: int | None = None,
 ) -> None:
     recipient = (to or "").strip()
     if not recipient:
@@ -59,4 +60,7 @@ def send_course_payment_email(
         subject=f"Payment Received – {course_title.strip() or 'CAISBE Course'}",
         html_body=html_body,
         purpose="system",
+        template_key="course_payment",
+        related_type="order" if order_id else None,
+        related_id=order_id,
     )

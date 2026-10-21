@@ -95,7 +95,15 @@ def _course(
 
 
 def _enroll(db: Session, user: User, course: Course) -> None:
-    db.add(Enrollment(user_id=user.id, course_id=course.id, status="enrolled", progress=100))
+    db.add(
+        Enrollment(
+            user_id=user.id,
+            course_id=course.id,
+            status="enrolled",
+            progress=100,
+            exam_access="allowed",
+        )
+    )
     db.commit()
 
 

@@ -15,6 +15,7 @@ from app.db import get_db
 from app.security.limiter import limiter
 from app.models import (
     ContactMessage,
+    ContactMessageReply,
     IndustryEvent,
     JobPosting,
     LeadershipPerson,
@@ -382,6 +383,7 @@ def submit_contact_message(
     db: Session = Depends(get_db),
 ) -> ContactMessageOut:
     try:
+        comments = payload.comments.strip()
         row = ContactMessage(
             first_name=payload.first_name.strip(),
             last_name=payload.last_name.strip(),
@@ -390,10 +392,18 @@ def submit_contact_message(
             phone=(payload.phone or "").strip() or None,
             email=str(payload.email).lower().strip(),
             help_topic=(payload.help_topic or "").strip() or None,
-            comments=payload.comments.strip(),
+            comments=comments,
             status="new",
         )
         db.add(row)
+        db.flush()
+        db.add(
+            ContactMessageReply(
+                contact_message_id=row.id,
+                direction="inbound",
+                body=comments,
+            )
+        )
         db.commit()
         db.refresh(row)
     except (OperationalError, ProgrammingError) as exc:
@@ -409,8 +419,13 @@ def submit_contact_message(
         send_request_received_email(
             to=row.email,
             full_name=f"{row.first_name} {row.last_name}".strip(),
+            related_type="contact_message",
+            related_id=row.id,
+            db=db,
         )
+        db.commit()
     except EmailDeliveryError as exc:
+        db.commit()  # keep failed outbound_emails row
         logger.error(
             "Request-received email delivery failed for contact message %s (%s): %s",
             row.id,
@@ -418,6 +433,7 @@ def submit_contact_message(
             exc,
         )
     except Exception:
+        db.rollback()
         logger.exception("Request-received email failed for contact message %s", row.id)
     return ContactMessageOut.model_validate(row)
 
@@ -498,16 +514,19 @@ def subscribe_newsletter(
         )
 
         if already_active:
-            send_newsletter_already_subscribed_email(to=email, subscriber_id=subscriber.id)
+            send_newsletter_already_subscribed_email(to=email, subscriber_id=subscriber.id, db=db)
         else:
-            send_newsletter_subscribed_email(to=email, subscriber_id=subscriber.id)
+            send_newsletter_subscribed_email(to=email, subscriber_id=subscriber.id, db=db)
+        db.commit()
     except EmailDeliveryError as exc:
+        db.commit()  # keep failed outbound_emails row
         logger.error(
             "Newsletter email delivery failed for %s: %s",
             email,
             exc,
         )
     except Exception:
+        db.rollback()
         logger.exception("Newsletter email failed for %s", email)
     return {"message": welcome_message}
 

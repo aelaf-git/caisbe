@@ -33,6 +33,13 @@ def portal_base_url() -> str:
     return base
 
 
+def admin_base_url() -> str:
+    base = (settings.admin_public_url or "http://localhost:3001").rstrip("/")
+    if not base.startswith(("http://", "https://")):
+        base = f"https://{base.lstrip('/')}"
+    return base
+
+
 def logo_url() -> str:
     return f"{web_base_url()}/images/logo.png"
 

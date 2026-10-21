@@ -5,6 +5,8 @@ from __future__ import annotations
 import html
 import logging
 
+from sqlalchemy.orm import Session
+
 from app.config import settings
 from app.services.email import send_email
 from app.services.email_layout import cta_button, web_base_url, wrap_email_html
@@ -13,10 +15,15 @@ from app.services.newsletter_unsubscribe import unsubscribe_footer_html
 logger = logging.getLogger(__name__)
 
 
-def send_newsletter_subscribed_email(*, to: str, subscriber_id: int) -> None:
+def send_newsletter_subscribed_email(
+    *,
+    to: str,
+    subscriber_id: int,
+    db: Session | None = None,
+) -> int | None:
     recipient = (to or "").strip()
     if not recipient:
-        return
+        return None
     if not settings.resend_api_key.strip():
         logger.info("RESEND_API_KEY unset — newsletter subscribed email for %s", recipient)
 
@@ -32,18 +39,27 @@ def send_newsletter_subscribed_email(*, to: str, subscriber_id: int) -> None:
         eyebrow="CAISBE Newsletter",
         footer_extra_html=footer,
     )
-    send_email(
+    return send_email(
         to=recipient,
         subject="You're Successfully Subscribed",
         html_body=html_body,
         purpose="newsletter",
+        template_key="newsletter_subscribed",
+        related_type="newsletter_subscriber",
+        related_id=subscriber_id,
+        db=db,
     )
 
 
-def send_newsletter_already_subscribed_email(*, to: str, subscriber_id: int) -> None:
+def send_newsletter_already_subscribed_email(
+    *,
+    to: str,
+    subscriber_id: int,
+    db: Session | None = None,
+) -> int | None:
     recipient = (to or "").strip()
     if not recipient:
-        return
+        return None
     if not settings.resend_api_key.strip():
         logger.info("RESEND_API_KEY unset — newsletter already-subscribed email for %s", recipient)
 
@@ -59,9 +75,13 @@ def send_newsletter_already_subscribed_email(*, to: str, subscriber_id: int) -> 
         eyebrow="CAISBE Newsletter",
         footer_extra_html=footer,
     )
-    send_email(
+    return send_email(
         to=recipient,
         subject="You're Already Subscribed to the CAISBE Newsletter",
         html_body=html_body,
         purpose="newsletter",
+        template_key="newsletter_already_subscribed",
+        related_type="newsletter_subscriber",
+        related_id=subscriber_id,
+        db=db,
     )

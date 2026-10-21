@@ -21,6 +21,7 @@ from app.models import (
     Chapter,
     AssignmentSubmission,
     ContactMessage,
+    ContactMessageReply,
     ContentBlock,
     Course,
     Enrollment,
@@ -154,7 +155,7 @@ def admin_list_contact_messages(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[ContactMessageOut]:
-    query = db.query(ContactMessage)
+    query = db.query(ContactMessage).options(selectinload(ContactMessage.replies))
     if status_filter:
         wanted = status_filter.strip().lower()
         if wanted not in CONTACT_STATUSES:
@@ -170,7 +171,12 @@ def admin_get_contact_message(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> ContactMessageOut:
-    row = db.query(ContactMessage).filter(ContactMessage.id == message_id).first()
+    row = (
+        db.query(ContactMessage)
+        .options(selectinload(ContactMessage.replies))
+        .filter(ContactMessage.id == message_id)
+        .first()
+    )
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact message not found")
     if row.status == "new":
@@ -206,7 +212,12 @@ def admin_reply_contact_message(
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> ContactMessageOut:
-    row = db.query(ContactMessage).filter(ContactMessage.id == message_id).first()
+    row = (
+        db.query(ContactMessage)
+        .options(selectinload(ContactMessage.replies))
+        .filter(ContactMessage.id == message_id)
+        .first()
+    )
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact message not found")
 
@@ -232,11 +243,16 @@ def admin_reply_contact_message(
         eyebrow="CAISBE Support",
     )
     try:
-        send_email(
+        outbound_id = send_email(
             to=row.email,
             subject=subject,
             html_body=html_body,
             purpose="contact",
+            template_key="contact_admin_reply",
+            related_type="contact_message",
+            related_id=row.id,
+            triggered_by_user_id=admin.id,
+            db=db,
         )
     except EmailDeliveryError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
@@ -245,8 +261,23 @@ def admin_reply_contact_message(
     row.replied_at = datetime.now(timezone.utc)
     row.replied_by_admin_id = admin.id
     row.status = "replied"
+    db.add(
+        ContactMessageReply(
+            contact_message_id=row.id,
+            direction="outbound",
+            body=body,
+            sent_by_admin_id=admin.id,
+            outbound_email_id=outbound_id,
+        )
+    )
     db.commit()
     db.refresh(row)
+    row = (
+        db.query(ContactMessage)
+        .options(selectinload(ContactMessage.replies))
+        .filter(ContactMessage.id == message_id)
+        .one()
+    )
     return ContactMessageOut.model_validate(row)
 
 

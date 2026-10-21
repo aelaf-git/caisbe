@@ -236,14 +236,67 @@ def course_completion_requirements_met(db: Session, user: User, course: Course) 
     return True
 
 
+def maybe_notify_exam_access_request(
+    db: Session,
+    user: User,
+    course: Course,
+    enrollment: Enrollment,
+) -> None:
+    """Idempotently email/notify admins when course work is first finished."""
+    if enrollment.exam_access_requested_at is not None:
+        return
+    if course.final_exam is None:
+        return
+    if not course_work_requirements_met(db, user, course):
+        return
+
+    now = datetime.now(timezone.utc)
+    enrollment.exam_access_requested_at = now
+    db.flush()
+
+    from app.services.exam_access_request_admin_email import send_exam_access_request_admin_emails
+    from app.services.notifications import notify_users
+
+    admin_rows = (
+        db.query(User.id, User.email)
+        .filter(User.role == "admin")
+        .all()
+    )
+    admin_ids = [row[0] for row in admin_rows]
+    admin_emails = [row[1] for row in admin_rows if (row[1] or "").strip()]
+    course_title = (course.title or "").strip() or "a course"
+    trainee_name = (user.full_name or "").strip() or "A trainee"
+    if admin_ids:
+        notify_users(
+            db,
+            admin_ids,
+            title="Exam access requested",
+            body=(
+                f"{trainee_name} completed all modules of {course_title} and is ready "
+                "for the final exam. Review and grant access in Access Control."
+            ),
+            kind="access",
+            link="/access-control",
+        )
+    send_exam_access_request_admin_emails(
+        admin_emails=admin_emails,
+        trainee_name=trainee_name,
+        trainee_email=(user.email or "").strip(),
+        course_title=course_title,
+        completed_at=now,
+        enrollment_id=enrollment.id,
+    )
+
+
 def _apply_progress(db: Session, user: User, course_id: int) -> Enrollment:
     course = db.query(Course).filter(Course.id == course_id, Course.status == "published").first()
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
     enrollment = require_active_enrollment(db, user, course_id)
     _recompute_progress(db, user, course, enrollment)
+    course = _load_published_course(db, course_id)
+    maybe_notify_exam_access_request(db, user, course, enrollment)
     if enrollment.status != "completed":
-        course = _load_published_course(db, course_id)
         if course_completion_requirements_met(db, user, course):
             _finalize_course_completion(db, user, course, enrollment)
     return enrollment
@@ -407,6 +460,11 @@ def _finalize_course_completion(
     enrollment.status = "completed"
     _recompute_progress(db, user, course, enrollment)
     certificate_code = _issue_certificate(db, user, course)
+    cert_row = (
+        db.query(Certificate)
+        .filter(Certificate.user_id == user.id, Certificate.course_id == course.id)
+        .first()
+    )
     issue_membership_certificate(db, user)
     if (user.email or "").strip():
         try:
@@ -418,6 +476,8 @@ def _finalize_course_completion(
                 full_name=user.full_name,
                 course_title=course.title,
                 certificate_code=certificate_code,
+                certificate_id=cert_row.id if cert_row else None,
+                enrollment_id=enrollment.id,
             )
         except EmailDeliveryError as exc:
             logger.error(
@@ -967,6 +1027,7 @@ def _require_open_exam(db: Session, user: User, course: Course) -> FinalExam:
     from app.services.access_control import require_exam_open
 
     enrollment = require_active_enrollment(db, user, course.id)
+    maybe_notify_exam_access_request(db, user, course, enrollment)
     require_exam_open(enrollment)
     _require_course_work_complete(db, user, course)
     exam = course.final_exam

@@ -74,7 +74,8 @@ class Enrollment(Base):
     status: Mapped[str] = mapped_column(String(32), default="enrolled")
     progress: Mapped[int] = mapped_column(Integer, default=0)
     course_access: Mapped[str] = mapped_column(String(16), default="allowed", server_default="allowed")
-    exam_access: Mapped[str] = mapped_column(String(16), default="allowed", server_default="allowed")
+    exam_access: Mapped[str] = mapped_column(String(16), default="restricted", server_default="restricted")
+    exam_access_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     enrolled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="enrollments")
