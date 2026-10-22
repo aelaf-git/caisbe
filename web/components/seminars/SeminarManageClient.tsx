@@ -6,6 +6,8 @@ import ButtonLink from "@/components/ui/ButtonLink";
 import { ContentSection, PageHero } from "@/components/pages/ContentPage";
 import { POSITION_OPTIONS, type AttendancePreference } from "@/lib/seminarRegistration";
 
+type PositionOption = (typeof POSITION_OPTIONS)[number];
+
 type ManagePayload = {
   registration_id: number;
   seminar_id: number;
@@ -62,7 +64,7 @@ export default function SeminarManageClient({ seminarId }: { seminarId: number }
   const [city, setCity] = useState("");
   const [stateProvince, setStateProvince] = useState("");
   const [country, setCountry] = useState("");
-  const [position, setPosition] = useState(POSITION_OPTIONS[0]);
+  const [position, setPosition] = useState<PositionOption>(POSITION_OPTIONS[0]);
   const [positionOther, setPositionOther] = useState("");
   const [earningCeu, setEarningCeu] = useState(false);
   const [designations, setDesignations] = useState("");
@@ -80,11 +82,8 @@ export default function SeminarManageClient({ seminarId }: { seminarId: number }
     setCity(payload.city);
     setStateProvince(payload.state_province);
     setCountry(payload.country);
-    setPosition(
-      (POSITION_OPTIONS.includes(payload.position as (typeof POSITION_OPTIONS)[number])
-        ? payload.position
-        : POSITION_OPTIONS[0]) as (typeof POSITION_OPTIONS)[number],
-    );
+    const nextPosition = payload.position as PositionOption;
+    setPosition(POSITION_OPTIONS.includes(nextPosition) ? nextPosition : POSITION_OPTIONS[0]);
     setPositionOther(payload.position_other || "");
     setEarningCeu(payload.earning_ceu);
     setDesignations(payload.designations || "");
