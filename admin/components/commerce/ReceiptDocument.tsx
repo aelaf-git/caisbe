@@ -86,7 +86,7 @@ export default function ReceiptDocument({
       <div className="px-8 py-8 sm:px-10">
         <header className="flex flex-wrap items-start justify-between gap-6">
           <div>
-            <BrandLogo alt="CAISBE" className="h-12 text-[3rem]" />
+            <BrandLogo alt="CAISBE" className="h-12" />
             <p className="mt-3 max-w-xs text-xs leading-5 text-[#5f6b7a]">{INSTITUTE}</p>
           </div>
           <div className="text-left sm:text-right">

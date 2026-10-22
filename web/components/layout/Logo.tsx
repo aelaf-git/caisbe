@@ -18,8 +18,8 @@ export default function Logo({ variant = "header" }: LogoProps) {
           src={logoImage.src}
           width={logoImage.width}
           height={logoImage.height}
-          alt={`${siteFullName} registered trademark logo`}
-          className="h-16 max-w-full text-[4rem] sm:h-20 sm:text-[5rem] md:h-24 md:text-[6rem]"
+          alt={`${siteFullName} logo`}
+          className="h-16 max-w-full sm:h-20 md:h-24"
         />
         <p className="text-base font-semibold leading-snug text-white sm:text-lg md:text-xl md:leading-7">
           {siteFullName}
@@ -34,8 +34,8 @@ export default function Logo({ variant = "header" }: LogoProps) {
         src={logoImage.src}
         width={logoImage.width}
         height={logoImage.height}
-        alt={`${siteFullName} registered trademark logo`}
-        className="h-10 text-[2.5rem] sm:h-12 sm:text-[3rem]"
+        alt={`${siteFullName} logo`}
+        className="h-10 sm:h-12"
         priority
       />
     </Link>
