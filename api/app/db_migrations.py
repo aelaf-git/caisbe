@@ -26,6 +26,9 @@ def upgrade_to_head() -> None:
     Databases created before Alembic (SQLAlchemy create_all) only have the original
     LMS tables. Stamp that baseline, then run later revisions instead of jumping to head.
     """
+    import logging
+
+    logger = logging.getLogger(__name__)
     config = _alembic_config()
     engine = create_engine(settings.database_url, pool_pre_ping=True)
 
@@ -34,4 +37,8 @@ def upgrade_to_head() -> None:
         if current is None and inspect(connection).has_table("users"):
             command.stamp(config, "001_initial_schema")
 
-    command.upgrade(config, "head")
+    try:
+        command.upgrade(config, "head")
+    except Exception:
+        logger.exception("Alembic upgrade to head failed")
+        raise

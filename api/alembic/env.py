@@ -1,7 +1,7 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, inspect, pool, text
 
 from app.config import settings
 from app.db import Base
@@ -17,6 +17,18 @@ target_metadata = Base.metadata
 
 def get_url() -> str:
     return settings.database_url
+
+
+def _widen_alembic_version_num(connection) -> None:
+    """Alembic defaults version_num to VARCHAR(32); longer revision ids must fit."""
+    if connection.dialect.name != "postgresql":
+        return
+    if not inspect(connection).has_table("alembic_version"):
+        return
+    connection.execute(
+        text("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(128)")
+    )
+    connection.commit()
 
 
 def run_migrations_offline() -> None:
@@ -47,7 +59,12 @@ def run_migrations_online() -> None:
             # same migrations can be checked off Postgres.
             dbapi = connection.connection.dbapi_connection
             dbapi.create_function("now", 0, lambda: "2000-01-01 00:00:00")
-        context.configure(connection=connection, target_metadata=target_metadata)
+        _widen_alembic_version_num(connection)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            transaction_per_migration=True,
+        )
 
         with context.begin_transaction():
             context.run_migrations()
