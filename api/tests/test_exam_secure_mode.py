@@ -99,6 +99,10 @@ def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+_ID_PHOTO = "/api/uploads/exams/identity/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg"
+_FACE_PHOTO = "/api/uploads/exams/identity/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.jpg"
+
+
 def _precheck_ok(client: TestClient, course_id: int, token: str) -> None:
     response = client.post(
         f"/api/me/courses/{course_id}/final-exam/precheck",
@@ -110,13 +114,76 @@ def _precheck_ok(client: TestClient, course_id: int, token: str) -> None:
             "camera_ok": True,
             "multi_monitor": False,
             "user_agent": "pytest",
+            "id_photo_url": _ID_PHOTO,
+            "face_photo_url": _FACE_PHOTO,
         },
     )
     assert response.status_code == 200, response.text
     assert response.json()["allowed"] is True
+    assert response.json().get("identity_status") == "pending"
 
 
-def test_secure_start_requires_precheck(client: TestClient, db: Session) -> None:
+def _approve_identity(db: Session, user_id: int) -> ExamSession:
+    session = db.query(ExamSession).filter(ExamSession.user_id == user_id).one()
+    session.identity_status = "approved"
+    session.identity_reviewed_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(session)
+    return session
+
+
+def _admin(db: Session, email: str = "admin-identity@example.com") -> User:
+    admin = User(
+        full_name="Identity Admin",
+        email=email,
+        phone="+15555550997",
+        country="Canada",
+        city="Toronto",
+        hashed_password=hash_password(STRONG_PASSWORD),
+        role="admin",
+        membership_status="active",
+        email_verified_at=datetime.now(timezone.utc),
+    )
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+    return admin
+
+
+def test_secure_precheck_requires_identity_photos(client: TestClient, db: Session) -> None:
+    user = _student(db, "sec-photos@example.com")
+    course, _exam = _course_with_exam(db, secure=True)
+    _enroll(db, user, course)
+    token = _login(client, user.email)
+
+    missing = client.post(
+        f"/api/me/courses/{course.id}/final-exam/precheck",
+        headers=_auth(token),
+        json={
+            "rules_accepted": True,
+            "fullscreen_ok": True,
+            "visibility_api_ok": True,
+            "camera_ok": True,
+            "multi_monitor": False,
+            "user_agent": "pytest",
+        },
+    )
+    assert missing.status_code == 200, missing.text
+    body = missing.json()
+    assert body["allowed"] is False
+    assert body["secure_ok"] is False
+    assert any("photo id" in reason.lower() for reason in body["reasons"])
+    assert any("face" in reason.lower() for reason in body["reasons"])
+
+    _precheck_ok(client, course.id, token)
+    session = db.query(ExamSession).filter(ExamSession.user_id == user.id).one()
+    assert session.id_photo_url == _ID_PHOTO
+    assert session.face_photo_url == _FACE_PHOTO
+    assert session.secure_ok_at is not None
+    assert session.identity_status == "pending"
+
+
+def test_secure_start_requires_precheck_and_identity_approval(client: TestClient, db: Session) -> None:
     user = _student(db, "sec-a@example.com")
     course, _exam = _course_with_exam(db, secure=True)
     _enroll(db, user, course)
@@ -127,12 +194,59 @@ def test_secure_start_requires_precheck(client: TestClient, db: Session) -> None
     assert "pre-check" in blocked.json()["detail"].lower()
 
     _precheck_ok(client, course.id, token)
+    pending = client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=_auth(token))
+    assert pending.status_code == 400
+    assert "pending admin approval" in pending.json()["detail"].lower()
+
+    _approve_identity(db, user.id)
     started = client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=_auth(token))
     assert started.status_code == 200, started.text
     body = started.json()
     assert body["in_progress"] is True
     assert body["secure_mode"] is True
+    assert body["identity_status"] == "approved"
     assert len(body["questions"]) == 2
+
+
+def test_admin_can_approve_and_reject_exam_identity(client: TestClient, db: Session) -> None:
+    admin = _admin(db)
+    user = _student(db, "sec-review@example.com")
+    course, _exam = _course_with_exam(db, secure=True)
+    _enroll(db, user, course)
+    token = _login(client, user.email)
+    admin_token = _login(client, admin.email)
+
+    _precheck_ok(client, course.id, token)
+    listed = client.get(f"/api/admin/students/{user.id}/exam-identity", headers=_auth(admin_token))
+    assert listed.status_code == 200, listed.text
+    assert len(listed.json()) == 1
+    session_id = listed.json()[0]["session_id"]
+    assert listed.json()[0]["identity_status"] == "pending"
+    assert listed.json()[0]["student_full_name"] == user.full_name
+
+    rejected = client.post(
+        f"/api/admin/students/{user.id}/exam-identity/{session_id}/review",
+        headers=_auth(admin_token),
+        json={"status": "rejected", "note": "Name does not match"},
+    )
+    assert rejected.status_code == 200, rejected.text
+    assert rejected.json()["identity_status"] == "rejected"
+    blocked = client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=_auth(token))
+    assert blocked.status_code == 400
+    assert "rejected" in blocked.json()["detail"].lower()
+
+    _precheck_ok(client, course.id, token)
+    listed2 = client.get(f"/api/admin/students/{user.id}/exam-identity", headers=_auth(admin_token))
+    session_id = listed2.json()[0]["session_id"]
+    approved = client.post(
+        f"/api/admin/students/{user.id}/exam-identity/{session_id}/review",
+        headers=_auth(admin_token),
+        json={"status": "approved"},
+    )
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["identity_status"] == "approved"
+    started = client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=_auth(token))
+    assert started.status_code == 200, started.text
 
 
 def test_integrity_events_isolated_per_student(client: TestClient, db: Session) -> None:
@@ -145,6 +259,7 @@ def test_integrity_events_isolated_per_student(client: TestClient, db: Session) 
     token_b = _login(client, b.email)
 
     _precheck_ok(client, course.id, token_a)
+    _approve_identity(db, a.id)
     assert client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=_auth(token_a)).status_code == 200
     assert (
         client.post(
@@ -183,6 +298,7 @@ def test_violation_lockout_fails_submit(client: TestClient, db: Session) -> None
     _enroll(db, user, course)
     token = _login(client, user.email)
     _precheck_ok(client, course.id, token)
+    _approve_identity(db, user.id)
     start = client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=_auth(token))
     assert start.status_code == 200
     qid = start.json()["questions"][0]["id"]
@@ -254,6 +370,7 @@ def test_admin_can_read_integrity_log(client: TestClient, db: Session) -> None:
     _enroll(db, user, course)
     token = _login(client, user.email)
     _precheck_ok(client, course.id, token)
+    _approve_identity(db, user.id)
     client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=_auth(token))
     client.post(
         f"/api/me/courses/{course.id}/final-exam/integrity",
@@ -267,3 +384,4 @@ def test_admin_can_read_integrity_log(client: TestClient, db: Session) -> None:
     types = {row["event_type"] for row in log.json()}
     assert "paste_attempt" in types
     assert "precheck_ok" in types
+    assert "identity_pending" in types

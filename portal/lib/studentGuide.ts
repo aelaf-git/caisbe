@@ -101,7 +101,7 @@ export const studentGuideSections: GuideSection[] = [
       "Open the course and select the exam.",
       "Read the three agreement screens: exam information, exam rules and academic integrity, then confidentiality and professional conduct. Check I agree on each screen.",
       "Choose Agree & start exam. The timer starts then, when the exam is timed.",
-      "If the exam is secure, complete the camera and fullscreen pre-check before Start exam. The camera check confirms you are present and does not record the exam.",
+      "If the exam is secure, capture your photo ID and a face photo, then run the secure pre-check (including fullscreen). Start exam unlocks after an administrator confirms the name on your photo ID matches your registered name. These photos are for identity verification and are not a continuous recording of the exam.",
       "Copy, paste, print, and right-click are blocked during a secure exam. Leaving the exam window is logged, and too many violations fail that attempt.",
       "Review your answers, then choose Submit exam. If time runs out, the exam is submitted for you.",
       "A score below the pass mark can be taken again. Correct answers are not shown.",

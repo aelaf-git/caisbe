@@ -25,6 +25,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
   const searchParams = useSearchParams();
   const tokenFromUrl = searchParams.get("token") || "";
 
+  const [gateName, setGateName] = useState("");
   const [email, setEmail] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [verifiedEmail, setVerifiedEmail] = useState("");
@@ -84,6 +85,13 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
           setAccessToken(data.access_token || tokenFromUrl);
           setVerifiedEmail(data.email || "");
           setEmail(data.email || "");
+          const requester = String(data.requester_name || "").trim();
+          if (requester) {
+            const parts = requester.split(/\s+/);
+            setFirstName(parts[0] || "");
+            setLastName(parts.slice(1).join(" "));
+            setGateName(requester);
+          }
           setGateMessage(data.message || "Email verified. Complete the form below.");
         }
       } catch (err) {
@@ -109,7 +117,7 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
       const res = await fetch(`/api/seminars/${seminar.id}/access`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ name: gateName.trim(), email: email.trim() }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -171,7 +179,11 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
         window.location.href = data.checkout_url;
         return;
       }
-      window.location.href = `/professional-development/seminars/${seminar.id}/register/success?registration_id=${data.id}`;
+      const manageParam =
+        typeof data.manage_url === "string" && data.manage_url.includes("token=")
+          ? `&manage_token=${encodeURIComponent(new URL(data.manage_url, window.location.origin).searchParams.get("token") || "")}`
+          : "";
+      window.location.href = `/professional-development/seminars/${seminar.id}/register/success?registration_id=${data.id}${manageParam}`;
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Unable to submit registration.");
     } finally {
@@ -240,9 +252,9 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
         <>
           <ContentSection title="Email verification">
             <p className="max-w-3xl text-base leading-7 text-caisbe-text">
-              Members and non-members can register. Enter your email address and we will
-              send a secure link. After you open the link from your inbox, the registration
-              form for this seminar will unlock.
+              Members and non-members can register. Enter your name and email address and we
+              will send a secure link. After you open the link from your inbox, the
+              registration form for this seminar will unlock.
             </p>
             {unlocked ? (
               <p className="mt-4 rounded-lg border border-caisbe-green/30 bg-caisbe-green/5 px-4 py-3 text-sm text-caisbe-text">
@@ -250,6 +262,18 @@ export default function SeminarRegistrationClient({ seminar }: Props) {
               </p>
             ) : (
               <form onSubmit={requestAccess} className="mt-6 max-w-xl space-y-4">
+                <label className="block text-sm font-semibold text-caisbe-text-dark">
+                  Name *
+                  <input
+                    type="text"
+                    required
+                    className={fieldClass}
+                    value={gateName}
+                    onChange={(e) => setGateName(e.target.value)}
+                    autoComplete="name"
+                    maxLength={120}
+                  />
+                </label>
                 <label className="block text-sm font-semibold text-caisbe-text-dark">
                   Email address *
                   <input

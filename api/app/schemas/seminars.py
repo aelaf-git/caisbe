@@ -28,6 +28,8 @@ class SeminarOut(BaseModel):
     event_date_label: str | None = None
     event_time_label: str | None = None
     event_format_label: str | None = None
+    venue_address: str | None = None
+    online_join_url: str | None = None
     event_starts_at: datetime | None = None
     registration_closes_at: datetime | None = None
     registration_enabled: bool = True
@@ -51,6 +53,8 @@ class SeminarCreateIn(BaseModel):
     event_date_label: str | None = Field(default=None, max_length=255)
     event_time_label: str | None = Field(default=None, max_length=500)
     event_format_label: str | None = Field(default=None, max_length=500)
+    venue_address: str | None = Field(default=None, max_length=4000)
+    online_join_url: str | None = Field(default=None, max_length=1024)
     event_starts_at: datetime | None = None
     registration_closes_at: datetime | None = None
     registration_enabled: bool = True
@@ -70,6 +74,8 @@ class SeminarUpdateIn(BaseModel):
     event_date_label: str | None = Field(default=None, max_length=255)
     event_time_label: str | None = Field(default=None, max_length=500)
     event_format_label: str | None = Field(default=None, max_length=500)
+    venue_address: str | None = Field(default=None, max_length=4000)
+    online_join_url: str | None = Field(default=None, max_length=1024)
     event_starts_at: datetime | None = None
     registration_closes_at: datetime | None = None
     registration_enabled: bool | None = None
@@ -83,6 +89,7 @@ class SeminarUpdateIn(BaseModel):
 
 
 class SeminarAccessRequestIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
     email: EmailStr
 
 
@@ -95,6 +102,7 @@ class SeminarAccessOut(BaseModel):
     seminar_id: int
     access_token: str
     message: str
+    requester_name: str | None = None
 
 
 class SeminarRegistrationIn(BaseModel):
@@ -144,7 +152,9 @@ class SeminarRegistrationOut(BaseModel):
     amount_cents: int
     currency: str
     checkout_url: str | None = None
+    manage_url: str | None = None
     paid_at: datetime | None = None
+    cancelled_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -153,3 +163,62 @@ class SeminarRegistrationOut(BaseModel):
 
 class SeminarRegistrationConfirmIn(BaseModel):
     session_id: str = Field(min_length=5, max_length=255)
+
+
+class SeminarManageUpdateIn(BaseModel):
+    token: str = Field(min_length=10, max_length=200)
+    first_name: str = Field(min_length=1, max_length=120)
+    last_name: str = Field(min_length=1, max_length=120)
+    preferred_name: str | None = Field(default=None, max_length=120)
+    phone: str = Field(min_length=1, max_length=60)
+    job_title: str = Field(min_length=1, max_length=160)
+    company: str = Field(min_length=1, max_length=200)
+    city: str = Field(min_length=1, max_length=120)
+    state_province: str = Field(min_length=1, max_length=120)
+    country: str = Field(min_length=1, max_length=120)
+    position: str = Field(min_length=1, max_length=120)
+    position_other: str | None = Field(default=None, max_length=160)
+    earning_ceu: bool = False
+    designations: str | None = Field(default=None, max_length=500)
+    attendance: str = Field(min_length=1, max_length=32)
+    accommodations: str | None = Field(default=None, max_length=2000)
+
+
+class SeminarManageCancelIn(BaseModel):
+    token: str = Field(min_length=10, max_length=200)
+
+
+class SeminarManageOut(BaseModel):
+    registration_id: int
+    seminar_id: int
+    status: str
+    ticket_reference: str
+    seminar_title: str
+    event_date_label: str | None = None
+    event_time_label: str | None = None
+    where_label: str | None = None
+    online_join_url: str | None = None
+    can_edit: bool = True
+    can_cancel: bool = True
+    first_name: str
+    last_name: str
+    preferred_name: str | None = None
+    email: str
+    phone: str
+    job_title: str
+    company: str
+    city: str
+    state_province: str
+    country: str
+    position: str
+    position_other: str | None = None
+    membership_status: str
+    earning_ceu: bool
+    designations: str | None = None
+    attendance: str
+    accommodations: str | None = None
+    amount_cents: int
+    currency: str
+    paid_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    manage_url: str | None = None

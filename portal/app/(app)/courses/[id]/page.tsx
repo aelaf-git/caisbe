@@ -34,6 +34,9 @@ function buildPlaylist(course: CourseDetail): PlaylistItem[] {
       }
     }
   }
+  for (const row of course.direct_assignments ?? []) {
+    items.push({ kind: "direct-assignment", assignmentId: row.direct_assignment_id });
+  }
   if (course.final_exam) items.push({ kind: "exam" });
   return items;
 }
@@ -58,8 +61,15 @@ export default function CoursePlayerPage() {
       setCourse(data);
       setSelection((prev) => {
         if (prev) return prev;
-        const requested =
-          typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("block")) : NaN;
+        const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+        const requestedDirect = params ? Number(params.get("direct")) : NaN;
+        if (Number.isFinite(requestedDirect) && requestedDirect > 0) {
+          const match = (data.direct_assignments ?? []).find(
+            (row) => row.direct_assignment_id === requestedDirect,
+          );
+          if (match) return { kind: "direct-assignment", assignmentId: match.direct_assignment_id };
+        }
+        const requested = params ? Number(params.get("block")) : NaN;
         if (Number.isFinite(requested) && requested > 0) {
           const match = data.chapters
             .flatMap((chapter) => chapter.blocks ?? [])

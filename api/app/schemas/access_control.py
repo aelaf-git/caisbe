@@ -68,3 +68,5 @@ class EnrollmentAccessUpdate(BaseModel):
 
 class SuspensionUpdate(BaseModel):
     suspended: bool
+    reason: str | None = Field(default=None, max_length=2000)
+    course_id: int | None = None

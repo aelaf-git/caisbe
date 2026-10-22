@@ -21,6 +21,8 @@ from app.models import (
     AssignmentSubmission,
     ContactMessage,
     ContentBlock,
+    DirectAssignment,
+    DirectAssignmentSubmission,
     Course,
     Enrollment,
     ExamIntegrityEvent,
@@ -867,7 +869,9 @@ def _assignment_submission_out(row: AssignmentSubmission) -> AssignmentSubmissio
     submitted_at = latest_submitted_at(row)
     return AssignmentSubmissionOut(
         id=row.id,
+        source="chapter",
         content_block_id=row.content_block_id,
+        direct_assignment_id=None,
         assignment_title=(block.title if block and block.title else "Assignment"),
         course_code=course.code if course else "",
         course_title=course.title if course else "",
@@ -888,11 +892,51 @@ def _assignment_submission_out(row: AssignmentSubmission) -> AssignmentSubmissio
     )
 
 
+def _direct_assignment_submission_out(row: DirectAssignmentSubmission) -> AssignmentSubmissionOut:
+    from app.services.assignments import latest_submitted_at, submission_is_late
+
+    assignment = row.assignment
+    course = assignment.course if assignment else None
+    student = row.user
+    submitted_at = latest_submitted_at(row)
+    return AssignmentSubmissionOut(
+        id=row.id,
+        source="direct",
+        content_block_id=0,
+        direct_assignment_id=row.direct_assignment_id,
+        assignment_title=(assignment.title if assignment else "Assignment"),
+        course_code=course.code if course else "",
+        course_title=course.title if course else "",
+        body=row.body,
+        file_url=row.file_url,
+        file_name=row.file_name,
+        status=row.status,
+        score=row.score,
+        feedback=row.feedback,
+        points_possible=assignment.points_possible if assignment else None,
+        due_at=assignment.due_at if assignment else None,
+        is_late=submission_is_late(assignment.due_at if assignment else None, submitted_at),
+        graded_at=row.graded_at,
+        user_id=row.user_id,
+        student_name=student.full_name if student else None,
+        student_email=student.email if student else None,
+        submitted_at=submitted_at,
+    )
+
+
 def _assignment_submission_query(db: Session):
     return db.query(AssignmentSubmission).options(
         joinedload(AssignmentSubmission.user),
         selectinload(AssignmentSubmission.attempts),
         joinedload(AssignmentSubmission.block).joinedload(ContentBlock.chapter).joinedload(Chapter.course),
+    )
+
+
+def _direct_assignment_submission_query(db: Session):
+    return db.query(DirectAssignmentSubmission).options(
+        joinedload(DirectAssignmentSubmission.user),
+        selectinload(DirectAssignmentSubmission.attempts),
+        joinedload(DirectAssignmentSubmission.assignment).joinedload(DirectAssignment.course),
     )
 
 

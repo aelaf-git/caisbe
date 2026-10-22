@@ -230,6 +230,13 @@ class ExamSession(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     order_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     secure_ok_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    id_photo_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    face_photo_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    # pending | approved | rejected — null until photos submitted via secure precheck
+    identity_status: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+    identity_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    identity_reviewed_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    identity_review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     violation_count: Mapped[int] = mapped_column(Integer, default=0)
     locked_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -380,6 +387,100 @@ class AssignmentAttempt(Base):
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     submission: Mapped["AssignmentSubmission"] = relationship(back_populates="attempts")
+
+
+class DirectAssignment(Base):
+    """Admin-uploaded handout assigned to selected students in a course."""
+
+    __tablename__ = "direct_assignments"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    points_possible: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    course: Mapped["Course"] = relationship()
+    created_by: Mapped["User | None"] = relationship(foreign_keys=[created_by_id])
+    recipients: Mapped[list["DirectAssignmentRecipient"]] = relationship(
+        back_populates="assignment",
+        cascade="all, delete-orphan",
+    )
+    submissions: Mapped[list["DirectAssignmentSubmission"]] = relationship(
+        back_populates="assignment",
+        cascade="all, delete-orphan",
+    )
+
+
+class DirectAssignmentRecipient(Base):
+    __tablename__ = "direct_assignment_recipients"
+    __table_args__ = (
+        UniqueConstraint("direct_assignment_id", "user_id", name="uq_direct_assignment_recipient"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    direct_assignment_id: Mapped[int] = mapped_column(
+        ForeignKey("direct_assignments.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+
+    assignment: Mapped["DirectAssignment"] = relationship(back_populates="recipients")
+    user: Mapped["User"] = relationship()
+
+
+class DirectAssignmentSubmission(Base):
+    __tablename__ = "direct_assignment_submissions"
+    __table_args__ = (
+        UniqueConstraint("user_id", "direct_assignment_id", name="uq_user_direct_assignment_submission"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    direct_assignment_id: Mapped[int] = mapped_column(
+        ForeignKey("direct_assignments.id", ondelete="CASCADE"), index=True
+    )
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="under_review")
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
+    graded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    graded_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(foreign_keys=[user_id])
+    graded_by: Mapped["User | None"] = relationship(foreign_keys=[graded_by_id])
+    assignment: Mapped["DirectAssignment"] = relationship(back_populates="submissions")
+    attempts: Mapped[list["DirectAssignmentAttempt"]] = relationship(
+        back_populates="submission",
+        cascade="all, delete-orphan",
+        order_by="DirectAssignmentAttempt.submitted_at",
+    )
+
+
+class DirectAssignmentAttempt(Base):
+    __tablename__ = "direct_assignment_attempts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    submission_id: Mapped[int] = mapped_column(
+        ForeignKey("direct_assignment_submissions.id", ondelete="CASCADE"), index=True
+    )
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    submission: Mapped["DirectAssignmentSubmission"] = relationship(back_populates="attempts")
 
 
 class QuizAttempt(Base):

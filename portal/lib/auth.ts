@@ -221,6 +221,8 @@ export type ApiUploadOptions = {
   onProgress?: (percent: number) => void;
   /** Client-side size guard; API may still enforce a lower limit. */
   maxBytes?: number;
+  /** Optional storage folder (must be allowlisted by the upload endpoint). */
+  folder?: string;
 };
 
 export async function apiUpload(
@@ -241,6 +243,9 @@ export async function apiUpload(
   const token = getToken();
   const body = new FormData();
   body.append("file", file);
+  if (options?.folder) {
+    body.append("folder", options.folder);
+  }
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();

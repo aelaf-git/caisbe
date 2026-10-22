@@ -19,6 +19,8 @@ _OPTIONAL_STR = {
     "event_date_label",
     "event_time_label",
     "event_format_label",
+    "venue_address",
+    "online_join_url",
 }
 
 
@@ -52,6 +54,8 @@ def admin_create_seminar(
         event_date_label=_clean_str(data.get("event_date_label")),
         event_time_label=_clean_str(data.get("event_time_label")),
         event_format_label=_clean_str(data.get("event_format_label")),
+        venue_address=_clean_str(data.get("venue_address")),
+        online_join_url=_clean_str(data.get("online_join_url")),
         event_starts_at=data.get("event_starts_at"),
         registration_closes_at=data.get("registration_closes_at"),
         registration_enabled=bool(data.get("registration_enabled", True)),

@@ -24,6 +24,7 @@ from app.models import (
     Course,
     Enrollment,
     ExamIntegrityEvent,
+    ExamSession,
     FinalExam,
     IndustryEvent,
     JobPosting,
@@ -79,6 +80,8 @@ from app.schemas.courses import (
     AdminCourseListOut,
     CourseOut,
     CourseUpdate,
+    ExamIdentityOut,
+    ExamIdentityReviewIn,
     ExamIntegrityEventOut,
     FinalExamOut,
     FinalExamUpdate,
@@ -400,6 +403,134 @@ def admin_student_exam_integrity(
         .order_by(ExamIntegrityEvent.created_at.desc(), ExamIntegrityEvent.id.desc())
         .limit(200)
         .all()
+    )
+
+
+@router.get("/students/{student_id}/exam-identity", response_model=list[ExamIdentityOut])
+def admin_student_exam_identity(
+    student_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[ExamIdentityOut]:
+    student = db.query(User).filter(User.id == student_id, User.role == "student").first()
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    rows = (
+        db.query(ExamSession)
+        .options(joinedload(ExamSession.final_exam).joinedload(FinalExam.course))
+        .filter(
+            ExamSession.user_id == student_id,
+            ExamSession.id_photo_url.isnot(None),
+            ExamSession.face_photo_url.isnot(None),
+        )
+        .order_by(ExamSession.id.desc())
+        .limit(50)
+        .all()
+    )
+    out: list[ExamIdentityOut] = []
+    for session in rows:
+        exam = session.final_exam
+        course = exam.course if exam is not None else None
+        if exam is None or course is None:
+            continue
+        out.append(
+            ExamIdentityOut(
+                session_id=session.id,
+                final_exam_id=exam.id,
+                course_id=course.id,
+                course_code=course.code,
+                course_title=course.title,
+                exam_title=exam.title,
+                student_full_name=student.full_name,
+                id_photo_url=session.id_photo_url,
+                face_photo_url=session.face_photo_url,
+                identity_status=session.identity_status,
+                identity_reviewed_at=session.identity_reviewed_at,
+                identity_reviewed_by_id=session.identity_reviewed_by_id,
+                identity_review_note=session.identity_review_note,
+                secure_ok_at=session.secure_ok_at,
+            )
+        )
+    return out
+
+
+@router.post(
+    "/students/{student_id}/exam-identity/{session_id}/review",
+    response_model=ExamIdentityOut,
+)
+def admin_review_exam_identity(
+    student_id: int,
+    session_id: int,
+    payload: ExamIdentityReviewIn,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> ExamIdentityOut:
+    student = db.query(User).filter(User.id == student_id, User.role == "student").first()
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    session = (
+        db.query(ExamSession)
+        .options(joinedload(ExamSession.final_exam).joinedload(FinalExam.course))
+        .filter(ExamSession.id == session_id, ExamSession.user_id == student_id)
+        .first()
+    )
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam identity session not found")
+    if not (session.id_photo_url or "").strip() or not (session.face_photo_url or "").strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This session has no identity photos to review.",
+        )
+    if session.identity_status not in {None, "pending", "rejected", "approved"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid identity status.")
+
+    now = datetime.now(timezone.utc)
+    note = (payload.note or "").strip() or None
+    session.identity_status = payload.status
+    session.identity_reviewed_at = now
+    session.identity_reviewed_by_id = admin.id
+    session.identity_review_note = note
+    if payload.status == "rejected":
+        session.secure_ok_at = None
+
+    exam = session.final_exam
+    if exam is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
+
+    from app.routers.courses.support import _record_integrity_event
+
+    _record_integrity_event(
+        db,
+        user=student,
+        exam=exam,
+        session=session,
+        phase="pre",
+        event_type="identity_approved" if payload.status == "approved" else "identity_rejected",
+        detail={
+            "reviewed_by_id": admin.id,
+            "note": note,
+            "student_full_name": student.full_name,
+        },
+    )
+    db.commit()
+    db.refresh(session)
+
+    course = exam.course
+    return ExamIdentityOut(
+        session_id=session.id,
+        final_exam_id=exam.id,
+        course_id=course.id,
+        course_code=course.code,
+        course_title=course.title,
+        exam_title=exam.title,
+        student_full_name=student.full_name,
+        id_photo_url=session.id_photo_url,
+        face_photo_url=session.face_photo_url,
+        identity_status=session.identity_status,
+        identity_reviewed_at=session.identity_reviewed_at,
+        identity_reviewed_by_id=session.identity_reviewed_by_id,
+        identity_review_note=session.identity_review_note,
+        secure_ok_at=session.secure_ok_at,
     )
 
 

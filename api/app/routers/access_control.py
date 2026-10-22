@@ -181,8 +181,42 @@ def update_account_suspension(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> AccessUserOut:
+    from app.services.account_suspension_email import (
+        send_account_reactivated_email,
+        send_account_suspended_email,
+    )
+
     student = _student_or_404(db, user_id)
-    set_suspension(db, student, payload.suspended)
+    was_suspended = is_suspended(student)
+    student, course = set_suspension(
+        db,
+        student,
+        payload.suspended,
+        reason=payload.reason,
+        course_id=payload.course_id,
+    )
+    course_title = course.title if course else "your training"
+    course_id = course.id if course else None
+
+    if payload.suspended and not was_suspended:
+        send_account_suspended_email(
+            to=student.email,
+            full_name=student.full_name,
+            course_title=course_title,
+            account_id=student.email,
+            suspended_at=student.suspended_at,
+            reason=student.suspension_reason or (payload.reason or ""),
+            user_id=student.id,
+        )
+    elif not payload.suspended and was_suspended:
+        send_account_reactivated_email(
+            to=student.email,
+            full_name=student.full_name,
+            course_title=course_title,
+            course_id=course_id,
+            user_id=student.id,
+        )
+
     now = datetime.now(timezone.utc)
     return AccessUserOut(
         id=student.id,

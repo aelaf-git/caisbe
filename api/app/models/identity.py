@@ -42,6 +42,10 @@ class User(Base):
     failed_login_count: Mapped[int] = mapped_column(Integer, default=0)
     login_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspension_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    suspension_course_id: Mapped[int | None] = mapped_column(
+        ForeignKey("courses.id", ondelete="SET NULL"), nullable=True
+    )
     # Portal appearance — per student only (not global AppSetting / admin theme).
     ui_theme: Mapped[str] = mapped_column(String(16), default="light")
     ui_font_size: Mapped[str] = mapped_column(String(8), default="md")

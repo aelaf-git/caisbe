@@ -424,6 +424,7 @@ class ExamSessionOut(BaseModel):
     questions: list[QuizQuestionStudentOut] = Field(default_factory=list)
     secure_mode: bool = True
     secure_ok: bool = False
+    identity_status: str | None = None  # pending | approved | rejected
     violation_count: int = 0
     max_integrity_violations: int = 3
     locked_out: bool = False
@@ -436,12 +437,37 @@ class ExamPrecheckIn(BaseModel):
     camera_ok: bool = False
     multi_monitor: bool | None = None
     user_agent: str | None = Field(default=None, max_length=512)
+    id_photo_url: str | None = Field(default=None, max_length=1024)
+    face_photo_url: str | None = Field(default=None, max_length=1024)
 
 
 class ExamPrecheckOut(BaseModel):
     allowed: bool
     reasons: list[str] = Field(default_factory=list)
     secure_ok: bool = False
+    identity_status: str | None = None
+
+
+class ExamIdentityOut(BaseModel):
+    session_id: int
+    final_exam_id: int
+    course_id: int
+    course_code: str
+    course_title: str
+    exam_title: str
+    student_full_name: str
+    id_photo_url: str | None
+    face_photo_url: str | None
+    identity_status: str | None
+    identity_reviewed_at: datetime | None = None
+    identity_reviewed_by_id: int | None = None
+    identity_review_note: str | None = None
+    secure_ok_at: datetime | None = None
+
+
+class ExamIdentityReviewIn(BaseModel):
+    status: Literal["approved", "rejected"]
+    note: str | None = Field(default=None, max_length=2000)
 
 
 class ExamIntegrityEventIn(BaseModel):
@@ -504,6 +530,7 @@ class CourseDetailStudentOut(CourseOut):
     certificate_code: str | None = None
     exam_passed: bool = False
     exam_score: int | None = None
+    direct_assignments: list["StudentAssignmentOut"] = Field(default_factory=list)
 
 
 class UploadOut(BaseModel):
@@ -517,9 +544,37 @@ class AssignmentSubmitIn(BaseModel):
     file_name: str | None = None
 
 
+class DirectAssignmentCreateIn(BaseModel):
+    course_id: int
+    title: str = Field(min_length=1, max_length=255)
+    body: str | None = Field(default=None, max_length=20000)
+    file_url: str = Field(min_length=1, max_length=1024)
+    file_name: str | None = Field(default=None, max_length=255)
+    student_ids: list[int] = Field(min_length=1)
+    points_possible: int | None = Field(default=None, ge=0)
+    due_at: datetime | None = None
+
+
+class DirectAssignmentOut(BaseModel):
+    id: int
+    course_id: int
+    course_code: str
+    course_title: str
+    title: str
+    body: str | None = None
+    file_url: str | None = None
+    file_name: str | None = None
+    points_possible: int | None = None
+    due_at: datetime | None = None
+    recipient_count: int = 0
+    created_at: datetime | None = None
+
+
 class AssignmentSubmissionOut(BaseModel):
     id: int
-    content_block_id: int
+    source: str = "chapter"
+    content_block_id: int = 0
+    direct_assignment_id: int | None = None
     assignment_title: str
     course_code: str
     course_title: str
@@ -548,7 +603,9 @@ class AssignmentAttemptOut(BaseModel):
 
 
 class StudentAssignmentOut(BaseModel):
-    block_id: int
+    kind: str = "chapter"
+    block_id: int = 0
+    direct_assignment_id: int | None = None
     course_id: int
     title: str
     course_code: str
@@ -565,7 +622,9 @@ class StudentAssignmentOut(BaseModel):
 
 
 class StudentAssignmentDetailOut(BaseModel):
-    block_id: int
+    kind: str = "chapter"
+    block_id: int = 0
+    direct_assignment_id: int | None = None
     course_id: int
     title: str
     instructions_body: str | None = None

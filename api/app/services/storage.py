@@ -40,6 +40,7 @@ UPLOAD_FOLDERS = frozenset(
         "membership/supporting",
         "profile/supporting",
         "assignments",
+        "exams/identity",
         "general",
     }
 )

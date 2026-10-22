@@ -59,5 +59,10 @@ export function selectionUnlocked(course: CourseDetail, selection: NavSelection 
     }
     return false;
   }
+  if (selection.kind === "direct-assignment") {
+    return (course.direct_assignments ?? []).some(
+      (row) => row.direct_assignment_id === selection.assignmentId,
+    );
+  }
   return true;
 }

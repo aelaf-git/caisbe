@@ -30,6 +30,9 @@ from app.models import (
     Lesson,
     AssignmentSubmission,
     BlockCompletion,
+    DirectAssignment,
+    DirectAssignmentRecipient,
+    DirectAssignmentSubmission,
     LessonProgress,
     MembershipApplication,
     MembershipCertificate,
@@ -672,7 +675,9 @@ def _student_assignment_detail(
     visible = grade_is_visible(row.status) if row else False
     attempts = sorted(row.attempts, key=lambda item: (item.submitted_at, item.id)) if row else []
     return StudentAssignmentDetailOut(
+        kind="chapter",
         block_id=block.id,
+        direct_assignment_id=None,
         course_id=course.id if course else 0,
         title=block.title or "Assignment",
         instructions_body=block.body,
@@ -710,6 +715,54 @@ def _student_assignment_detail(
     )
 
 
+def _student_direct_assignment_detail(
+    assignment: DirectAssignment, row: DirectAssignmentSubmission | None
+) -> StudentAssignmentDetailOut:
+    course = assignment.course
+    submitted_at = latest_submitted_at(row) if row else None
+    visible = grade_is_visible(row.status) if row else False
+    attempts = sorted(row.attempts, key=lambda item: (item.submitted_at, item.id)) if row else []
+    return StudentAssignmentDetailOut(
+        kind="direct",
+        block_id=0,
+        direct_assignment_id=assignment.id,
+        course_id=course.id if course else assignment.course_id,
+        title=assignment.title,
+        instructions_body=assignment.body,
+        instructions_url=assignment.file_url,
+        instructions_label=assignment.file_name,
+        course_code=course.code if course else "",
+        course_title=course.title if course else "",
+        chapter_title="Assigned to you",
+        points_possible=assignment.points_possible,
+        due_at=assignment.due_at,
+        bucket=status_bucket(row.status if row else None),
+        review_status=row.status if row else None,
+        score=row.score if row and visible else None,
+        feedback=row.feedback if row and visible else None,
+        graded_at=row.graded_at if row and visible else None,
+        body=row.body if row else None,
+        file_url=row.file_url if row else None,
+        file_name=row.file_name if row else None,
+        submitted_at=submitted_at,
+        is_late=submission_is_late(assignment.due_at, submitted_at),
+        can_submit=row is None and can_submit_new(assignment.due_at),
+        can_resubmit=can_resubmit(row.status, assignment.due_at) if row else False,
+        can_withdraw=can_withdraw(row.status) if row else False,
+        unlocked=True,
+        attempts=[
+            {
+                "id": attempt.id,
+                "body": attempt.body,
+                "file_url": attempt.file_url,
+                "file_name": attempt.file_name,
+                "submitted_at": attempt.submitted_at,
+            }
+            for attempt in attempts
+        ],
+    )
+
+
 def _load_student_assignment(db: Session, block_id: int) -> tuple[ContentBlock, Course]:
     block = (
         db.query(ContentBlock)
@@ -723,6 +776,31 @@ def _load_student_assignment(db: Session, block_id: int) -> tuple[ContentBlock, 
     if course is None or course.status != "published":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
     return block, course
+
+
+def _load_student_direct_assignment(db: Session, assignment_id: int, user_id: int) -> DirectAssignment:
+    assignment = (
+        db.query(DirectAssignment)
+        .options(joinedload(DirectAssignment.course))
+        .filter(DirectAssignment.id == assignment_id)
+        .first()
+    )
+    if assignment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+    recipient = (
+        db.query(DirectAssignmentRecipient)
+        .filter(
+            DirectAssignmentRecipient.direct_assignment_id == assignment.id,
+            DirectAssignmentRecipient.user_id == user_id,
+        )
+        .first()
+    )
+    if recipient is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Assignment not available")
+    course = assignment.course
+    if course is None or course.status != "published":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+    return assignment
 
 
 def _submission_payload(payload: AssignmentSubmitIn) -> tuple[str | None, str | None, str | None]:
@@ -801,6 +879,8 @@ def _secure_precheck_valid(exam: FinalExam, session: ExamSession | None, now: da
     if not exam.secure_mode:
         return True
     if session is None or session.secure_ok_at is None:
+        return False
+    if not (session.id_photo_url or "").strip() or not (session.face_photo_url or "").strip():
         return False
     return now <= _as_utc(session.secure_ok_at) + PRECHECK_TTL
 
@@ -1017,6 +1097,7 @@ def _exam_session_state(db: Session, user: User, exam: FinalExam, now: datetime)
         questions=_student_questions_for_order(exam, order) if in_progress else [],
         secure_mode=bool(exam.secure_mode),
         secure_ok=_secure_precheck_valid(exam, session, now),
+        identity_status=(session.identity_status if session else None),
         violation_count=int(session.violation_count or 0) if session else 0,
         max_integrity_violations=max(1, int(exam.max_integrity_violations or 3)),
         locked_out=bool(session and session.locked_out_at is not None),

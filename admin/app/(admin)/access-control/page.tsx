@@ -7,11 +7,10 @@ import Alert from "@/components/ui/Alert";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
-import { fieldClassName } from "@/components/ui/FormField";
+import { buttonStyles } from "@/components/ui/Button";
+import { fieldClassName, textAreaClassName } from "@/components/ui/FormField";
 import PageHeader from "@/components/ui/PageHeader";
 import Skeleton from "@/components/ui/Skeleton";
-import { IconActionButton } from "@/components/ui/IconAction";
-
 type AccessValue = "allowed" | "restricted";
 
 type AccessUser = {
@@ -200,21 +199,34 @@ export default function AccessControlPage() {
     }
   }
 
-  async function setSuspended(userId: number, suspended: boolean) {
+  const [suspendTarget, setSuspendTarget] = useState<AccessUser | null>(null);
+
+  async function setSuspended(
+    userId: number,
+    suspended: boolean,
+    options?: { reason?: string; course_id?: number },
+  ): Promise<boolean> {
     setBusy(`user-${userId}`);
     setError(null);
     try {
       const updated = await apiFetch<AccessUser>(`/admin/access-control/users/${userId}/suspension`, {
         method: "POST",
-        body: JSON.stringify({ suspended }),
+        body: JSON.stringify({
+          suspended,
+          reason: options?.reason ?? null,
+          course_id: options?.course_id ?? null,
+        }),
       });
       setData((current) => {
         if (!current) return current;
         const nextUsers = current.users.map((user) => (user.id === updated.id ? updated : user));
         return { ...current, users: nextUsers, restrictions: rebuildRestrictions(nextUsers, current.enrollments) };
       });
+      setSuspendTarget(null);
+      return true;
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Unable to update this account.");
+      return false;
     } finally {
       setBusy(null);
     }
@@ -343,12 +355,32 @@ export default function AccessControlPage() {
           <Section
             id="activation"
             title="Account Activation & Suspension"
-            description="A suspended student cannot sign in. An open session stops on the next request."
+            description="A suspended student cannot sign in. An open session stops on the next request. Suspending sends an email with the reason you enter."
           >
-            <ActivationTable users={users} busy={busy} onToggle={(user) => void setSuspended(user.id, !user.suspended)} />
+            <ActivationTable
+              users={users}
+              busy={busy}
+              onSuspend={(user) => setSuspendTarget(user)}
+              onActivate={(user) => void setSuspended(user.id, false)}
+            />
           </Section>
         </>
       )}
+
+      {suspendTarget ? (
+        <SuspendAccountDialog
+          user={suspendTarget}
+          enrollments={(data?.enrollments ?? []).filter((row) => row.student_id === suspendTarget.id)}
+          busy={busy === `user-${suspendTarget.id}`}
+          onCancel={() => setSuspendTarget(null)}
+          onConfirm={async (reason, courseId) => {
+            const ok = await setSuspended(suspendTarget.id, true, { reason, course_id: courseId });
+            if (!ok) {
+              throw new ApiError(400, "Unable to suspend this account. Check the form and try again.");
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -670,14 +702,186 @@ function ActivityTable({ rows }: { rows: LoginEvent[] }) {
   );
 }
 
+function SuspendGlyph() {
+  return (
+    <svg
+      className="h-4 w-4 shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="m5.6 5.6 12.8 12.8" />
+    </svg>
+  );
+}
+
+function ActivateGlyph() {
+  return (
+    <svg
+      className="h-4 w-4 shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8 12.5 3 3 5-6" />
+    </svg>
+  );
+}
+
+function SuspendAccountDialog({
+  user,
+  enrollments,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  user: AccessUser;
+  enrollments: AccessEnrollment[];
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: (reason: string, courseId: number) => Promise<void>;
+}) {
+  const courses = useMemo(() => {
+    const seen = new Set<number>();
+    const rows: AccessEnrollment[] = [];
+    for (const row of enrollments) {
+      if (seen.has(row.course_id)) continue;
+      seen.add(row.course_id);
+      rows.push(row);
+    }
+    return rows.sort((a, b) => a.course_title.localeCompare(b.course_title));
+  }, [enrollments]);
+
+  const [courseId, setCourseId] = useState<number | "">(courses[0]?.course_id ?? "");
+  const [reason, setReason] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCourseId(courses[0]?.course_id ?? "");
+  }, [courses]);
+
+  async function submit() {
+    setLocalError(null);
+    if (courseId === "") {
+      setLocalError("Select a course for the suspension notice.");
+      return;
+    }
+    if (!reason.trim()) {
+      setLocalError("Enter a reason for the suspension.");
+      return;
+    }
+    try {
+      await onConfirm(reason.trim(), Number(courseId));
+    } catch (err) {
+      setLocalError(err instanceof ApiError ? err.detail : "Unable to suspend this account.");
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Dismiss"
+        className="absolute inset-0 bg-caisbe-text/50 backdrop-blur-[2px]"
+        disabled={busy}
+        onClick={() => {
+          if (!busy) onCancel();
+        }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="suspend-dialog-title"
+        className="relative z-[101] w-full max-w-lg rounded-none border border-ifma-border bg-admin-surface p-6 shadow-brand-card sm:p-7"
+      >
+        <h2 id="suspend-dialog-title" className="font-display text-xl font-semibold text-caisbe-text-dark">
+          Suspend account
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-caisbe-muted">
+          {user.full_name} ({user.email}) will be blocked from signing in. They will receive an email with the
+          details below.
+        </p>
+
+        {courses.length === 0 ? (
+          <p className="mt-4 rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+            This student has no course enrollments. Enroll them in a course before sending a suspension notice.
+          </p>
+        ) : (
+          <div className="mt-5 space-y-4">
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-semibold text-caisbe-text">Course</span>
+              <select
+                value={courseId === "" ? "" : String(courseId)}
+                onChange={(event) => setCourseId(event.target.value ? Number(event.target.value) : "")}
+                className={fieldClassName}
+                disabled={busy}
+              >
+                {courses.map((row) => (
+                  <option key={row.course_id} value={row.course_id}>
+                    {row.course_code} — {row.course_title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-semibold text-caisbe-text">Reason for suspension</span>
+              <textarea
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                rows={4}
+                disabled={busy}
+                placeholder="e.g. Non-compliance with terms / Administrative review / Outstanding fees"
+                className={textAreaClassName}
+              />
+            </label>
+          </div>
+        )}
+
+        {localError ? <p className="mt-4 text-sm text-caisbe-red">{localError}</p> : null}
+
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className={buttonStyles({ variant: "secondary" })}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={busy || courses.length === 0}
+            onClick={() => void submit()}
+            className={buttonStyles({ variant: "danger" })}
+          >
+            {busy ? "Suspending…" : "Suspend account"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ActivationTable({
   users,
   busy,
-  onToggle,
+  onSuspend,
+  onActivate,
 }: {
   users: AccessUser[];
   busy: string | null;
-  onToggle: (user: AccessUser) => void;
+  onSuspend: (user: AccessUser) => void;
+  onActivate: (user: AccessUser) => void;
 }) {
   if (users.length === 0) {
     return (
@@ -711,13 +915,20 @@ function ActivationTable({
                 </Badge>
               </td>
               <td className="px-4 py-4 text-right sm:px-6">
-                <IconActionButton
-                  icon={user.suspended ? "activate" : "suspend"}
-                  tone={user.suspended ? "brand" : "danger"}
-                  label={user.suspended ? `Activate ${user.email}` : `Suspend ${user.email}`}
+                <button
+                  type="button"
+                  aria-label={user.suspended ? `Activate ${user.email}` : `Suspend ${user.email}`}
                   disabled={busy === `user-${user.id}`}
-                  onClick={() => onToggle(user)}
-                />
+                  onClick={() => (user.suspended ? onActivate(user) : onSuspend(user))}
+                  className={`inline-flex items-center gap-2 rounded-none border-2 px-3 py-2 text-sm font-bold transition disabled:opacity-60 ${
+                    user.suspended
+                      ? "border-admin-success bg-admin-success-soft text-admin-success hover:bg-admin-success hover:text-white"
+                      : "border-caisbe-red bg-caisbe-red/5 text-caisbe-red hover:bg-caisbe-red hover:text-white"
+                  }`}
+                >
+                  {user.suspended ? <ActivateGlyph /> : <SuspendGlyph />}
+                  {user.suspended ? "Activate" : "Suspend"}
+                </button>
               </td>
             </tr>
           ))}

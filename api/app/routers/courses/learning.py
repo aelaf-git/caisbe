@@ -29,6 +29,7 @@ from app.models import (
     Lesson,
     AssignmentSubmission,
     BlockCompletion,
+    DirectAssignmentSubmission,
     LessonProgress,
     MembershipApplication,
     MembershipCertificate,
@@ -74,12 +75,14 @@ from app.services.settings import get_setting
 
 from app.services.assignments import (
     append_attempt,
+    append_direct_attempt,
     assignment_blocks_for_courses,
     assignment_unlock_map,
     can_resubmit,
     can_submit_new,
-    can_withdraw,
     clear_grade,
+    direct_assignments_for_user,
+    direct_submission_map,
     due_has_passed,
     grade_is_visible,
     latest_submitted_at,
@@ -339,6 +342,9 @@ def latest_quiz_attempt(
     )
 
 
+_STUDENT_UPLOAD_FOLDERS = frozenset({"assignments", "exams/identity"})
+
+
 @router.post("/me/uploads", response_model=UploadOut)
 async def student_upload(
     request: Request,
@@ -352,12 +358,21 @@ async def student_upload(
     uploaded = form.get("file")
     if not isinstance(uploaded, UploadFile):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing file upload")
+    folder = str(form.get("folder") or "assignments").strip().lower()
+    if folder not in _STUDENT_UPLOAD_FOLDERS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid upload folder.")
+    # Identity captures must be images only.
+    suffixes = {".jpg", ".jpeg", ".png", ".webp"} if folder == "exams/identity" else _STUDENT_UPLOAD_SUFFIXES
     url, filename = await save_upload(
         uploaded,
-        allowed_suffixes=_STUDENT_UPLOAD_SUFFIXES,
+        allowed_suffixes=suffixes,
         max_bytes=_STUDENT_UPLOAD_MAX_BYTES,
-        folder="assignments",
-        invalid_detail="Upload a PDF, Word, or image file (JPG, PNG, WebP, GIF).",
+        folder=folder,
+        invalid_detail=(
+            "Upload a JPG, PNG, or WebP image."
+            if folder == "exams/identity"
+            else "Upload a PDF, Word, or image file (JPG, PNG, WebP, GIF)."
+        ),
         too_large_detail="File is too large. Maximum size is 25 MB.",
     )
     return UploadOut(url=url, filename=filename)
@@ -393,7 +408,9 @@ def list_my_assignments(
         visible = grade_is_visible(row.status) if row else False
         items.append(
             StudentAssignmentOut(
+                kind="chapter",
                 block_id=block.id,
+                direct_assignment_id=None,
                 course_id=course.id,
                 title=block.title or "Assignment",
                 course_code=course.code,
@@ -407,6 +424,35 @@ def list_my_assignments(
                 submitted_at=submitted_at,
                 is_late=submission_is_late(block.due_at, submitted_at),
                 unlocked=unlocks.get(block.id, False),
+            )
+        )
+    directs = direct_assignments_for_user(db, current_user.id)
+    direct_rows = direct_submission_map(db, current_user.id, [item.id for item in directs])
+    for assignment in directs:
+        course = assignment.course
+        if course is None:
+            continue
+        row = direct_rows.get(assignment.id)
+        submitted_at = latest_submitted_at(row) if row else None
+        visible = grade_is_visible(row.status) if row else False
+        items.append(
+            StudentAssignmentOut(
+                kind="direct",
+                block_id=0,
+                direct_assignment_id=assignment.id,
+                course_id=course.id,
+                title=assignment.title,
+                course_code=course.code,
+                course_title=course.title,
+                chapter_title="Assigned to you",
+                due_at=assignment.due_at,
+                bucket=status_bucket(row.status if row else None),
+                review_status=row.status if row else None,
+                score=row.score if row and visible else None,
+                points_possible=assignment.points_possible,
+                submitted_at=submitted_at,
+                is_late=submission_is_late(assignment.due_at, submitted_at),
+                unlocked=True,
             )
         )
     items.sort(
@@ -432,6 +478,113 @@ def get_my_assignment(
     if db.new or db.dirty:
         db.commit()
     return _student_assignment_detail(block, rows.get(block.id), unlocked=unlocked)
+
+
+@router.get("/me/direct-assignments/{assignment_id}", response_model=StudentAssignmentDetailOut)
+def get_my_direct_assignment(
+    assignment_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StudentAssignmentDetailOut:
+    assignment = _load_student_direct_assignment(db, assignment_id, current_user.id)
+    require_active_enrollment(db, current_user, assignment.course_id)
+    rows = direct_submission_map(db, current_user.id, [assignment.id])
+    return _student_direct_assignment_detail(assignment, rows.get(assignment.id))
+
+
+@router.post("/me/direct-assignments/{assignment_id}/submit")
+def submit_direct_assignment(
+    assignment_id: int,
+    payload: AssignmentSubmitIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, int | str | bool]:
+    assignment = _load_student_direct_assignment(db, assignment_id, current_user.id)
+    require_active_enrollment(db, current_user, assignment.course_id)
+    existing = (
+        db.query(DirectAssignmentSubmission)
+        .filter(
+            DirectAssignmentSubmission.user_id == current_user.id,
+            DirectAssignmentSubmission.direct_assignment_id == assignment.id,
+        )
+        .first()
+    )
+    if existing is not None and existing.status == "passed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This assignment has been marked passed and can no longer be changed.",
+        )
+    if existing is None and not can_submit_new(assignment.due_at):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The due date for this assignment has passed.",
+        )
+    if existing is not None and not can_resubmit(existing.status, assignment.due_at):
+        if due_has_passed(assignment.due_at):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The due date for this assignment has passed.",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This assignment cannot be resubmitted.",
+        )
+    text, file_url, file_name = _submission_payload(payload)
+    now = datetime.now(timezone.utc)
+    if existing is None:
+        existing = DirectAssignmentSubmission(
+            user_id=current_user.id,
+            direct_assignment_id=assignment.id,
+            status="under_review",
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(existing)
+    else:
+        clear_grade(existing)
+    existing.body = text
+    existing.file_url = file_url
+    existing.file_name = file_name
+    existing.updated_at = now
+    db.flush()
+    append_direct_attempt(
+        db,
+        existing,
+        body=text,
+        file_url=file_url,
+        file_name=file_name,
+        submitted_at=now,
+    )
+    db.commit()
+    return {"completed": True, "status": "under_review"}
+
+
+@router.delete("/me/direct-assignments/{assignment_id}/submit")
+def unsubmit_direct_assignment(
+    assignment_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, bool]:
+    assignment = _load_student_direct_assignment(db, assignment_id, current_user.id)
+    require_active_enrollment(db, current_user, assignment.course_id)
+    existing = (
+        db.query(DirectAssignmentSubmission)
+        .filter(
+            DirectAssignmentSubmission.user_id == current_user.id,
+            DirectAssignmentSubmission.direct_assignment_id == assignment.id,
+        )
+        .first()
+    )
+    if existing is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No submission to withdraw.")
+    if existing.status != "under_review":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This assignment has already been reviewed.",
+        )
+    db.delete(existing)
+    db.commit()
+    return {"completed": False}
 
 
 @router.post("/me/blocks/{block_id}/submit")

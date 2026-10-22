@@ -67,6 +67,8 @@ function emptyForm(itemCount: number) {
       "9:00 AM – 4:00 PM Eastern Time (ET) / 8:00 AM – 3:00 PM Central Time (CT) / 6:00 AM – 1:00 PM Pacific Time (PT)",
     event_format_label:
       "Hybrid – In-person in Chicago, IL, with a live virtual option for remote attendees",
+    venue_address: "",
+    online_join_url: "",
     event_starts_at: "",
     registration_enabled: true,
     member_price: "50",
@@ -103,6 +105,8 @@ export default function SeminarsManager({
   const [eventDateLabel, setEventDateLabel] = useState("");
   const [eventTimeLabel, setEventTimeLabel] = useState("");
   const [eventFormatLabel, setEventFormatLabel] = useState("");
+  const [venueAddress, setVenueAddress] = useState("");
+  const [onlineJoinUrl, setOnlineJoinUrl] = useState("");
   const [eventStartsAt, setEventStartsAt] = useState("");
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
   const [memberPrice, setMemberPrice] = useState("50");
@@ -122,6 +126,8 @@ export default function SeminarsManager({
       event_date_label: eventDateLabel.trim(),
       event_time_label: eventTimeLabel.trim(),
       event_format_label: eventFormatLabel.trim(),
+      venue_address: venueAddress.trim(),
+      online_join_url: onlineJoinUrl.trim(),
       event_starts_at: eventStartsAt,
       registration_enabled: registrationEnabled,
       member_price: memberPrice.trim(),
@@ -137,6 +143,8 @@ export default function SeminarsManager({
       eventDateLabel,
       eventTimeLabel,
       eventFormatLabel,
+      venueAddress,
+      onlineJoinUrl,
       eventStartsAt,
       registrationEnabled,
       memberPrice,
@@ -155,6 +163,8 @@ export default function SeminarsManager({
     setEventDateLabel(next.event_date_label);
     setEventTimeLabel(next.event_time_label);
     setEventFormatLabel(next.event_format_label);
+    setVenueAddress(next.venue_address);
+    setOnlineJoinUrl(next.online_join_url);
     setEventStartsAt(next.event_starts_at);
     setRegistrationEnabled(next.registration_enabled);
     setMemberPrice(next.member_price);
@@ -170,6 +180,8 @@ export default function SeminarsManager({
       event_date_label: next.event_date_label,
       event_time_label: next.event_time_label,
       event_format_label: next.event_format_label,
+      venue_address: next.venue_address,
+      online_join_url: next.online_join_url,
       event_starts_at: next.event_starts_at,
       registration_enabled: next.registration_enabled,
       member_price: next.member_price,
@@ -195,6 +207,8 @@ export default function SeminarsManager({
       event_date_label: item.event_date_label || "",
       event_time_label: item.event_time_label || "",
       event_format_label: item.event_format_label || "",
+      venue_address: item.venue_address || "",
+      online_join_url: item.online_join_url || "",
       event_starts_at: toDatetimeLocalValue(item.event_starts_at),
       registration_enabled: item.registration_enabled ?? true,
       member_price: centsToDollars(item.member_price_cents ?? 5000),
@@ -260,6 +274,8 @@ export default function SeminarsManager({
       event_date_label: eventDateLabel.trim() || null,
       event_time_label: eventTimeLabel.trim() || null,
       event_format_label: eventFormatLabel.trim() || null,
+      venue_address: venueAddress.trim() || null,
+      online_join_url: onlineJoinUrl.trim() || null,
       event_starts_at: fromDatetimeLocalValue(eventStartsAt),
       registration_enabled: registrationEnabled,
       member_price_cents: dollarsToCents(memberPrice),
@@ -415,6 +431,23 @@ export default function SeminarsManager({
               className={`${textAreaClassName} min-h-20`}
               value={eventFormatLabel}
               onChange={(e) => setEventFormatLabel(e.target.value)}
+            />
+          </FormField>
+          <FormField label="In-person venue address" hint="Used in confirmation emails for in-person attendees.">
+            <textarea
+              className={`${textAreaClassName} min-h-20`}
+              value={venueAddress}
+              onChange={(e) => setVenueAddress(e.target.value)}
+              placeholder="815-4AVE SW, Calgary, Alberta"
+            />
+          </FormField>
+          <FormField label="Online join URL" hint="Used in confirmation emails and the manage portal for virtual attendees.">
+            <input
+              type="url"
+              className={fieldClassName}
+              value={onlineJoinUrl}
+              onChange={(e) => setOnlineJoinUrl(e.target.value)}
+              placeholder="https://…"
             />
           </FormField>
           <FormField

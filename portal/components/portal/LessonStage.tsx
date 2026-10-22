@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import BlockView, { TopicSections } from "@/components/portal/BlockView";
+import DirectAssignmentStage from "@/components/portal/DirectAssignmentStage";
 import ExamPlayer from "@/components/portal/ExamPlayer";
 import type { ContentBlock, CourseDetail, Lesson, QuizAttempt } from "@/lib/lms";
 import type { NavSelection } from "@/components/portal/coursePlayerTypes";
@@ -53,6 +54,12 @@ export default function LessonStage({
               const chapter = course.chapters.find((item) => item.id === selection.chapterId);
               return chapter ? readingsForChapter(chapter) : [];
             })()}
+          />
+        ) : selection?.kind === "direct-assignment" ? (
+          <DirectAssignmentStage
+            key={selection.assignmentId}
+            assignmentId={selection.assignmentId}
+            onChanged={onReload}
           />
         ) : selection?.kind === "exam" && course.final_exam ? (
           course.exam_passed ? (

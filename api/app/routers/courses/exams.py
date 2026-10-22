@@ -134,7 +134,12 @@ def precheck_final_exam(
             detail=None,
         )
         db.commit()
-        return ExamPrecheckOut(allowed=True, reasons=[], secure_ok=True)
+        return ExamPrecheckOut(allowed=True, reasons=[], secure_ok=True, identity_status=None)
+
+    from app.services.storage import is_managed_upload_url
+
+    id_photo = (payload.id_photo_url or "").strip()
+    face_photo = (payload.face_photo_url or "").strip()
 
     reasons: list[str] = []
     if not payload.rules_accepted:
@@ -147,6 +152,10 @@ def precheck_final_exam(
         reasons.append("Allow camera access for the identity check.")
     if payload.multi_monitor:
         reasons.append("Disconnect extra monitors before starting.")
+    if not id_photo or not is_managed_upload_url(id_photo):
+        reasons.append("Capture a clear photo of your photo ID.")
+    if not face_photo or not is_managed_upload_url(face_photo):
+        reasons.append("Capture a photo of your face for identity verification.")
 
     detail = {
         "rules_accepted": payload.rules_accepted,
@@ -155,6 +164,8 @@ def precheck_final_exam(
         "camera_ok": payload.camera_ok,
         "multi_monitor": payload.multi_monitor,
         "user_agent": (payload.user_agent or "")[:512],
+        "id_photo_url": id_photo[:1024] if id_photo else None,
+        "face_photo_url": face_photo[:1024] if face_photo else None,
     }
     _record_integrity_event(
         db,
@@ -190,7 +201,13 @@ def precheck_final_exam(
         db.commit()
         return ExamPrecheckOut(allowed=False, reasons=reasons, secure_ok=False)
 
+    session.id_photo_url = id_photo[:1024]
+    session.face_photo_url = face_photo[:1024]
     session.secure_ok_at = now
+    session.identity_status = "pending"
+    session.identity_reviewed_at = None
+    session.identity_reviewed_by_id = None
+    session.identity_review_note = None
     if session.locked_out_at is not None:
         # Fresh precheck after a prior lockout only applies once the session was cleared on submit.
         pass
@@ -203,8 +220,22 @@ def precheck_final_exam(
         event_type="precheck_ok",
         detail=detail,
     )
+    _record_integrity_event(
+        db,
+        user=current_user,
+        exam=exam,
+        session=session,
+        phase="pre",
+        event_type="identity_pending",
+        detail={"id_photo_url": session.id_photo_url, "face_photo_url": session.face_photo_url},
+    )
     db.commit()
-    return ExamPrecheckOut(allowed=True, reasons=[], secure_ok=True)
+    return ExamPrecheckOut(
+        allowed=True,
+        reasons=[],
+        secure_ok=True,
+        identity_status="pending",
+    )
 
 
 @router.post("/me/courses/{course_id}/final-exam/integrity", response_model=ExamIntegrityStateOut)
@@ -277,11 +308,28 @@ def start_final_exam(
         db.commit()
         return state
 
-    if exam.secure_mode and not _secure_precheck_valid(exam, session, now):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Complete the secure exam pre-check before starting.",
-        )
+    if exam.secure_mode:
+        identity = (session.identity_status if session else None) or ""
+        if identity == "rejected":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Identity was rejected. Capture new photos and run pre-check again.",
+            )
+        if not _secure_precheck_valid(exam, session, now):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Complete the secure exam pre-check before starting.",
+            )
+        if identity == "pending":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Identity verification is pending admin approval.",
+            )
+        if identity != "approved":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Identity verification is pending admin approval.",
+            )
 
     from app.services.commerce import ensure_attempt_paid
 

@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import ExamAgreement from "@/components/portal/ExamAgreement";
+import ExamIdentityCapture from "@/components/portal/ExamIdentityCapture";
+import ExamProgressBar from "@/components/portal/ExamProgressBar";
 import SecureExamShell from "@/components/portal/SecureExamShell";
 import { apiFetch, ApiError } from "@/lib/auth";
 import { followCheckout, type CheckoutResult } from "@/lib/commerce";
 import {
   buildPrecheckCapabilities,
   exitFullscreenSafe,
-  probeCamera,
   requestFullscreen,
 } from "@/lib/examSecurity";
 import type {
@@ -108,9 +109,16 @@ export default function ExamPlayer({
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [rulesAccepted, setRulesAccepted] = useState(false);
   const [fullscreenOk, setFullscreenOk] = useState(false);
-  const [cameraOk, setCameraOk] = useState(false);
+  const [idPhotoUrl, setIdPhotoUrl] = useState<string | null>(null);
+  const [facePhotoUrl, setFacePhotoUrl] = useState<string | null>(null);
   const [precheckBusy, setPrecheckBusy] = useState(false);
   const [secureReady, setSecureReady] = useState(!secureMode);
+  const [identityStatus, setIdentityStatus] = useState<"pending" | "approved" | "rejected" | null>(
+    null,
+  );
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [liveView, setLiveView] = useState<"question" | "summary">("question");
+  const [visitedSummary, setVisitedSummary] = useState(false);
 
   const answersRef = useRef(answers);
   const phaseRef = useRef(phase);
@@ -132,6 +140,9 @@ export default function ExamPlayer({
   ) {
     autoSubmitted.current = false;
     submitLock.current = false;
+    setQuestionIndex(0);
+    setLiveView("question");
+    setVisitedSummary(false);
     setAnswers(readStoredAnswers(exam.id, startedAt));
     const livePhase: Phase = {
       kind: "live",
@@ -146,6 +157,11 @@ export default function ExamPlayer({
 
   function applySession(state: ExamSessionState, certificateCode: string | null) {
     if (state.secure_ok) setSecureReady(true);
+    if (state.identity_status != null) {
+      setIdentityStatus(state.identity_status);
+    } else if (!secureMode) {
+      setIdentityStatus(null);
+    }
     if (state.in_progress && state.started_at) {
       const sessionQuestions = state.questions?.length
         ? state.questions
@@ -210,6 +226,10 @@ export default function ExamPlayer({
 
   async function runPrecheck() {
     setError(null);
+    if (!idPhotoUrl || !facePhotoUrl) {
+      setError("Capture your photo ID and face photo before running the secure pre-check.");
+      return;
+    }
     setPrecheckBusy(true);
     try {
       const root = precheckRootRef.current;
@@ -218,19 +238,27 @@ export default function ExamPlayer({
         fsOk = await requestFullscreen(root);
         setFullscreenOk(fsOk);
       }
-      let camOk = cameraOk;
-      if (!camOk) {
-        camOk = await probeCamera();
-        setCameraOk(camOk);
-      }
-      const payload = buildPrecheckCapabilities(rulesAccepted, fsOk, camOk);
+      const payload = buildPrecheckCapabilities(
+        rulesAccepted,
+        fsOk,
+        true,
+        idPhotoUrl,
+        facePhotoUrl,
+      );
       const result = await apiFetch<ExamPrecheckResult>(`/me/courses/${courseId}/final-exam/precheck`, {
         method: "POST",
         body: JSON.stringify(payload),
       });
       setSecureReady(result.allowed && result.secure_ok);
+      if (result.identity_status) {
+        setIdentityStatus(result.identity_status);
+      } else if (result.allowed && result.secure_ok) {
+        setIdentityStatus("pending");
+      }
       if (!result.allowed) {
         setError(result.reasons.join(" ") || "Secure pre-check failed.");
+      } else if (result.identity_status === "pending" || !result.identity_status) {
+        setError(null);
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Unable to complete secure pre-check.");
@@ -257,6 +285,18 @@ export default function ExamPlayer({
     try {
       if (secureMode && !secureReady) {
         setError("Complete the secure exam pre-check before starting.");
+        return;
+      }
+      if (secureMode && identityStatus === "pending") {
+        setError("Identity verification is pending admin approval.");
+        return;
+      }
+      if (secureMode && identityStatus === "rejected") {
+        setError("Identity was rejected. Capture new photos and run pre-check again.");
+        return;
+      }
+      if (secureMode && identityStatus !== "approved") {
+        setError("Identity verification is pending admin approval.");
         return;
       }
       const state = await apiFetch<ExamSessionState>(`/me/courses/${courseId}/final-exam/start`, {
@@ -346,68 +386,205 @@ export default function ExamPlayer({
 
   const liveQuestions =
     phase.kind === "live" ? orderedQuestions(phase.questions, phase.order) : [];
+  const safeQuestionIndex =
+    liveQuestions.length === 0 ? 0 : Math.min(questionIndex, liveQuestions.length - 1);
+  const currentQuestion = liveQuestions[safeQuestionIndex] ?? null;
+  const isFirstQuestion = safeQuestionIndex <= 0;
+  const isLastQuestion = liveQuestions.length === 0 || safeQuestionIndex >= liveQuestions.length - 1;
   const answeredCount =
     phase.kind === "live"
       ? liveQuestions.filter((question) => answers[String(question.id)] != null).length
       : 0;
+  const skippedCount = liveQuestions.length - answeredCount;
   const limitLabel = exam.time_limit_minutes != null ? formatLimit(exam.time_limit_minutes) : null;
   const timeUp = remaining === 0;
-  const canStart = bankSize > 0 && (!secureMode || secureReady);
+  const identityReady = Boolean(idPhotoUrl && facePhotoUrl);
+  const canRunPrecheck = rulesAccepted && identityReady;
+  const canStart =
+    bankSize > 0 && (!secureMode || (secureReady && identityStatus === "approved"));
+
+  function selectedChoiceLabel(question: QuizQuestion): string | null {
+    const choiceId = answers[String(question.id)];
+    if (choiceId == null) return null;
+    const index = question.choices.findIndex((choice) => Number(choice.id) === Number(choiceId));
+    if (index < 0) return null;
+    const choice = question.choices[index];
+    const letter = String.fromCharCode(65 + index);
+    return `${letter}. ${choice.text}`;
+  }
+
+  function openSummary() {
+    setVisitedSummary(true);
+    setLiveView("summary");
+  }
+
+  function jumpToQuestion(index: number) {
+    setQuestionIndex(index);
+    setLiveView("question");
+  }
 
   const liveBody =
-    phase.kind === "live" ? (
+    phase.kind !== "live" ? null : liveView === "summary" ? (
       <div className="space-y-5">
-        {liveQuestions.map((question, index) => (
-          <fieldset key={question.id ?? question.prompt} className="space-y-3" disabled={submitting}>
-            <legend className="text-sm font-semibold break-words text-caisbe-text-dark">
-              <span className="mr-2 text-caisbe-muted">{index + 1}.</span>
-              {question.prompt}
-            </legend>
-            <div className="space-y-2">
-              {question.choices.map((choice, choiceIndex) => {
-                const selected = Number(answers[String(question.id)]) === Number(choice.id);
-                const letter = String.fromCharCode(65 + choiceIndex);
-                return (
-                  <label
-                    key={choice.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 text-sm ${
-                      selected
-                        ? "border-caisbe-red bg-caisbe-red/5 text-caisbe-text-dark"
-                        : "border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red/40"
+        <div>
+          <h3 className="font-display text-lg font-semibold text-caisbe-text-dark">Exam summary</h3>
+          <p className="mt-1 text-sm text-caisbe-muted">
+            {answeredCount} answered · {skippedCount} skipped
+          </p>
+          <p className="mt-2 text-sm text-caisbe-text">
+            Review every question below. Open any item to change your answer before you submit.
+          </p>
+        </div>
+        <ul className="space-y-2">
+          {liveQuestions.map((question, index) => {
+            const selected = selectedChoiceLabel(question);
+            const skipped = selected == null;
+            return (
+              <li key={question.id ?? `${index}-${question.prompt}`}>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => jumpToQuestion(index)}
+                  className={`flex w-full flex-col gap-1 rounded-md border px-3 py-3 text-left text-sm transition hover:border-caisbe-red/40 disabled:opacity-60 ${
+                    skipped
+                      ? "border-caisbe-red/40 bg-caisbe-red/5"
+                      : "border-ifma-border bg-admin-surface"
+                  }`}
+                >
+                  <span className="font-semibold text-caisbe-text-dark">
+                    {index + 1}. {question.prompt}
+                  </span>
+                  {skipped ? (
+                    <span className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">
+                      Skipped / Not Answered
+                    </span>
+                  ) : (
+                    <span className="text-xs text-caisbe-text">
+                      <span className="font-semibold uppercase tracking-wide text-admin-success">
+                        Answered
+                      </span>
+                      {" — "}
+                      {selected}
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => setLiveView("question")}
+            className="rounded-md border-2 border-ifma-border bg-admin-surface px-5 py-2.5 text-sm font-semibold uppercase text-caisbe-text-dark hover:border-caisbe-red/40 disabled:opacity-60"
+          >
+            Back to questions
+          </button>
+          <button
+            type="button"
+            disabled={submitting || liveQuestions.length === 0}
+            onClick={() => void submit(timeUp)}
+            className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+          >
+            {submitting ? "Submitting…" : "Submit exam"}
+          </button>
+        </div>
+      </div>
+    ) : currentQuestion ? (
+      <div className="space-y-5">
+        <p className="text-sm font-semibold text-caisbe-text-dark">
+          Question {safeQuestionIndex + 1} of {liveQuestions.length}
+        </p>
+        <fieldset
+          key={currentQuestion.id ?? currentQuestion.prompt}
+          className="space-y-3"
+          disabled={submitting}
+        >
+          <legend className="text-sm font-semibold break-words text-caisbe-text-dark">
+            <span className="mr-2 text-caisbe-muted">{safeQuestionIndex + 1}.</span>
+            {currentQuestion.prompt}
+          </legend>
+          <div className="space-y-2">
+            {currentQuestion.choices.map((choice, choiceIndex) => {
+              const selected = Number(answers[String(currentQuestion.id)]) === Number(choice.id);
+              const letter = String.fromCharCode(65 + choiceIndex);
+              return (
+                <label
+                  key={choice.id}
+                  className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 text-sm ${
+                    selected
+                      ? "border-caisbe-red bg-caisbe-red/5 text-caisbe-text-dark"
+                      : "border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red/40"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    className="mt-1"
+                    name={`exam-q-${currentQuestion.id}`}
+                    checked={selected}
+                    onChange={() => {
+                      if (choice.id == null) return;
+                      setAnswers((prev) => ({
+                        ...prev,
+                        [String(currentQuestion.id)]: choice.id!,
+                      }));
+                    }}
+                  />
+                  <span
+                    className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold ${
+                      selected ? "bg-caisbe-red/15 text-caisbe-red" : "bg-admin-canvas text-caisbe-muted"
                     }`}
                   >
-                    <input
-                      type="radio"
-                      className="mt-1"
-                      name={`exam-q-${question.id}`}
-                      checked={selected}
-                      onChange={() => {
-                        if (choice.id == null) return;
-                        setAnswers((prev) => ({ ...prev, [String(question.id)]: choice.id! }));
-                      }}
-                    />
-                    <span
-                      className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold ${
-                        selected ? "bg-caisbe-red/15 text-caisbe-red" : "bg-admin-canvas text-caisbe-muted"
-                      }`}
-                    >
-                      {letter}
-                    </span>
-                    <span className="min-w-0 flex-1 leading-snug">{choice.text}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-        ))}
-        <button
-          type="button"
-          disabled={submitting || liveQuestions.length === 0}
-          onClick={() => void submit(timeUp)}
-          className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
-        >
-          {submitting ? "Submitting…" : "Submit exam"}
-        </button>
+                    {letter}
+                  </span>
+                  <span className="min-w-0 flex-1 leading-snug">{choice.text}</span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={submitting || isFirstQuestion}
+            onClick={() => setQuestionIndex((current) => Math.max(0, current - 1))}
+            className="rounded-md border-2 border-ifma-border bg-admin-surface px-5 py-2.5 text-sm font-semibold uppercase text-caisbe-text-dark hover:border-caisbe-red/40 disabled:opacity-60"
+          >
+            Previous
+          </button>
+          {isLastQuestion ? (
+            <button
+              type="button"
+              disabled={submitting || liveQuestions.length === 0}
+              onClick={() => openSummary()}
+              className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            >
+              Review answers
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() =>
+                setQuestionIndex((current) => Math.min(liveQuestions.length - 1, current + 1))
+              }
+              className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            >
+              Next
+            </button>
+          )}
+          {visitedSummary ? (
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => openSummary()}
+              className="rounded-md border-2 border-ifma-border bg-admin-canvas px-5 py-2.5 text-sm font-semibold uppercase text-caisbe-text-dark hover:border-caisbe-red/40 disabled:opacity-60"
+            >
+              Back to summary
+            </button>
+          ) : null}
+        </div>
       </div>
     ) : null;
 
@@ -430,9 +607,13 @@ export default function ExamPlayer({
                 : "border-ifma-border bg-admin-canvas text-caisbe-muted"
             }`}
           >
-            {remaining != null
-              ? `${formatClock(remaining)} · ${answeredCount} of ${liveQuestions.length}`
-              : `${answeredCount} of ${liveQuestions.length} answered`}
+            {liveView === "summary"
+              ? remaining != null
+                ? `${formatClock(remaining)} · Summary · ${answeredCount}/${liveQuestions.length}`
+                : `Summary · ${answeredCount} answered · ${skippedCount} skipped`
+              : remaining != null
+                ? `${formatClock(remaining)} · Question ${safeQuestionIndex + 1} of ${liveQuestions.length}`
+                : `Question ${safeQuestionIndex + 1} of ${liveQuestions.length} · ${answeredCount} answered`}
           </span>
         ) : null}
       </div>
@@ -464,14 +645,14 @@ export default function ExamPlayer({
         <div ref={precheckRootRef} className="space-y-4 rounded-md border border-ifma-border bg-[#fafaf8] px-4 py-4">
           <h3 className="font-display text-lg font-semibold text-caisbe-text-dark">Secure exam pre-check</h3>
           <p className="text-sm leading-6 text-caisbe-text">
-            Identity verification is required before the timer starts. The camera check confirms you are
-            present and does not record the exam.
+            Capture a photo of your photo ID and a photo of your face. When both are saved, run the secure
+            pre-check to enable Start exam. These photos are stored for identity verification and are not a
+            continuous recording of the exam.
           </p>
           <ul className="list-disc space-y-1 pl-5 text-sm text-caisbe-text">
             <li>Stay in fullscreen; leaving the tab or exam window is logged.</li>
             <li>Copy, paste, print, and right-click are blocked during the exam.</li>
             <li>Too many integrity violations ({maxViolations}) fails this attempt.</li>
-            <li>Camera permission is required for a presence check (no continuous recording).</li>
           </ul>
           <label className="flex items-start gap-2 text-sm text-caisbe-text">
             <input
@@ -485,17 +666,79 @@ export default function ExamPlayer({
             />
             <span>I accept these rules and will take the exam honestly.</span>
           </label>
+          <div className="grid gap-3 md:grid-cols-2">
+            <ExamIdentityCapture
+              kind="id"
+              value={idPhotoUrl}
+              onCaptured={(url) => {
+                setIdPhotoUrl(url);
+                setSecureReady(false);
+                setIdentityStatus(null);
+              }}
+              onCleared={() => {
+                setIdPhotoUrl(null);
+                setSecureReady(false);
+                setIdentityStatus(null);
+              }}
+            />
+            <ExamIdentityCapture
+              kind="face"
+              value={facePhotoUrl}
+              onCaptured={(url) => {
+                setFacePhotoUrl(url);
+                setSecureReady(false);
+                setIdentityStatus(null);
+              }}
+              onCleared={() => {
+                setFacePhotoUrl(null);
+                setSecureReady(false);
+                setIdentityStatus(null);
+              }}
+            />
+          </div>
           <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide">
+            <span className={idPhotoUrl ? "text-admin-success" : "text-caisbe-muted"}>
+              Photo ID {idPhotoUrl ? "captured" : "needed"}
+            </span>
+            <span className={facePhotoUrl ? "text-admin-success" : "text-caisbe-muted"}>
+              Face {facePhotoUrl ? "captured" : "needed"}
+            </span>
             <span className={fullscreenOk ? "text-admin-success" : "text-caisbe-muted"}>
               Fullscreen {fullscreenOk ? "ready" : "needed"}
-            </span>
-            <span className={cameraOk ? "text-admin-success" : "text-caisbe-muted"}>
-              Camera {cameraOk ? "ready" : "needed"}
             </span>
             <span className={secureReady ? "text-admin-success" : "text-caisbe-muted"}>
               Pre-check {secureReady ? "passed" : "pending"}
             </span>
+            <span
+              className={
+                identityStatus === "approved"
+                  ? "text-admin-success"
+                  : identityStatus === "rejected"
+                    ? "text-caisbe-red"
+                    : "text-caisbe-muted"
+              }
+            >
+              Identity{" "}
+              {identityStatus === "approved"
+                ? "approved"
+                : identityStatus === "rejected"
+                  ? "rejected"
+                  : identityStatus === "pending"
+                    ? "awaiting admin"
+                    : "needed"}
+            </span>
           </div>
+          {secureReady && identityStatus === "pending" ? (
+            <p className="text-sm text-caisbe-text">
+              Pre-check passed. Start exam unlocks after an administrator confirms your photo ID name
+              matches your registered name.
+            </p>
+          ) : null}
+          {identityStatus === "rejected" ? (
+            <p className="text-sm text-caisbe-red">
+              Identity was rejected. Capture new photos and run the secure pre-check again.
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -506,7 +749,7 @@ export default function ExamPlayer({
             </button>
             <button
               type="button"
-              disabled={precheckBusy || !rulesAccepted}
+              disabled={precheckBusy || !canRunPrecheck}
               onClick={() => void runPrecheck()}
               className="rounded-md border-2 border-ifma-border bg-admin-canvas px-5 py-2 text-sm font-semibold uppercase text-caisbe-text-dark hover:border-caisbe-red/40 disabled:opacity-60"
             >
@@ -531,7 +774,10 @@ export default function ExamPlayer({
           maxViolations={maxViolations}
           onForceSubmit={() => void submit(true)}
         >
-          {liveBody}
+          <div>
+            <ExamProgressBar answeredCount={answeredCount} total={liveQuestions.length} />
+            {liveBody}
+          </div>
         </SecureExamShell>
       ) : null}
 
@@ -571,7 +817,9 @@ export default function ExamPlayer({
                 setSecureReady(!secureMode);
                 setRulesAccepted(false);
                 setFullscreenOk(false);
-                setCameraOk(false);
+                setIdPhotoUrl(null);
+                setFacePhotoUrl(null);
+                setIdentityStatus(null);
                 setShowPrecheck(false);
                 setAgreementKey((current) => current + 1);
                 setPhase({ kind: "intro" });

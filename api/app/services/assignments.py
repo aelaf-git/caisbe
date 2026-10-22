@@ -13,6 +13,10 @@ from app.models import (
     Chapter,
     ContentBlock,
     Course,
+    DirectAssignment,
+    DirectAssignmentAttempt,
+    DirectAssignmentRecipient,
+    DirectAssignmentSubmission,
     LessonProgress,
 )
 
@@ -36,7 +40,9 @@ def submission_is_late(due_at: datetime | None, submitted_at: datetime | None) -
     return as_utc(submitted_at) > as_utc(due_at)
 
 
-def latest_submitted_at(submission: AssignmentSubmission) -> datetime | None:
+def latest_submitted_at(
+    submission: AssignmentSubmission | DirectAssignmentSubmission,
+) -> datetime | None:
     attempts = list(submission.attempts or [])
     if not attempts:
         return submission.created_at
@@ -90,13 +96,67 @@ def append_attempt(
     return attempt
 
 
-def clear_grade(submission: AssignmentSubmission) -> None:
+def clear_grade(submission: AssignmentSubmission | DirectAssignmentSubmission) -> None:
     submission.score = None
     submission.feedback = None
     submission.graded_at = None
     submission.graded_by_id = None
     submission.status = "under_review"
     submission.updated_at = datetime.now(timezone.utc)
+
+
+def append_direct_attempt(
+    db: Session,
+    submission: DirectAssignmentSubmission,
+    *,
+    body: str | None,
+    file_url: str | None,
+    file_name: str | None,
+    submitted_at: datetime | None = None,
+) -> DirectAssignmentAttempt:
+    attempt = DirectAssignmentAttempt(
+        submission_id=submission.id,
+        body=body,
+        file_url=file_url,
+        file_name=file_name,
+        submitted_at=submitted_at or datetime.now(timezone.utc),
+    )
+    db.add(attempt)
+    return attempt
+
+
+def direct_submission_map(
+    db: Session, user_id: int, assignment_ids: list[int]
+) -> dict[int, DirectAssignmentSubmission]:
+    if not assignment_ids:
+        return {}
+    rows = (
+        db.query(DirectAssignmentSubmission)
+        .options(selectinload(DirectAssignmentSubmission.attempts))
+        .filter(
+            DirectAssignmentSubmission.user_id == user_id,
+            DirectAssignmentSubmission.direct_assignment_id.in_(assignment_ids),
+        )
+        .all()
+    )
+    return {row.direct_assignment_id: row for row in rows}
+
+
+def direct_assignments_for_user(
+    db: Session, user_id: int, *, course_id: int | None = None
+) -> list[DirectAssignment]:
+    query = (
+        db.query(DirectAssignment)
+        .join(
+            DirectAssignmentRecipient,
+            DirectAssignmentRecipient.direct_assignment_id == DirectAssignment.id,
+        )
+        .options(joinedload(DirectAssignment.course))
+        .filter(DirectAssignmentRecipient.user_id == user_id)
+    )
+    if course_id is not None:
+        query = query.filter(DirectAssignment.course_id == course_id)
+    return query.order_by(DirectAssignment.created_at.desc()).all()
 
 
 def promote_legacy_completions(db: Session, user_id: int, assignment_ids: list[int]) -> None:

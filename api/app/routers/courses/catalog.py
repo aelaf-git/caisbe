@@ -82,6 +82,8 @@ from app.services.assignments import (
     can_submit_new,
     can_withdraw,
     clear_grade,
+    direct_assignments_for_user,
+    direct_submission_map,
     due_has_passed,
     grade_is_visible,
     latest_submitted_at,
@@ -226,6 +228,34 @@ def get_course_detail(
                 block.can_submit = unlocked and row is None and can_submit_new(block.due_at)
                 block.can_resubmit = unlocked and can_resubmit(row.status, block.due_at) if row else False
                 block.is_late = submission_is_late(block.due_at, submitted_at)
+
+    directs = direct_assignments_for_user(db, current_user.id, course_id=course_id)
+    direct_rows = direct_submission_map(db, current_user.id, [item.id for item in directs])
+    detail.direct_assignments = []
+    for assignment in directs:
+        row = direct_rows.get(assignment.id)
+        submitted_at = latest_submitted_at(row) if row else None
+        visible = grade_is_visible(row.status) if row else False
+        detail.direct_assignments.append(
+            StudentAssignmentOut(
+                kind="direct",
+                block_id=0,
+                direct_assignment_id=assignment.id,
+                course_id=course.id,
+                title=assignment.title,
+                course_code=course.code,
+                course_title=course.title,
+                chapter_title="Assigned to you",
+                due_at=assignment.due_at,
+                bucket=status_bucket(row.status if row else None),
+                review_status=row.status if row else None,
+                score=row.score if row and visible else None,
+                points_possible=assignment.points_possible,
+                submitted_at=submitted_at,
+                is_late=submission_is_late(assignment.due_at, submitted_at),
+                unlocked=True,
+            )
+        )
 
     return detail
 

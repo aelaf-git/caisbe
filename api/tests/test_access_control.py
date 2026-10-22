@@ -157,19 +157,81 @@ def test_admin_can_restrict_exam_access(client: TestClient, db: Session) -> None
         assert "restricted" not in detail.lower()
 
 
+def test_suspension_requires_reason_and_enrolled_course(client: TestClient, db: Session) -> None:
+    _user(db, email="suspend-req-admin@example.com", role="admin", name="Suspend Admin")
+    student = _user(db, email="suspend-req-student@example.com")
+    course = _course(db)
+    other = Course(
+        code="ACC-999",
+        title="Other Course",
+        description="Not enrolled",
+        slug="other-access-course",
+        status="published",
+        pass_percent=70,
+        price_cents=1000,
+    )
+    db.add(other)
+    db.add(Enrollment(user_id=student.id, course_id=course.id, status="enrolled", progress=0))
+    db.commit()
+    db.refresh(other)
+    admin_headers = _auth(_login(client, "suspend-req-admin@example.com"))
+
+    missing = client.post(
+        f"/api/admin/access-control/users/{student.id}/suspension",
+        headers=admin_headers,
+        json={"suspended": True},
+    )
+    assert missing.status_code == 400
+
+    no_reason = client.post(
+        f"/api/admin/access-control/users/{student.id}/suspension",
+        headers=admin_headers,
+        json={"suspended": True, "course_id": course.id, "reason": "  "},
+    )
+    assert no_reason.status_code == 400
+
+    wrong_course = client.post(
+        f"/api/admin/access-control/users/{student.id}/suspension",
+        headers=admin_headers,
+        json={"suspended": True, "course_id": other.id, "reason": "Administrative review"},
+    )
+    assert wrong_course.status_code == 400
+
+
 def test_suspension_blocks_login_and_existing_session(client: TestClient, db: Session) -> None:
     _user(db, email="suspend-admin@example.com", role="admin", name="Suspend Admin")
     student = _user(db, email="suspend-student@example.com")
+    course = Course(
+        code="ACC-SUS",
+        title="Suspension Course",
+        description="A published program.",
+        slug="suspension-course",
+        status="published",
+        pass_percent=70,
+        price_cents=2500,
+    )
+    db.add(course)
+    db.flush()
+    db.add(Enrollment(user_id=student.id, course_id=course.id, status="enrolled", progress=10))
+    db.commit()
+    db.refresh(course)
     token = _login(client, student.email)
     admin_headers = _auth(_login(client, "suspend-admin@example.com"))
 
     suspended = client.post(
         f"/api/admin/access-control/users/{student.id}/suspension",
         headers=admin_headers,
-        json={"suspended": True},
+        json={
+            "suspended": True,
+            "course_id": course.id,
+            "reason": "Administrative review",
+        },
     )
     assert suspended.status_code == 200, suspended.text
     assert suspended.json()["suspended"] is True
+    db.refresh(student)
+    assert student.suspension_reason == "Administrative review"
+    assert student.suspension_course_id == course.id
 
     me = client.get("/api/auth/me", headers=_auth(token))
     assert me.status_code == 403
@@ -189,6 +251,9 @@ def test_suspension_blocks_login_and_existing_session(client: TestClient, db: Se
     )
     assert activated.status_code == 200
     assert activated.json()["suspended"] is False
+    db.refresh(student)
+    assert student.suspension_reason is None
+    assert student.suspension_course_id is None
     assert _login(client, student.email)
 
 

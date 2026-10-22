@@ -156,6 +156,8 @@ export type Seminar = {
   event_date_label: string | null;
   event_time_label: string | null;
   event_format_label: string | null;
+  venue_address: string | null;
+  online_join_url: string | null;
   event_starts_at: string | null;
   registration_closes_at: string | null;
   registration_enabled: boolean;

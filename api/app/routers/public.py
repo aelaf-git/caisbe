@@ -47,6 +47,9 @@ from app.schemas.seminars import (
     SeminarAccessOut,
     SeminarAccessRequestIn,
     SeminarAccessVerifyIn,
+    SeminarManageCancelIn,
+    SeminarManageOut,
+    SeminarManageUpdateIn,
     SeminarOut,
     SeminarRegistrationConfirmIn,
     SeminarRegistrationIn,
@@ -252,7 +255,7 @@ def request_seminar_access(
 ) -> dict[str, str]:
     seminar = seminar_reg.get_published_seminar(db, seminar_id)
     try:
-        seminar_reg.request_access(db, seminar, str(payload.email))
+        seminar_reg.request_access(db, seminar, str(payload.email), payload.name)
     except EmailDeliveryError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     return {
@@ -275,6 +278,7 @@ def verify_seminar_access(
         seminar_id=seminar_id,
         access_token=payload.token,
         message="Email verified. You can complete registration.",
+        requester_name=row.requester_name,
     )
 
 
@@ -291,9 +295,10 @@ def submit_seminar_registration(
     db: Session = Depends(get_db),
 ) -> SeminarRegistrationOut:
     seminar = seminar_reg.get_published_seminar(db, seminar_id)
-    row, checkout_url = seminar_reg.create_registration(db, seminar, payload)
+    row, checkout_url, manage_raw = seminar_reg.create_registration(db, seminar, payload)
     out = SeminarRegistrationOut.model_validate(row)
     out.checkout_url = checkout_url
+    out.manage_url = seminar_reg.registration_manage_url(seminar.id, manage_raw)
     return out
 
 
@@ -305,12 +310,47 @@ def confirm_seminar_registration_payment(
     registration_id: int = Query(..., ge=1),
     db: Session = Depends(get_db),
 ) -> SeminarRegistrationOut:
-    row = seminar_reg.confirm_seminar_payment(
+    row, manage_raw = seminar_reg.confirm_seminar_payment(
         db,
         registration_id=registration_id,
         session_id=payload.session_id,
     )
-    return SeminarRegistrationOut.model_validate(row)
+    out = SeminarRegistrationOut.model_validate(row)
+    out.manage_url = seminar_reg.registration_manage_url(row.seminar_id, manage_raw)
+    return out
+
+
+@router.get("/seminars/registrations/manage", response_model=SeminarManageOut)
+@limiter.limit("30/minute")
+def get_seminar_registration_manage(
+    request: Request,
+    token: str = Query(..., min_length=10, max_length=200),
+    seminar_id: int | None = Query(default=None, ge=1),
+    db: Session = Depends(get_db),
+) -> SeminarManageOut:
+    return SeminarManageOut.model_validate(
+        seminar_reg.get_manage_registration(db, token, seminar_id=seminar_id)
+    )
+
+
+@router.patch("/seminars/registrations/manage", response_model=SeminarManageOut)
+@limiter.limit("20/minute")
+def patch_seminar_registration_manage(
+    request: Request,
+    payload: SeminarManageUpdateIn,
+    db: Session = Depends(get_db),
+) -> SeminarManageOut:
+    return SeminarManageOut.model_validate(seminar_reg.update_manage_registration(db, payload))
+
+
+@router.post("/seminars/registrations/manage/cancel", response_model=SeminarManageOut)
+@limiter.limit("10/minute")
+def cancel_seminar_registration_manage(
+    request: Request,
+    payload: SeminarManageCancelIn,
+    db: Session = Depends(get_db),
+) -> SeminarManageOut:
+    return SeminarManageOut.model_validate(seminar_reg.cancel_manage_registration(db, payload.token))
 
 
 @router.get("/testimonials", response_model=list[TestimonialOut])

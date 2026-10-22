@@ -221,6 +221,32 @@ export default function CourseOutline({
           </div>
         );
       })}
+      {(course.direct_assignments ?? []).length > 0 ? (
+        <div className="border-b border-ifma-border-light py-2">
+          <p className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+            Assigned to you
+          </p>
+          <ul className="space-y-0.5 pb-2">
+            {(course.direct_assignments ?? []).map((row) => (
+              <li key={row.direct_assignment_id}>
+                <ItemButton
+                  type="assignment"
+                  locked={false}
+                  done={row.bucket === "evaluated" && row.review_status === "passed"}
+                  active={selectionsEqual(selection, {
+                    kind: "direct-assignment",
+                    assignmentId: row.direct_assignment_id,
+                  })}
+                  label={row.title}
+                  onClick={() =>
+                    onSelect({ kind: "direct-assignment", assignmentId: row.direct_assignment_id })
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {course.final_exam ? (
         <ItemButton
           type="exam"

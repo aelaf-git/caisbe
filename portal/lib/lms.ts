@@ -102,6 +102,7 @@ export type ExamSessionState = {
   questions?: QuizQuestion[];
   secure_mode?: boolean;
   secure_ok?: boolean;
+  identity_status?: "pending" | "approved" | "rejected" | null;
   violation_count?: number;
   max_integrity_violations?: number;
   locked_out?: boolean;
@@ -111,12 +112,32 @@ export type ExamPrecheckResult = {
   allowed: boolean;
   reasons: string[];
   secure_ok: boolean;
+  identity_status?: "pending" | "approved" | "rejected" | null;
 };
 
 export type CertificateTemplate = {
   id: number;
   title: string;
   body: string;
+};
+
+export type DirectAssignmentSummary = {
+  kind: "direct";
+  block_id: number;
+  direct_assignment_id: number;
+  course_id: number;
+  title: string;
+  course_code: string;
+  course_title: string;
+  chapter_title: string;
+  due_at: string | null;
+  bucket: string;
+  review_status: string | null;
+  score: number | null;
+  points_possible: number | null;
+  submitted_at: string | null;
+  is_late: boolean;
+  unlocked: boolean;
 };
 
 export type CourseDetail = {
@@ -137,6 +158,7 @@ export type CourseDetail = {
   certificate_code?: string | null;
   exam_passed?: boolean;
   exam_score?: number | null;
+  direct_assignments?: DirectAssignmentSummary[];
 };
 
 export type QuizAnswerReview = {

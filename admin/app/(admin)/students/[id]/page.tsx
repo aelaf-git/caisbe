@@ -40,6 +40,23 @@ type IntegrityEvent = {
   final_exam_id: number;
 };
 
+type ExamIdentity = {
+  session_id: number;
+  final_exam_id: number;
+  course_id: number;
+  course_code: string;
+  course_title: string;
+  exam_title: string;
+  student_full_name: string;
+  id_photo_url: string | null;
+  face_photo_url: string | null;
+  identity_status: string | null;
+  identity_reviewed_at: string | null;
+  identity_reviewed_by_id: number | null;
+  identity_review_note: string | null;
+  secure_ok_at: string | null;
+};
+
 export default function StudentProfilePrintPage() {
   const params = useParams<{ id: string }>();
   const { notice, dialog } = useNoticeDialog();
@@ -47,8 +64,11 @@ export default function StudentProfilePrintPage() {
   const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [integrity, setIntegrity] = useState<IntegrityEvent[]>([]);
+  const [identities, setIdentities] = useState<ExamIdentity[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<number | null>(null);
+  const [identityBusy, setIdentityBusy] = useState<number | null>(null);
+  const [identityNotes, setIdentityNotes] = useState<Record<number, string>>({});
 
   useEffect(() => {
     void apiFetch<AdminStudent>(`/admin/students/${params.id}`)
@@ -63,6 +83,9 @@ export default function StudentProfilePrintPage() {
     void apiFetch<IntegrityEvent[]>(`/admin/students/${params.id}/exam-integrity`)
       .then(setIntegrity)
       .catch(() => setIntegrity([]));
+    void apiFetch<ExamIdentity[]>(`/admin/students/${params.id}/exam-identity`)
+      .then(setIdentities)
+      .catch(() => setIdentities([]));
   }, [params.id]);
 
   async function review(id: number, payload: AssignmentReviewPayload) {
@@ -86,6 +109,43 @@ export default function StudentProfilePrintPage() {
       });
     } finally {
       setReviewing(null);
+    }
+  }
+
+  async function reviewIdentity(sessionId: number, status: "approved" | "rejected") {
+    setIdentityBusy(sessionId);
+    try {
+      const updated = await apiFetch<ExamIdentity>(
+        `/admin/students/${params.id}/exam-identity/${sessionId}/review`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            status,
+            note: (identityNotes[sessionId] || "").trim() || null,
+          }),
+        },
+      );
+      setIdentities((current) =>
+        current.map((row) => (row.session_id === sessionId ? updated : row)),
+      );
+      const refreshed = await apiFetch<IntegrityEvent[]>(`/admin/students/${params.id}/exam-integrity`);
+      setIntegrity(refreshed);
+      await notice({
+        tone: "success",
+        title: status === "approved" ? "Identity approved" : "Identity rejected",
+        description:
+          status === "approved"
+            ? "The student can start the exam once the secure pre-check is still valid."
+            : "The student must capture new photos and run pre-check again.",
+      });
+    } catch (err) {
+      await notice({
+        tone: "error",
+        title: "Something went wrong",
+        description: err instanceof ApiError ? err.detail : "Unable to review identity.",
+      });
+    } finally {
+      setIdentityBusy(null);
     }
   }
 
@@ -201,6 +261,126 @@ export default function StudentProfilePrintPage() {
               </div>
             </li>
           ))}
+        </ul>
+      )}
+      <h2 className="font-display text-xl font-semibold">Exam identity verification</h2>
+      <p className="text-sm text-caisbe-muted">
+        Confirm the name on the photo ID matches the registered name before approving.
+      </p>
+      {identities.length === 0 ? (
+        <p className="text-sm text-caisbe-muted">No exam identity captures yet.</p>
+      ) : (
+        <ul className="space-y-4">
+          {identities.map((row) => {
+            const idSrc = resolveUploadUrl(row.id_photo_url);
+            const faceSrc = resolveUploadUrl(row.face_photo_url);
+            const status = row.identity_status || "pending";
+            const busy = identityBusy === row.session_id;
+            return (
+              <li key={row.session_id} className="space-y-3 border border-ifma-border p-4 text-sm">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-caisbe-text">
+                      {row.course_code} · {row.exam_title}
+                    </p>
+                    <p className="text-caisbe-muted">{row.course_title}</p>
+                  </div>
+                  <span
+                    className={`text-xs font-semibold uppercase tracking-wide ${
+                      status === "approved"
+                        ? "text-admin-success"
+                        : status === "rejected"
+                          ? "text-caisbe-red"
+                          : "text-caisbe-muted"
+                    }`}
+                  >
+                    {status}
+                  </span>
+                </div>
+                <p className="text-sm text-caisbe-text">
+                  Registered name: <span className="font-semibold">{row.student_full_name}</span>
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+                      Photo ID
+                    </p>
+                    {idSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={idSrc}
+                        alt="Photo ID"
+                        className="max-h-56 w-full border border-ifma-border object-contain bg-admin-canvas"
+                      />
+                    ) : (
+                      <p className="text-caisbe-muted">Missing</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+                      Face photo
+                    </p>
+                    {faceSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={faceSrc}
+                        alt="Face photo"
+                        className="max-h-56 w-full border border-ifma-border object-contain bg-admin-canvas"
+                      />
+                    ) : (
+                      <p className="text-caisbe-muted">Missing</p>
+                    )}
+                  </div>
+                </div>
+                {row.identity_reviewed_at ? (
+                  <p className="text-xs text-caisbe-muted">
+                    Reviewed {new Date(row.identity_reviewed_at).toLocaleString()}
+                    {row.identity_review_note ? ` · ${row.identity_review_note}` : ""}
+                  </p>
+                ) : null}
+                {status === "pending" || status === "rejected" ? (
+                  <div className="print:hidden space-y-2">
+                    <textarea
+                      className="w-full border border-ifma-border px-3 py-2 text-sm"
+                      rows={2}
+                      placeholder="Optional note"
+                      value={identityNotes[row.session_id] ?? ""}
+                      onChange={(event) =>
+                        setIdentityNotes((current) => ({
+                          ...current,
+                          [row.session_id]: event.target.value,
+                        }))
+                      }
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        disabled={busy}
+                        onClick={() => void reviewIdentity(row.session_id, "approved")}
+                      >
+                        {busy ? "Saving…" : "Approve"}
+                      </Button>
+                      <Button
+                        disabled={busy}
+                        onClick={() => void reviewIdentity(row.session_id, "rejected")}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+                {status === "approved" ? (
+                  <div className="print:hidden">
+                    <Button
+                      disabled={busy}
+                      onClick={() => void reviewIdentity(row.session_id, "rejected")}
+                    >
+                      Revoke / reject
+                    </Button>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
       <h2 className="font-display text-xl font-semibold">Exam integrity log</h2>

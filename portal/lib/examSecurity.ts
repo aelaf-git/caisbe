@@ -14,6 +14,8 @@ export type PrecheckPayload = {
   camera_ok: boolean;
   multi_monitor: boolean | null;
   user_agent: string;
+  id_photo_url: string;
+  face_photo_url: string;
 };
 
 export type IntegrityEvent = {
@@ -79,6 +81,8 @@ export function buildPrecheckCapabilities(
   rulesAccepted: boolean,
   fullscreenOk: boolean,
   cameraOk: boolean,
+  idPhotoUrl: string,
+  facePhotoUrl: string,
 ): PrecheckPayload {
   return {
     rules_accepted: rulesAccepted,
@@ -87,6 +91,8 @@ export function buildPrecheckCapabilities(
     camera_ok: cameraOk,
     multi_monitor: detectMultiMonitor(),
     user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 512) : "",
+    id_photo_url: idPhotoUrl.trim(),
+    face_photo_url: facePhotoUrl.trim(),
   };
 }
 
