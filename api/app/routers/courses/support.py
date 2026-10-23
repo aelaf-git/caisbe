@@ -574,6 +574,13 @@ def _enrollment_to_out(db: Session, user: User, enrollment: Enrollment) -> Enrol
         .first()
     )
     counts = _progress_counts(db, user, course) if course is not None else {}
+    exam_available = None
+    wait_remaining = None
+    if course is not None and course.final_exam is not None:
+        from app.services.access_control import exam_available_at, exam_wait_days_remaining
+
+        exam_available = exam_available_at(enrollment, course.final_exam)
+        wait_remaining = exam_wait_days_remaining(enrollment, course.final_exam)
     return EnrollmentOut(
         id=enrollment.id,
         status=enrollment.status,
@@ -589,6 +596,8 @@ def _enrollment_to_out(db: Session, user: User, enrollment: Enrollment) -> Enrol
         assignments_completed=int(counts.get("assignments_completed", 0)),
         assignments_total=int(counts.get("assignments_total", 0)),
         has_final_exam=bool(counts.get("has_final_exam", False)),
+        exam_available_at=exam_available,
+        exam_wait_days_remaining=wait_remaining,
     )
 
 
@@ -1105,7 +1114,7 @@ def _exam_session_state(db: Session, user: User, exam: FinalExam, now: datetime)
 
 
 def _require_open_exam(db: Session, user: User, course: Course) -> FinalExam:
-    from app.services.access_control import require_exam_open
+    from app.services.access_control import require_exam_open, require_exam_wait_elapsed
 
     enrollment = require_active_enrollment(db, user, course.id)
     maybe_notify_exam_access_request(db, user, course, enrollment)
@@ -1116,6 +1125,10 @@ def _require_open_exam(db: Session, user: User, course: Course) -> FinalExam:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Final exam not configured")
     if _user_passed_final_exam(db, user, course):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You already passed this exam.")
+    session = _exam_session(db, user, exam)
+    # Allow an already-started attempt to continue even if wait days later increase.
+    if session is None or session.started_at is None:
+        require_exam_wait_elapsed(enrollment, exam)
     return exam
 
 

@@ -61,6 +61,7 @@ def _course_with_exam(db: Session, *, secure: bool = True, max_violations: int =
         pass_percent=70,
         secure_mode=secure,
         max_integrity_violations=max_violations,
+        exam_wait_days=0,
     )
     db.add(exam)
     db.flush()

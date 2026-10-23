@@ -67,6 +67,7 @@ export type FinalExam = {
   pass_percent: number;
   time_limit_minutes?: number | null;
   questions_to_appear?: number | null;
+  exam_wait_days?: number;
   secure_mode?: boolean;
   max_integrity_violations?: number;
   questions: QuizQuestion[];

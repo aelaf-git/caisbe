@@ -15,8 +15,10 @@ function courseStatus(enrollment: Enrollment) {
 function examStatus(enrollment: Enrollment) {
   if (!enrollment.has_final_exam) return "No exam";
   if (enrollment.exam_passed) return "Passed";
-  if (count(enrollment.topics_completed) === count(enrollment.topics_total)) return "Eligible";
-  return "Not eligible";
+  const topicsDone = count(enrollment.topics_completed) === count(enrollment.topics_total);
+  if (!topicsDone) return "Not eligible";
+  if ((enrollment.exam_wait_days_remaining ?? 0) > 0) return "Waiting period";
+  return "Eligible";
 }
 
 function outstandingLines(enrollment: Enrollment) {
@@ -35,7 +37,14 @@ function outstandingLines(enrollment: Enrollment) {
     count(enrollment.topics_completed) === count(enrollment.topics_total) &&
     !enrollment.exam_passed
   ) {
-    lines.push("Pass the final exam");
+    const remaining = enrollment.exam_wait_days_remaining ?? 0;
+    if (remaining > 0) {
+      lines.push(
+        `Waiting period: ${remaining} day${remaining === 1 ? "" : "s"} before the exam unlocks`,
+      );
+    } else {
+      lines.push("Pass the final exam");
+    }
   }
   return lines;
 }
@@ -54,7 +63,7 @@ function courseChipTone(label: string): "success" | "warning" | "muted" {
 
 function examChipTone(label: string): "success" | "warning" | "muted" {
   if (label === "Passed" || label === "Eligible") return "success";
-  if (label === "Not eligible") return "warning";
+  if (label === "Not eligible" || label === "Waiting period") return "warning";
   return "muted";
 }
 

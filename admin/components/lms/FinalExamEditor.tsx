@@ -13,6 +13,7 @@ export type ExamDraft = {
   pass_percent: number;
   time_limit_minutes: number | null;
   questions_to_appear: number | null;
+  exam_wait_days: number;
   secure_mode: boolean;
   max_integrity_violations: number;
   questions: QuizQuestion[];
@@ -81,6 +82,7 @@ export default function FinalExamEditor({
             pass_percent: next.pass_percent,
             time_limit_minutes: next.time_limit_minutes,
             questions_to_appear: next.questions_to_appear,
+            exam_wait_days: next.exam_wait_days,
             secure_mode: next.secure_mode,
             max_integrity_violations: next.max_integrity_violations,
             questions: serializeQuestions(next.questions),
@@ -147,6 +149,27 @@ export default function FinalExamEditor({
             onChange({
               ...exam,
               time_limit_minutes: Math.min(480, Math.max(1, Math.trunc(next))),
+            });
+          }}
+          onBlur={() => void autosave.flush()}
+          className={fieldClassName}
+        />
+      </FormField>
+      <FormField
+        label="Minimum enrollment days before exam"
+        hint="Reading/wait period from the student’s enrollment date. Use 0 for no wait (exam available once other requirements are met)."
+      >
+        <input
+          type="number"
+          min={0}
+          max={365}
+          value={exam.exam_wait_days}
+          onChange={(event) => {
+            const next = Number(event.target.value);
+            if (!Number.isFinite(next)) return;
+            onChange({
+              ...exam,
+              exam_wait_days: Math.min(365, Math.max(0, Math.trunc(next))),
             });
           }}
           onBlur={() => void autosave.flush()}

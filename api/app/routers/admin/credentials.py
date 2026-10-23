@@ -191,6 +191,8 @@ def admin_upsert_final_exam(
         exam.secure_mode = payload.secure_mode
     if payload.max_integrity_violations is not None:
         exam.max_integrity_violations = payload.max_integrity_violations
+    if payload.exam_wait_days is not None:
+        exam.exam_wait_days = max(0, min(365, int(payload.exam_wait_days)))
 
     db.commit()
     exam = (

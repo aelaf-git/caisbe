@@ -66,6 +66,8 @@ class EnrollmentOut(BaseModel):
     assignments_completed: int = 0
     assignments_total: int = 0
     has_final_exam: bool = False
+    exam_available_at: datetime | None = None
+    exam_wait_days_remaining: int | None = None
 
     model_config = {"from_attributes": True}
 
@@ -373,6 +375,7 @@ class FinalExamUpdate(BaseModel):
     pass_percent: int | None = Field(default=None, ge=0, le=100)
     time_limit_minutes: int | None = Field(default=None, ge=1, le=480)
     questions_to_appear: int | None = Field(default=None, ge=1)
+    exam_wait_days: int | None = Field(default=None, ge=0, le=365)
     secure_mode: bool | None = None
     max_integrity_violations: int | None = Field(default=None, ge=1, le=20)
     questions: list[QuizQuestionIn] | None = None
@@ -384,6 +387,7 @@ class FinalExamOut(BaseModel):
     pass_percent: int
     time_limit_minutes: int | None = None
     questions_to_appear: int | None = None
+    exam_wait_days: int = 30
     secure_mode: bool = True
     max_integrity_violations: int = 3
     questions: list[QuizQuestionOut] = Field(default_factory=list)
@@ -398,6 +402,9 @@ class FinalExamStudentOut(BaseModel):
     time_limit_minutes: int | None = None
     questions_to_appear: int | None = None
     question_bank_size: int = 0
+    exam_wait_days: int = 30
+    exam_available_at: datetime | None = None
+    exam_wait_days_remaining: int | None = None
     secure_mode: bool = True
     max_integrity_violations: int = 3
     # Full bank is withheld; live prompts arrive on ExamSessionOut when the attempt starts.
@@ -530,6 +537,8 @@ class CourseDetailStudentOut(CourseOut):
     certificate_code: str | None = None
     exam_passed: bool = False
     exam_score: int | None = None
+    exam_available_at: datetime | None = None
+    exam_wait_days_remaining: int | None = None
     direct_assignments: list["StudentAssignmentOut"] = Field(default_factory=list)
 
 

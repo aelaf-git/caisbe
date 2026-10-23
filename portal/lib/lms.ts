@@ -79,6 +79,9 @@ export type FinalExam = {
   time_limit_minutes: number | null;
   questions_to_appear?: number | null;
   question_bank_size?: number;
+  exam_wait_days?: number;
+  exam_available_at?: string | null;
+  exam_wait_days_remaining?: number | null;
   secure_mode?: boolean;
   max_integrity_violations?: number;
   questions: QuizQuestion[];
@@ -158,6 +161,8 @@ export type CourseDetail = {
   certificate_code?: string | null;
   exam_passed?: boolean;
   exam_score?: number | null;
+  exam_available_at?: string | null;
+  exam_wait_days_remaining?: number | null;
   direct_assignments?: DirectAssignmentSummary[];
 };
 

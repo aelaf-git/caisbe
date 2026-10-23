@@ -99,7 +99,13 @@ def _course_with_work(db: Session) -> tuple[Course, Lesson, Quiz, ContentBlock, 
         points_possible=100,
     )
     db.add(assignment)
-    exam = FinalExam(course_id=course.id, title="Final", pass_percent=70, secure_mode=False)
+    exam = FinalExam(
+        course_id=course.id,
+        title="Final",
+        pass_percent=70,
+        secure_mode=False,
+        exam_wait_days=0,
+    )
     db.add(exam)
     db.flush()
     exam_q = QuizQuestion(final_exam_id=exam.id, prompt="Exam?", sort_order=0)

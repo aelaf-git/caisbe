@@ -199,6 +199,8 @@ class FinalExam(Base):
     time_limit_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # NULL = show the full bank; otherwise sample this many questions per attempt.
     questions_to_appear: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Calendar days after enrollment before the student may sit the exam (0 = no wait).
+    exam_wait_days: Mapped[int] = mapped_column(Integer, default=30, server_default="30")
     secure_mode: Mapped[bool] = mapped_column(Boolean, default=True)
     max_integrity_violations: Mapped[int] = mapped_column(Integer, default=3)
 

@@ -85,6 +85,8 @@ export type Enrollment = {
   assignments_completed: number;
   assignments_total: number;
   has_final_exam: boolean;
+  exam_available_at?: string | null;
+  exam_wait_days_remaining?: number | null;
 };
 
 export type TokenResponse = {

@@ -88,6 +88,17 @@ function formatLimit(minutes: number) {
   return `${hourLabel} ${rest} minute${rest === 1 ? "" : "s"}`;
 }
 
+function formatUnlockDate(iso: string | null | undefined) {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 export default function ExamPlayer({
   courseId,
   exam,
@@ -99,6 +110,9 @@ export default function ExamPlayer({
 }) {
   const secureMode = exam.secure_mode !== false;
   const maxViolations = exam.max_integrity_violations ?? 3;
+  const waitRemaining = Math.max(0, Number(exam.exam_wait_days_remaining ?? 0));
+  const waitBlocked = waitRemaining > 0;
+  const unlockLabel = formatUnlockDate(exam.exam_available_at);
   const precheckRootRef = useRef<HTMLDivElement>(null);
 
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
@@ -620,7 +634,27 @@ export default function ExamPlayer({
 
       {phase.kind === "loading" ? <p className="text-sm text-caisbe-muted">Loading exam…</p> : null}
 
-      {phase.kind === "intro" && !showPrecheck && feeOrderId == null && !error?.toLowerCase().includes("restricted") ? (
+      {phase.kind === "intro" && waitBlocked && feeOrderId == null ? (
+        <div className="space-y-3 rounded-md border border-ifma-border bg-[#fafaf8] px-4 py-4">
+          <h3 className="font-display text-lg font-semibold text-caisbe-text-dark">Waiting period</h3>
+          <p className="text-sm leading-6 text-caisbe-text">
+            This exam requires a minimum reading period after enrollment
+            {exam.exam_wait_days != null ? ` (${exam.exam_wait_days} day${exam.exam_wait_days === 1 ? "" : "s"})` : ""}.
+            {unlockLabel
+              ? ` You can sit for the exam on ${unlockLabel}.`
+              : ` ${waitRemaining} day${waitRemaining === 1 ? "" : "s"} remaining.`}
+          </p>
+          <p className="text-sm text-caisbe-muted">
+            Continue your course materials until the waiting period ends.
+          </p>
+        </div>
+      ) : null}
+
+      {phase.kind === "intro" &&
+      !waitBlocked &&
+      !showPrecheck &&
+      feeOrderId == null &&
+      !error?.toLowerCase().includes("restricted") ? (
         <ExamAgreement
           key={agreementKey}
           facts={{
@@ -641,7 +675,7 @@ export default function ExamPlayer({
         />
       ) : null}
 
-      {phase.kind === "intro" && showPrecheck && feeOrderId == null ? (
+      {phase.kind === "intro" && !waitBlocked && showPrecheck && feeOrderId == null ? (
         <div ref={precheckRootRef} className="space-y-4 rounded-md border border-ifma-border bg-[#fafaf8] px-4 py-4">
           <h3 className="font-display text-lg font-semibold text-caisbe-text-dark">Secure exam pre-check</h3>
           <p className="text-sm leading-6 text-caisbe-text">

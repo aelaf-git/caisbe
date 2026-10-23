@@ -80,6 +80,7 @@ def _course(
             title="Final",
             pass_percent=70,
             secure_mode=False,
+            exam_wait_days=0,
         )
         db.add(exam)
         db.flush()

@@ -133,7 +133,7 @@ def test_enrollment_reports_progress_counts_and_exam_eligibility(client: TestCli
             sort_order=0,
         )
     )
-    db.add(FinalExam(course_id=course.id, title="Final Exam"))
+    db.add(FinalExam(course_id=course.id, title="Final Exam", exam_wait_days=0))
     db.add(Enrollment(user_id=student.id, course_id=course.id, status="enrolled", progress=0))
     db.commit()
 

@@ -105,6 +105,7 @@ function AdminCourseEditorInner() {
     pass_percent: 70,
     time_limit_minutes: null,
     questions_to_appear: null,
+    exam_wait_days: 30,
     secure_mode: true,
     max_integrity_violations: 3,
     questions: [emptyQuestion()],
@@ -140,6 +141,7 @@ function AdminCourseEditorInner() {
       pass_percent: data.final_exam?.pass_percent ?? data.pass_percent,
       time_limit_minutes: data.final_exam?.time_limit_minutes ?? null,
       questions_to_appear: data.final_exam?.questions_to_appear ?? null,
+      exam_wait_days: data.final_exam?.exam_wait_days ?? 30,
       secure_mode: data.final_exam?.secure_mode !== false,
       max_integrity_violations: data.final_exam?.max_integrity_violations ?? 3,
       questions: data.final_exam?.questions?.length

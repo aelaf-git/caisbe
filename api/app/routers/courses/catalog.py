@@ -177,9 +177,17 @@ def get_course_detail(
     detail.exam_passed = exam_passed
     detail.exam_score = exam_score
     if detail.final_exam is not None and course.final_exam is not None:
+        from app.services.access_control import exam_available_at, exam_wait_days_remaining
+
         detail.final_exam.question_bank_size = len(course.final_exam.questions)
         # Withhold the bank until an attempt starts (session returns the subset).
         detail.final_exam.questions = []
+        available_at = exam_available_at(enrollment, course.final_exam)
+        remaining = exam_wait_days_remaining(enrollment, course.final_exam)
+        detail.final_exam.exam_available_at = available_at
+        detail.final_exam.exam_wait_days_remaining = remaining
+        detail.exam_available_at = available_at
+        detail.exam_wait_days_remaining = remaining
 
     _, quiz_ids, assignment_ids = _course_progress_units(db, course_id)
     done_quizzes = _passed_quiz_ids(db, current_user.id, quiz_ids)
