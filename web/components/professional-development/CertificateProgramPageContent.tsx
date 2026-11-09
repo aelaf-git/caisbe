@@ -15,7 +15,6 @@ export default async function CertificateProgramPageContent({
   const { t } = await getServerT();
   const paragraphs = courseDescriptionParagraphs(course.description, course.title);
   const registerHref = courseRegisterLoginUrl(course.id);
-  const lessonsClosed = course.content_published === false;
 
   return (
     <CourseScrapeGuard>
@@ -66,15 +65,6 @@ export default async function CertificateProgramPageContent({
                   </p>
                 )}
               </div>
-
-              {lessonsClosed ? (
-                <p className="mt-6 max-w-2xl border border-caisbe-red/20 bg-white px-4 py-3 text-sm font-semibold leading-6 text-caisbe-text-dark">
-                  {t(
-                    "This course is not ready yet.",
-                    "Ce cours n’est pas encore prêt.",
-                  )}
-                </p>
-              ) : null}
 
               <div className="mt-8 max-w-xl">
                 <ButtonLink href={registerHref} variant="primary">

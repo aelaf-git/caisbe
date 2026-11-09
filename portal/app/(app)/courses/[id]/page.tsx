@@ -270,7 +270,9 @@ export default function CoursePlayerPage() {
               {notReady.description ? (
                 <p className="text-sm leading-7 text-caisbe-muted">{courseShortSummary(notReady.description)}</p>
               ) : null}
-              <p className="text-sm font-semibold text-caisbe-text-dark">This course is not ready yet.</p>
+              <p className="border border-caisbe-red/20 bg-white px-4 py-3 text-sm font-semibold leading-6 text-caisbe-text-dark">
+                This course is not ready yet.
+              </p>
             </div>
           </div>
         </section>

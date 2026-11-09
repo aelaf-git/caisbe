@@ -150,9 +150,6 @@ export default function CourseSummaryPage() {
                 {course.title}
               </h2>
               <p className="text-sm leading-7 text-caisbe-muted">{summary}</p>
-              {course.content_published === false ? (
-                <p className="text-sm font-semibold text-caisbe-text-dark">This course is not ready yet.</p>
-              ) : null}
               <p className="text-base font-semibold text-caisbe-text-dark">
                 {formatMoney(course.price_cents ?? 0, course.currency)}
               </p>
