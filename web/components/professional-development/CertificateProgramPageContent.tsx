@@ -70,12 +70,6 @@ export default async function CertificateProgramPageContent({
                 <ButtonLink href={registerHref} variant="primary">
                   {t("Sign in to register", "Connectez-vous pour vous inscrire")}
                 </ButtonLink>
-                <p className="mt-4 text-sm leading-6 text-caisbe-muted">
-                  {t(
-                    "Sign in to buy this course and unlock lessons in myCAISBE. Course content stays private until you register.",
-                    "Connectez-vous pour acheter ce cours et accéder aux leçons dans myCAISBE. Le contenu du cours reste privé jusqu’à votre inscription.",
-                  )}
-                </p>
               </div>
             </div>
 
