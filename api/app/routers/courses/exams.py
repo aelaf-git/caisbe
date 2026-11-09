@@ -320,16 +320,6 @@ def start_final_exam(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Complete the secure exam pre-check before starting.",
             )
-        if identity == "pending":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Identity verification is pending admin approval.",
-            )
-        if identity != "approved":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Identity verification is pending admin approval.",
-            )
 
     from app.services.commerce import ensure_attempt_paid
 

@@ -184,7 +184,7 @@ def test_secure_precheck_requires_identity_photos(client: TestClient, db: Sessio
     assert session.identity_status == "pending"
 
 
-def test_secure_start_requires_precheck_and_identity_approval(client: TestClient, db: Session) -> None:
+def test_secure_start_requires_precheck_not_admin_approval(client: TestClient, db: Session) -> None:
     user = _student(db, "sec-a@example.com")
     course, _exam = _course_with_exam(db, secure=True)
     _enroll(db, user, course)
@@ -195,17 +195,12 @@ def test_secure_start_requires_precheck_and_identity_approval(client: TestClient
     assert "pre-check" in blocked.json()["detail"].lower()
 
     _precheck_ok(client, course.id, token)
-    pending = client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=_auth(token))
-    assert pending.status_code == 400
-    assert "pending admin approval" in pending.json()["detail"].lower()
-
-    _approve_identity(db, user.id)
     started = client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=_auth(token))
     assert started.status_code == 200, started.text
     body = started.json()
     assert body["in_progress"] is True
     assert body["secure_mode"] is True
-    assert body["identity_status"] == "approved"
+    assert body["identity_status"] == "pending"
     assert len(body["questions"]) == 2
 
 

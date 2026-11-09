@@ -301,16 +301,8 @@ export default function ExamPlayer({
         setError("Complete the secure exam pre-check before starting.");
         return;
       }
-      if (secureMode && identityStatus === "pending") {
-        setError("Identity verification is pending admin approval.");
-        return;
-      }
       if (secureMode && identityStatus === "rejected") {
         setError("Identity was rejected. Capture new photos and run pre-check again.");
-        return;
-      }
-      if (secureMode && identityStatus !== "approved") {
-        setError("Identity verification is pending admin approval.");
         return;
       }
       const state = await apiFetch<ExamSessionState>(`/me/courses/${courseId}/final-exam/start`, {
@@ -415,7 +407,7 @@ export default function ExamPlayer({
   const identityReady = Boolean(idPhotoUrl && facePhotoUrl);
   const canRunPrecheck = rulesAccepted && identityReady;
   const canStart =
-    bankSize > 0 && (!secureMode || (secureReady && identityStatus === "approved"));
+    bankSize > 0 && (!secureMode || (secureReady && identityStatus !== "rejected"));
 
   function selectedChoiceLabel(question: QuizQuestion): string | null {
     const choiceId = answers[String(question.id)];
@@ -762,10 +754,9 @@ export default function ExamPlayer({
                     : "needed"}
             </span>
           </div>
-          {secureReady && identityStatus === "pending" ? (
+          {secureReady && identityStatus !== "rejected" ? (
             <p className="text-sm text-caisbe-text">
-              Pre-check passed. Start exam unlocks after an administrator confirms your photo ID name
-              matches your registered name.
+              Pre-check passed. Start exam is ready.
             </p>
           ) : null}
           {identityStatus === "rejected" ? (

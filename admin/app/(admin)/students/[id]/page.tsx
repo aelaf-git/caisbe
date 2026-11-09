@@ -135,7 +135,7 @@ export default function StudentProfilePrintPage() {
         title: status === "approved" ? "Identity approved" : "Identity rejected",
         description:
           status === "approved"
-            ? "The student can start the exam once the secure pre-check is still valid."
+            ? "The review is recorded. The student can already start after a valid secure pre-check."
             : "The student must capture new photos and run pre-check again.",
       });
     } catch (err) {
