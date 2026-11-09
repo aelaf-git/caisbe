@@ -202,6 +202,13 @@ def test_public_courses_truncates_long_description_and_locks_future_lessons(
     assert len(matched["description"]) <= 265
     assert matched["description"].endswith("…")
 
+    # 1b. The program page endpoint returns the full description but still no lesson content
+    program = client.get("/api/courses/by-slug/anti-scrape-course")
+    assert program.status_code == 200
+    assert program.json()["description"] == long_desc
+    assert "chapters" not in program.json()
+    assert client.get("/api/courses/by-slug/does-not-exist").status_code == 404
+
     # 2. Enrolled student gets Topic 1 body, but Topic 2 body & block URLs are redacted until Topic 1 is completed
     student_token = _login(client, student.email)
     headers = {"Authorization": f"Bearer {student_token}"}

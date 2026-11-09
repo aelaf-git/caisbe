@@ -364,6 +364,14 @@ export async function fetchPublishedCourses(locale?: Locale): Promise<Course[]> 
   return apiFetch<Course[]>("/courses", { locale });
 }
 
+/** One published course with its full description (the list endpoint returns a teaser). */
+export async function fetchPublishedCourseBySlug(
+  slug: string,
+  locale?: Locale,
+): Promise<Course> {
+  return apiFetch<Course>(`/courses/by-slug/${encodeURIComponent(slug)}`, { locale });
+}
+
 export function courseProgramPath(slug: string) {
   return `/professional-development/${slug}`;
 }

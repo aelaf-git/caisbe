@@ -1,7 +1,7 @@
 import ButtonLink from "@/components/ui/ButtonLink";
 import BackButton from "@/components/ui/BackButton";
 import CourseScrapeGuard from "@/components/security/CourseScrapeGuard";
-import { courseShortSummary } from "@/lib/courseSummary";
+import { courseDescriptionParagraphs } from "@/lib/courseSummary";
 import { courseRegisterLoginUrl, type Course } from "@/lib/api";
 import { getServerT } from "@/lib/i18n/server";
 
@@ -13,7 +13,7 @@ export default async function CertificateProgramPageContent({
   course,
 }: CertificateProgramPageContentProps) {
   const { t } = await getServerT();
-  const summary = courseShortSummary(course.description, 320, course.title);
+  const paragraphs = courseDescriptionParagraphs(course.description, course.title);
   const registerHref = courseRegisterLoginUrl(course.id);
   const lessonsClosed = course.content_published === false;
 
@@ -43,9 +43,29 @@ export default async function CertificateProgramPageContent({
               <h1 className="font-hopewell-display mt-4 max-w-3xl break-words text-3xl font-extrabold tracking-tight text-caisbe-text-dark sm:text-4xl">
                 {course.title}
               </h1>
-              <p className="mt-4 max-w-2xl break-words text-base leading-7 text-caisbe-text sm:mt-5 sm:text-lg sm:leading-8">
-                {summary}
-              </p>
+              <div className="mt-4 max-w-2xl space-y-4 sm:mt-5">
+                {paragraphs.length > 0 ? (
+                  paragraphs.map((paragraph, index) => (
+                    <p
+                      key={index}
+                      className={`break-words text-caisbe-text ${
+                        index === 0
+                          ? "text-base leading-7 sm:text-lg sm:leading-8"
+                          : "text-base leading-7"
+                      }`}
+                    >
+                      {paragraph}
+                    </p>
+                  ))
+                ) : (
+                  <p className="break-words text-base leading-7 text-caisbe-text sm:text-lg sm:leading-8">
+                    {t(
+                      "A CAISBE certificate program for built-environment professionals.",
+                      "Un programme de certificat CAISBE pour les professionnels du cadre bâti.",
+                    )}
+                  </p>
+                )}
+              </div>
 
               {lessonsClosed ? (
                 <p className="mt-6 max-w-2xl border border-caisbe-red/20 bg-white px-4 py-3 text-sm font-semibold leading-6 text-caisbe-text-dark">

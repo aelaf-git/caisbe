@@ -16,7 +16,7 @@ from app.db import get_db
 from app.security.auth import get_current_user
 from app.security.html_sanitize import sanitize_html, strip_plain_text
 from app.security.limiter import limiter
-from app.services.translations import localize_many
+from app.services.translations import localize_many, localize_one
 from app.models import (
     Certificate,
     CertificateTemplate,
@@ -130,6 +130,25 @@ def list_courses(
     for item in items:
         item.description = _public_course_teaser(item.description)
     return items
+
+
+@router.get("/courses/by-slug/{slug}", response_model=CourseOut)
+@limiter.limit("30/minute")
+def get_public_course(
+    request: Request,
+    slug: str,
+    lang: str = Query(default="en", max_length=12),
+    db: Session = Depends(get_db),
+) -> CourseOut:
+    """Public program page: full description (not the catalog teaser), no lesson content."""
+    row = (
+        db.query(Course)
+        .filter(Course.slug == slug.strip().lower(), Course.status == "published")
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    return localize_one(db, "course", CourseOut.model_validate(row), lang)
 
 
 @router.get("/courses/{course_id}", response_model=CourseDetailStudentOut)
