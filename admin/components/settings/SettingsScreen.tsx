@@ -233,7 +233,7 @@ export default function SettingsScreen({ initialTab = "general" }: { initialTab?
                   required
                 />
               </FormField>
-              <FormField label="Default pass percent" hint="Applied when creating a course.">
+              <FormField label="Default pass percent" hint="Final exam pass mark for a new course.">
                 <input
                   type="number"
                   min={0}

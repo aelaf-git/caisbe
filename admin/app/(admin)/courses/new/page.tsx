@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import PassMarkControl from "@/components/lms/PassMarkControl";
 import BackButton from "@/components/ui/BackButton";
 import Button, { buttonStyles } from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -21,7 +20,6 @@ export default function AdminCreateCoursePage() {
   const [description, setDescription] = useState("");
   const [slug, setSlug] = useState("");
   const [slugManual, setSlugManual] = useState(false);
-  const [passPercent, setPassPercent] = useState(70);
   const [priceDollars, setPriceDollars] = useState("99.00");
   const [submitting, setSubmitting] = useState(false);
 
@@ -45,7 +43,6 @@ export default function AdminCreateCoursePage() {
           title,
           description,
           slug: slug || slugify(code),
-          pass_percent: passPercent,
           price_cents: Math.max(0, Math.round(priceAmount * 100)),
         }),
       });
@@ -120,13 +117,6 @@ export default function AdminCreateCoursePage() {
               placeholder="What will learners gain from this course?"
           />
           </FormField>
-
-          <PassMarkControl
-            value={passPercent}
-            onChange={setPassPercent}
-            onCommit={() => undefined}
-            description="Minimum score required to complete the course and earn a certificate."
-          />
 
           <FormField
             label="Course price (USD)"

@@ -172,7 +172,6 @@ def _passed_quiz_ids(db: Session, user_id: int, quiz_ids: list[int]) -> set[int]
             .filter(
                 QuizAttempt.user_id == user_id,
                 QuizAttempt.quiz_id.in_(quiz_ids),
-                QuizAttempt.passed.is_(True),
             )
             .distinct()
             .all()
@@ -654,7 +653,7 @@ def _require_course_work_complete(db: Session, user: User, course: Course) -> No
     if not _course_quizzes_complete(db, user, course):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Pass every chapter quiz before the final exam.",
+            detail="Complete every chapter quiz before the final exam.",
         )
     if not _course_assignments_complete(db, user, course):
         raise HTTPException(

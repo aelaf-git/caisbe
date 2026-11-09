@@ -30,7 +30,6 @@ export default function QuizPlayer({
 
   const reviews = result?.reviews ?? [];
   const revealed = reviews.length > 0;
-  const canRetry = Boolean(result && !result.passed);
 
   function applyResult(next: QuizAttempt | null) {
     setResult(next);
@@ -101,9 +100,7 @@ export default function QuizPlayer({
           <h2 className="mt-1 font-display text-2xl font-semibold text-caisbe-text-dark">{title}</h2>
         </div>
         <span className="inline-flex items-center rounded-md border border-ifma-border bg-admin-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
-          {revealed && !canRetry
-            ? "Checked"
-            : `${answeredCount} of ${questions.length} answered`}
+          {revealed ? "Checked" : `${answeredCount} of ${questions.length} answered`}
         </span>
       </div>
 
@@ -111,7 +108,7 @@ export default function QuizPlayer({
         {questions.map((question, index) => {
           const review = reviews.find((item) => Number(item.question_id) === Number(question.id));
           return (
-            <fieldset key={question.id ?? question.prompt} className="space-y-3" disabled={revealed && !canRetry}>
+            <fieldset key={question.id ?? question.prompt} className="space-y-3" disabled={revealed}>
               <legend className="text-sm font-semibold break-words text-caisbe-text-dark">
                 <span className="mr-2 text-caisbe-muted">{index + 1}.</span>
                 {question.prompt}
@@ -133,7 +130,7 @@ export default function QuizPlayer({
                             : selected
                               ? "border-caisbe-red bg-caisbe-red/5 text-caisbe-text-dark"
                               : "border-ifma-border bg-admin-surface text-caisbe-text hover:border-caisbe-red/40"
-                      } ${revealed && !canRetry ? "cursor-default" : "cursor-pointer"}`}
+                      } ${revealed ? "cursor-default" : "cursor-pointer"}`}
                     >
                       <input
                         type="radio"
@@ -141,7 +138,7 @@ export default function QuizPlayer({
                         name={`q-${question.id}`}
                         checked={selected}
                         onChange={() => {
-                          if (choice.id == null || (revealed && !canRetry)) return;
+                          if (choice.id == null || revealed) return;
                           setAnswers((prev) => ({ ...prev, [String(question.id)]: choice.id! }));
                         }}
                       />
@@ -187,31 +184,22 @@ export default function QuizPlayer({
           <div className="rounded-md border border-ifma-border bg-[#fafaf8] px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Score</p>
             <p className="mt-1 font-display text-3xl font-semibold text-caisbe-text-dark">{result.score}%</p>
-            <p
-              className={`mt-2 text-sm font-semibold ${
-                result.passed ? "text-admin-success" : "text-caisbe-red"
-              }`}
-            >
-              {result.passed ? "Passed" : "Not passed — you can try again."}
-            </p>
             {result.certificate_code ? (
               <p className="mt-2 text-sm text-caisbe-text">Certificate {result.certificate_code}</p>
             ) : null}
           </div>
-          {canRetry ? (
-            <button
-              type="button"
-              disabled={submitting || questions.length === 0}
-              onClick={() => {
-                setResult(null);
-                setAnswers({});
-                onResult?.(null);
-              }}
-              className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
-            >
-              Try again
-            </button>
-          ) : null}
+          <button
+            type="button"
+            disabled={submitting || questions.length === 0}
+            onClick={() => {
+              setResult(null);
+              setAnswers({});
+              onResult?.(null);
+            }}
+            className="rounded-md border-2 border-caisbe-red bg-caisbe-red px-6 py-2.5 text-sm font-semibold uppercase text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+          >
+            Try again
+          </button>
         </div>
       ) : (
         <button

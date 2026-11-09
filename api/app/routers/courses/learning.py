@@ -235,44 +235,12 @@ def submit_quiz(
     require_lessons_open(course)
     require_active_enrollment(db, current_user, course_id)
 
-    passed_existing = (
-        db.query(QuizAttempt)
-        .filter(
-            QuizAttempt.user_id == current_user.id,
-            QuizAttempt.quiz_id == quiz.id,
-            QuizAttempt.passed.is_(True),
-        )
-        .order_by(QuizAttempt.id.desc())
-        .first()
-    )
-    if passed_existing is not None:
-        stored = json.loads(passed_existing.answers_json or "{}")
-        if not isinstance(stored, dict):
-            stored = {}
-        checked: dict[str, int] = {}
-        for key, value in stored.items():
-            try:
-                checked[str(key)] = int(value)
-            except (TypeError, ValueError):
-                continue
-        _apply_progress(db, current_user, course_id)
-        db.commit()
-        return QuizAttemptOut(
-            id=passed_existing.id,
-            score=passed_existing.score,
-            passed=True,
-            certificate_code=None,
-            reviews=_answer_reviews(quiz.questions, checked),
-        )
-
     score, _, _ = _score_answers(quiz.questions, payload.answers)
-    pass_mark = max(0, min(100, int(course.pass_percent or 70)))
-    passed = score >= pass_mark
     attempt = QuizAttempt(
         user_id=current_user.id,
         quiz_id=quiz.id,
         score=score,
-        passed=passed,
+        passed=True,
         answers_json=json.dumps(payload.answers),
     )
     db.add(attempt)

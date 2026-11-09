@@ -122,10 +122,19 @@ def _course_with_work(db: Session) -> tuple[Course, Lesson, Quiz, ContentBlock, 
     return course, lesson, quiz, assignment, exam
 
 
-def test_quiz_uses_course_pass_percent_and_allows_retry(client: TestClient, db: Session) -> None:
+def test_quiz_completes_at_any_score_and_allows_retry(client: TestClient, db: Session) -> None:
     student = _student(db, "quiz-pass@example.com")
-    course, _lesson, quiz, _assignment, _exam = _course_with_work(db)
-    db.add(Enrollment(user_id=student.id, course_id=course.id, status="enrolled", progress=0))
+    course, lesson, quiz, _assignment, _exam = _course_with_work(db)
+    db.add(
+        Enrollment(
+            user_id=student.id,
+            course_id=course.id,
+            status="enrolled",
+            progress=0,
+            exam_access="allowed",
+        )
+    )
+    db.add(LessonProgress(user_id=student.id, lesson_id=lesson.id))
     db.commit()
     headers = _login(client, student.email)
 
@@ -138,14 +147,18 @@ def test_quiz_uses_course_pass_percent_and_allows_retry(client: TestClient, db: 
     wrong = next(choice for choice in choices if not choice.is_correct)
     right = next(choice for choice in choices if choice.is_correct)
 
-    failed = client.post(
+    submitted = client.post(
         f"/api/me/quizzes/{quiz.id}/submit",
         headers=headers,
         json={"answers": {str(question.id): wrong.id}},
     )
-    assert failed.status_code == 200, failed.text
-    assert failed.json()["passed"] is False
-    assert failed.json()["score"] == 0
+    assert submitted.status_code == 200, submitted.text
+    assert submitted.json()["passed"] is True
+    assert submitted.json()["score"] == 0
+
+    blocked = client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=headers)
+    assert blocked.status_code == 400
+    assert "assignment" in blocked.json()["detail"].lower()
 
     retry = client.post(
         f"/api/me/quizzes/{quiz.id}/submit",
@@ -155,10 +168,12 @@ def test_quiz_uses_course_pass_percent_and_allows_retry(client: TestClient, db: 
     assert retry.status_code == 200, retry.text
     assert retry.json()["passed"] is True
     assert retry.json()["score"] == 100
+    assert retry.json()["id"] != submitted.json()["id"]
 
     latest = client.get(f"/api/me/quizzes/{quiz.id}/latest", headers=headers)
     assert latest.status_code == 200
     assert latest.json()["passed"] is True
+    assert latest.json()["score"] == 100
 
 
 def test_exam_blocked_until_quiz_and_assignment_passed(client: TestClient, db: Session) -> None:

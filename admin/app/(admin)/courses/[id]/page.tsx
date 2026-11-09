@@ -7,7 +7,6 @@ import ChapterCard from "@/components/lms/ChapterCard";
 import CourseCoverField from "@/components/lms/CourseCoverField";
 import { CourseStatusBadge, SaveStatus } from "@/components/lms/CourseEditorChrome";
 import FinalExamEditor, { type ExamDraft } from "@/components/lms/FinalExamEditor";
-import PassMarkControl from "@/components/lms/PassMarkControl";
 import { emptyQuestion } from "@/components/lms/QuizQuestionEditor";
 import FrenchTranslationPanel from "@/components/translations/FrenchTranslationPanel";
 import BackButton from "@/components/ui/BackButton";
@@ -42,7 +41,6 @@ type CourseMeta = {
   description: string;
   slug: string;
   cover_url: string | null;
-  pass_percent: number;
   price_cents: number;
   content_protection: boolean;
 };
@@ -96,7 +94,6 @@ function AdminCourseEditorInner() {
     description: "",
     slug: "",
     cover_url: null,
-    pass_percent: 70,
     price_cents: 9900,
     content_protection: true,
   });
@@ -135,7 +132,6 @@ function AdminCourseEditorInner() {
       description: data.description,
       slug: data.slug,
       cover_url: data.cover_url ?? null,
-      pass_percent: data.pass_percent,
       price_cents: data.price_cents ?? 9900,
       content_protection: data.content_protection !== false,
     });
@@ -484,12 +480,6 @@ function AdminCourseEditorInner() {
           onChange={(cover_url) => commitCover(cover_url)}
           onError={showError}
           saving={coverSaving}
-        />
-        <PassMarkControl
-          value={meta.pass_percent}
-          onChange={(pass_percent) => setMeta((current) => ({ ...current, pass_percent }))}
-          onCommit={() => void metaAutosave.flush()}
-          description="Minimum score required to complete the course and earn a certificate."
         />
         <FormField label="Course price (USD)" hint="Students pay this at checkout. Use promotions for discounts or complimentary enrollment.">
           <input
