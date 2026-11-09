@@ -305,6 +305,15 @@ def _apply_progress(db: Session, user: User, course_id: int) -> Enrollment:
     return enrollment
 
 
+LESSONS_NOT_READY = "This course is not ready yet."
+
+
+def require_lessons_open(course: Course) -> None:
+    """Listed courses can be purchased before lesson bodies are released."""
+    if not course.content_published:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=LESSONS_NOT_READY)
+
+
 def _load_published_course(db: Session, course_id: int) -> Course:
     course = (
         db.query(Course)
@@ -319,6 +328,7 @@ def _load_published_course(db: Session, course_id: int) -> Course:
     )
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    require_lessons_open(course)
     return course
 
 
@@ -784,6 +794,7 @@ def _load_student_assignment(db: Session, block_id: int) -> tuple[ContentBlock, 
     course = block.chapter.course
     if course is None or course.status != "published":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+    require_lessons_open(course)
     return block, course
 
 
@@ -809,6 +820,7 @@ def _load_student_direct_assignment(db: Session, assignment_id: int, user_id: in
     course = assignment.course
     if course is None or course.status != "published":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+    require_lessons_open(course)
     return assignment
 
 

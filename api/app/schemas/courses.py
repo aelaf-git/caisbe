@@ -19,6 +19,7 @@ class CourseOut(BaseModel):
     price_cents: int = 9900
     currency: str = "usd"
     content_protection: bool = True
+    content_published: bool = True
 
     model_config = {"from_attributes": True}
 
@@ -48,6 +49,7 @@ class CourseUpdate(BaseModel):
     pass_percent: int | None = Field(default=None, ge=0, le=100)
     price_cents: int | None = Field(default=None, ge=0)
     content_protection: bool | None = None
+    content_published: bool | None = None
     status: str | None = None
 
 

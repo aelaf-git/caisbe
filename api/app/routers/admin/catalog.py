@@ -221,8 +221,19 @@ def admin_update_course(
 
     data = payload.model_dump(exclude_unset=True)
     next_status = data.pop("status", None)
+    next_content_published = data.pop("content_published", None)
     if next_status is not None and next_status not in ("draft", "published"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
+    if next_content_published is True:
+        listing_status = next_status if next_status is not None else course.status
+        if listing_status != "published":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Publish the listing before opening lessons.",
+            )
+        publish_errors = _publish_content_errors(_load_course_admin(db, course_id))
+        if publish_errors:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=publish_errors[0])
     if "code" in data and data["code"]:
         data["code"] = data["code"].strip().upper()
     if "slug" in data and data["slug"]:
@@ -242,18 +253,24 @@ def admin_update_course(
     _write_course_meta(course, meta)
 
     was_published = course.status == "published"
+    was_open = bool(course.content_published)
     if next_status == "published":
-        loaded = _load_course_admin(db, course_id)
-        # Validate against working content (draft details are overlaid separately below).
-        publish_errors = _publish_content_errors(loaded)
-        if publish_errors:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=publish_errors[0])
+        # Listing does not require finished lessons. Cover and description go live now.
         _apply_course_draft_meta(course)
         course.status = "published"
+        if next_content_published is not True:
+            course.content_published = False
     elif next_status == "draft":
         # Keep any pending detail edits in draft_meta while unpublishing, or fold them in.
         _apply_course_draft_meta(course)
         course.status = "draft"
+        course.content_published = False
+
+    if next_content_published is True:
+        _apply_course_draft_meta(course)
+        course.content_published = True
+    elif next_content_published is False:
+        course.content_published = False
 
     newly_published = not was_published and course.status == "published"
     if newly_published:
@@ -268,6 +285,21 @@ def admin_update_course(
             ),
             kind="course_added",
             link="/courses",
+        )
+
+    if not was_open and course.content_published and course.status == "published":
+        from app.services.notifications import notify_enrolled_students
+
+        notify_enrolled_students(
+            db,
+            course.id,
+            title="Course ready",
+            body=(
+                f'"{course.title}" ({course.code}) is ready. '
+                "Open My courses to start."
+            ),
+            kind="course_update",
+            link=f"/courses/{course.id}",
         )
 
     db.commit()

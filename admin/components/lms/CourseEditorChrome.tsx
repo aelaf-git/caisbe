@@ -1,12 +1,22 @@
 import Badge from "@/components/ui/Badge";
 import type { AutosaveStatus } from "@/hooks/autosaveContext";
 
-export function CourseStatusBadge({ status }: { status: string }) {
-  const published = status === "published";
+export function CourseStatusBadge({
+  status,
+  contentPublished = true,
+}: {
+  status: string;
+  contentPublished?: boolean;
+}) {
+  const listed = status === "published";
+  const lessonsOpen = listed && contentPublished;
+  const label = !listed ? "Draft" : lessonsOpen ? "Lessons open" : "Listed";
+  const tone = !listed ? "neutral" : lessonsOpen ? "success" : "info";
+  const dot = !listed ? "bg-caisbe-muted" : lessonsOpen ? "bg-admin-success" : "bg-admin-info";
   return (
-    <Badge tone={published ? "success" : "neutral"}>
-      <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${published ? "bg-admin-success" : "bg-caisbe-muted"}`} />
-      {published ? "Published" : "Draft"}
+    <Badge tone={tone}>
+      <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${dot}`} />
+      {label}
     </Badge>
   );
 }

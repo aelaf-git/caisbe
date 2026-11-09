@@ -97,6 +97,7 @@ export type Course = {
   description: string;
   slug: string;
   status: string;
+  content_published?: boolean;
   cover_url: string | null;
   pass_percent: number;
   price_cents: number;

@@ -91,6 +91,7 @@ export type CourseDetail = {
   pass_percent: number;
   price_cents?: number;
   content_protection?: boolean;
+  content_published?: boolean;
   has_unpublished_changes?: boolean;
   chapters: Chapter[];
   final_exam: FinalExam | null;

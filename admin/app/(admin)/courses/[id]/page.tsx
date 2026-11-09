@@ -83,8 +83,10 @@ function AdminCourseEditorInner() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
+  const [openingLessons, setOpeningLessons] = useState(false);
   const [savingChanges, setSavingChanges] = useState(false);
   const [status, setStatus] = useState("draft");
+  const [contentPublished, setContentPublished] = useState(true);
   const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(false);
   const [baselineKey, setBaselineKey] = useState(0);
 
@@ -125,6 +127,7 @@ function AdminCourseEditorInner() {
   function hydrateFromCourse(data: CourseDetail) {
     setCourse(data);
     setStatus(data.status);
+    setContentPublished(data.content_published !== false);
     setHasUnpublishedChanges(Boolean(data.has_unpublished_changes));
     setMeta({
       code: data.code,
@@ -207,6 +210,7 @@ function AdminCourseEditorInner() {
       });
       setCourse(updated);
       setStatus(updated.status);
+      setContentPublished(updated.content_published !== false);
       setHasUnpublishedChanges(Boolean(updated.has_unpublished_changes));
     },
   });
@@ -223,6 +227,7 @@ function AdminCourseEditorInner() {
       const savedCover = updated.cover_url ?? null;
       setCourse(updated);
       setStatus(updated.status);
+      setContentPublished(updated.content_published !== false);
       setHasUnpublishedChanges(Boolean(updated.has_unpublished_changes));
       let snapshot: CourseMeta | null = null;
       setMeta((current) => {
@@ -255,7 +260,7 @@ function AdminCourseEditorInner() {
     }
   }
 
-  async function togglePublish() {
+  async function toggleListing() {
     const next = status === "published" ? "draft" : "published";
     setPublishing(true);
     try {
@@ -265,11 +270,29 @@ function AdminCourseEditorInner() {
         body: JSON.stringify({ status: next }),
       });
       hydrateFromCourse(updated);
-      showSuccess(next === "published" ? "Course published." : "Course unpublished.");
+      showSuccess(next === "published" ? "Listing published." : "Listing unpublished.");
     } catch (err) {
-      showError(err instanceof ApiError ? err.detail : "Unable to update status.");
+      showError(err instanceof ApiError ? err.detail : "Unable to update the listing.");
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function toggleLessons() {
+    const next = !contentPublished;
+    setOpeningLessons(true);
+    try {
+      await flushAll();
+      const updated = await apiFetch<CourseDetail>(`/admin/courses/${courseId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ content_published: next }),
+      });
+      hydrateFromCourse(updated);
+      showSuccess(next ? "Course published. Students can open the lessons." : "Lessons closed.");
+    } catch (err) {
+      showError(err instanceof ApiError ? err.detail : "Unable to update lesson access.");
+    } finally {
+      setOpeningLessons(false);
     }
   }
 
@@ -332,7 +355,11 @@ function AdminCourseEditorInner() {
     hasUnpublishedChanges,
   });
   const saveBusy =
-    savingChanges || publishing || overallStatus === "saving" || overallStatus === "pending";
+    savingChanges ||
+    publishing ||
+    openingLessons ||
+    overallStatus === "saving" ||
+    overallStatus === "pending";
   const saveDirty = !isPublished || hasUnpublishedChanges || overallStatus !== "idle";
 
   if (loading) {
@@ -368,7 +395,7 @@ function AdminCourseEditorInner() {
       <PageHeader
         eyebrow="Course workspace"
         title={meta.title || course.title}
-        titleAccessory={<CourseStatusBadge status={status} />}
+        titleAccessory={<CourseStatusBadge status={status} contentPublished={contentPublished} />}
         description={`${meta.code || course.code} · Manage course details, curriculum, assessments, and certification.`}
         meta={<SaveStatus status={overallStatus} label={draftLabel} />}
         actions={
@@ -383,10 +410,21 @@ function AdminCourseEditorInner() {
             />
             <Button
               variant={isPublished ? "secondary" : "primary"}
-              onClick={() => void togglePublish()}
+              onClick={() => void toggleListing()}
               disabled={saveBusy}
             >
-              {publishing ? "Working…" : isPublished ? "Unpublish" : "Publish"}
+              {publishing ? "Working…" : isPublished ? "Unpublish listing" : "Publish listing"}
+            </Button>
+            <Button
+              variant={contentPublished && isPublished ? "secondary" : "primary"}
+              onClick={() => void toggleLessons()}
+              disabled={saveBusy || !isPublished}
+            >
+              {openingLessons
+                ? "Working…"
+                : contentPublished && isPublished
+                  ? "Close course"
+                  : "Publish course"}
             </Button>
           </>
         }
@@ -403,7 +441,7 @@ function AdminCourseEditorInner() {
         <div>
           <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Course details</h2>
           <p className="mt-1 text-sm text-caisbe-muted">
-            Edits autosave as a draft. Click Save changes to update the published course on the student portal.
+            Publish listing shows the cover and short description before lessons are finished. Publish course opens the lessons after every chapter has content. Edits autosave as a draft. Click Save changes to update a live listing.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">

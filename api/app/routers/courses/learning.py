@@ -118,6 +118,7 @@ def complete_lesson(
     course = lesson.chapter.course
     if course.status != "published":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    require_lessons_open(course)
 
     enrollment = require_active_enrollment(db, current_user, course.id)
     _require_prior_topics_complete(db, current_user, lesson)
@@ -175,6 +176,7 @@ def uncomplete_lesson(
     course = lesson.chapter.course
     if course.status != "published":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    require_lessons_open(course)
 
     enrollment = require_active_enrollment(db, current_user, course.id)
     existing = (
@@ -230,6 +232,7 @@ def submit_quiz(
     course = db.query(Course).filter(Course.id == course_id).first()
     if course is None or course.status != "published":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    require_lessons_open(course)
     require_active_enrollment(db, current_user, course_id)
 
     passed_existing = (
@@ -314,6 +317,10 @@ def latest_quiz_attempt(
         if chapter is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
         course_id = chapter.course_id
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if course is None or course.status != "published":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    require_lessons_open(course)
     require_active_enrollment(db, current_user, course_id)
 
     attempt = (
@@ -401,7 +408,7 @@ def list_my_assignments(
     for block in blocks:
         chapter = block.chapter
         course = chapter.course if chapter else None
-        if course is None:
+        if course is None or not course.content_published:
             continue
         row = rows.get(block.id)
         submitted_at = latest_submitted_at(row) if row else None
@@ -430,7 +437,7 @@ def list_my_assignments(
     direct_rows = direct_submission_map(db, current_user.id, [item.id for item in directs])
     for assignment in directs:
         course = assignment.course
-        if course is None:
+        if course is None or not course.content_published:
             continue
         row = direct_rows.get(assignment.id)
         submitted_at = latest_submitted_at(row) if row else None

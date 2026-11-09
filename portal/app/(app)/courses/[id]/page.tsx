@@ -13,7 +13,9 @@ import {
   type PlaylistItem,
 } from "@/components/portal/coursePlayerTypes";
 import BackButton from "@/components/ui/BackButton";
-import { apiFetch, ApiError } from "@/lib/auth";
+import { apiFetch, ApiError, type Course } from "@/lib/auth";
+import { courseShortSummary } from "@/lib/courseSummary";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 import type { ContentBlock, CourseDetail, Lesson, QuizAttempt } from "@/lib/lms";
 import { outlineNumber } from "@/lib/outlineNumber";
 import { selectionUnlocked } from "@/lib/courseAccess";
@@ -48,6 +50,7 @@ export default function CoursePlayerPage() {
   const { user, loading } = useAuth();
 
   const [course, setCourse] = useState<CourseDetail | null>(null);
+  const [notReady, setNotReady] = useState<Course | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<NavSelection | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,6 +61,7 @@ export default function CoursePlayerPage() {
     setError(null);
     try {
       const data = await apiFetch<CourseDetail>(`/courses/${courseId}`);
+      setNotReady(null);
       setCourse(data);
       setSelection((prev) => {
         if (prev) return prev;
@@ -93,6 +97,21 @@ export default function CoursePlayerPage() {
         return null;
       });
     } catch (err) {
+      if (err instanceof ApiError && err.detail === "This course is not ready yet.") {
+        const listed = await apiFetch<Course[]>("/courses", { auth: false }).catch(() => [] as Course[]);
+        setCourse(null);
+        setNotReady(
+          listed.find((item) => item.id === courseId) ?? {
+            id: courseId,
+            code: "",
+            title: "Course",
+            description: "",
+            slug: "",
+            content_published: false,
+          },
+        );
+        return;
+      }
       if (err instanceof ApiError && err.status === 403) {
         if (err.detail.toLowerCase().includes("restricted")) {
           setError(err.detail);
@@ -222,6 +241,41 @@ export default function CoursePlayerPage() {
 
   if (loading || !user) {
     return <div className="px-4 py-16 text-center text-sm text-caisbe-muted">Loading…</div>;
+  }
+
+  if (notReady) {
+    const cover = resolveUploadUrl(notReady.cover_url) ?? notReady.cover_url ?? null;
+    return (
+      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+        <BackButton href="/courses" />
+        <section className="space-y-6 border border-ifma-border bg-admin-surface p-5 shadow-brand-card md:p-8">
+          <div className="flex flex-col gap-6 md:flex-row md:items-start">
+            <span className="relative h-48 w-full shrink-0 overflow-hidden rounded-md border border-ifma-border bg-[#fafaf8] sm:h-40 sm:w-64">
+              {cover ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={cover} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-sm font-semibold uppercase tracking-wide text-caisbe-red">
+                  {notReady.code.slice(0, 4) || "CAISBE"}
+                </span>
+              )}
+            </span>
+            <div className="min-w-0 flex-1 space-y-3">
+              {notReady.code ? (
+                <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">
+                  {notReady.code}
+                </p>
+              ) : null}
+              <h1 className="font-display text-2xl font-semibold text-caisbe-text-dark">{notReady.title}</h1>
+              {notReady.description ? (
+                <p className="text-sm leading-7 text-caisbe-muted">{courseShortSummary(notReady.description)}</p>
+              ) : null}
+              <p className="text-sm font-semibold text-caisbe-text-dark">This course is not ready yet.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
   }
 
   if (error && !course) {

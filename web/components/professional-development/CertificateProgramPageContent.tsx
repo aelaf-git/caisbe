@@ -42,6 +42,11 @@ export default async function CertificateProgramPageContent({
             className="mt-8 aspect-video w-full max-w-2xl rounded-none object-cover shadow-hopewell"
           />
         ) : null}
+        {course.content_published === false ? (
+          <p className="mt-6 max-w-2xl text-sm font-semibold leading-6 text-caisbe-text-dark">
+            {t("This course is not ready yet.", "Ce cours n’est pas encore prêt.")}
+          </p>
+        ) : null}
         <p className="mt-6 max-w-2xl text-sm leading-6 text-caisbe-muted">
           {t(
             "Sign in to buy this course and unlock lessons in myCAISBE. Course content stays private until you register.",

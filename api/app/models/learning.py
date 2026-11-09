@@ -38,6 +38,8 @@ class Course(Base):
     # Working copy of details while status is published; portal keeps reading live columns.
     draft_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     has_unpublished_changes: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Listing (status=published) can go live before lessons. False hides lesson bodies.
+    content_published: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     enrollments: Mapped[list["Enrollment"]] = relationship(
         back_populates="course",

@@ -160,7 +160,10 @@ export default function AdminCoursesPage() {
                 <Link href={`/courses/${course.id}`} className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <p className="truncate font-semibold text-caisbe-text group-hover:text-caisbe-red">{course.title}</p>
-                    <StatusBadge status={course.status ?? "draft"} />
+                    <StatusBadge
+                      status={course.status ?? "draft"}
+                      contentPublished={course.content_published !== false}
+                    />
                     {course.has_unpublished_changes ? (
                       <Badge tone="warning">Unsaved publish</Badge>
                     ) : null}
@@ -184,11 +187,16 @@ export default function AdminCoursesPage() {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const published = status === "published";
-  return (
-    <Badge tone={published ? "success" : "warning"}>
-      {status}
-    </Badge>
-  );
+function StatusBadge({
+  status,
+  contentPublished,
+}: {
+  status: string;
+  contentPublished: boolean;
+}) {
+  const listed = status === "published";
+  const lessonsOpen = listed && contentPublished;
+  const label = !listed ? "Draft" : lessonsOpen ? "Lessons open" : "Listed";
+  const tone = !listed ? "warning" : lessonsOpen ? "success" : "info";
+  return <Badge tone={tone}>{label}</Badge>;
 }
