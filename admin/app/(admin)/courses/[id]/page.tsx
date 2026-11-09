@@ -270,7 +270,7 @@ function AdminCourseEditorInner() {
         body: JSON.stringify({ status: next }),
       });
       hydrateFromCourse(updated);
-      showSuccess(next === "published" ? "Listing published." : "Listing unpublished.");
+      showSuccess(next === "published" ? "Course info published." : "Course info unpublished.");
     } catch (err) {
       showError(err instanceof ApiError ? err.detail : "Unable to update the listing.");
     } finally {
@@ -279,7 +279,11 @@ function AdminCourseEditorInner() {
   }
 
   async function toggleLessons() {
-    const next = !contentPublished;
+    const next = !(status === "published" && contentPublished);
+    if (next && status !== "published") {
+      showError("Publish the course info before publishing chapters and exams.");
+      return;
+    }
     setOpeningLessons(true);
     try {
       await flushAll();
@@ -288,7 +292,7 @@ function AdminCourseEditorInner() {
         body: JSON.stringify({ content_published: next }),
       });
       hydrateFromCourse(updated);
-      showSuccess(next ? "Course published. Students can open the lessons." : "Lessons closed.");
+      showSuccess(next ? "Lessons and exam published." : "Lessons and exam closed.");
     } catch (err) {
       showError(err instanceof ApiError ? err.detail : "Unable to update lesson access.");
     } finally {
@@ -399,34 +403,14 @@ function AdminCourseEditorInner() {
         description={`${meta.code || course.code} · Manage course details, curriculum, assessments, and certification.`}
         meta={<SaveStatus status={overallStatus} label={draftLabel} />}
         actions={
-          <>
-            <SaveButton
-              variant={needsPublishUpdate ? "primary" : "secondary"}
-              dirty={saveDirty}
-              saving={savingChanges}
-              disabled={saveBusy && !savingChanges}
-              idleLabel="Save changes"
-              onClick={() => void saveChanges()}
-            />
-            <Button
-              variant={isPublished ? "secondary" : "primary"}
-              onClick={() => void toggleListing()}
-              disabled={saveBusy}
-            >
-              {publishing ? "Working…" : isPublished ? "Unpublish listing" : "Publish listing"}
-            </Button>
-            <Button
-              variant={contentPublished && isPublished ? "secondary" : "primary"}
-              onClick={() => void toggleLessons()}
-              disabled={saveBusy || !isPublished}
-            >
-              {openingLessons
-                ? "Working…"
-                : contentPublished && isPublished
-                  ? "Close course"
-                  : "Publish course"}
-            </Button>
-          </>
+          <SaveButton
+            variant={needsPublishUpdate ? "primary" : "secondary"}
+            dirty={saveDirty}
+            saving={savingChanges}
+            disabled={saveBusy && !savingChanges}
+            idleLabel="Save changes"
+            onClick={() => void saveChanges()}
+          />
         }
       />
 
@@ -438,11 +422,20 @@ function AdminCourseEditorInner() {
 
       {showSection("details") ? (
       <Card id="details" className="scroll-mt-48 space-y-5">
-        <div>
-          <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Course details</h2>
-          <p className="mt-1 text-sm text-caisbe-muted">
-            Publish listing shows the cover and short description before lessons are finished. Publish course opens the lessons after every chapter has content. Edits autosave as a draft. Click Save changes to update a live listing.
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Course info</h2>
+            <p className="mt-1 max-w-2xl text-sm text-caisbe-muted">
+              Publish course info to show the cover and short description on the public site and in the student catalog. This does not open chapters or the exam. Edits autosave as a draft. Click Save changes to update live course info.
+            </p>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={() => void toggleListing()}
+            disabled={saveBusy}
+          >
+            {publishing ? "Working…" : isPublished ? "Unpublish course info" : "Publish course info"}
+          </Button>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <FormField label="Course code" hint="Updating the code also suggests a matching URL slug.">
@@ -540,6 +533,32 @@ function AdminCourseEditorInner() {
             { name: "description", label: "Teaser description", kind: "textarea", rows: 4 },
           ]}
         />
+      </Card>
+      ) : null}
+
+      {activeSection === "all" || activeSection === "content" || activeSection === "exam" || activeSection === "certificate" ? (
+      <Card className="scroll-mt-48 space-y-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="font-display text-xl font-semibold text-caisbe-text-dark">Lessons and exam</h2>
+            <p className="mt-1 max-w-2xl text-sm text-caisbe-muted">
+              {isPublished
+                ? "Publish lessons and exam to open chapters, quizzes, assignments, and the final exam for enrolled students."
+                : "Publish the course info before publishing chapters and exams."}
+            </p>
+          </div>
+          <Button
+            variant="primary"
+            onClick={() => void toggleLessons()}
+            disabled={saveBusy || !isPublished}
+          >
+            {openingLessons
+              ? "Working…"
+              : isPublished && contentPublished
+                ? "Close lessons and exam"
+                : "Publish lessons and exam"}
+          </Button>
+        </div>
       </Card>
       ) : null}
 

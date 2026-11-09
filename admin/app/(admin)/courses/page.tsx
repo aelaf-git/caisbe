@@ -196,7 +196,7 @@ function StatusBadge({
 }) {
   const listed = status === "published";
   const lessonsOpen = listed && contentPublished;
-  const label = !listed ? "Draft" : lessonsOpen ? "Lessons open" : "Listed";
+  const label = !listed ? "Draft" : lessonsOpen ? "Lessons and exam live" : "Course info live";
   const tone = !listed ? "warning" : lessonsOpen ? "success" : "info";
   return <Badge tone={tone}>{label}</Badge>;
 }

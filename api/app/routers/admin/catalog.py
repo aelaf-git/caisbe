@@ -229,7 +229,7 @@ def admin_update_course(
         if listing_status != "published":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Publish the listing before opening lessons.",
+                detail="Publish the course info before publishing chapters and exams.",
             )
         publish_errors = _publish_content_errors(_load_course_admin(db, course_id))
         if publish_errors:
