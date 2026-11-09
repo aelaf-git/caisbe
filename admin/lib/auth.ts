@@ -19,6 +19,7 @@ export type Course = {
   pass_percent?: number;
   price_cents?: number;
   has_unpublished_changes?: boolean;
+  has_unpublished_content_changes?: boolean;
 };
 
 export type Enrollment = {

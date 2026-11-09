@@ -189,15 +189,10 @@ def get_course_detail(
         detail.exam_available_at = available_at
         detail.exam_wait_days_remaining = remaining
 
-    _, quiz_ids, assignment_ids = _course_progress_units(db, course_id)
+    _, quiz_ids, assignment_ids = _course_progress_units(db, course)
     done_quizzes = _passed_quiz_ids(db, current_user.id, quiz_ids)
     submissions = submission_map(db, current_user.id, assignment_ids)
-    assignment_blocks = [
-        block
-        for chapter in course.chapters
-        for block in chapter.blocks
-        if block.block_type == "assignment"
-    ]
+    assignment_blocks = course.assignment_blocks()
     unlocks = assignment_unlock_map(db, current_user.id, assignment_blocks)
     if db.new or db.dirty:
         db.commit()
@@ -279,14 +274,7 @@ def get_course_lesson_detail(
 ) -> LessonStudentOut:
     course = _load_published_course(db, course_id)
     enrollment = require_active_enrollment(db, current_user, course_id)
-    target_lesson: Lesson | None = None
-    for chapter in course.chapters:
-        for lesson in chapter.lessons:
-            if lesson.id == lesson_id:
-                target_lesson = lesson
-                break
-        if target_lesson is not None:
-            break
+    target_lesson = course.lesson(lesson_id)
     if target_lesson is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
 

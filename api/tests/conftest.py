@@ -85,6 +85,7 @@ def client(db: Session) -> Generator[TestClient, None, None]:
         patch("app.main.seed_industry_events"),
         patch("app.main.seed_forum"),
         patch("app.main.seed_site_pages"),
+        patch("app.main.backfill_published_content"),
         patch("app.main._run_job_sync"),
         patch("app.config.settings.job_sync_enabled", False),
     ):

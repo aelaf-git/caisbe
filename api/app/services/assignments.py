@@ -230,8 +230,14 @@ def submission_map(
     return {row.content_block_id: row for row in rows}
 
 
-def assignment_unlock_map(db: Session, user_id: int, blocks: list[ContentBlock]) -> dict[int, bool]:
-    """Chapter assignments open after that chapter's topics, and every earlier chapter's topics, are done."""
+def assignment_unlock_map(db: Session, user_id: int, blocks: list) -> dict[int, bool]:
+    """Chapter assignments open after that chapter's topics, and every earlier chapter's topics, are done.
+
+    ``blocks`` may be ORM rows or published-content block views; chapter and
+    topic structure always comes from the published version of each course.
+    """
+    from app.services.course_content import published_view
+
     course_ids = {
         block.chapter.course_id
         for block in blocks
@@ -240,13 +246,9 @@ def assignment_unlock_map(db: Session, user_id: int, blocks: list[ContentBlock])
     if not course_ids:
         return {block.id: False for block in blocks}
 
-    chapters = (
-        db.query(Chapter)
-        .options(selectinload(Chapter.lessons))
-        .filter(Chapter.course_id.in_(course_ids))
-        .all()
-    )
-    lesson_ids = [lesson.id for chapter in chapters for lesson in chapter.lessons]
+    rows = db.query(Course).filter(Course.id.in_(course_ids)).all()
+    views = [published_view(row) for row in rows]
+    lesson_ids = [lesson_id for view in views for lesson_id in view.lesson_ids()]
     done: set[int] = set()
     if lesson_ids:
         done = {
@@ -257,12 +259,9 @@ def assignment_unlock_map(db: Session, user_id: int, blocks: list[ContentBlock])
         }
 
     unlocked_chapters: set[int] = set()
-    by_course: dict[int, list[Chapter]] = {}
-    for chapter in chapters:
-        by_course.setdefault(chapter.course_id, []).append(chapter)
-    for course_chapters in by_course.values():
+    for view in views:
         prior_complete = True
-        for chapter in sorted(course_chapters, key=lambda item: (item.sort_order, item.id)):
+        for chapter in sorted(view.chapters, key=lambda item: (item.sort_order, item.id)):
             topics_done = all(lesson.id in done for lesson in chapter.lessons)
             if prior_complete and topics_done:
                 unlocked_chapters.add(chapter.id)
@@ -274,18 +273,18 @@ def assignment_unlock_map(db: Session, user_id: int, blocks: list[ContentBlock])
     }
 
 
-def assignment_blocks_for_courses(db: Session, course_ids: list[int]) -> list[ContentBlock]:
+def assignment_blocks_for_courses(db: Session, course_ids: list[int]) -> list:
+    """Published chapter assignment blocks (views) for the given courses."""
+    from app.services.course_content import published_view
+
     if not course_ids:
         return []
-    return (
-        db.query(ContentBlock)
-        .join(Chapter, Chapter.id == ContentBlock.chapter_id)
-        .join(Course, Course.id == Chapter.course_id)
-        .options(joinedload(ContentBlock.chapter).joinedload(Chapter.course))
-        .filter(
-            ContentBlock.block_type == "assignment",
-            Chapter.course_id.in_(course_ids),
-            Course.status == "published",
-        )
+    rows = (
+        db.query(Course)
+        .filter(Course.id.in_(course_ids), Course.status == "published")
         .all()
     )
+    blocks: list = []
+    for row in rows:
+        blocks.extend(published_view(row).assignment_blocks())
+    return blocks

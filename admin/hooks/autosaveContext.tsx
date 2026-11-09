@@ -14,12 +14,21 @@ export type AutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
 
 type FlushFn = () => Promise<void>;
 
+/** Pick a subset of autosave units by id. */
+export type UnitMatch = (id: string) => boolean;
+
 type AutosaveContextValue = {
   register: (id: string, flush: FlushFn) => void;
   unregister: (id: string) => void;
   flushAll: () => Promise<void>;
+  /** Flush only the units whose id matches. */
+  flushWhere: (match: UnitMatch) => Promise<void>;
   setUnitStatus: (id: string, status: AutosaveStatus) => void;
   overallStatus: AutosaveStatus;
+  /** Aggregate status of the units whose id matches. */
+  statusFor: (match: UnitMatch) => AutosaveStatus;
+  /** Status of every registered unit, keyed by id. */
+  unitStatuses: Record<string, AutosaveStatus>;
 };
 
 const AutosaveContext = createContext<AutosaveContextValue | null>(null);
@@ -70,6 +79,13 @@ export function AutosaveProvider({ children }: { children: ReactNode }) {
     await Promise.all(tasks);
   }, []);
 
+  const flushWhere = useCallback(async (match: UnitMatch) => {
+    const tasks = [...flushes.current.entries()]
+      .filter(([id]) => match(id))
+      .map(([, flush]) => flush());
+    await Promise.all(tasks);
+  }, []);
+
   const setUnitStatus = useCallback((id: string, status: AutosaveStatus) => {
     setUnitStatuses((prev) => (prev[id] === status ? prev : { ...prev, [id]: status }));
   }, []);
@@ -79,9 +95,28 @@ export function AutosaveProvider({ children }: { children: ReactNode }) {
     [unitStatuses],
   );
 
+  const statusFor = useCallback(
+    (match: UnitMatch) =>
+      aggregate(
+        Object.entries(unitStatuses)
+          .filter(([id]) => match(id))
+          .map(([, status]) => status),
+      ),
+    [unitStatuses],
+  );
+
   const value = useMemo(
-    () => ({ register, unregister, flushAll, setUnitStatus, overallStatus }),
-    [register, unregister, flushAll, setUnitStatus, overallStatus],
+    () => ({
+      register,
+      unregister,
+      flushAll,
+      flushWhere,
+      setUnitStatus,
+      overallStatus,
+      statusFor,
+      unitStatuses,
+    }),
+    [register, unregister, flushAll, flushWhere, setUnitStatus, overallStatus, statusFor, unitStatuses],
   );
 
   return <AutosaveContext.Provider value={value}>{children}</AutosaveContext.Provider>;
@@ -95,6 +130,15 @@ export function useAutosaveRegistry() {
   return ctx;
 }
 
+/** Unit id used by the Course info section; every other unit belongs to Lessons and exam. */
+export function isCourseInfoUnit(id: string): boolean {
+  return /^course-\d+-meta$/.test(id);
+}
+
+export function isContentUnit(id: string): boolean {
+  return !isCourseInfoUnit(id);
+}
+
 export function autosaveLabel(
   status: AutosaveStatus,
   options?: { published?: boolean; hasUnpublishedChanges?: boolean },
@@ -103,20 +147,20 @@ export function autosaveLabel(
   switch (status) {
     case "pending":
     case "saving":
-      return published ? "Saving draft…" : "Saving draft…";
+      return "Saving draft…";
     case "saved":
       if (published && options?.hasUnpublishedChanges) {
-        return "Draft saved — click Save changes to update the published course";
+        return "Draft saved — publish changes to update what students see";
       }
       if (published) {
-        return "Published version is up to date";
+        return "Students see the latest version";
       }
       return "Draft saved";
     case "error":
       return "Autosave failed";
     default:
       if (published && options?.hasUnpublishedChanges) {
-        return "Draft ready — click Save changes to update the published course";
+        return "Unpublished edits — publish changes to update what students see";
       }
       return null;
   }

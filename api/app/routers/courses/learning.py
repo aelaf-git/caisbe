@@ -106,19 +106,7 @@ def complete_lesson(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, int | bool | str | None]:
-    lesson = (
-        db.query(Lesson)
-        .options(joinedload(Lesson.chapter).joinedload(Chapter.course).joinedload(Course.chapters).joinedload(Chapter.lessons))
-        .filter(Lesson.id == lesson_id)
-        .first()
-    )
-    if lesson is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
-
-    course = lesson.chapter.course
-    if course.status != "published":
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
-    require_lessons_open(course)
+    course, lesson = _load_published_lesson(db, lesson_id)
 
     enrollment = require_active_enrollment(db, current_user, course.id)
     _require_prior_topics_complete(db, current_user, lesson)
@@ -132,8 +120,6 @@ def complete_lesson(
         db.add(LessonProgress(user_id=current_user.id, lesson_id=lesson_id))
         db.flush()
 
-    # reload course with chapters for progress
-    course = _load_published_course(db, course.id)
     _recompute_progress(db, current_user, course, enrollment)
     maybe_notify_exam_access_request(db, current_user, course, enrollment)
 
@@ -159,24 +145,7 @@ def uncomplete_lesson(
     db: Session = Depends(get_db),
 ) -> dict[str, int | bool]:
     """Allow a student to clear the completed mark on a topic."""
-    lesson = (
-        db.query(Lesson)
-        .options(
-            joinedload(Lesson.chapter)
-            .joinedload(Chapter.course)
-            .joinedload(Course.chapters)
-            .joinedload(Chapter.lessons)
-        )
-        .filter(Lesson.id == lesson_id)
-        .first()
-    )
-    if lesson is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
-
-    course = lesson.chapter.course
-    if course.status != "published":
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
-    require_lessons_open(course)
+    course, _lesson = _load_published_lesson(db, lesson_id)
 
     enrollment = require_active_enrollment(db, current_user, course.id)
     existing = (
@@ -188,7 +157,6 @@ def uncomplete_lesson(
         db.delete(existing)
         db.flush()
 
-    course = _load_published_course(db, course.id)
     _recompute_progress(db, current_user, course, enrollment)
     if enrollment.status == "completed" and not course_completion_requirements_met(
         db, current_user, course
@@ -206,33 +174,8 @@ def submit_quiz(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> QuizAttemptOut:
-    quiz = (
-        db.query(Quiz)
-        .options(joinedload(Quiz.questions).joinedload(QuizQuestion.choices), joinedload(Quiz.blocks))
-        .filter(Quiz.id == quiz_id)
-        .first()
-    )
-    if quiz is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
-
-    block = next((item for item in quiz.blocks if item.lesson_id or item.chapter_id), None)
-    if block is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quiz is not attached to a course")
-
-    if block.lesson_id is not None:
-        lesson = db.query(Lesson).options(joinedload(Lesson.chapter)).filter(Lesson.id == block.lesson_id).first()
-        if lesson is None or lesson.chapter is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
-        course_id = lesson.chapter.course_id
-    else:
-        chapter = db.query(Chapter).filter(Chapter.id == block.chapter_id).first()
-        if chapter is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
-        course_id = chapter.course_id
-    course = db.query(Course).filter(Course.id == course_id).first()
-    if course is None or course.status != "published":
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
-    require_lessons_open(course)
+    course, quiz = _load_published_quiz(db, quiz_id)
+    course_id = course.id
     require_active_enrollment(db, current_user, course_id)
 
     score, _, _ = _score_answers(quiz.questions, payload.answers)
@@ -263,33 +206,8 @@ def latest_quiz_attempt(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> QuizAttemptOut:
-    quiz = (
-        db.query(Quiz)
-        .options(joinedload(Quiz.questions).joinedload(QuizQuestion.choices), joinedload(Quiz.blocks))
-        .filter(Quiz.id == quiz_id)
-        .first()
-    )
-    if quiz is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
-
-    block = next((item for item in quiz.blocks if item.lesson_id or item.chapter_id), None)
-    if block is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quiz is not attached to a course")
-    if block.lesson_id is not None:
-        lesson = db.query(Lesson).options(joinedload(Lesson.chapter)).filter(Lesson.id == block.lesson_id).first()
-        if lesson is None or lesson.chapter is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
-        course_id = lesson.chapter.course_id
-    else:
-        chapter = db.query(Chapter).filter(Chapter.id == block.chapter_id).first()
-        if chapter is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
-        course_id = chapter.course_id
-    course = db.query(Course).filter(Course.id == course_id).first()
-    if course is None or course.status != "published":
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
-    require_lessons_open(course)
-    require_active_enrollment(db, current_user, course_id)
+    course, quiz = _load_published_quiz(db, quiz_id)
+    require_active_enrollment(db, current_user, course.id)
 
     attempt = (
         db.query(QuizAttempt)

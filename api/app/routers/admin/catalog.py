@@ -152,8 +152,33 @@ def admin_list_courses(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[AdminCourseListOut]:
-    rows = db.query(Course).order_by(Course.id.desc()).all()
-    return [AdminCourseListOut.model_validate(row) for row in rows]
+    from app.services.course_content import has_unpublished_content_changes
+
+    rows = (
+        db.query(Course)
+        .options(
+            selectinload(Course.chapters)
+            .selectinload(Chapter.lessons)
+            .selectinload(Lesson.blocks)
+            .selectinload(ContentBlock.quiz)
+            .selectinload(Quiz.questions)
+            .selectinload(QuizQuestion.choices),
+            selectinload(Course.chapters)
+            .selectinload(Chapter.blocks)
+            .selectinload(ContentBlock.quiz)
+            .selectinload(Quiz.questions)
+            .selectinload(QuizQuestion.choices),
+            selectinload(Course.final_exam).selectinload(FinalExam.questions).selectinload(QuizQuestion.choices),
+        )
+        .order_by(Course.id.desc())
+        .all()
+    )
+    out: list[AdminCourseListOut] = []
+    for row in rows:
+        item = AdminCourseListOut.model_validate(row)
+        item.has_unpublished_content_changes = has_unpublished_content_changes(row)
+        out.append(item)
+    return out
 
 
 @router.post("/courses", response_model=CourseDetailAdminOut, status_code=status.HTTP_201_CREATED)
@@ -267,8 +292,10 @@ def admin_update_course(
         course.content_published = False
 
     if next_content_published is True:
+        from app.services.course_content import publish_content
+
         _apply_course_draft_meta(course)
-        course.content_published = True
+        publish_content(db, course)
     elif next_content_published is False:
         course.content_published = False
 
@@ -336,6 +363,56 @@ def admin_save_course_changes(
         # Draft courses already persist to live columns on autosave.
         course.draft_meta = None
         course.has_unpublished_changes = False
+
+    db.commit()
+    return _course_admin_out(_load_course_admin(db, course_id))
+
+
+@router.post("/courses/{course_id}/publish-content", response_model=CourseDetailAdminOut)
+def admin_publish_course_content(
+    course_id: int,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> CourseDetailAdminOut:
+    """Make the current chapters, topics, quizzes and final exam the version students see."""
+    from app.services.course_content import has_unpublished_content_changes, publish_content
+    from app.services.notifications import notify_enrolled_students
+
+    course = _load_course_admin(db, course_id)
+    if course.status != "published":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Publish the course info before publishing chapters and exams.",
+        )
+    publish_errors = _publish_content_errors(course)
+    if publish_errors:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=publish_errors[0])
+
+    first_release = not course.content_published
+    changed = first_release or has_unpublished_content_changes(course)
+    publish_content(db, course)
+
+    if first_release:
+        notify_enrolled_students(
+            db,
+            course.id,
+            title="Course ready",
+            body=f'"{course.title}" ({course.code}) is ready. Open My courses to start.',
+            kind="course_update",
+            link=f"/courses/{course.id}",
+        )
+    elif changed:
+        notify_enrolled_students(
+            db,
+            course.id,
+            title="Course content updated",
+            body=(
+                f'"{course.title}" ({course.code}) has updated lessons. '
+                "Open My courses to review the latest content."
+            ),
+            kind="course_update",
+            link=f"/courses/{course.id}",
+        )
 
     db.commit()
     return _course_admin_out(_load_course_admin(db, course_id))
@@ -428,7 +505,7 @@ def admin_update_chapter(
             joinedload(Chapter.lessons).joinedload(Lesson.blocks),
             joinedload(Chapter.blocks).joinedload(ContentBlock.quiz).joinedload(Quiz.questions).joinedload(QuizQuestion.choices),
         )
-        .filter(Chapter.id == chapter_id)
+        .filter(Chapter.id == chapter_id, Chapter.deleted_at.is_(None))
         .first()
     )
     if chapter is None:
@@ -448,10 +525,8 @@ def admin_delete_chapter(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> None:
-    chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
-    if chapter is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
-    db.delete(chapter)
+    chapter = _live_chapter(db, chapter_id)
+    _soft_delete_chapter(db, chapter)
     db.commit()
 
 
@@ -465,7 +540,7 @@ def admin_create_lesson(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> Lesson:
-    chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+    chapter = db.query(Chapter).filter(Chapter.id == chapter_id, Chapter.deleted_at.is_(None)).first()
     if chapter is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
     lesson = Lesson(
@@ -490,7 +565,7 @@ def admin_update_lesson(
     lesson = (
         db.query(Lesson)
         .options(joinedload(Lesson.blocks).joinedload(ContentBlock.quiz).joinedload(Quiz.questions).joinedload(QuizQuestion.choices))
-        .filter(Lesson.id == lesson_id)
+        .filter(Lesson.id == lesson_id, Lesson.deleted_at.is_(None))
         .first()
     )
     if lesson is None:
@@ -512,10 +587,8 @@ def admin_delete_lesson(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> None:
-    lesson = db.query(Lesson).filter(Lesson.id == lesson_id).first()
-    if lesson is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
-    db.delete(lesson)
+    lesson = _live_lesson(db, lesson_id)
+    _soft_delete_lesson(db, lesson)
     db.commit()
 
 
@@ -533,7 +606,7 @@ def admin_create_block(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> ContentBlock:
-    lesson = db.query(Lesson).filter(Lesson.id == lesson_id).first()
+    lesson = db.query(Lesson).filter(Lesson.id == lesson_id, Lesson.deleted_at.is_(None)).first()
     if lesson is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
     if payload.block_type not in TOPIC_BLOCK_TYPES:
@@ -582,7 +655,7 @@ def admin_create_chapter_block(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> ContentBlock:
-    chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+    chapter = db.query(Chapter).filter(Chapter.id == chapter_id, Chapter.deleted_at.is_(None)).first()
     if chapter is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
     if payload.block_type not in CHAPTER_ALLOWED_BLOCK_TYPES:
@@ -666,7 +739,7 @@ def admin_update_block(
     block = (
         db.query(ContentBlock)
         .options(joinedload(ContentBlock.quiz).joinedload(Quiz.questions).joinedload(QuizQuestion.choices))
-        .filter(ContentBlock.id == block_id)
+        .filter(ContentBlock.id == block_id, ContentBlock.deleted_at.is_(None))
         .first()
     )
     if block is None:
@@ -726,9 +799,7 @@ def admin_delete_block(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> None:
-    block = db.query(ContentBlock).filter(ContentBlock.id == block_id).first()
-    if block is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Block not found")
+    block = _live_block(db, block_id)
     _delete_block_tree(db, block)
     db.commit()
 
@@ -740,14 +811,18 @@ def admin_reorder_lesson_blocks(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> None:
-    lesson = db.query(Lesson).filter(Lesson.id == lesson_id).first()
+    lesson = db.query(Lesson).filter(Lesson.id == lesson_id, Lesson.deleted_at.is_(None)).first()
     if lesson is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
 
     requested_ids = [item.id for item in payload.items]
     blocks = (
         db.query(ContentBlock)
-        .filter(ContentBlock.lesson_id == lesson_id, ContentBlock.id.in_(requested_ids))
+        .filter(
+            ContentBlock.lesson_id == lesson_id,
+            ContentBlock.id.in_(requested_ids),
+            ContentBlock.deleted_at.is_(None),
+        )
         .all()
     )
     if len(blocks) != len(set(requested_ids)):

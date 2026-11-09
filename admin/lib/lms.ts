@@ -93,6 +93,8 @@ export type CourseDetail = {
   content_protection?: boolean;
   content_published?: boolean;
   has_unpublished_changes?: boolean;
+  has_unpublished_content_changes?: boolean;
+  content_published_at?: string | null;
   chapters: Chapter[];
   final_exam: FinalExam | null;
   certificate_template?: CertificateTemplate | null;

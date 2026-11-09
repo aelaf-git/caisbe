@@ -75,6 +75,7 @@ from app.services.membership import (
     record_membership_application,
 )
 from app.services.settings import get_setting
+from app.services.course_content import PublishedCourse, published_view
 
 from app.services.assignments import (
     append_attempt,
@@ -109,39 +110,16 @@ def _lesson_ids_for_course(course: Course) -> list[int]:
     return ids
 
 
-def _course_progress_units(db: Session, course_id: int) -> tuple[list[int], list[int], list[int]]:
-    lesson_ids = [
-        row[0]
-        for row in (
-            db.query(Lesson.id)
-            .join(Chapter, Chapter.id == Lesson.chapter_id)
-            .filter(Chapter.course_id == course_id)
-            .all()
-        )
-    ]
-    quiz_ids = [
-        row[0]
-        for row in (
-            db.query(ContentBlock.quiz_id)
-            .join(Chapter, Chapter.id == ContentBlock.chapter_id)
-            .filter(
-                Chapter.course_id == course_id,
-                ContentBlock.block_type == "quiz",
-                ContentBlock.quiz_id.isnot(None),
-            )
-            .all()
-        )
-    ]
-    assignment_ids = [
-        row[0]
-        for row in (
-            db.query(ContentBlock.id)
-            .join(Chapter, Chapter.id == ContentBlock.chapter_id)
-            .filter(Chapter.course_id == course_id, ContentBlock.block_type == "assignment")
-            .all()
-        )
-    ]
-    return lesson_ids, quiz_ids, assignment_ids
+def _course_progress_units(
+    db: Session, course: Course | PublishedCourse | int
+) -> tuple[list[int], list[int], list[int]]:
+    """Lesson, quiz and assignment ids students are measured against (published version)."""
+    if isinstance(course, int):
+        row = db.query(Course).filter(Course.id == course).first()
+        if row is None:
+            return [], [], []
+        course = row
+    return published_view(course).progress_units()
 
 
 def _assignment_review_status(
@@ -180,7 +158,7 @@ def _passed_quiz_ids(db: Session, user_id: int, quiz_ids: list[int]) -> set[int]
 
 
 def _recompute_progress(db: Session, user: User, course: Course, enrollment: Enrollment) -> None:
-    lesson_ids, quiz_ids, assignment_ids = _course_progress_units(db, course.id)
+    lesson_ids, quiz_ids, assignment_ids = _course_progress_units(db, course)
     total = len(lesson_ids) + len(quiz_ids) + len(assignment_ids)
     if total == 0:
         enrollment.progress = 0
@@ -198,6 +176,7 @@ def _recompute_progress(db: Session, user: User, course: Course, enrollment: Enr
 
 
 def _course_topics_complete(db: Session, user: User, course: Course) -> bool:
+    course = published_view(course)
     done = _completed_lesson_ids(db, user, course)
     for chapter in course.chapters:
         for topic in chapter.lessons:
@@ -207,14 +186,14 @@ def _course_topics_complete(db: Session, user: User, course: Course) -> bool:
 
 
 def _course_quizzes_complete(db: Session, user: User, course: Course) -> bool:
-    _, quiz_ids, _ = _course_progress_units(db, course.id)
+    _, quiz_ids, _ = _course_progress_units(db, course)
     if not quiz_ids:
         return True
     return set(quiz_ids) <= _passed_quiz_ids(db, user.id, quiz_ids)
 
 
 def _course_assignments_complete(db: Session, user: User, course: Course) -> bool:
-    _, _, assignment_ids = _course_progress_units(db, course.id)
+    _, _, assignment_ids = _course_progress_units(db, course)
     if not assignment_ids:
         return True
     return set(assignment_ids) <= _completed_assignment_ids(db, user.id, assignment_ids)
@@ -231,6 +210,7 @@ def course_work_requirements_met(db: Session, user: User, course: Course) -> boo
 
 def course_completion_requirements_met(db: Session, user: User, course: Course) -> bool:
     """Certificate eligibility: course work done, plus final exam pass when configured."""
+    course = published_view(course)
     if not course_work_requirements_met(db, user, course):
         return False
     if course.final_exam is not None and not _user_passed_final_exam(db, user, course):
@@ -247,6 +227,7 @@ def maybe_notify_exam_access_request(
     """Idempotently email/notify admins when course work is first finished."""
     if enrollment.exam_access_requested_at is not None:
         return
+    course = published_view(course)
     if course.final_exam is None:
         return
     if not course_work_requirements_met(db, user, course):
@@ -291,12 +272,9 @@ def maybe_notify_exam_access_request(
 
 
 def _apply_progress(db: Session, user: User, course_id: int) -> Enrollment:
-    course = db.query(Course).filter(Course.id == course_id, Course.status == "published").first()
-    if course is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    course = _load_published_course(db, course_id)
     enrollment = require_active_enrollment(db, user, course_id)
     _recompute_progress(db, user, course, enrollment)
-    course = _load_published_course(db, course_id)
     maybe_notify_exam_access_request(db, user, course, enrollment)
     if enrollment.status != "completed":
         if course_completion_requirements_met(db, user, course):
@@ -313,22 +291,90 @@ def require_lessons_open(course: Course) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=LESSONS_NOT_READY)
 
 
-def _load_published_course(db: Session, course_id: int) -> Course:
+def _load_published_course(db: Session, course_id: int) -> PublishedCourse:
+    """Student view of a course: live scalar fields plus the published content snapshot."""
     course = (
         db.query(Course)
-        .options(
-            selectinload(Course.chapters).selectinload(Chapter.lessons).selectinload(Lesson.blocks).selectinload(ContentBlock.quiz).selectinload(Quiz.questions).selectinload(QuizQuestion.choices),
-            selectinload(Course.chapters).selectinload(Chapter.blocks).selectinload(ContentBlock.quiz).selectinload(Quiz.questions).selectinload(QuizQuestion.choices),
-            selectinload(Course.final_exam).selectinload(FinalExam.questions).selectinload(QuizQuestion.choices),
-            selectinload(Course.certificate_template),
-        )
+        .options(selectinload(Course.certificate_template))
         .filter(Course.id == course_id, Course.status == "published")
         .first()
     )
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
     require_lessons_open(course)
-    return course
+    return published_view(course)
+
+
+def _course_id_for_lesson(db: Session, lesson_id: int) -> int | None:
+    row = (
+        db.query(Chapter.course_id)
+        .join(Lesson, Lesson.chapter_id == Chapter.id)
+        .filter(Lesson.id == lesson_id)
+        .first()
+    )
+    return row[0] if row else None
+
+
+def _course_id_for_quiz(db: Session, quiz_id: int) -> int | None:
+    via_chapter = (
+        db.query(Chapter.course_id)
+        .join(ContentBlock, ContentBlock.chapter_id == Chapter.id)
+        .filter(ContentBlock.quiz_id == quiz_id)
+        .first()
+    )
+    if via_chapter:
+        return via_chapter[0]
+    via_lesson = (
+        db.query(Chapter.course_id)
+        .join(Lesson, Lesson.chapter_id == Chapter.id)
+        .join(ContentBlock, ContentBlock.lesson_id == Lesson.id)
+        .filter(ContentBlock.quiz_id == quiz_id)
+        .first()
+    )
+    return via_lesson[0] if via_lesson else None
+
+
+def _course_id_for_block(db: Session, block_id: int) -> int | None:
+    via_chapter = (
+        db.query(Chapter.course_id)
+        .join(ContentBlock, ContentBlock.chapter_id == Chapter.id)
+        .filter(ContentBlock.id == block_id)
+        .first()
+    )
+    if via_chapter:
+        return via_chapter[0]
+    via_lesson = (
+        db.query(Chapter.course_id)
+        .join(Lesson, Lesson.chapter_id == Chapter.id)
+        .join(ContentBlock, ContentBlock.lesson_id == Lesson.id)
+        .filter(ContentBlock.id == block_id)
+        .first()
+    )
+    return via_lesson[0] if via_lesson else None
+
+
+def _load_published_lesson(db: Session, lesson_id: int):
+    """Published course and lesson for a student action, or 404."""
+    course_id = _course_id_for_lesson(db, lesson_id)
+    if course_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
+    course = _load_published_course(db, course_id)
+    lesson = course.lesson(lesson_id)
+    if lesson is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
+    return course, lesson
+
+
+def _load_published_quiz(db: Session, quiz_id: int):
+    """Published course and chapter quiz for a student action, or 404."""
+    course_id = _course_id_for_quiz(db, quiz_id)
+    if course_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
+    course = _load_published_course(db, course_id)
+    quiz = course.quiz(quiz_id)
+    if quiz is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
+    return course, quiz
 
 
 def _score_answers(questions: list[QuizQuestion], answers: dict[str, int]) -> tuple[int, bool, int]:
@@ -441,7 +487,7 @@ def _issue_certificate(db: Session, user: User, course: Course) -> str:
 
 
 def _user_passed_final_exam(db: Session, user: User, course: Course) -> bool:
-    exam = course.final_exam
+    exam = published_view(course).final_exam
     if exam is None:
         return True
     attempt = (
@@ -554,7 +600,7 @@ def _membership_to_out(row: MembershipCertificate, student_name: str, db: Sessio
 
 
 def _progress_counts(db: Session, user: User, course: Course) -> dict[str, int | bool]:
-    lesson_ids, quiz_ids, assignment_ids = _course_progress_units(db, course.id)
+    lesson_ids, quiz_ids, assignment_ids = _course_progress_units(db, course)
     topics_completed = 0
     if lesson_ids:
         topics_completed = (
@@ -575,7 +621,7 @@ def _progress_counts(db: Session, user: User, course: Course) -> dict[str, int |
 
 
 def _enrollment_to_out(db: Session, user: User, enrollment: Enrollment) -> EnrollmentOut:
-    course = enrollment.course
+    course = published_view(enrollment.course) if enrollment.course is not None else None
     exam_passed = _user_passed_final_exam(db, user, course) if course else False
     cert = (
         db.query(Certificate)
@@ -611,7 +657,7 @@ def _enrollment_to_out(db: Session, user: User, enrollment: Enrollment) -> Enrol
 
 
 def _completed_lesson_ids(db: Session, user: User, course: Course) -> set[int]:
-    lesson_ids = [lesson.id for chapter in course.chapters for lesson in chapter.lessons]
+    lesson_ids = published_view(course).lesson_ids()
     if not lesson_ids:
         return set()
     rows = (
@@ -781,19 +827,19 @@ def _student_direct_assignment_detail(
     )
 
 
-def _load_student_assignment(db: Session, block_id: int) -> tuple[ContentBlock, Course]:
-    block = (
-        db.query(ContentBlock)
-        .options(joinedload(ContentBlock.chapter).joinedload(Chapter.course))
-        .filter(ContentBlock.id == block_id)
-        .first()
-    )
-    if block is None or block.block_type != "assignment" or block.chapter is None:
+def _load_student_assignment(db: Session, block_id: int):
+    """Published chapter assignment block and its course, or 404."""
+    course_id = _course_id_for_block(db, block_id)
+    if course_id is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
-    course = block.chapter.course
-    if course is None or course.status != "published":
+    row = db.query(Course).filter(Course.id == course_id, Course.status == "published").first()
+    if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
-    require_lessons_open(course)
+    require_lessons_open(row)
+    course = published_view(row)
+    block = course.block(block_id)
+    if block is None or block.block_type != "assignment" or block.lesson is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
     return block, course
 
 

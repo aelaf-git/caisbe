@@ -164,8 +164,8 @@ export default function AdminCoursesPage() {
                       status={course.status ?? "draft"}
                       contentPublished={course.content_published !== false}
                     />
-                    {course.has_unpublished_changes ? (
-                      <Badge tone="warning">Unsaved publish</Badge>
+                    {course.has_unpublished_changes || course.has_unpublished_content_changes ? (
+                      <Badge tone="warning">Unpublished edits</Badge>
                     ) : null}
                   </div>
                   <p className="mt-1 text-xs text-caisbe-muted">{course.code} · /{course.slug}</p>

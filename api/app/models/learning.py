@@ -40,15 +40,21 @@ class Course(Base):
     has_unpublished_changes: Mapped[bool] = mapped_column(Boolean, default=False)
     # Listing (status=published) can go live before lessons. False hides lesson bodies.
     content_published: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # Copy of chapters, lessons, blocks and the final exam that students read.
+    # Admin edits touch the live rows and stay hidden until the next publish.
+    published_content: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    content_published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     enrollments: Mapped[list["Enrollment"]] = relationship(
         back_populates="course",
         cascade="all, delete-orphan",
     )
+    # Deleted rows stay until the next content publish so student progress keeps valid keys.
     chapters: Mapped[list["Chapter"]] = relationship(
         back_populates="course",
         cascade="all, delete-orphan",
         order_by="Chapter.sort_order",
+        primaryjoin="and_(Course.id == Chapter.course_id, Chapter.deleted_at.is_(None))",
     )
     final_exam: Mapped["FinalExam | None"] = relationship(
         back_populates="course",
@@ -91,18 +97,21 @@ class Chapter(Base):
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
     title: Mapped[str] = mapped_column(String(255))
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     course: Mapped["Course"] = relationship(back_populates="chapters")
     lessons: Mapped[list["Lesson"]] = relationship(
         back_populates="chapter",
         cascade="all, delete-orphan",
         order_by="Lesson.sort_order",
+        primaryjoin="and_(Chapter.id == Lesson.chapter_id, Lesson.deleted_at.is_(None))",
     )
     blocks: Mapped[list["ContentBlock"]] = relationship(
         back_populates="chapter",
         cascade="all, delete-orphan",
         order_by="ContentBlock.sort_order",
         foreign_keys="ContentBlock.chapter_id",
+        primaryjoin="and_(Chapter.id == ContentBlock.chapter_id, ContentBlock.deleted_at.is_(None))",
     )
 
 
@@ -114,6 +123,7 @@ class Lesson(Base):
     title: Mapped[str] = mapped_column(String(255))
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     chapter: Mapped["Chapter"] = relationship(back_populates="lessons")
     blocks: Mapped[list["ContentBlock"]] = relationship(
@@ -121,6 +131,7 @@ class Lesson(Base):
         cascade="all, delete-orphan",
         order_by="ContentBlock.sort_order",
         foreign_keys="ContentBlock.lesson_id",
+        primaryjoin="and_(Lesson.id == ContentBlock.lesson_id, ContentBlock.deleted_at.is_(None))",
     )
     progress_records: Mapped[list["LessonProgress"]] = relationship(
         back_populates="lesson",
@@ -169,6 +180,7 @@ class ContentBlock(Base):
     points_possible: Mapped[int | None] = mapped_column(Integer, nullable=True)
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     lesson: Mapped["Lesson | None"] = relationship(
         back_populates="blocks", foreign_keys=[lesson_id]

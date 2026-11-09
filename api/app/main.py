@@ -34,6 +34,7 @@ from app.seeds.admin import seed_admin
 from app.seeds.events_cpd import seed_industry_events
 from app.seeds.forum import seed_forum
 from app.seeds.site_pages import seed_site_pages
+from app.services.course_content import backfill_published_content
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,7 @@ async def lifespan(_: FastAPI):
         seed_industry_events(db)
         seed_forum(db)
         seed_site_pages(db)
+        backfill_published_content(db)
     finally:
         db.close()
 

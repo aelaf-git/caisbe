@@ -582,7 +582,11 @@ def _validate_topic_parent(
 
     parent = (
         db.query(ContentBlock)
-        .filter(ContentBlock.id == parent_id, ContentBlock.lesson_id == lesson_id)
+        .filter(
+            ContentBlock.id == parent_id,
+            ContentBlock.lesson_id == lesson_id,
+            ContentBlock.deleted_at.is_(None),
+        )
         .first()
     )
     if parent is None:
@@ -618,27 +622,88 @@ def _validate_topic_parent(
     return parent_id
 
 
-def _delete_block_tree(db: Session, root: ContentBlock) -> None:
-    quiz_ids: list[int] = []
-    descendant_ids: list[int] = []
+def _block_tree_ids(db: Session, root: ContentBlock) -> list[int]:
+    """Root first, then every descendant, breadth-first."""
+    ids = [root.id]
     frontier = [root.id]
-    if root.quiz_id:
-        quiz_ids.append(root.quiz_id)
     while frontier:
-        children = db.query(ContentBlock).filter(ContentBlock.parent_id.in_(frontier)).all()
-        frontier = []
-        for child in children:
-            descendant_ids.append(child.id)
-            frontier.append(child.id)
-            if child.quiz_id:
-                quiz_ids.append(child.quiz_id)
-    for child_id in reversed(descendant_ids):
-        db.query(ContentBlock).filter(ContentBlock.id == child_id).delete(synchronize_session=False)
-    db.delete(root)
-    for quiz_id in quiz_ids:
-        quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
-        if quiz:
-            db.delete(quiz)
+        children = db.query(ContentBlock.id).filter(ContentBlock.parent_id.in_(frontier)).all()
+        frontier = [row[0] for row in children]
+        ids.extend(frontier)
+    return ids
+
+
+def _delete_block_tree(db: Session, root: ContentBlock) -> None:
+    """Hide a block and its descendants from the editor.
+
+    Rows stay until the next content publish so students on the published
+    version keep working and progress keys stay valid.
+    """
+    now = datetime.now(timezone.utc)
+    ids = _block_tree_ids(db, root)
+    db.query(ContentBlock).filter(ContentBlock.id.in_(ids)).update(
+        {ContentBlock.deleted_at: now},
+        synchronize_session=False,
+    )
+
+
+def _soft_delete_lesson(db: Session, lesson: Lesson) -> None:
+    now = datetime.now(timezone.utc)
+    lesson.deleted_at = now
+    db.query(ContentBlock).filter(
+        ContentBlock.lesson_id == lesson.id,
+        ContentBlock.deleted_at.is_(None),
+    ).update({ContentBlock.deleted_at: now}, synchronize_session=False)
+
+
+def _soft_delete_chapter(db: Session, chapter: Chapter) -> None:
+    now = datetime.now(timezone.utc)
+    chapter.deleted_at = now
+    lesson_ids = [
+        row[0]
+        for row in db.query(Lesson.id)
+        .filter(Lesson.chapter_id == chapter.id, Lesson.deleted_at.is_(None))
+        .all()
+    ]
+    if lesson_ids:
+        db.query(Lesson).filter(Lesson.id.in_(lesson_ids)).update(
+            {Lesson.deleted_at: now}, synchronize_session=False
+        )
+        db.query(ContentBlock).filter(
+            ContentBlock.lesson_id.in_(lesson_ids),
+            ContentBlock.deleted_at.is_(None),
+        ).update({ContentBlock.deleted_at: now}, synchronize_session=False)
+    db.query(ContentBlock).filter(
+        ContentBlock.chapter_id == chapter.id,
+        ContentBlock.deleted_at.is_(None),
+    ).update({ContentBlock.deleted_at: now}, synchronize_session=False)
+
+
+def _live_chapter(db: Session, chapter_id: int) -> Chapter:
+    chapter = db.query(Chapter).filter(Chapter.id == chapter_id, Chapter.deleted_at.is_(None)).first()
+    if chapter is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+    return chapter
+
+
+def _live_lesson(db: Session, lesson_id: int, *, options: tuple = ()) -> Lesson:
+    query = db.query(Lesson).filter(Lesson.id == lesson_id, Lesson.deleted_at.is_(None))
+    if options:
+        query = query.options(*options)
+    lesson = query.first()
+    if lesson is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
+    return lesson
+
+
+def _live_block(db: Session, block_id: int, *, options: tuple = ()) -> ContentBlock:
+    query = db.query(ContentBlock).filter(ContentBlock.id == block_id, ContentBlock.deleted_at.is_(None))
+    if options:
+        query = query.options(*options)
+    block = query.first()
+    if block is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Block not found")
+    return block
 
 
 def _publish_content_errors(course: Course) -> list[str]:
@@ -736,8 +801,12 @@ def _load_course_admin(db: Session, course_id: int) -> Course:
 
 
 def _course_admin_out(course: Course) -> CourseDetailAdminOut:
+    from app.services.course_content import has_unpublished_content_changes
+
     out = CourseDetailAdminOut.model_validate(course)
     out.has_unpublished_changes = bool(course.has_unpublished_changes)
+    out.has_unpublished_content_changes = has_unpublished_content_changes(course)
+    out.content_published_at = course.content_published_at
     if course.has_unpublished_changes and course.draft_meta:
         for key in COURSE_DRAFT_META_KEYS:
             if key in course.draft_meta:

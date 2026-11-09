@@ -26,6 +26,7 @@ class CourseOut(BaseModel):
 
 class AdminCourseListOut(CourseOut):
     has_unpublished_changes: bool = False
+    has_unpublished_content_changes: bool = False
 
 
 
@@ -526,6 +527,8 @@ class CertificateTemplateOut(BaseModel):
 
 class CourseDetailAdminOut(CourseOut):
     has_unpublished_changes: bool = False
+    has_unpublished_content_changes: bool = False
+    content_published_at: datetime | None = None
     chapters: list[ChapterOut] = Field(default_factory=list)
     final_exam: FinalExamOut | None = None
     certificate_template: CertificateTemplateOut | None = None
