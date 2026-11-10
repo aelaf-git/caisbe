@@ -331,3 +331,120 @@ def test_replaced_unpublished_file_is_deleted_immediately(
     assert published_again.status_code == 200, published_again.text
     assert not live_file.exists()
     assert replacement_file.is_file()
+
+
+def _question(prompt: str, correct: str, wrong: str) -> dict:
+    return {
+        "prompt": prompt,
+        "sort_order": 0,
+        "choices": [
+            {"text": correct, "is_correct": True, "sort_order": 0},
+            {"text": wrong, "is_correct": False, "sort_order": 1},
+        ],
+    }
+
+
+def test_quiz_autosave_replaces_questions(client: TestClient, db: Session) -> None:
+    admin = _user(db, "quiz-admin@example.com", "admin")
+    course, chapter, _first, _second = _published_course(db)
+    headers = _login(client, admin.email)
+
+    created = client.post(
+        f"/api/admin/chapters/{chapter.id}/blocks",
+        headers=headers,
+        json={
+            "block_type": "quiz",
+            "title": "Quiz",
+            "quiz_title": "Quiz",
+            "quiz_questions": [_question("First prompt", "Yes", "No")],
+            "sort_order": 0,
+        },
+    )
+    assert created.status_code == 201, created.text
+    block_id = created.json()["id"]
+
+    first = client.patch(
+        f"/api/admin/blocks/{block_id}",
+        headers=headers,
+        json={
+            "title": "Chapter check",
+            "quiz_title": "Chapter check",
+            "quiz_questions": [_question("What is a facility?", "A building", "A color")],
+        },
+    )
+    assert first.status_code == 200, first.text
+    quiz = first.json()["quiz"]
+    assert quiz["title"] == "Chapter check"
+    assert quiz["questions"][0]["prompt"] == "What is a facility?"
+    assert quiz["questions"][0]["choices"][0]["is_correct"] is True
+
+    second = client.patch(
+        f"/api/admin/blocks/{block_id}",
+        headers=headers,
+        json={
+            "title": "Chapter check",
+            "quiz_title": "Chapter check",
+            "quiz_questions": [
+                _question("What is a facility?", "A building", "A color"),
+                _question("Who maintains it?", "The team", "Nobody"),
+            ],
+        },
+    )
+    assert second.status_code == 200, second.text
+    questions = second.json()["quiz"]["questions"]
+    assert [item["prompt"] for item in questions] == ["What is a facility?", "Who maintains it?"]
+    assert questions[1]["choices"][0]["text"] == "The team"
+    assert questions[1]["choices"][0]["is_correct"] is True
+
+    saved = client.get(f"/api/admin/courses/{course.id}", headers=headers)
+    assert saved.status_code == 200, saved.text
+    stored = next(block for block in saved.json()["chapters"][0]["blocks"] if block["id"] == block_id)
+    assert [item["prompt"] for item in stored["quiz"]["questions"]] == [
+        "What is a facility?",
+        "Who maintains it?",
+    ]
+
+
+def test_assignment_save_updates_instructions_points_and_due_date(client: TestClient, db: Session) -> None:
+    admin = _user(db, "assign-admin@example.com", "admin")
+    _course, chapter, _first, _second = _published_course(db)
+    headers = _login(client, admin.email)
+
+    created = client.post(
+        f"/api/admin/chapters/{chapter.id}/blocks",
+        headers=headers,
+        json={
+            "block_type": "assignment",
+            "title": "Site visit notes",
+            "body": "Describe the site visit.",
+            "sort_order": 1,
+        },
+    )
+    assert created.status_code == 201, created.text
+    block_id = created.json()["id"]
+
+    updated = client.patch(
+        f"/api/admin/blocks/{block_id}",
+        headers=headers,
+        json={
+            "title": "Site visit report",
+            "body": "Describe the site visit and the hazards you found.",
+            "points_possible": 20,
+            "due_at": "2026-12-01T15:00:00Z",
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["title"] == "Site visit report"
+    assert "hazards" in updated.json()["body"]
+    assert updated.json()["points_possible"] == 20
+    assert updated.json()["due_at"] is not None
+
+    cleared = client.patch(
+        f"/api/admin/blocks/{block_id}",
+        headers=headers,
+        json={"points_possible": None, "due_at": None},
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["points_possible"] is None
+    assert cleared.json()["due_at"] is None
+    assert "hazards" in cleared.json()["body"]

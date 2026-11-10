@@ -824,8 +824,10 @@ def admin_update_block(
         if not (next_title or "").strip() and url:
             data["title"] = _reading_display_name(url)
 
-    quiz_questions = data.pop("quiz_questions", None)
-    quiz_title = data.pop("quiz_title", None)
+    data.pop("quiz_questions", None)
+    data.pop("quiz_title", None)
+    quiz_questions = payload.quiz_questions if "quiz_questions" in payload.model_fields_set else None
+    quiz_title = payload.quiz_title if "quiz_title" in payload.model_fields_set else None
     if "parent_id" in data and block.lesson_id is not None:
         data["parent_id"] = _validate_topic_parent(
             db,
