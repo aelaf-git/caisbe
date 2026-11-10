@@ -68,6 +68,7 @@ def admin_update_leadership(
     row = db.query(LeadershipPerson).filter(LeadershipPerson.id == person_id).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Leadership person not found")
+    previous_photo = row.photo_url
     data = payload.model_dump(exclude_unset=True)
     for key, value in data.items():
         if key in _OPTIONAL_STR_KEYS:
@@ -83,6 +84,9 @@ def admin_update_leadership(
         setattr(row, key, value)
     db.commit()
     db.refresh(row)
+    from app.services.storage import delete_managed_uploads, replaced_upload_urls
+
+    delete_managed_uploads(replaced_upload_urls([previous_photo], [row.photo_url]))
     return LeadershipPersonOut.model_validate(row)
 
 
@@ -95,5 +99,9 @@ def admin_delete_leadership(
     row = db.query(LeadershipPerson).filter(LeadershipPerson.id == person_id).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Leadership person not found")
+    removed_photo = row.photo_url
     db.delete(row)
     db.commit()
+    from app.services.storage import delete_managed_uploads
+
+    delete_managed_uploads([removed_photo])

@@ -233,6 +233,34 @@ def admin_get_course(
     return _course_admin_out(_load_course_admin(db, course_id))
 
 
+def _course_cover_urls(course: Course) -> list[str | None]:
+    urls: list[str | None] = [course.cover_url]
+    draft = course.draft_meta if isinstance(course.draft_meta, dict) else None
+    if draft is not None:
+        urls.append(draft.get("cover_url"))
+    return urls
+
+
+def _release_replaced_covers(before: list[str | None], course: Course) -> None:
+    from app.services.storage import delete_managed_uploads, replaced_upload_urls
+
+    delete_managed_uploads(replaced_upload_urls(before, _course_cover_urls(course)))
+
+
+def _course_for_block(db: Session, block: ContentBlock) -> Course | None:
+    if block.chapter_id:
+        chapter = db.query(Chapter).filter(Chapter.id == block.chapter_id).first()
+        if chapter is not None:
+            return db.query(Course).filter(Course.id == chapter.course_id).first()
+    if block.lesson_id:
+        lesson = db.query(Lesson).filter(Lesson.id == block.lesson_id).first()
+        if lesson is not None:
+            chapter = db.query(Chapter).filter(Chapter.id == lesson.chapter_id).first()
+            if chapter is not None:
+                return db.query(Course).filter(Course.id == chapter.course_id).first()
+    return None
+
+
 @router.patch("/courses/{course_id}", response_model=CourseDetailAdminOut)
 def admin_update_course(
     course_id: int,
@@ -244,6 +272,7 @@ def admin_update_course(
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
+    previous_covers = _course_cover_urls(course)
     data = payload.model_dump(exclude_unset=True)
     next_status = data.pop("status", None)
     next_content_published = data.pop("content_published", None)
@@ -330,6 +359,7 @@ def admin_update_course(
         )
 
     db.commit()
+    _release_replaced_covers(previous_covers, course)
     return _course_admin_out(_load_course_admin(db, course_id))
 
 
@@ -344,6 +374,7 @@ def admin_save_course_changes(
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
+    previous_covers = _course_cover_urls(course)
     if course.status == "published":
         from app.services.notifications import notify_enrolled_students
 
@@ -365,6 +396,7 @@ def admin_save_course_changes(
         course.has_unpublished_changes = False
 
     db.commit()
+    _release_replaced_covers(previous_covers, course)
     return _course_admin_out(_load_course_admin(db, course_id))
 
 
@@ -431,6 +463,30 @@ def admin_delete_course(
     if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
+    from sqlalchemy import or_
+
+    from app.services.course_content import managed_urls_in_snapshot
+    from app.services.storage import delete_managed_uploads
+
+    removed_files: list[str | None] = _course_cover_urls(course)
+    removed_files.extend(managed_urls_in_snapshot(course.published_content))
+    chapter_ids = [row[0] for row in db.query(Chapter.id).filter(Chapter.course_id == course_id).all()]
+    lesson_ids = [
+        row[0]
+        for row in db.query(Lesson.id).filter(Lesson.chapter_id.in_(chapter_ids or [-1])).all()
+    ]
+    content_blocks = (
+        db.query(ContentBlock)
+        .filter(
+            or_(
+                ContentBlock.chapter_id.in_(chapter_ids or [-1]),
+                ContentBlock.lesson_id.in_(lesson_ids or [-1]),
+            )
+        )
+        .all()
+    )
+    removed_files.extend(block.url for block in content_blocks)
+
     title = course.title
     code = course.code
     affected_user_ids = {
@@ -465,6 +521,7 @@ def admin_delete_course(
 
     db.delete(course)
     db.commit()
+    delete_managed_uploads(removed_files)
 
 
 
@@ -746,6 +803,14 @@ def admin_update_block(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Block not found")
 
     data = payload.model_dump(exclude_unset=True)
+    previous_url = block.url
+    published_urls: set[str] = set()
+    if "url" in data:
+        from app.services.course_content import managed_urls_in_snapshot
+
+        course = _course_for_block(db, block)
+        if course is not None:
+            published_urls = managed_urls_in_snapshot(course.published_content)
     if block.block_type != "assignment":
         data.pop("points_possible", None)
         data.pop("due_at", None)
@@ -790,6 +855,10 @@ def admin_update_block(
         .filter(ContentBlock.id == block_id)
         .one()
     )
+    if previous_url and previous_url != block.url and previous_url not in published_urls:
+        from app.services.storage import delete_managed_upload
+
+        delete_managed_upload(previous_url)
     return block
 
 

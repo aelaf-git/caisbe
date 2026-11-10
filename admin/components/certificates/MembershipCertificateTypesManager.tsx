@@ -254,13 +254,21 @@ export default function MembershipCertificateTypesManager({
       {selected ? (
         <div className="space-y-4">
           <Card className="space-y-4">
-            <div>
-              <h2 className="font-hopewell-display text-xl font-extrabold text-caisbe-text-dark">
-                {selected.label}
-              </h2>
-              <p className="mt-1 text-sm text-caisbe-muted">
-                Membership type code: <span className="font-mono">{selected.membership_type}</span>
-              </p>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <SaveButton
+                dirty={dirty}
+                saving={saving}
+                idleLabel="Save"
+                onClick={() => void handleSave()}
+              />
+              <div className="min-w-0 text-right">
+                <h2 className="font-hopewell-display text-xl font-extrabold text-caisbe-text-dark">
+                  {selected.label}
+                </h2>
+                <p className="mt-1 text-sm text-caisbe-muted">
+                  Membership type code: <span className="font-mono">{selected.membership_type}</span>
+                </p>
+              </div>
             </div>
 
             <FormField label="Display label">
@@ -351,12 +359,6 @@ export default function MembershipCertificateTypesManager({
               />
               Active for this membership type
             </label>
-            <SaveButton
-              dirty={dirty}
-              saving={saving}
-              idleLabel="Save certificate"
-              onClick={() => void handleSave()}
-            />
           </Card>
 
           <Card className="space-y-3">

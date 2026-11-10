@@ -242,6 +242,7 @@ def admin_update_job(
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
     was_published = bool(row.published)
+    previous_attachment = row.attachment_url
     data = payload.model_dump(exclude_unset=True)
     if "attachment_url" in data and data["attachment_url"]:
         _validate_upload_url(data["attachment_url"], field="Attachment")
@@ -282,6 +283,9 @@ def admin_update_job(
         )
     db.commit()
     db.refresh(row)
+    from app.services.storage import delete_managed_uploads, replaced_upload_urls
+
+    delete_managed_uploads(replaced_upload_urls([previous_attachment], [row.attachment_url]))
     return _job_out(row)
 
 
@@ -294,7 +298,11 @@ def admin_delete_job(
     row = db.query(JobPosting).filter(JobPosting.id == job_id).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    removed_file = row.attachment_url
     db.delete(row)
     db.commit()
+    from app.services.storage import delete_managed_uploads
+
+    delete_managed_uploads([removed_file])
 
 

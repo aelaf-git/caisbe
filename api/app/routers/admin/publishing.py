@@ -268,6 +268,7 @@ def admin_update_media(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media asset not found")
 
     was_published = bool(asset.published)
+    previous_files = [asset.file_url, asset.cover_url]
     data = payload.model_dump(exclude_unset=True)
     fields = _normalize_media_fields(
         category=data.get("category", asset.category),
@@ -317,6 +318,9 @@ def admin_update_media(
         )
     db.commit()
     db.refresh(asset)
+    from app.services.storage import delete_managed_uploads, replaced_upload_urls
+
+    delete_managed_uploads(replaced_upload_urls(previous_files, [asset.file_url, asset.cover_url]))
     return MediaAssetOut.model_validate(asset)
 
 
@@ -333,6 +337,7 @@ def admin_delete_media(
     asset = db.query(MediaAsset).filter(MediaAsset.id == asset_id).first()
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media asset not found")
+    removed_files = [asset.file_url, asset.cover_url]
     try:
         db.query(ContentTranslation).filter(
             ContentTranslation.entity_type == "media",
@@ -346,6 +351,9 @@ def admin_delete_media(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to delete this media item. Please try again.",
         ) from exc
+    from app.services.storage import delete_managed_uploads
+
+    delete_managed_uploads(removed_files)
     return {"ok": True}
 
 

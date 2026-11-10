@@ -326,11 +326,33 @@ def published_view(course: Course | PublishedCourse) -> PublishedCourse:
 # --- Publishing ---------------------------------------------------------------
 
 
-def purge_deleted_content(db: Session, course: Course) -> None:
-    """Hard-delete soft-deleted chapters, lessons and blocks for this course."""
+def managed_urls_in_snapshot(snapshot: dict[str, Any] | None) -> set[str]:
+    """Managed and other file URLs stored on content blocks in a snapshot."""
+    found: set[str] = set()
+
+    def walk(value: Any) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key == "url" and isinstance(item, str) and item.strip():
+                    found.add(item)
+                else:
+                    walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(snapshot or {})
+    return found
+
+
+def purge_deleted_content(db: Session, course: Course) -> set[str]:
+    """Hard-delete soft-deleted chapters, lessons and blocks for this course.
+
+    Returns file URLs that belonged to the removed blocks.
+    """
     chapter_ids = [row[0] for row in db.query(Chapter.id).filter(Chapter.course_id == course.id).all()]
     if not chapter_ids:
-        return
+        return set()
     doomed_chapters = (
         db.query(Chapter)
         .filter(Chapter.course_id == course.id, Chapter.deleted_at.isnot(None))
@@ -363,6 +385,7 @@ def purge_deleted_content(db: Session, course: Course) -> None:
         .all()
     )
     quiz_ids = {block.quiz_id for block in doomed_blocks if block.quiz_id}
+    removed_urls = {block.url for block in doomed_blocks if block.url}
     # Children first so parent deletes never race the ORM cascade.
     for block in sorted(doomed_blocks, key=lambda item: (item.parent_id is None, -item.id)):
         db.delete(block)
@@ -374,16 +397,22 @@ def purge_deleted_content(db: Session, course: Course) -> None:
         db.delete(chapter)
     db.flush()
     db.expire(course)
+    return removed_urls
 
 
 def publish_content(db: Session, course: Course) -> dict[str, Any]:
     """Make the live curriculum the version students see."""
-    purge_deleted_content(db, course)
+    from app.services.storage import delete_managed_uploads
+
+    previous_urls = managed_urls_in_snapshot(course.published_content)
+    removed_urls = purge_deleted_content(db, course)
     snapshot = serialize_content(course)
     course.published_content = snapshot
     course.content_published = True
     course.content_published_at = datetime.now(timezone.utc)
     db.flush()
+    kept_urls = managed_urls_in_snapshot(snapshot)
+    delete_managed_uploads((previous_urls | removed_urls) - kept_urls)
     return snapshot
 
 

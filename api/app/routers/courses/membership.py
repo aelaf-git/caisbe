@@ -322,7 +322,11 @@ def delete_my_document(
     )
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    removed_file = row.file_url
     db.delete(row)
     db.commit()
+    from app.services.storage import delete_managed_uploads
+
+    delete_managed_uploads([removed_file])
 
 

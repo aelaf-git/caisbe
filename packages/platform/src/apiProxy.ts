@@ -313,10 +313,11 @@ async function proxy(request: NextRequest, path: string[], options: ApiProxyOpti
     if (value) responseHeaders.set(key, value);
   }
   responseHeaders.delete("content-length");
-  if (responseBody.byteLength > 0) {
+  const noContent = chosen.upstream.status === 204 || chosen.upstream.status === 205;
+  if (!noContent && responseBody.byteLength > 0) {
     responseHeaders.set("content-length", String(responseBody.byteLength));
   }
-  const response = new NextResponse(responseBody, {
+  const response = new NextResponse(noContent ? null : responseBody, {
     status: chosen.upstream.status,
     headers: responseHeaders,
   });

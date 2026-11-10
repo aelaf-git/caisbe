@@ -212,6 +212,7 @@ def admin_update_event(
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     was_published = bool(event.published)
+    previous_report = event.report_file_url
     data = payload.model_dump(exclude_unset=True)
     if "report_file_url" in data and data["report_file_url"]:
         _validate_upload_url(data["report_file_url"], field="Report file")
@@ -235,6 +236,9 @@ def admin_update_event(
         )
     db.commit()
     db.refresh(event)
+    from app.services.storage import delete_managed_uploads, replaced_upload_urls
+
+    delete_managed_uploads(replaced_upload_urls([previous_report], [event.report_file_url]))
     return IndustryEventOut.model_validate(event)
 
 
@@ -247,7 +251,11 @@ def admin_delete_event(
     event = db.query(IndustryEvent).filter(IndustryEvent.id == event_id).first()
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    removed_file = event.report_file_url
     db.delete(event)
     db.commit()
+    from app.services.storage import delete_managed_uploads
+
+    delete_managed_uploads([removed_file])
 
 

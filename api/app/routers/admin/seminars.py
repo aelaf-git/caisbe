@@ -83,6 +83,7 @@ def admin_update_seminar(
     row = db.query(Seminar).filter(Seminar.id == seminar_id).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Seminar not found")
+    previous_cover = row.cover_url
     data = payload.model_dump(exclude_unset=True)
     for key, value in data.items():
         if key in _OPTIONAL_STR:
@@ -98,6 +99,9 @@ def admin_update_seminar(
         setattr(row, key, value)
     db.commit()
     db.refresh(row)
+    from app.services.storage import delete_managed_uploads, replaced_upload_urls
+
+    delete_managed_uploads(replaced_upload_urls([previous_cover], [row.cover_url]))
     return SeminarOut.model_validate(row)
 
 
@@ -110,8 +114,12 @@ def admin_delete_seminar(
     row = db.query(Seminar).filter(Seminar.id == seminar_id).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Seminar not found")
+    removed_cover = row.cover_url
     db.delete(row)
     db.commit()
+    from app.services.storage import delete_managed_uploads
+
+    delete_managed_uploads([removed_cover])
 
 
 @router.get(

@@ -720,38 +720,42 @@ export default function MembershipApplicationForm({
           </>
         ) : null}
 
-        <p className="text-sm font-semibold text-caisbe-text-dark md:col-span-2">Chapter Membership</p>
-        <Field label="Name of Chapter (if any)" className="md:col-span-2">
-          <input className={inputClass} value={chapterName} onChange={(e) => setChapterName(e.target.value)} />
-        </Field>
-        <div className="flex flex-wrap gap-x-5 gap-y-3 md:col-span-2">
-          {chapterMembershipOptions.map((option) => (
-            <label key={option.id} className="inline-flex items-center gap-2 text-sm text-caisbe-text">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-caisbe-red"
-                checked={chapter[option.id]}
-                onChange={() => toggle(chapter, setChapter, option.id)}
-              />
-              {option.label}
-            </label>
-          ))}
-        </div>
+        {isRegister ? null : (
+          <>
+            <p className="text-sm font-semibold text-caisbe-text-dark md:col-span-2">Chapter Membership</p>
+            <Field label="Name of Chapter (if any)" className="md:col-span-2">
+              <input className={inputClass} value={chapterName} onChange={(e) => setChapterName(e.target.value)} />
+            </Field>
+            <div className="flex flex-wrap gap-x-5 gap-y-3 md:col-span-2">
+              {chapterMembershipOptions.map((option) => (
+                <label key={option.id} className="inline-flex items-center gap-2 text-sm text-caisbe-text">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-caisbe-red"
+                    checked={chapter[option.id]}
+                    onChange={() => toggle(chapter, setChapter, option.id)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
 
-        <p className="text-sm font-semibold text-caisbe-red md:col-span-2">Additional Membership Options</p>
-        <div className="flex flex-wrap gap-x-5 gap-y-3 md:col-span-2">
-          {additionalMembershipOptions.map((option) => (
-            <label key={option.id} className="inline-flex items-center gap-2 text-sm text-caisbe-text">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-caisbe-red"
-                checked={additional[option.id]}
-                onChange={() => toggle(additional, setAdditional, option.id)}
-              />
-              {option.label}
-            </label>
-          ))}
-        </div>
+            <p className="text-sm font-semibold text-caisbe-red md:col-span-2">Additional Membership Options</p>
+            <div className="flex flex-wrap gap-x-5 gap-y-3 md:col-span-2">
+              {additionalMembershipOptions.map((option) => (
+                <label key={option.id} className="inline-flex items-center gap-2 text-sm text-caisbe-text">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-caisbe-red"
+                    checked={additional[option.id]}
+                    onChange={() => toggle(additional, setAdditional, option.id)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </>
+        )}
       </div>
       ) : null}
 

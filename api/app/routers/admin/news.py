@@ -219,6 +219,14 @@ def admin_create_news(
     return _news_out(row)
 
 
+def _news_file_urls(row: NewsPost) -> list[str | None]:
+    urls: list[str | None] = [row.cover_url]
+    for collection in (row.image_urls, row.video_urls):
+        if isinstance(collection, list):
+            urls.extend(item for item in collection if isinstance(item, str))
+    return urls
+
+
 @router.patch("/news/{post_id}", response_model=NewsPostOut)
 def admin_update_news(
     post_id: int,
@@ -230,6 +238,7 @@ def admin_update_news(
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
     was_published = bool(row.published)
+    previous_files = _news_file_urls(row)
     data = payload.model_dump(exclude_unset=True)
     if "cover_url" in data and data["cover_url"]:
         _validate_upload_url(data["cover_url"], field="Cover image")
@@ -275,6 +284,9 @@ def admin_update_news(
         )
     db.commit()
     db.refresh(row)
+    from app.services.storage import delete_managed_uploads, replaced_upload_urls
+
+    delete_managed_uploads(replaced_upload_urls(previous_files, _news_file_urls(row)))
     return _news_out(row)
 
 
@@ -287,7 +299,11 @@ def admin_delete_news(
     row = db.query(NewsPost).filter(NewsPost.id == post_id).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News post not found")
+    removed_files = _news_file_urls(row)
     db.delete(row)
     db.commit()
+    from app.services.storage import delete_managed_uploads
+
+    delete_managed_uploads(removed_files)
 
 

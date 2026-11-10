@@ -211,3 +211,123 @@ def test_publish_content_requires_listed_course(client: TestClient, db: Session)
     blocked = client.post(f"/api/admin/courses/{course.id}/publish-content", headers=headers)
     assert blocked.status_code == 400
     assert "course info" in blocked.json()["detail"].lower()
+
+
+def _pdf_url(name: str) -> str:
+    return f"/api/uploads/courses/media/{name}.pdf"
+
+
+def _write_upload(root, url: str):
+    from pathlib import Path
+
+    relative = url.split("/api/uploads/", 1)[1]
+    dest = Path(root) / relative
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(b"%PDF-1.4")
+    return dest
+
+
+def test_publish_deletes_files_that_leave_the_snapshot(client: TestClient, db: Session, monkeypatch, tmp_path) -> None:
+    from app.config import settings
+    from app.services import storage
+
+    monkeypatch.setattr(settings, "upload_dir", str(tmp_path))
+    monkeypatch.setattr(storage, "object_storage_enabled", lambda: False)
+
+    admin = _user(db, "files-admin@example.com", "admin")
+    course, _chapter, first, _second = _published_course(db)
+    headers = _login(client, admin.email)
+    parent = db.query(ContentBlock).filter(ContentBlock.lesson_id == first.id).one()
+    kept = _pdf_url("a" * 32)
+    dropped = _pdf_url("b" * 32)
+    external = "https://www.youtube.com/watch?v=example"
+    drop_id = None
+    for url, title in ((kept, "Keep"), (dropped, "Drop"), (external, "Watch")):
+        created = client.post(
+            f"/api/admin/lessons/{first.id}/blocks",
+            headers=headers,
+            json={
+                "block_type": "pdf" if url != external else "video",
+                "title": title,
+                "url": url,
+                "parent_id": parent.id,
+                "sort_order": 1,
+            },
+        )
+        assert created.status_code == 201, created.text
+        if url == dropped:
+            drop_id = created.json()["id"]
+    kept_file = _write_upload(tmp_path, kept)
+    dropped_file = _write_upload(tmp_path, dropped)
+
+    published = client.post(f"/api/admin/courses/{course.id}/publish-content", headers=headers)
+    assert published.status_code == 200, published.text
+    assert kept_file.is_file()
+    assert dropped_file.is_file()
+
+    removed = client.delete(f"/api/admin/blocks/{drop_id}", headers=headers)
+    assert removed.status_code == 204, removed.text
+    assert dropped_file.is_file()
+
+    published_again = client.post(f"/api/admin/courses/{course.id}/publish-content", headers=headers)
+    assert published_again.status_code == 200, published_again.text
+    assert kept_file.is_file()
+    assert not dropped_file.exists()
+
+
+def test_replaced_unpublished_file_is_deleted_immediately(
+    client: TestClient, db: Session, monkeypatch, tmp_path
+) -> None:
+    from app.config import settings
+    from app.services import storage
+
+    monkeypatch.setattr(settings, "upload_dir", str(tmp_path))
+    monkeypatch.setattr(storage, "object_storage_enabled", lambda: False)
+
+    admin = _user(db, "replace-admin@example.com", "admin")
+    course, _chapter, first, _second = _published_course(db)
+    headers = _login(client, admin.email)
+    parent = db.query(ContentBlock).filter(ContentBlock.lesson_id == first.id).one()
+    live = _pdf_url("c" * 32)
+    created = client.post(
+        f"/api/admin/lessons/{first.id}/blocks",
+        headers=headers,
+        json={"block_type": "pdf", "title": "Handout", "url": live, "parent_id": parent.id, "sort_order": 1},
+    )
+    assert created.status_code == 201, created.text
+    block_id = created.json()["id"]
+    live_file = _write_upload(tmp_path, live)
+    published = client.post(f"/api/admin/courses/{course.id}/publish-content", headers=headers)
+    assert published.status_code == 200, published.text
+
+    replacement = _pdf_url("d" * 32)
+    replacement_file = _write_upload(tmp_path, replacement)
+    updated = client.patch(
+        f"/api/admin/blocks/{block_id}",
+        headers=headers,
+        json={"url": replacement},
+    )
+    assert updated.status_code == 200, updated.text
+    assert live_file.is_file()
+
+    draft = _pdf_url("e" * 32)
+    draft_file = _write_upload(tmp_path, draft)
+    drafted = client.post(
+        f"/api/admin/lessons/{first.id}/blocks",
+        headers=headers,
+        json={"block_type": "pdf", "title": "Draft", "url": draft, "parent_id": parent.id, "sort_order": 2},
+    )
+    assert drafted.status_code == 201, drafted.text
+    swapped = client.patch(
+        f"/api/admin/blocks/{drafted.json()['id']}",
+        headers=headers,
+        json={"url": _pdf_url("f" * 32)},
+    )
+    assert swapped.status_code == 200, swapped.text
+    assert not draft_file.exists()
+    assert replacement_file.is_file()
+
+    published_again = client.post(f"/api/admin/courses/{course.id}/publish-content", headers=headers)
+    assert published_again.status_code == 200, published_again.text
+    assert not live_file.exists()
+    assert replacement_file.is_file()

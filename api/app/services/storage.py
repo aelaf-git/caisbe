@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 import tempfile
 import uuid
+from collections.abc import Iterable
 from pathlib import Path
 from typing import BinaryIO
 from urllib.parse import urlparse
@@ -15,6 +17,8 @@ from fastapi import HTTPException, UploadFile, status
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 UPLOAD_KEY_PREFIX = "uploads/"
 
@@ -321,3 +325,50 @@ def read_managed_bytes(file_url: str) -> bytes:
 
     with urlopen(raw, timeout=60) as resp:  # noqa: S310
         return resp.read()
+
+
+def _delete_object_key(key: str) -> None:
+    _s3_client().delete_object(Bucket=settings.s3_bucket.strip(), Key=key)
+
+
+def delete_managed_upload(url: str | None) -> None:
+    """Remove one managed upload from R2 or local disk. Missing files are ignored."""
+    raw = (url or "").strip()
+    if not is_managed_upload_url(raw):
+        return
+    try:
+        relative = _relative_upload_path(raw)
+        if not relative or ".." in relative.split("/"):
+            return
+        if object_storage_enabled():
+            _delete_object_key(f"{UPLOAD_KEY_PREFIX}{relative}")
+            return
+        dest = (Path(settings.upload_dir) / relative).resolve()
+        root = Path(settings.upload_dir).resolve()
+        if dest == root or root not in dest.parents:
+            return
+        dest.unlink(missing_ok=True)
+    except Exception:
+        logger.warning("Unable to delete upload %s", raw, exc_info=True)
+
+
+def delete_managed_uploads(urls: Iterable[str | None]) -> None:
+    seen: set[str] = set()
+    for url in urls:
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        delete_managed_upload(url)
+
+
+def replaced_upload_urls(before: Iterable[str | None], after: Iterable[str | None]) -> list[str]:
+    """URLs that were stored and are no longer stored."""
+    kept = {url for url in after if url}
+    removed: list[str] = []
+    seen: set[str] = set()
+    for url in before:
+        if not url or url in kept or url in seen:
+            continue
+        seen.add(url)
+        removed.append(url)
+    return removed
