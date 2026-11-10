@@ -56,9 +56,11 @@ export function useAutosave<T>({
   }, [value, save, enabled, isEqual]);
 
   const report = useCallback(
-    (next: AutosaveStatus) => {
+    (next: AutosaveStatus, reason?: string | null) => {
       setStatus(next);
-      setUnitStatus(id, next);
+      if (next === "error") setError(reason ?? "Unable to save draft.");
+      else setError(null);
+      setUnitStatus(id, next, next === "error" ? reason : null);
     },
     [id, setUnitStatus],
   );
@@ -85,7 +87,6 @@ export function useAutosave<T>({
     }
 
     report("saving");
-    setError(null);
     try {
       await saveRef.current(next);
       savedRef.current = next;
@@ -98,8 +99,8 @@ export function useAutosave<T>({
         }, 0);
       }
     } catch (err) {
-      setError(errorMessage(err));
-      report("error");
+      const message = errorMessage(err);
+      report("error", message);
       throw err;
     }
   }, [report]);

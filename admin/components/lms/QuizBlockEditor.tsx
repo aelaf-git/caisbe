@@ -8,6 +8,7 @@ import QuizQuestionEditor, {
 import { DeleteIconButton } from "@/components/ui/IconTrash";
 import { CollapseToggle } from "@/components/ui/CollapseToggle";
 import { fieldClassName } from "@/components/ui/FormField";
+import { shortSaveReason } from "@/hooks/autosaveContext";
 import { useAutosave } from "@/hooks/useAutosave";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { ContentBlock, QuizQuestion } from "@/lib/lms";
@@ -87,12 +88,8 @@ export default function QuizBlockEditor({
     id: `quiz-block-${block.id}`,
     value: draft,
     baselineKey,
-    enabled: draft.title.trim().length >= 1,
+    enabled: draft.title.trim().length >= 1 && validationError === null,
     save: async (next) => {
-      const invalid = validateQuestions(next.questions);
-      if (invalid) {
-        throw new Error(invalid);
-      }
       try {
         await apiFetch(`/admin/blocks/${block.id}`, {
           method: "PATCH",
@@ -128,14 +125,16 @@ export default function QuizBlockEditor({
           <p className="font-semibold text-caisbe-text">{draft.title || "Quiz"}</p>
           <p className="text-xs text-caisbe-muted">
             {questionCount} question{questionCount === 1 ? "" : "s"}
-            {autosave.status === "saving"
-              ? " · Saving…"
-              : autosave.status === "saved"
-                ? " · Saved"
-                : autosave.status === "pending"
-                  ? " · Unsaved changes…"
-                  : validationError
-                    ? " · Fix errors to save"
+            {validationError
+              ? " · Fix errors to save"
+              : autosave.status === "error" && autosave.error
+                ? ` · Autosave failed. ${shortSaveReason(autosave.error)}`
+              : autosave.status === "saving"
+                ? " · Saving…"
+                : autosave.status === "saved"
+                  ? " · Saved"
+                  : autosave.status === "pending"
+                    ? " · Unsaved changes…"
                     : ""}
           </p>
         </div>

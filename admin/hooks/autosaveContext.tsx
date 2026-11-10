@@ -23,10 +23,12 @@ type AutosaveContextValue = {
   flushAll: () => Promise<void>;
   /** Flush only the units whose id matches. */
   flushWhere: (match: UnitMatch) => Promise<void>;
-  setUnitStatus: (id: string, status: AutosaveStatus) => void;
+  setUnitStatus: (id: string, status: AutosaveStatus, error?: string | null) => void;
   overallStatus: AutosaveStatus;
   /** Aggregate status of the units whose id matches. */
   statusFor: (match: UnitMatch) => AutosaveStatus;
+  /** First save-failure reason among units whose id matches. */
+  errorFor: (match: UnitMatch) => string | null;
   /** Status of every registered unit, keyed by id. */
   unitStatuses: Record<string, AutosaveStatus>;
 };
@@ -56,9 +58,17 @@ function aggregate(statuses: Iterable<AutosaveStatus>): AutosaveStatus {
   return best;
 }
 
+export function shortSaveReason(message: string | null | undefined): string | null {
+  if (!message) return null;
+  const text = message.replace(/\s+/g, " ").trim();
+  if (!text) return null;
+  return text.length <= 140 ? text : `${text.slice(0, 137)}…`;
+}
+
 export function AutosaveProvider({ children }: { children: ReactNode }) {
   const flushes = useRef(new Map<string, FlushFn>());
   const [unitStatuses, setUnitStatuses] = useState<Record<string, AutosaveStatus>>({});
+  const [unitErrors, setUnitErrors] = useState<Record<string, string>>({});
 
   const register = useCallback((id: string, flush: FlushFn) => {
     flushes.current.set(id, flush);
@@ -67,6 +77,12 @@ export function AutosaveProvider({ children }: { children: ReactNode }) {
   const unregister = useCallback((id: string) => {
     flushes.current.delete(id);
     setUnitStatuses((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setUnitErrors((prev) => {
       if (!(id in prev)) return prev;
       const next = { ...prev };
       delete next[id];
@@ -86,8 +102,19 @@ export function AutosaveProvider({ children }: { children: ReactNode }) {
     await Promise.all(tasks);
   }, []);
 
-  const setUnitStatus = useCallback((id: string, status: AutosaveStatus) => {
+  const setUnitStatus = useCallback((id: string, status: AutosaveStatus, error?: string | null) => {
     setUnitStatuses((prev) => (prev[id] === status ? prev : { ...prev, [id]: status }));
+    setUnitErrors((prev) => {
+      if (status !== "error") {
+        if (!(id in prev)) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      const message = shortSaveReason(error) ?? "";
+      if (prev[id] === message) return prev;
+      return { ...prev, [id]: message };
+    });
   }, []);
 
   const overallStatus = useMemo(
@@ -105,6 +132,16 @@ export function AutosaveProvider({ children }: { children: ReactNode }) {
     [unitStatuses],
   );
 
+  const errorFor = useCallback(
+    (match: UnitMatch) => {
+      for (const [id, status] of Object.entries(unitStatuses)) {
+        if (status === "error" && match(id) && unitErrors[id]) return unitErrors[id];
+      }
+      return null;
+    },
+    [unitErrors, unitStatuses],
+  );
+
   const value = useMemo(
     () => ({
       register,
@@ -114,9 +151,10 @@ export function AutosaveProvider({ children }: { children: ReactNode }) {
       setUnitStatus,
       overallStatus,
       statusFor,
+      errorFor,
       unitStatuses,
     }),
-    [register, unregister, flushAll, flushWhere, setUnitStatus, overallStatus, statusFor, unitStatuses],
+    [register, unregister, flushAll, flushWhere, setUnitStatus, overallStatus, statusFor, errorFor, unitStatuses],
   );
 
   return <AutosaveContext.Provider value={value}>{children}</AutosaveContext.Provider>;
@@ -141,7 +179,7 @@ export function isContentUnit(id: string): boolean {
 
 export function autosaveLabel(
   status: AutosaveStatus,
-  options?: { published?: boolean; hasUnpublishedChanges?: boolean },
+  options?: { published?: boolean; hasUnpublishedChanges?: boolean; reason?: string | null },
 ): string | null {
   const published = Boolean(options?.published);
   switch (status) {
@@ -157,7 +195,7 @@ export function autosaveLabel(
       }
       return "Draft saved";
     case "error":
-      return "Autosave failed";
+      return options?.reason ? `Autosave failed. ${options.reason}` : "Autosave failed";
     default:
       if (published && options?.hasUnpublishedChanges) {
         return "Unpublished edits — publish changes to update what students see";

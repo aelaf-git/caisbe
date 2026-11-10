@@ -3,7 +3,7 @@
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { SaveStatus } from "@/components/lms/CourseEditorChrome";
-import type { AutosaveStatus } from "@/hooks/autosaveContext";
+import { shortSaveReason, type AutosaveStatus } from "@/hooks/autosaveContext";
 
 export type SectionActionsProps = {
   /** Section name, e.g. "Course info". Used for accessible labels. */
@@ -11,6 +11,8 @@ export type SectionActionsProps = {
   /** Students can currently see this section. */
   live: boolean;
   autosaveStatus: AutosaveStatus;
+  /** Short explanation when autosaveStatus is error. */
+  failureReason?: string | null;
   /** Saved edits that students have not received yet (only meaningful while live). */
   hasStagedChanges: boolean;
   onSave: () => void;
@@ -52,6 +54,7 @@ export default function SectionActions({
   label,
   live,
   autosaveStatus,
+  failureReason = null,
   hasStagedChanges,
   onSave,
   onPublishChanges,
@@ -70,7 +73,10 @@ export default function SectionActions({
   const size = compact ? "sm" : "md";
 
   const statusLine = (() => {
-    if (autosaveStatus === "error") return "Autosave failed. Fix the field or try again.";
+    if (autosaveStatus === "error") {
+      const reason = shortSaveReason(failureReason);
+      return reason ? `Autosave failed. ${reason}` : "Autosave failed. Fix the field or try again.";
+    }
     if (autosaveStatus === "saving" || autosaveStatus === "pending") return "Saving draft…";
     if (live && hasStagedChanges) return "Saved. Students still see the previous version.";
     if (live) return "Students see the latest version.";
@@ -86,7 +92,9 @@ export default function SectionActions({
       <div className={`flex items-center gap-2 ${compact ? "" : "sm:justify-end"}`}>
         {compact ? <span className="text-sm font-semibold text-caisbe-text-dark">{label}</span> : null}
         <Badge tone={state.tone}>{state.text}</Badge>
-        {!compact ? <SaveStatus status={autosaveStatus} label={statusLine} /> : null}
+        {!compact || autosaveStatus === "error" ? (
+          <SaveStatus status={autosaveStatus} label={statusLine} />
+        ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {showPublishChanges ? (

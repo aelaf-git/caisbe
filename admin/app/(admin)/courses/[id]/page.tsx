@@ -72,7 +72,7 @@ export default function AdminCourseEditorPage() {
 function AdminCourseEditorInner() {
   const params = useParams<{ id: string }>();
   const courseId = Number(params.id);
-  const { flushWhere, overallStatus, statusFor, unitStatuses } = useAutosaveRegistry();
+  const { flushWhere, overallStatus, statusFor, errorFor, unitStatuses } = useAutosaveRegistry();
   const { notice, dialog: noticeDialog } = useNoticeDialog();
 
   const showError = useCallback(
@@ -231,6 +231,8 @@ function AdminCourseEditorInner() {
   const contentLive = isPublished && contentPublished;
   const infoStatus: AutosaveStatus = statusFor(isCourseInfoUnit);
   const contentStatus: AutosaveStatus = statusFor(isContentUnit);
+  const infoError = errorFor(isCourseInfoUnit);
+  const contentError = errorFor(isContentUnit);
 
   // Content units write to live rows but students read the published snapshot,
   // so a content save while lessons are live means there are staged edits.
@@ -439,6 +441,7 @@ function AdminCourseEditorInner() {
   const draftLabel = autosaveLabel(overallStatus, {
     published: isPublished,
     hasUnpublishedChanges: hasUnpublishedChanges || (contentLive && hasUnpublishedContentChanges),
+    reason: errorFor(() => true),
   });
   const anyBusy = infoBusy !== null || contentBusy !== null;
 
@@ -447,6 +450,7 @@ function AdminCourseEditorInner() {
     label: "Course info",
     live: isPublished,
     autosaveStatus: infoStatus,
+    failureReason: infoError,
     hasStagedChanges: hasUnpublishedChanges,
     onSave: () => void saveInfo(),
     onPublishChanges: () => void publishInfoChanges(),
@@ -462,6 +466,7 @@ function AdminCourseEditorInner() {
     label: "Lessons and exam",
     live: contentLive,
     autosaveStatus: contentStatus,
+    failureReason: contentError,
     hasStagedChanges: hasUnpublishedContentChanges,
     onSave: () => void saveContent(),
     onPublishChanges: () => void publishContentChanges(),

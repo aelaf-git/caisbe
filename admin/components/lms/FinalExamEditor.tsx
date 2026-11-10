@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import QuizQuestionEditor, { validateQuestions } from "@/components/lms/QuizQuestionEditor";
 import PassMarkControl from "@/components/lms/PassMarkControl";
 import FormField, { fieldClassName } from "@/components/ui/FormField";
+import { shortSaveReason } from "@/hooks/autosaveContext";
 import { useAutosave } from "@/hooks/useAutosave";
 import { apiFetch, ApiError } from "@/lib/auth";
 import type { QuizQuestion } from "@/lib/lms";
@@ -64,16 +65,8 @@ export default function FinalExamEditor({
     id: `course-${courseId}-exam`,
     value: exam,
     baselineKey,
-    enabled: true,
+    enabled: validationError === null,
     save: async (next) => {
-      const invalid =
-        validateQuestions(next.questions) ??
-        (next.questions_to_appear != null && next.questions_to_appear > next.questions.length
-          ? `Questions to appear (${next.questions_to_appear}) cannot exceed the bank size (${next.questions.length}).`
-          : null);
-      if (invalid) {
-        throw new Error(invalid);
-      }
       try {
         await apiFetch(`/admin/courses/${courseId}/final-exam`, {
           method: "PUT",
@@ -97,9 +90,12 @@ export default function FinalExamEditor({
   });
 
   const statusLabel = useMemo(() => {
+    if (validationError) return "Fix exam errors to save";
+    if (autosave.status === "error" && autosave.error) {
+      return `Autosave failed. ${shortSaveReason(autosave.error)}`;
+    }
     if (autosave.status === "saving") return "Saving exam…";
     if (autosave.status === "pending") return "Unsaved exam changes…";
-    if (validationError && autosave.status === "error") return "Fix exam errors to save";
     return null;
   }, [autosave.status, validationError]);
 
