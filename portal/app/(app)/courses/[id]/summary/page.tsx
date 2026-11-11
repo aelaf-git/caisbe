@@ -84,7 +84,7 @@ export default function CourseSummaryPage() {
         body: JSON.stringify({ course_id: course.id }),
       });
       setInCart(true);
-      setMessage("Added to cart.");
+      setMessage("Great choice! The course has been added to your cart.");
     } catch (err) {
       const detail = err instanceof ApiError ? err.detail : "Unable to add to cart.";
       setError(

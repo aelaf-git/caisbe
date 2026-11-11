@@ -12,7 +12,6 @@ import {
 } from "@/lib/data/resources";
 import { getResourcePage, resourcesPages } from "@/lib/data/site-pages";
 import { fetchPublishedSitePage, topicChrome } from "@/lib/sitePages";
-import { cmsTopicPage } from "@/lib/cmsTopic";
 import { getServerT } from "@/lib/i18n/server";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -64,9 +63,8 @@ export default async function ResourceSubpage({ params }: Props) {
   const { slug } = await params;
 
   if (slug === advocacyContent.slug) {
-    const cms = await cmsTopicPage(`/resources/${slug}`);
-    if (cms) return cms;
-    return <AdvocacyPageContent />;
+    const published = await fetchPublishedSitePage(`/resources/${slug}`);
+    return <AdvocacyPageContent page={published} />;
   }
 
   if (slug === "magazine") {

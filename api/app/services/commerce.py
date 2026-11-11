@@ -385,56 +385,34 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
                 link="/access-control",
             )
     if (user.email or "").strip():
-        from app.services.course_payment_email import send_course_payment_email
-        from app.services.course_registration_email import send_course_registration_email
         from app.services.email import EmailDeliveryError
+        from app.services.enrollment_email import send_enrollment_email
         from app.services.receipt_email import send_receipt_email
+        from app.services.receipt_pdf import build_order_receipt_pdf
 
-        transaction_id = order.number
-        for payment in order.payments:
-            intent = (payment.stripe_payment_intent_id or "").strip()
-            if intent:
-                transaction_id = intent
-                break
-        for course, enrollment, item in granted_courses:
-            try:
-                send_course_registration_email(
-                    to=user.email,
-                    full_name=user.full_name,
-                    course_title=course.title,
-                    start_date=enrollment.enrolled_at or now,
-                    order_id=order.id,
-                    enrollment_id=enrollment.id,
-                )
-            except EmailDeliveryError as exc:
-                logger.error(
-                    "Registration email delivery failed for order %s course %s (%s): %s",
-                    order.number,
-                    course.id,
-                    user.email,
-                    exc,
-                )
-            except Exception:
-                logger.exception(
-                    "Registration email failed for order %s course %s",
-                    order.number,
-                    course.id,
-                )
-            if paid > 0:
+        if granted_courses:
+            receipt_pdf = build_order_receipt_pdf(
+                order_number=order.number,
+                amount_cents=paid,
+                currency=order.currency,
+                paid_at=order.paid_at or now,
+                course_titles=[course.title for course, _enrollment, _item in granted_courses],
+            )
+            for course, _enrollment, _item in granted_courses:
                 try:
-                    send_course_payment_email(
+                    send_enrollment_email(
                         to=user.email,
                         full_name=user.full_name,
+                        given_name=user.given_name,
+                        course_id=course.id,
                         course_title=course.title,
-                        amount_cents=max(0, item.unit_price_cents or 0),
-                        currency=order.currency,
-                        transaction_id=transaction_id,
-                        paid_at=order.paid_at or now,
+                        order_number=order.number,
                         order_id=order.id,
+                        receipt_pdf=receipt_pdf,
                     )
                 except EmailDeliveryError as exc:
                     logger.error(
-                        "Payment confirmation email delivery failed for order %s course %s (%s): %s",
+                        "Enrollment email delivery failed for order %s course %s (%s): %s",
                         order.number,
                         course.id,
                         user.email,
@@ -442,35 +420,36 @@ def fulfill_order(db: Session, order: Order, amount_paid_cents: int | None = Non
                     )
                 except Exception:
                     logger.exception(
-                        "Payment confirmation email failed for order %s course %s",
+                        "Enrollment email failed for order %s course %s",
                         order.number,
                         course.id,
                     )
-        try:
-            send_receipt_email(
-                to=user.email,
-                full_name=user.full_name,
-                order_number=order.number,
-                amount_cents=paid,
-                currency=order.currency,
-                order_id=order.id,
-            )
-        except EmailDeliveryError as exc:
-            logger.error(
-                "Receipt email delivery failed for order %s (%s): %s",
-                order.number,
-                user.email,
-                exc,
-            )
-        except Exception:
-            logger.exception("Receipt email failed for order %s", order.number)
+        elif has_membership_item or not granted_titles:
+            try:
+                send_receipt_email(
+                    to=user.email,
+                    full_name=user.full_name,
+                    order_number=order.number,
+                    amount_cents=paid,
+                    currency=order.currency,
+                    order_id=order.id,
+                )
+            except EmailDeliveryError as exc:
+                logger.error(
+                    "Receipt email delivery failed for order %s (%s): %s",
+                    order.number,
+                    user.email,
+                    exc,
+                )
+            except Exception:
+                logger.exception("Receipt email failed for order %s", order.number)
 
 
 def _cancel_stale_pending_course_checkouts(db: Session, user: User, course_ids: list[int]) -> None:
     """Clear stuck pending_payment enrollments/orders so checkout can be retried.
 
-    With same-request manual fulfill, any leftover pending_payment is orphaned — revoke it.
-    Also cancel unpaid pending orders for these courses older than STALE_PENDING_HOURS.
+    A leftover pending_payment from an abandoned card checkout is revoked.
+    Unpaid pending orders for these courses older than STALE_PENDING_HOURS are cancelled.
     """
     if not course_ids:
         return
@@ -1012,11 +991,11 @@ def ensure_attempt_paid(db: Session, user: User, course: Course) -> None:
 
 
 def settle_checkout(db: Session, order: Order, *, cancel_url: str) -> str | None:
-    """Use Stripe Checkout when a secret key is configured.
+    """Open Stripe Checkout when a secret key is configured.
 
     Returns the hosted checkout URL and leaves the order pending. With no Stripe
-    key, record a manual payment and fulfill immediately, matching the current
-    enroll-on-confirm behavior. Returns None once the order is fulfilled.
+    key, roll back an uncommitted checkout and refuse payment so the course stays
+    locked. Returns None once the order is already paid.
     """
     order = (
         db.query(Order)
@@ -1041,11 +1020,11 @@ def settle_checkout(db: Session, order: Order, *, cancel_url: str) -> str | None
         payment.stripe_session_id = session_id
         db.commit()
         return url
-    payment = order.payments[0] if order.payments else None
-    mark_manual_unlock(order, payment)
-    fulfill_order(db, order)
-    db.commit()
-    return None
+    db.rollback()
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Card payment is not available yet. CAISBE is connecting Stripe.",
+    )
 
 
 def confirm_pending_order(db: Session, user: User, order_id: int) -> tuple[Order, str | None]:

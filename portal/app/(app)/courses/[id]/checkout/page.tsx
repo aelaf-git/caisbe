@@ -4,10 +4,11 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import CheckoutDesk from "@/components/commerce/CheckoutDesk";
 import BackButton from "@/components/ui/BackButton";
-import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError, type Course } from "@/lib/auth";
-import { followCheckout, formatMoney, type CheckoutPreview, type CheckoutResult } from "@/lib/commerce";
+import { followCheckout, type CheckoutPreview, type CheckoutResult } from "@/lib/commerce";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 
 export default function CourseCheckoutPage() {
   return (
@@ -22,12 +23,11 @@ function CourseCheckoutInner() {
   const courseId = Number(params.id);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [quote, setQuote] = useState<CheckoutPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
   const cancelled = searchParams.get("cancelled") === "1";
 
   useEffect(() => {
@@ -38,13 +38,15 @@ function CourseCheckoutInner() {
         if (!active) return;
         const found = courses.find((item) => item.id === courseId) ?? null;
         setCourse(found);
-        if (found) {
-          const preview = await apiFetch<CheckoutPreview>("/me/checkout/preview", {
-            method: "POST",
-            body: JSON.stringify({ course_id: found.id }),
-          });
-          if (active) setQuote(preview);
+        if (!found) {
+          setError("This course is not available.");
+          return;
         }
+        const preview = await apiFetch<CheckoutPreview>("/me/checkout/preview", {
+          method: "POST",
+          body: JSON.stringify({ course_id: found.id }),
+        });
+        if (active) setQuote(preview);
       } catch (err) {
         if (active) setError(err instanceof ApiError ? err.detail : "Unable to load checkout.");
       }
@@ -79,32 +81,20 @@ function CourseCheckoutInner() {
     }
   }
 
+  const cover = course?.cover_url ? resolveUploadUrl(course.cover_url) ?? course.cover_url : null;
+  const complimentary = Boolean(quote?.complimentary || quote?.total_cents === 0);
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-start gap-3">
-        <BackButton href="/courses" />
-        <PageHeader
-          eyebrow="Learning"
-          title="Buy course"
-          description={
-            <>
-              Buy to unlock this course. Prefer several courses?{" "}
-              <Link href="/cart" className="font-semibold text-caisbe-red hover:underline">
-                Use your cart
-              </Link>
-              .
-            </>
-          }
-        />
-      </div>
+    <div className="space-y-6">
+      <BackButton href={`/courses/${courseId}/summary`} />
 
       {cancelled ? (
-        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           Checkout was cancelled. You can try again below.
         </div>
       ) : null}
       {error ? (
-        <div className="rounded-none border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
+        <div className="border border-caisbe-red/30 bg-caisbe-red/5 px-4 py-3 text-sm text-caisbe-red">
           <p>{error}</p>
           {/already have this course/i.test(error) ? (
             <Link href="/courses" className="mt-2 inline-flex font-semibold underline">
@@ -114,54 +104,30 @@ function CourseCheckoutInner() {
         </div>
       ) : null}
 
-      {course ? (
-        <section className="rounded-none bg-white p-6 shadow-hopewell">
-          <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-red">{course.code}</p>
-          <h2 className="mt-1 font-display text-xl font-semibold text-caisbe-text-dark">{course.title}</h2>
-          {quote ? (
-            <dl className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between text-caisbe-muted">
-                <dt>Subtotal</dt>
-                <dd>{formatMoney(quote.subtotal_cents, quote.currency)}</dd>
-              </div>
-              <div className="flex justify-between text-base font-semibold text-caisbe-text-dark">
-                <dt>Total</dt>
-                <dd>{formatMoney(quote.total_cents, quote.currency)}</dd>
-              </div>
-            </dl>
-          ) : null}
-        </section>
-      ) : (
-        <p className="text-sm text-caisbe-muted">Loading course…</p>
+      {course && quote ? (
+        <CheckoutDesk
+          lines={[
+            {
+              id: String(course.id),
+              title: course.title,
+              meta: course.code,
+              priceCents: quote.items?.[0]?.unit_price_cents ?? quote.subtotal_cents,
+              coverUrl: cover,
+            },
+          ]}
+          currency={quote.currency}
+          subtotalCents={quote.subtotal_cents}
+          discountCents={quote.discount_cents}
+          totalCents={quote.total_cents}
+          studentName={user?.full_name?.trim() || "Student"}
+          complimentary={complimentary}
+          cardReady={Boolean(quote.card_payments_ready)}
+          busy={busy}
+          onPay={() => void buy()}
+        />
+      ) : error ? null : (
+        <p className="text-sm text-caisbe-muted">Loading checkout…</p>
       )}
-
-      <section className="rounded-none border-2 border-caisbe-red/30 bg-white p-6 shadow-hopewell">
-        <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">Payment</p>
-        <h2 className="mt-1 font-display text-2xl font-semibold text-caisbe-text-dark">Buy this course</h2>
-        <p className="mt-2 text-sm leading-6 text-caisbe-muted">
-          Confirm to purchase. Course access unlocks immediately after you buy.
-        </p>
-        {quote ? (
-          <p className="mt-4 text-lg font-semibold text-caisbe-text-dark">
-            {formatMoney(quote.total_cents, quote.currency)}
-          </p>
-        ) : null}
-        <p className="mt-1 text-xs text-caisbe-muted">
-          Card checkout via Stripe will be added next. For now, buy to enroll immediately.
-        </p>
-        <button
-          type="button"
-          disabled={busy || !course}
-          onClick={() => void buy()}
-          className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
-        >
-          {busy
-            ? "Buying…"
-            : quote
-              ? `Buy now · ${formatMoney(quote.total_cents, quote.currency)}`
-              : "Buy now"}
-        </button>
-      </section>
     </div>
   );
 }

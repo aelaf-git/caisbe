@@ -130,7 +130,7 @@ function MembershipPageInner() {
       <PageHeader
         eyebrow="Membership"
         title="Your membership"
-        description="Student membership includes a free certificate. Paid membership types show their catalog price and unlock after you confirm payment below."
+        description="Student membership includes a free certificate. Paid membership types show their catalog price and unlock after the card payment succeeds."
       />
 
       {error ? (
@@ -259,8 +259,8 @@ function MembershipPageInner() {
             {pendingKind === "renewal" ? "Renew" : "Activate"} {pendingLabel}
           </h2>
           <p className="mt-2 text-sm leading-6 text-caisbe-muted">
-            Confirm payment for this membership type. Your certificate updates as soon as payment is
-            confirmed.
+            Pay by credit card for this membership type. The certificate updates after the payment
+            succeeds.
           </p>
           <p className="mt-4 text-lg font-semibold text-caisbe-text-dark">
             {typeof pendingPrice === "number"
@@ -269,14 +269,19 @@ function MembershipPageInner() {
           </p>
           {typeof pendingPrice === "number" && pendingPrice > 0 ? (
             <p className="mt-1 text-xs text-caisbe-muted">
-              Card checkout via Stripe will be added next. For now, confirm to activate this paid
-              membership and issue its certificate.
+              {user?.card_payments_ready
+                ? "You enter the card on the secure Stripe payment page."
+                : "CAISBE is connecting Stripe. Card payment is not available yet."}
             </p>
           ) : null}
           {payError ? <p className="mt-3 text-sm text-caisbe-red">{payError}</p> : null}
           <button
             type="button"
-            disabled={paying || typeof pendingPrice !== "number"}
+            disabled={
+              paying ||
+              typeof pendingPrice !== "number" ||
+              (pendingPrice > 0 && !user?.card_payments_ready)
+            }
             onClick={() => void startMembershipPayment()}
             className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
           >

@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+
+from app.config import settings
+from app.services.commerce import fulfill_stripe_session
 
 from app.models import (
     Chapter,
@@ -21,6 +25,15 @@ from app.models import (
 from app.security.auth import hash_password
 
 STRONG_PASSWORD = "Str0ng-Password!99"
+
+
+def _enable_stripe(monkeypatch: pytest.MonkeyPatch, session_id: str = "cs_test_pay") -> str:
+    monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_checkout")
+    monkeypatch.setattr(
+        "app.services.commerce.create_stripe_session",
+        lambda order, cancel_url: (session_id, f"https://checkout.stripe.test/{session_id}"),
+    )
+    return session_id
 
 
 def _user(db: Session, *, email: str, role: str = "student", name: str = "Learner") -> User:
@@ -151,7 +164,9 @@ def test_create_course_stores_custom_price(client: TestClient, db: Session) -> N
     assert course.price_cents == 4500
 
 
-def test_course_price_change_is_what_checkout_charges(client: TestClient, db: Session) -> None:
+def test_course_price_change_is_what_checkout_charges(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     admin = _user(db, email="fees-admin@example.com", role="admin", name="Fees Admin")
     student = _user(db, email="fees-buyer@example.com")
     course = _course(db, code="FEE-PRICE", price_cents=10000)
@@ -168,6 +183,7 @@ def test_course_price_change_is_what_checkout_charges(client: TestClient, db: Se
     assert course.price_cents == 2500
     assert course.draft_meta["price_cents"] == 2500
 
+    _enable_stripe(monkeypatch)
     bought = client.post(
         "/api/me/checkout",
         headers=_login(client, student.email),
@@ -175,7 +191,14 @@ def test_course_price_change_is_what_checkout_charges(client: TestClient, db: Se
     )
     assert bought.status_code == 200, bought.text
     assert bought.json()["total_cents"] == 2500
-    assert bought.json()["status"] == "paid"
+    assert bought.json()["status"] == "pending"
+    assert bought.json()["checkout_url"]
+    enrollment = (
+        db.query(Enrollment)
+        .filter(Enrollment.user_id == student.id, Enrollment.course_id == course.id)
+        .one()
+    )
+    assert enrollment.status == "pending_payment"
 
 
 def test_zero_exam_fee_still_starts(client: TestClient, db: Session) -> None:
@@ -191,7 +214,9 @@ def test_zero_exam_fee_still_starts(client: TestClient, db: Session) -> None:
     assert started.json()["in_progress"] is True
 
 
-def test_exam_fee_blocks_until_paid_and_lists_as_outstanding(client: TestClient, db: Session) -> None:
+def test_exam_fee_blocks_until_paid_and_lists_as_outstanding(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     admin = _user(db, email="fees-exam-admin@example.com", role="admin", name="Exam Admin")
     student = _user(db, email="fees-exam@example.com", name="Exam Student")
     course = _course(db, code="FEE-EXAM", with_exam=True, exam_fee_cents=4000)
@@ -219,9 +244,12 @@ def test_exam_fee_blocks_until_paid_and_lists_as_outstanding(client: TestClient,
     assert rows[0]["student_email"] == student.email
 
     before = db.query(Enrollment).filter(Enrollment.user_id == student.id).count()
+    session_id = _enable_stripe(monkeypatch, "cs_test_exam")
     paid = client.post("/api/me/checkout", headers=headers, json={"order_id": detail["order_id"]})
     assert paid.status_code == 200, paid.text
-    assert paid.json()["status"] == "paid"
+    assert paid.json()["status"] == "pending"
+    assert paid.json()["checkout_url"]
+    fulfill_stripe_session(db, session_id)
     assert db.query(Enrollment).filter(Enrollment.user_id == student.id).count() == before
 
     cleared = client.get("/api/admin/fees", headers=_login(client, admin.email))
@@ -234,7 +262,9 @@ def test_exam_fee_blocks_until_paid_and_lists_as_outstanding(client: TestClient,
     assert all(item.item_kind == "exam" for item in order.items)
 
 
-def test_retake_fee_blocks_the_next_attempt_until_paid(client: TestClient, db: Session) -> None:
+def test_retake_fee_blocks_the_next_attempt_until_paid(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     student = _user(db, email="fees-retake@example.com")
     course = _course(db, code="FEE-RETAKE", with_exam=True, retake_fee_cents=3000)
     _enroll(db, student, course)
@@ -249,15 +279,20 @@ def test_retake_fee_blocks_the_next_attempt_until_paid(client: TestClient, db: S
     assert detail["kind"] == "retake"
     assert detail["amount_cents"] == 3000
 
+    session_id = _enable_stripe(monkeypatch, "cs_test_retake")
     paid = client.post("/api/me/checkout", headers=headers, json={"order_id": detail["order_id"]})
     assert paid.status_code == 200, paid.text
+    assert paid.json()["status"] == "pending"
+    fulfill_stripe_session(db, session_id)
     assert db.query(Enrollment).filter(Enrollment.user_id == student.id).count() == before
 
     started = client.post(f"/api/me/courses/{course.id}/final-exam/start", headers=headers)
     assert started.status_code == 200, started.text
 
 
-def test_scholarship_code_reduces_the_course_total(client: TestClient, db: Session) -> None:
+def test_scholarship_code_reduces_the_course_total(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     admin = _user(db, email="fees-scholar-admin@example.com", role="admin", name="Scholar Admin")
     student = _user(db, email="fees-scholar@example.com")
     course = _course(db, code="FEE-SCHOLAR", price_cents=10000)
@@ -276,6 +311,7 @@ def test_scholarship_code_reduces_the_course_total(client: TestClient, db: Sessi
     assert created.status_code == 201, created.text
     assert created.json()["kind"] == "scholarship"
 
+    session_id = _enable_stripe(monkeypatch, "cs_test_scholar")
     bought = client.post(
         "/api/me/checkout",
         headers=_login(client, student.email),
@@ -283,19 +319,26 @@ def test_scholarship_code_reduces_the_course_total(client: TestClient, db: Sessi
     )
     assert bought.status_code == 200, bought.text
     assert bought.json()["total_cents"] == 5000
-    assert bought.json()["status"] == "paid"
+    assert bought.json()["status"] == "pending"
     promo = db.query(Promotion).filter(Promotion.code == "HALF-OFF").one()
+    assert promo.redemption_count == 0
+    fulfill_stripe_session(db, session_id)
+    db.refresh(promo)
     assert promo.redemption_count == 1
 
 
-def test_student_sees_only_their_own_payments(client: TestClient, db: Session) -> None:
+def test_student_sees_only_their_own_payments(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     buyer = _user(db, email="pay-buyer@example.com", name="Buyer")
     other = _user(db, email="pay-other@example.com", name="Other")
     course = _course(db, code="PAY-OWN", price_cents=2500)
     buyer_headers = _login(client, buyer.email)
 
+    _enable_stripe(monkeypatch, "cs_test_own")
     bought = client.post("/api/me/checkout", headers=buyer_headers, json={"course_id": course.id})
     assert bought.status_code == 200, bought.text
+    assert bought.json()["status"] == "pending"
 
     mine = client.get("/api/me/payments", headers=buyer_headers)
     assert mine.status_code == 200, mine.text

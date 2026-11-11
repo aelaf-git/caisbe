@@ -102,6 +102,7 @@ class UserOut(BaseModel):
     pending_membership_price_cents: int | None = None
     pending_membership_currency: str | None = None
     pending_membership_label: str | None = None
+    card_payments_ready: bool = False
     ui_theme: str = "light"
     ui_font_size: str = "md"
     ui_font_body: str = "nunito"

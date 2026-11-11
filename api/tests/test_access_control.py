@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.models import Course, Enrollment, LoginEvent, Notification, User
 from app.security.auth import hash_password
+from app.services.commerce import fulfill_stripe_session
 
 STRONG_PASSWORD = "Str0ng-Password!99"
 
@@ -59,15 +62,32 @@ def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_payment_enrolls_immediately_and_notifies_admins(client: TestClient, db: Session) -> None:
+def test_payment_enrolls_immediately_and_notifies_admins(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     admin = _user(db, email="access-admin@example.com", role="admin", name="Access Admin")
     student = _user(db, email="access-student@example.com")
     course = _course(db)
     headers = _auth(_login(client, student.email))
 
+    blocked = client.post("/api/me/checkout", headers=headers, json={"course_id": course.id})
+    assert blocked.status_code == 503, blocked.text
+    assert (
+        db.query(Enrollment)
+        .filter(Enrollment.user_id == student.id, Enrollment.status == "enrolled")
+        .count()
+        == 0
+    )
+
+    monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_access")
+    monkeypatch.setattr(
+        "app.services.commerce.create_stripe_session",
+        lambda order, cancel_url: ("cs_test_access", "https://checkout.stripe.test/cs_test_access"),
+    )
     bought = client.post("/api/me/checkout", headers=headers, json={"course_id": course.id})
     assert bought.status_code == 200, bought.text
-    assert bought.json()["status"] == "paid"
+    assert bought.json()["status"] == "pending"
+    fulfill_stripe_session(db, "cs_test_access")
 
     enrollment = (
         db.query(Enrollment)

@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
-import { followCheckout, formatMoney, type Cart, type CheckoutResult } from "@/lib/commerce";
+import { formatMoney, type Cart } from "@/lib/commerce";
 import { IconActionButton } from "@/components/ui/IconAction";
 
 export default function CartPage() {
@@ -18,12 +17,9 @@ export default function CartPage() {
 }
 
 function CartInner() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { refreshUser } = useAuth();
   const [cart, setCart] = useState<Cart | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
   const cancelled = searchParams.get("cancelled") === "1";
 
@@ -52,34 +48,6 @@ function CartInner() {
       setError(err instanceof ApiError ? err.detail : "Unable to remove item.");
     } finally {
       setRemovingId(null);
-    }
-  }
-
-  async function buy() {
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await apiFetch<CheckoutResult>("/me/checkout", {
-        method: "POST",
-        body: JSON.stringify({ from_cart: true }),
-      });
-      if (followCheckout(result)) return;
-      await refreshUser();
-      router.push(`/checkout/success?order=${result.order_number}`);
-    } catch (err) {
-      const detail = err instanceof ApiError ? err.detail : "Unable to complete purchase.";
-      setError(
-        /already enrolled/i.test(detail)
-          ? "You already have one of these courses. Remove it and buy the others."
-          : detail,
-      );
-      try {
-        await loadCart();
-      } catch {
-        // ignore reload failure
-      }
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -173,22 +141,17 @@ function CartInner() {
               Buy cart courses
             </h2>
             <p className="mt-2 text-sm leading-6 text-caisbe-muted">
-              Confirm to purchase every course in this cart. Access unlocks immediately after you buy.
+              Continue to payment options. Access unlocks after the card payment succeeds.
             </p>
             <p className="mt-4 text-lg font-semibold text-caisbe-text-dark">
               {formatMoney(cart.subtotal_cents, cart.currency)}
             </p>
-            <p className="mt-1 text-xs text-caisbe-muted">
-              Card checkout via Stripe will be added next. For now, buy to enroll in all cart courses.
-            </p>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void buy()}
-              className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            <Link
+              href="/checkout"
+              className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark"
             >
-              {busy ? "Buying…" : `Buy now · ${formatMoney(cart.subtotal_cents, cart.currency)}`}
-            </button>
+              {`Buy now · ${formatMoney(cart.subtotal_cents, cart.currency)}`}
+            </Link>
           </section>
         </>
       )}

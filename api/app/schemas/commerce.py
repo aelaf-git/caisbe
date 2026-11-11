@@ -51,6 +51,7 @@ class PromoPreviewOut(BaseModel):
     complimentary: bool = False
     promo_code: str | None = None
     message: str | None = None
+    card_payments_ready: bool = False
     items: list["OrderItemOut"] = Field(default_factory=list)
 
 

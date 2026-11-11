@@ -269,6 +269,7 @@ def test_fulfill_order_sends_registration_payment_and_receipt(db: Session) -> No
     db.refresh(order)
 
     with (
+        patch("app.services.enrollment_email.send_email") as enrolled,
         patch("app.services.course_registration_email.send_email") as reg,
         patch("app.services.course_payment_email.send_email") as pay,
         patch("app.services.receipt_email.send_email") as receipt,
@@ -277,13 +278,19 @@ def test_fulfill_order_sends_registration_payment_and_receipt(db: Session) -> No
         db.commit()
         fulfill_order(db, order)
 
-    assert reg.call_count == 1
-    assert "Course Registration Confirmed" in reg.call_args.kwargs["subject"]
-    assert pay.call_count == 1
-    assert "Payment Received" in pay.call_args.kwargs["subject"]
-    assert "pi_auto_test" in pay.call_args.kwargs["html_body"]
-    assert receipt.call_count == 1
-    assert "Your CAISBE receipt ORD-AUTO-1" == receipt.call_args.kwargs["subject"]
+    assert enrolled.call_count == 1
+    assert enrolled.call_args.kwargs["subject"] == f"Enrollment Confirmed – {course.title}"
+    assert "Hi Learner" in enrolled.call_args.kwargs["html_body"]
+    assert f"/courses/{course.id}" in enrolled.call_args.kwargs["html_body"]
+    assert "/dashboard" in enrolled.call_args.kwargs["html_body"]
+    assert "/account/receipts/ORD-AUTO-1" in enrolled.call_args.kwargs["html_body"]
+    assert "Welcome aboard!" in enrolled.call_args.kwargs["html_body"]
+    attachment = enrolled.call_args.kwargs["attachments"][0]
+    assert attachment.filename == "caisbe-receipt-ORD-AUTO-1.pdf"
+    assert attachment.content.startswith(b"%PDF")
+    assert reg.call_count == 0
+    assert pay.call_count == 0
+    assert receipt.call_count == 0
 
 
 def test_refund_sends_cancellation_email(db: Session) -> None:

@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+
+from app.config import settings
+from app.services.commerce import fulfill_stripe_session
 
 from app.models import (
     Certificate,
@@ -70,7 +74,9 @@ def _login(client: TestClient, email: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-def test_enrolled_student_can_buy_a_second_course(client: TestClient, db: Session) -> None:
+def test_enrolled_student_can_buy_a_second_course(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     student = _student(db, "more-courses@example.com")
     first = _course(db, "EXT-A")
     second = _course(db, "EXT-B")
@@ -81,8 +87,15 @@ def test_enrolled_student_can_buy_a_second_course(client: TestClient, db: Sessio
     added = client.post("/api/me/cart", headers=headers, json={"course_id": second.id})
     assert added.status_code == 201
 
+    monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_second")
+    monkeypatch.setattr(
+        "app.services.commerce.create_stripe_session",
+        lambda order, cancel_url: ("cs_test_second", "https://checkout.stripe.test/cs_test_second"),
+    )
     bought = client.post("/api/me/checkout", headers=headers, json={"from_cart": True})
     assert bought.status_code == 200
+    assert bought.json()["status"] == "pending"
+    fulfill_stripe_session(db, "cs_test_second")
 
     owned = {
         row.course_id

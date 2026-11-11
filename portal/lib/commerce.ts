@@ -65,6 +65,7 @@ export type CheckoutPreview = {
   complimentary: boolean;
   promo_code: string | null;
   message: string | null;
+  card_payments_ready?: boolean;
   items?: CheckoutPreviewItem[];
 };
 

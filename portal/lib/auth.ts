@@ -35,6 +35,7 @@ export type AuthUser = {
   pending_membership_price_cents?: number | null;
   pending_membership_currency?: string | null;
   pending_membership_label?: string | null;
+  card_payments_ready?: boolean;
   ui_theme?: string;
   ui_font_size?: string;
   ui_font_body?: string;

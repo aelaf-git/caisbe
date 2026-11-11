@@ -211,6 +211,7 @@ def preview_checkout(
         complimentary=complimentary,
         promo_code=None,
         message=message,
+        card_payments_ready=bool(settings.stripe_secret_key.strip()),
         items=[
             OrderItemOut(
                 course_id=course.id,
