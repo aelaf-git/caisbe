@@ -72,8 +72,7 @@ export default function CheckoutDesk({
   onPay,
   payment,
 }: CheckoutDeskProps) {
-  const needsCard = !complimentary;
-  const payDisabled = disabled || busy || (needsCard && !cardReady);
+  const payDisabled = disabled || busy;
   const money = (cents: number) => formatMoney(cents, currency);
 
   return (
@@ -128,7 +127,7 @@ export default function CheckoutDesk({
                     ? "This order has no charge. Confirm to enroll."
                     : cardReady
                       ? "Complete purchase to pay on this page. Card details stay in Stripe’s secure form. CAISBE does not store the card."
-                      : "CAISBE is connecting Stripe. Payment stays unavailable until the account is connected, so this course stays locked."}
+                      : "Stripe is not connected yet. Complete purchase uses a mock payment and opens this course."}
                 </p>
                 <button
                   type="button"
@@ -141,7 +140,9 @@ export default function CheckoutDesk({
               </>
             )}
             <p className="mt-3 text-center text-xs leading-5 text-caisbe-muted">
-              Secure payment by Stripe. You’ll receive a confirmation email after purchase.
+              {cardReady
+                ? "Secure payment by Stripe. You’ll receive a confirmation email after purchase."
+                : "Mock payment until Stripe is connected. You’ll receive a confirmation email after purchase."}
             </p>
           </section>
         </div>

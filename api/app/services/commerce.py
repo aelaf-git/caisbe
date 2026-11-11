@@ -1006,8 +1006,8 @@ def settle_checkout(db: Session, order: Order, *, cancel_url: str) -> tuple[str 
 
     Returns ``(checkout_url, client_secret)``. Embedded checkout leaves the URL
     empty and returns the client secret for the on-page form. With no Stripe
-    key, roll back an uncommitted checkout and refuse payment. Returns
-    ``(None, None)`` once the order is already paid.
+    key, record a mock payment and fulfill the order so the purchase is not
+    locked. Returns ``(None, None)`` once the order is paid.
     """
     order = (
         db.query(Order)
@@ -1032,11 +1032,26 @@ def settle_checkout(db: Session, order: Order, *, cancel_url: str) -> tuple[str 
         payment.stripe_session_id = session_id
         db.commit()
         return None, client_secret
-    db.rollback()
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Card payment is not available yet. CAISBE is connecting Stripe.",
+    payment = order.payments[0] if order.payments else None
+    if payment is None:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Order has no payment.")
+    payment.provider = "mock"
+    payment.status = "pending"
+    db.commit()
+    order = (
+        db.query(Order)
+        .options(
+            joinedload(Order.items),
+            joinedload(Order.invoices),
+            joinedload(Order.payments),
+            joinedload(Order.user),
+        )
+        .filter(Order.id == order.id)
+        .one()
     )
+    fulfill_order(db, order)
+    db.commit()
+    return None, None
 
 
 def confirm_pending_order(db: Session, user: User, order_id: int) -> tuple[Order, str | None, str | None]:

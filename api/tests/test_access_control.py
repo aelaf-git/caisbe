@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import Course, Enrollment, LoginEvent, Notification, User
+from app.models import Course, Enrollment, LoginEvent, Notification, Payment, User
 from app.security.auth import hash_password
 from app.services.commerce import fulfill_stripe_session
 
@@ -70,14 +70,33 @@ def test_payment_enrolls_immediately_and_notifies_admins(
     course = _course(db)
     headers = _auth(_login(client, student.email))
 
-    blocked = client.post("/api/me/checkout", headers=headers, json={"course_id": course.id})
-    assert blocked.status_code == 503, blocked.text
-    assert (
+    bought_mock = client.post("/api/me/checkout", headers=headers, json={"course_id": course.id})
+    assert bought_mock.status_code == 200, bought_mock.text
+    assert bought_mock.json()["status"] == "paid"
+    assert bought_mock.json()["client_secret"] is None
+    mock_enrollment = (
         db.query(Enrollment)
-        .filter(Enrollment.user_id == student.id, Enrollment.status == "enrolled")
-        .count()
-        == 0
+        .filter(Enrollment.user_id == student.id, Enrollment.course_id == course.id)
+        .one()
     )
+    assert mock_enrollment.status == "enrolled"
+    assert mock_enrollment.course_access == "allowed"
+    assert mock_enrollment.exam_access == "restricted"
+    mock_payment = db.query(Payment).filter(Payment.user_id == student.id, Payment.order_id == bought_mock.json()["order_id"]).one()
+    assert mock_payment.provider == "mock"
+
+    second = Course(
+        code="ACC-102",
+        title="Second Access Course",
+        description="Another published program.",
+        slug="access-control-two",
+        status="published",
+        pass_percent=70,
+        price_cents=2500,
+    )
+    db.add(second)
+    db.commit()
+    db.refresh(second)
 
     monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_access")
     monkeypatch.setattr(settings, "stripe_publishable_key", "pk_test_access")
@@ -85,25 +104,24 @@ def test_payment_enrolls_immediately_and_notifies_admins(
         "app.services.commerce.create_stripe_session",
         lambda order, cancel_url: ("cs_test_access", "https://checkout.stripe.test/cs_test_access"),
     )
-    bought = client.post("/api/me/checkout", headers=headers, json={"course_id": course.id})
+    bought = client.post("/api/me/checkout", headers=headers, json={"course_id": second.id})
     assert bought.status_code == 200, bought.text
     assert bought.json()["status"] == "pending"
     fulfill_stripe_session(db, "cs_test_access")
 
     enrollment = (
         db.query(Enrollment)
-        .filter(Enrollment.user_id == student.id, Enrollment.course_id == course.id)
+        .filter(Enrollment.user_id == student.id, Enrollment.course_id == second.id)
         .one()
     )
     assert enrollment.status == "enrolled"
-    assert enrollment.course_access == "allowed"
-    assert enrollment.exam_access == "restricted"
 
     notice = (
         db.query(Notification)
         .filter(Notification.user_id == admin.id, Notification.kind == "access")
-        .one()
+        .first()
     )
+    assert notice is not None
     assert notice.link == "/access-control"
     assert "Access Control" in notice.body
 

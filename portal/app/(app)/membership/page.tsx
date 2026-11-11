@@ -278,7 +278,7 @@ function MembershipPageInner() {
             <p className="mt-1 text-xs text-caisbe-muted">
               {user?.card_payments_ready
                 ? "Complete payment to pay on this page. Card details stay in Stripe’s secure form."
-                : "CAISBE is connecting Stripe. Card payment is not available yet."}
+                : "Stripe is not connected yet. Confirm payment uses a mock payment and unlocks this membership."}
             </p>
           ) : null}
           {payError ? <p className="mt-3 text-sm text-caisbe-red">{payError}</p> : null}
@@ -290,11 +290,7 @@ function MembershipPageInner() {
           ) : (
             <button
               type="button"
-              disabled={
-                paying ||
-                typeof pendingPrice !== "number" ||
-                (pendingPrice > 0 && !user?.card_payments_ready)
-              }
+              disabled={paying || typeof pendingPrice !== "number"}
               onClick={() => void startMembershipPayment()}
               className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
             >
