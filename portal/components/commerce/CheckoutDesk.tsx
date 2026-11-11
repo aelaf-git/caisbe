@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { formatMoney } from "@/lib/commerce";
 
 export type CheckoutLine = {
@@ -23,6 +24,62 @@ type CheckoutDeskProps = {
   onPay: () => void;
 };
 
+function LockIcon() {
+  return (
+    <svg
+      className="h-3.5 w-3.5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="5" y="11" width="14" height="10" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
+function VisaMark() {
+  return (
+    <span className="inline-flex h-5 items-center rounded-sm bg-[#1a1f71] px-1.5 text-[9px] font-bold tracking-wide text-white">
+      VISA
+    </span>
+  );
+}
+
+function MastercardMark() {
+  return (
+    <span className="inline-flex h-5 w-8 items-center justify-center" aria-hidden>
+      <svg viewBox="0 0 32 20" className="h-5 w-8">
+        <circle cx="12" cy="10" r="7" fill="#eb001b" />
+        <circle cx="20" cy="10" r="7" fill="#f79e1b" />
+        <path d="M16 4.8a7 7 0 0 1 0 10.4 7 7 0 0 1 0-10.4z" fill="#ff5f00" />
+      </svg>
+    </span>
+  );
+}
+
+function AmexMark() {
+  return (
+    <span className="inline-flex h-5 items-center rounded-sm bg-[#2e77bc] px-1.5 text-[8px] font-bold tracking-wide text-white">
+      AMEX
+    </span>
+  );
+}
+
+function CardBrandMarks() {
+  return (
+    <span className="inline-flex items-center gap-1.5" aria-hidden>
+      <VisaMark />
+      <MastercardMark />
+      <AmexMark />
+    </span>
+  );
+}
+
 function Cover({ line }: { line: CheckoutLine }) {
   return (
     <span className="relative h-16 w-24 shrink-0 overflow-hidden border border-ifma-border bg-[#fafaf8]">
@@ -38,14 +95,27 @@ function Cover({ line }: { line: CheckoutLine }) {
   );
 }
 
-function DetailSlot({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function DetailSlot({
+  label,
+  value,
+  hint,
+  trailing,
+  wide = false,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  trailing?: ReactNode;
+  wide?: boolean;
+}) {
   return (
-    <div>
-      <p className="text-xs font-semibold text-caisbe-text-dark">{label}</p>
-      <div className="mt-1.5 flex min-h-11 items-center border border-ifma-border bg-[#fafafa] px-3 text-sm text-caisbe-muted">
-        {value}
+    <div className={wide ? "sm:col-span-2" : undefined}>
+      <p className="text-xs font-semibold uppercase tracking-wide text-caisbe-muted">{label}</p>
+      <div className="mt-2 flex min-h-12 items-center justify-between gap-3 border border-ifma-border bg-[#fafafa] px-3.5 text-sm text-caisbe-text-dark">
+        <span className="truncate text-caisbe-muted">{value}</span>
+        {trailing}
       </div>
-      {hint ? <p className="mt-1 text-xs leading-5 text-caisbe-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 text-xs leading-5 text-caisbe-muted">{hint}</p> : null}
     </div>
   );
 }
@@ -71,7 +141,8 @@ export default function CheckoutDesk({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-semibold text-caisbe-text-dark">Checkout</h1>
-        <p className="border border-ifma-border bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text-dark">
+        <p className="inline-flex items-center gap-1.5 border border-ifma-border bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-caisbe-text-dark">
+          <LockIcon />
           Secure checkout
         </p>
       </div>
@@ -109,9 +180,12 @@ export default function CheckoutDesk({
 
           <section className="border border-ifma-border bg-white p-5 shadow-hopewell md:p-6">
             <h2 className="font-display text-lg font-semibold text-caisbe-text-dark">Choose payment method</h2>
-            <div className="mt-4 border-2 border-caisbe-red bg-caisbe-red/5 px-4 py-3">
-              <p className="text-sm font-semibold text-caisbe-text-dark">Credit / debit card</p>
-              <p className="mt-1 text-xs text-caisbe-muted">Visa, Mastercard</p>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-2 border-caisbe-red bg-caisbe-red/5 px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-caisbe-text-dark">Credit / debit card</p>
+                <p className="mt-0.5 text-xs text-caisbe-muted">Visa, Mastercard, American Express</p>
+              </div>
+              <CardBrandMarks />
             </div>
 
             {complimentary ? (
@@ -127,7 +201,12 @@ export default function CheckoutDesk({
                     : "CAISBE is connecting Stripe. Card payment is not available yet, so this course stays locked."}
                 </p>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <DetailSlot label="Card number" value="•••• •••• •••• ••••" />
+                  <DetailSlot
+                    label="Card number"
+                    value="•••• •••• •••• ••••"
+                    trailing={<CardBrandMarks />}
+                    wide
+                  />
                   <DetailSlot label="Name on card" value={studentName} />
                   <DetailSlot label="Expiry date" value="MM / YY" />
                   <DetailSlot label="CVV" value="•••" hint="3-digit code on the back of your card" />
