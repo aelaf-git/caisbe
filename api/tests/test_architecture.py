@@ -34,6 +34,7 @@ def _user(db: Session, email: str) -> User:
 
 def test_checkout_stays_pending_until_stripe_confirms(client: TestClient, db: Session, monkeypatch) -> None:
     monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_architecture")
+    monkeypatch.setattr(settings, "stripe_publishable_key", "pk_test_architecture")
     monkeypatch.setattr(
         "app.services.commerce.create_stripe_session",
         lambda order, cancel_url: ("cs_test_architecture", "https://checkout.stripe.test/cs_test_architecture"),
@@ -62,7 +63,8 @@ def test_checkout_stays_pending_until_stripe_confirms(client: TestClient, db: Se
     )
     assert bought.status_code == 200, bought.text
     body = bought.json()
-    assert body["checkout_url"] == "https://checkout.stripe.test/cs_test_architecture"
+    assert body["checkout_url"] is None
+    assert body["client_secret"] == "https://checkout.stripe.test/cs_test_architecture"
     assert body["status"] == "pending"
     enrollment = db.query(Enrollment).filter(Enrollment.user_id == student.id).one()
     assert enrollment.status == "pending_payment"

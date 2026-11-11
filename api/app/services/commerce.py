@@ -615,10 +615,12 @@ def create_checkout_order(
 
 
 def create_stripe_session(order: Order, *, cancel_url: str) -> tuple[str, str]:
-    if not settings.stripe_secret_key:
+    """Open an embedded Checkout session. ``cancel_url`` is unused; the form stays on the page."""
+    del cancel_url
+    if not settings.stripe_secret_key.strip() or not settings.stripe_publishable_key.strip():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Card payment is not configured. Contact CAISBE or set a $0 course price.",
+            detail="Card payment is not available yet. CAISBE is connecting Stripe.",
         )
     if not order.items:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order has no items.")
@@ -641,16 +643,22 @@ def create_stripe_session(order: Order, *, cancel_url: str) -> tuple[str, str]:
     # method enabled in the Stripe Dashboard that the charge currency allows.
     # Apple Pay and Google Pay are wallets on the card method.
     session = stripe.checkout.Session.create(
+        ui_mode="embedded",
         mode="payment",
-        success_url=f"{portal}/checkout/success?order={order.number}&session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=cancel_url,
+        return_url=f"{portal}/checkout/success?order={order.number}&session_id={{CHECKOUT_SESSION_ID}}",
         customer_email=order.user.email if order.user else None,
         client_reference_id=str(order.id),
         metadata={"order_id": str(order.id), "order_number": order.number},
         line_items=line_items,
         allow_promotion_codes=True,
     )
-    return session.id, session.url
+    client_secret = getattr(session, "client_secret", None)
+    if not client_secret:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Stripe did not return a checkout form.",
+        )
+    return session.id, str(client_secret)
 
 
 def fulfill_stripe_session(
@@ -993,12 +1001,13 @@ def ensure_attempt_paid(db: Session, user: User, course: Course) -> None:
     )
 
 
-def settle_checkout(db: Session, order: Order, *, cancel_url: str) -> str | None:
-    """Open Stripe Checkout when a secret key is configured.
+def settle_checkout(db: Session, order: Order, *, cancel_url: str) -> tuple[str | None, str | None]:
+    """Open embedded Stripe Checkout when Stripe keys are configured.
 
-    Returns the hosted checkout URL and leaves the order pending. With no Stripe
-    key, roll back an uncommitted checkout and refuse payment so the course stays
-    locked. Returns None once the order is already paid.
+    Returns ``(checkout_url, client_secret)``. Embedded checkout leaves the URL
+    empty and returns the client secret for the on-page form. With no Stripe
+    key, roll back an uncommitted checkout and refuse payment. Returns
+    ``(None, None)`` once the order is already paid.
     """
     order = (
         db.query(Order)
@@ -1012,9 +1021,9 @@ def settle_checkout(db: Session, order: Order, *, cancel_url: str) -> str | None
         .one()
     )
     if order.status == "paid":
-        return None
-    if settings.stripe_secret_key:
-        session_id, url = create_stripe_session(order, cancel_url=cancel_url)
+        return None, None
+    if settings.stripe_secret_key.strip() and settings.stripe_publishable_key.strip():
+        session_id, client_secret = create_stripe_session(order, cancel_url=cancel_url)
         payment = order.payments[0] if order.payments else None
         if payment is None:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Order has no payment.")
@@ -1022,7 +1031,7 @@ def settle_checkout(db: Session, order: Order, *, cancel_url: str) -> str | None
         payment.status = "pending"
         payment.stripe_session_id = session_id
         db.commit()
-        return url
+        return None, client_secret
     db.rollback()
     raise HTTPException(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -1030,7 +1039,7 @@ def settle_checkout(db: Session, order: Order, *, cancel_url: str) -> str | None
     )
 
 
-def confirm_pending_order(db: Session, user: User, order_id: int) -> tuple[Order, str | None]:
+def confirm_pending_order(db: Session, user: User, order_id: int) -> tuple[Order, str | None, str | None]:
     order = (
         db.query(Order)
         .options(joinedload(Order.items), joinedload(Order.invoices), joinedload(Order.payments), joinedload(Order.user))
@@ -1040,10 +1049,10 @@ def confirm_pending_order(db: Session, user: User, order_id: int) -> tuple[Order
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     if order.status == "paid":
-        return order, None
+        return order, None, None
     if order.status != "pending":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This order cannot be paid.")
-    checkout_url = settle_checkout(
+    checkout_url, client_secret = settle_checkout(
         db,
         order,
         cancel_url=f"{settings.portal_public_url.rstrip('/')}/cart",
@@ -1054,4 +1063,4 @@ def confirm_pending_order(db: Session, user: User, order_id: int) -> tuple[Order
         .filter(Order.id == order.id)
         .one()
     )
-    return order, checkout_url
+    return order, checkout_url, client_secret

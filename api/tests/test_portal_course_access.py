@@ -88,6 +88,7 @@ def test_enrolled_student_can_buy_a_second_course(
     assert added.status_code == 201
 
     monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_second")
+    monkeypatch.setattr(settings, "stripe_publishable_key", "pk_test_second")
     monkeypatch.setattr(
         "app.services.commerce.create_stripe_session",
         lambda order, cancel_url: ("cs_test_second", "https://checkout.stripe.test/cs_test_second"),

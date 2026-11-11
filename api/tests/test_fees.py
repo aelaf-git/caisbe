@@ -29,6 +29,7 @@ STRONG_PASSWORD = "Str0ng-Password!99"
 
 def _enable_stripe(monkeypatch: pytest.MonkeyPatch, session_id: str = "cs_test_pay") -> str:
     monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_checkout")
+    monkeypatch.setattr(settings, "stripe_publishable_key", "pk_test_checkout")
     monkeypatch.setattr(
         "app.services.commerce.create_stripe_session",
         lambda order, cancel_url: (session_id, f"https://checkout.stripe.test/{session_id}"),
@@ -192,7 +193,8 @@ def test_course_price_change_is_what_checkout_charges(
     assert bought.status_code == 200, bought.text
     assert bought.json()["total_cents"] == 2500
     assert bought.json()["status"] == "pending"
-    assert bought.json()["checkout_url"]
+    assert bought.json()["checkout_url"] is None
+    assert bought.json()["client_secret"]
     enrollment = (
         db.query(Enrollment)
         .filter(Enrollment.user_id == student.id, Enrollment.course_id == course.id)
@@ -248,7 +250,8 @@ def test_exam_fee_blocks_until_paid_and_lists_as_outstanding(
     paid = client.post("/api/me/checkout", headers=headers, json={"order_id": detail["order_id"]})
     assert paid.status_code == 200, paid.text
     assert paid.json()["status"] == "pending"
-    assert paid.json()["checkout_url"]
+    assert paid.json()["checkout_url"] is None
+    assert paid.json()["client_secret"]
     fulfill_stripe_session(db, session_id)
     assert db.query(Enrollment).filter(Enrollment.user_id == student.id).count() == before
 

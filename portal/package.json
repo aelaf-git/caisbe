@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@caisbe/platform": "*",
+    "@stripe/react-stripe-js": "^7.0.1",
+    "@stripe/stripe-js": "^10.2.1",
     "html2canvas-pro": "^2.5.0",
     "isomorphic-dompurify": "^3.19.0",
     "jspdf": "^4.2.1",

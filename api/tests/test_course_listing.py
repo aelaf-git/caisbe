@@ -41,6 +41,7 @@ def _login(client: TestClient, email: str) -> str:
 
 def test_listing_is_public_before_lessons_open(client: TestClient, db: Session, monkeypatch) -> None:
     monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_listing")
+    monkeypatch.setattr(settings, "stripe_publishable_key", "pk_test_listing")
     monkeypatch.setattr(
         "app.services.commerce.create_stripe_session",
         lambda order, cancel_url: ("cs_test_listing", "https://checkout.stripe.test/cs_test_listing"),
@@ -90,7 +91,8 @@ def test_listing_is_public_before_lessons_open(client: TestClient, db: Session, 
     )
     assert bought.status_code == 200, bought.text
     assert bought.json()["status"] == "pending"
-    assert bought.json()["checkout_url"] == "https://checkout.stripe.test/cs_test_listing"
+    assert bought.json()["checkout_url"] is None
+    assert bought.json()["client_secret"] == "https://checkout.stripe.test/cs_test_listing"
     enrollment = db.query(Enrollment).filter(Enrollment.user_id == student.id).one()
     assert enrollment.status == "pending_payment"
     payment = db.query(Payment).filter(Payment.user_id == student.id).one()

@@ -9,9 +9,10 @@ import MembershipCertificateDocument from "@/components/certificates/MembershipC
 import MembershipApplicationForm from "@/components/membership/MembershipApplicationForm";
 import { certificatePdfFileName } from "@/lib/certificatePdf";
 import { certificateVerifyUrl } from "@/lib/certificateVerifyUrl";
+import EmbeddedStripeCheckout from "@/components/commerce/EmbeddedStripeCheckout";
 import PageHeader from "@/components/ui/PageHeader";
 import { apiFetch, ApiError } from "@/lib/auth";
-import { followCheckout, formatMoney, membershipTypeLabel, type CheckoutResult } from "@/lib/commerce";
+import { embeddedCheckout, followCheckout, formatMoney, membershipTypeLabel, type CheckoutResult } from "@/lib/commerce";
 import type { MembershipCertificate } from "@/lib/lms";
 
 function MemberPathCard({
@@ -60,6 +61,7 @@ function MembershipPageInner() {
   const [path, setPath] = useState<"new" | "existing" | null>(null);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [stripePay, setStripePay] = useState<{ clientSecret: string; publishableKey: string } | null>(null);
 
   const pendingType = user?.pending_membership_type;
   const pendingLabel =
@@ -114,6 +116,11 @@ function MembershipPageInner() {
           kind: pendingKind,
         }),
       });
+      const session = embeddedCheckout(paid);
+      if (session) {
+        setStripePay(session);
+        return;
+      }
       if (followCheckout(paid)) return;
       await refreshUser();
       await loadCertificate();
@@ -270,27 +277,34 @@ function MembershipPageInner() {
           {typeof pendingPrice === "number" && pendingPrice > 0 ? (
             <p className="mt-1 text-xs text-caisbe-muted">
               {user?.card_payments_ready
-                ? "You enter the card on the secure Stripe payment page."
+                ? "Complete payment to pay on this page. Card details stay in Stripe’s secure form."
                 : "CAISBE is connecting Stripe. Card payment is not available yet."}
             </p>
           ) : null}
           {payError ? <p className="mt-3 text-sm text-caisbe-red">{payError}</p> : null}
-          <button
-            type="button"
-            disabled={
-              paying ||
-              typeof pendingPrice !== "number" ||
-              (pendingPrice > 0 && !user?.card_payments_ready)
-            }
-            onClick={() => void startMembershipPayment()}
-            className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
-          >
-            {paying
-              ? "Confirming…"
-              : typeof pendingPrice === "number"
-                ? `Confirm payment · ${formatMoney(pendingPrice, pendingCurrency)}`
-                : "Confirm payment"}
-          </button>
+          {stripePay ? (
+            <EmbeddedStripeCheckout
+              publishableKey={stripePay.publishableKey}
+              clientSecret={stripePay.clientSecret}
+            />
+          ) : (
+            <button
+              type="button"
+              disabled={
+                paying ||
+                typeof pendingPrice !== "number" ||
+                (pendingPrice > 0 && !user?.card_payments_ready)
+              }
+              onClick={() => void startMembershipPayment()}
+              className="mt-5 inline-flex h-11 items-center rounded-none bg-caisbe-red px-6 text-sm font-bold text-white hover:bg-caisbe-red-dark disabled:opacity-60"
+            >
+              {paying
+                ? "Confirming…"
+                : typeof pendingPrice === "number"
+                  ? `Confirm payment · ${formatMoney(pendingPrice, pendingCurrency)}`
+                  : "Confirm payment"}
+            </button>
+          )}
         </section>
       ) : null}
     </div>

@@ -5,9 +5,11 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import CheckoutDesk, { type CheckoutLine } from "@/components/commerce/CheckoutDesk";
+import EmbeddedStripeCheckout from "@/components/commerce/EmbeddedStripeCheckout";
 import BackButton from "@/components/ui/BackButton";
 import { apiFetch, ApiError } from "@/lib/auth";
 import {
+  embeddedCheckout,
   followCheckout,
   type Cart,
   type CheckoutPreview,
@@ -31,6 +33,7 @@ function CartCheckoutInner() {
   const [lines, setLines] = useState<CheckoutLine[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [stripePay, setStripePay] = useState<{ clientSecret: string; publishableKey: string } | null>(null);
   const cancelled = searchParams.get("cancelled") === "1";
 
   useEffect(() => {
@@ -82,6 +85,11 @@ function CartCheckoutInner() {
         method: "POST",
         body: JSON.stringify({ from_cart: true }),
       });
+      const session = embeddedCheckout(result);
+      if (session) {
+        setStripePay(session);
+        return;
+      }
       if (followCheckout(result)) return;
       await refreshUser();
       router.push(`/checkout/success?order=${result.order_number}`);
@@ -131,6 +139,14 @@ function CartCheckoutInner() {
           cardReady={Boolean(quote.card_payments_ready)}
           busy={busy}
           onPay={() => void pay()}
+          payment={
+            stripePay ? (
+              <EmbeddedStripeCheckout
+                publishableKey={stripePay.publishableKey}
+                clientSecret={stripePay.clientSecret}
+              />
+            ) : undefined
+          }
         />
       ) : error ? null : (
         <p className="text-sm text-caisbe-muted">Loading payment…</p>

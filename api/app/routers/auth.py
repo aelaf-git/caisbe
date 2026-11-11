@@ -104,7 +104,7 @@ def user_to_out(user: User, db: Session | None = None) -> UserOut:
     out = UserOut.model_validate(user)
     out.profile_completed = profile_is_complete(user)
     out.email_verified = user.email_verified_at is not None
-    out.card_payments_ready = bool(settings.stripe_secret_key.strip())
+    out.card_payments_ready = bool(settings.stripe_secret_key.strip() and settings.stripe_publishable_key.strip())
     if db is not None:
         pending = get_pending_membership_application(db, user)
         if pending and not is_student_membership(pending.membership_type):

@@ -84,6 +84,7 @@ class CheckoutOut(BaseModel):
     currency: str
     complimentary: bool = False
     checkout_url: str | None = None
+    client_secret: str | None = None
     publishable_key: str | None = None
     status: str
 

@@ -5,8 +5,9 @@ import ExamAgreement from "@/components/portal/ExamAgreement";
 import ExamIdentityCapture from "@/components/portal/ExamIdentityCapture";
 import ExamProgressBar from "@/components/portal/ExamProgressBar";
 import SecureExamShell from "@/components/portal/SecureExamShell";
+import EmbeddedStripeCheckout from "@/components/commerce/EmbeddedStripeCheckout";
 import { apiFetch, ApiError } from "@/lib/auth";
-import { followCheckout, type CheckoutResult } from "@/lib/commerce";
+import { embeddedCheckout, followCheckout, type CheckoutResult } from "@/lib/commerce";
 import {
   buildPrecheckCapabilities,
   exitFullscreenSafe,
@@ -119,6 +120,7 @@ export default function ExamPlayer({
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [feeOrderId, setFeeOrderId] = useState<number | null>(null);
+  const [stripePay, setStripePay] = useState<{ clientSecret: string; publishableKey: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [rulesAccepted, setRulesAccepted] = useState(false);
@@ -324,6 +326,11 @@ export default function ExamPlayer({
         method: "POST",
         body: JSON.stringify({ order_id: feeOrderId }),
       });
+      const session = embeddedCheckout(paid);
+      if (session) {
+        setStripePay(session);
+        return;
+      }
       if (followCheckout(paid)) return;
       setFeeOrderId(null);
       setError(null);
@@ -860,7 +867,12 @@ export default function ExamPlayer({
       {error ? (
         <div className="space-y-3">
           <p className="text-sm text-caisbe-red">{error}</p>
-          {feeOrderId != null ? (
+          {stripePay ? (
+            <EmbeddedStripeCheckout
+              publishableKey={stripePay.publishableKey}
+              clientSecret={stripePay.clientSecret}
+            />
+          ) : feeOrderId != null ? (
             <button
               type="button"
               disabled={submitting}

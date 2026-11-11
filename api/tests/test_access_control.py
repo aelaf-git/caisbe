@@ -80,6 +80,7 @@ def test_payment_enrolls_immediately_and_notifies_admins(
     )
 
     monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_access")
+    monkeypatch.setattr(settings, "stripe_publishable_key", "pk_test_access")
     monkeypatch.setattr(
         "app.services.commerce.create_stripe_session",
         lambda order, cancel_url: ("cs_test_access", "https://checkout.stripe.test/cs_test_access"),

@@ -5,9 +5,10 @@ import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import CheckoutDesk from "@/components/commerce/CheckoutDesk";
+import EmbeddedStripeCheckout from "@/components/commerce/EmbeddedStripeCheckout";
 import BackButton from "@/components/ui/BackButton";
 import { apiFetch, ApiError, type Course } from "@/lib/auth";
-import { followCheckout, type CheckoutPreview, type CheckoutResult } from "@/lib/commerce";
+import { embeddedCheckout, followCheckout, type CheckoutPreview, type CheckoutResult } from "@/lib/commerce";
 import { resolveUploadUrl } from "@/lib/mediaUrl";
 
 export default function CourseCheckoutPage() {
@@ -28,6 +29,7 @@ function CourseCheckoutInner() {
   const [quote, setQuote] = useState<CheckoutPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [stripePay, setStripePay] = useState<{ clientSecret: string; publishableKey: string } | null>(null);
   const cancelled = searchParams.get("cancelled") === "1";
 
   useEffect(() => {
@@ -66,6 +68,11 @@ function CourseCheckoutInner() {
         method: "POST",
         body: JSON.stringify({ course_id: course.id }),
       });
+      const session = embeddedCheckout(result);
+      if (session) {
+        setStripePay(session);
+        return;
+      }
       if (followCheckout(result)) return;
       await refreshUser();
       router.push(`/checkout/success?order=${result.order_number}`);
@@ -124,6 +131,14 @@ function CourseCheckoutInner() {
           cardReady={Boolean(quote.card_payments_ready)}
           busy={busy}
           onPay={() => void buy()}
+          payment={
+            stripePay ? (
+              <EmbeddedStripeCheckout
+                publishableKey={stripePay.publishableKey}
+                clientSecret={stripePay.clientSecret}
+              />
+            ) : undefined
+          }
         />
       ) : error ? null : (
         <p className="text-sm text-caisbe-muted">Loading checkout…</p>

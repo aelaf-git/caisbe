@@ -211,7 +211,7 @@ def preview_checkout(
         complimentary=complimentary,
         promo_code=None,
         message=message,
-        card_payments_ready=bool(settings.stripe_secret_key.strip()),
+        card_payments_ready=bool(settings.stripe_secret_key.strip() and settings.stripe_publishable_key.strip()),
         items=[
             OrderItemOut(
                 course_id=course.id,
@@ -235,7 +235,7 @@ def start_checkout(
     from app.models import Enrollment
 
     if payload.order_id:
-        order, checkout_url = confirm_pending_order(db, current_user, payload.order_id)
+        order, checkout_url, client_secret = confirm_pending_order(db, current_user, payload.order_id)
         return CheckoutOut(
             order_id=order.id,
             order_number=order.number,
@@ -245,6 +245,7 @@ def start_checkout(
             currency=order.currency,
             complimentary=order.total_cents == 0,
             checkout_url=checkout_url,
+            client_secret=client_secret,
             publishable_key=settings.stripe_publishable_key or None,
             status=order.status,
         )
@@ -254,13 +255,14 @@ def start_checkout(
     order, enrollments, complimentary = create_checkout_order(db, current_user, courses, promo)
     enrollment_ids = [row.id for row in enrollments]
     checkout_url = None
+    client_secret = None
     if not complimentary:
-        checkout_url = settle_checkout(
+        checkout_url, client_secret = settle_checkout(
             db,
             order,
             cancel_url=f"{settings.portal_public_url.rstrip('/')}/cart",
         )
-        if checkout_url is None:
+        if checkout_url is None and client_secret is None:
             clear_cart(db, current_user.id, [course.id for course in courses])
             db.commit()
             enrollments = (
@@ -283,6 +285,7 @@ def start_checkout(
         currency=order.currency,
         complimentary=False,
         checkout_url=checkout_url,
+        client_secret=client_secret,
         publishable_key=settings.stripe_publishable_key or None,
         status=order.status,
     )
@@ -305,8 +308,9 @@ def start_membership_checkout(
         kind=payload.kind or "application",
     )
     checkout_url = None
+    client_secret = None
     if not complimentary:
-        checkout_url = settle_checkout(
+        checkout_url, client_secret = settle_checkout(
             db,
             order,
             cancel_url=f"{settings.portal_public_url.rstrip('/')}/membership?cancelled=1",
@@ -326,6 +330,7 @@ def start_membership_checkout(
         currency=order.currency,
         complimentary=False,
         checkout_url=checkout_url,
+        client_secret=client_secret,
         publishable_key=settings.stripe_publishable_key or None,
         status=order.status,
     )

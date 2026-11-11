@@ -69,7 +69,7 @@ export type CheckoutPreview = {
   items?: CheckoutPreviewItem[];
 };
 
-/** Send the browser to Stripe when the API opened a card checkout. */
+/** Send the browser to a hosted Stripe page when the API returned one. */
 export function followCheckout(result: { checkout_url?: string | null }): boolean {
   if (typeof window === "undefined" || !result.checkout_url) return false;
   window.location.assign(result.checkout_url);
@@ -85,8 +85,18 @@ export type CheckoutResult = {
   currency: string;
   complimentary: boolean;
   checkout_url: string | null;
+  client_secret?: string | null;
+  publishable_key?: string | null;
   status: string;
 };
+
+/** On-page Stripe form, when checkout returned an embedded session. */
+export function embeddedCheckout(
+  result: CheckoutResult,
+): { clientSecret: string; publishableKey: string } | null {
+  if (!result.client_secret || !result.publishable_key) return null;
+  return { clientSecret: result.client_secret, publishableKey: result.publishable_key };
+}
 
 export type OrderItemRow = {
   course_id?: number | null;
