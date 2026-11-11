@@ -637,6 +637,9 @@ def create_stripe_session(order: Order, *, cancel_url: str) -> tuple[str, str]:
         }
         for item in order.items
     ]
+    # Do not set payment_method_types. Omitting it leaves Checkout open to every
+    # method enabled in the Stripe Dashboard that the charge currency allows.
+    # Apple Pay and Google Pay are wallets on the card method.
     session = stripe.checkout.Session.create(
         mode="payment",
         success_url=f"{portal}/checkout/success?order={order.number}&session_id={{CHECKOUT_SESSION_ID}}",
