@@ -30,7 +30,7 @@ export function cleanWordHtml(html: string): { html: string; skippedFileImages: 
 }
 
 export function dataUrlToFile(dataUrl: string, name: string): File | null {
-  const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/);
+  const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+)(?:;[\w.+-]+=[^;,]*)*;base64,([A-Za-z0-9+/=\s]+)$/);
   if (!match) return null;
   const type = match[1];
   const binary = atob(match[2].replace(/\s/g, ""));
@@ -83,31 +83,32 @@ export function cleanDocsHtml(html: string): { html: string; skippedFileImages: 
   removeComments(doc);
   doc.querySelectorAll("[id^='docs-internal-guid']").forEach((node) => unwrap(node));
   promoteDocsFormatting(doc.body);
-  let skippedFileImages = 0;
-  doc.querySelectorAll("img").forEach((img) => {
-    const src = img.getAttribute("src") || "";
-    if (!src || /^(file|cid|blob):/i.test(src)) {
-      skippedFileImages += 1;
-      img.remove();
-    }
-  });
   doc.body.querySelectorAll("*").forEach((el) => cleanElement(el as HTMLElement));
   wrapBareImages(doc.body);
   ensureTableCells(doc.body);
-  return { html: doc.body.innerHTML, skippedFileImages };
+  return { html: doc.body.innerHTML, skippedFileImages: 0 };
 }
 
 export async function replaceRemoteImages(
   html: string,
   upload: (file: File) => Promise<string>,
   fetchRemote: (url: string) => Promise<string>,
+  spareFiles: File[] = [],
 ): Promise<{ html: string; skipped: number }> {
   const doc = new DOMParser().parseFromString(html, "text/html");
+  const spares = spareFiles.slice();
   let skipped = 0;
   let index = 0;
   for (const img of Array.from(doc.querySelectorAll("img"))) {
     const src = img.getAttribute("src") || "";
-    if (!src.startsWith("https://")) continue;
+    if (src.startsWith("data:")) continue;
+    if (!src.startsWith("https://")) {
+      if (!(await useSpareImage(img, spares, upload))) {
+        skipped += 1;
+        img.remove();
+      }
+      continue;
+    }
     index += 1;
     try {
       const file = await readRemoteImage(src, index);
@@ -115,9 +116,13 @@ export async function replaceRemoteImages(
         img.setAttribute("src", await upload(file));
         continue;
       }
-      if (!isGoogleImageUrl(src)) throw new Error("unreadable");
-      img.setAttribute("src", await fetchRemote(src));
+      if (isGoogleImageUrl(src)) {
+        img.setAttribute("src", await fetchRemote(src));
+        continue;
+      }
+      if (!(await useSpareImage(img, spares, upload))) throw new Error("unreadable");
     } catch {
+      if (await useSpareImage(img, spares, upload)) continue;
       skipped += 1;
       img.remove();
     }
@@ -125,17 +130,53 @@ export async function replaceRemoteImages(
   return { html: doc.body.innerHTML, skipped };
 }
 
+async function useSpareImage(
+  img: HTMLImageElement,
+  spareFiles: File[],
+  upload: (file: File) => Promise<string>,
+): Promise<boolean> {
+  const file = spareFiles.shift();
+  if (!file) return false;
+  img.setAttribute("src", await upload(file));
+  return true;
+}
+
 async function readRemoteImage(src: string, index: number): Promise<File | null> {
   try {
-    const response = await fetch(src);
+    const response = await fetch(src, { referrerPolicy: "no-referrer" });
     if (!response.ok) return null;
     const blob = await response.blob();
-    if (!blob.type.startsWith("image/")) return null;
-    const extension = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "png";
-    return new File([blob], `docs-image-${index}.${extension}`, { type: blob.type });
+    const type = blob.type.startsWith("image/") ? blob.type.split(";")[0] : await sniffImageType(blob);
+    if (!type) return null;
+    const extension = type.split("/")[1]?.replace("jpeg", "jpg") || "png";
+    if (!/^[a-z0-9]+$/.test(extension)) return null;
+    return new File([blob], `docs-image-${index}.${extension}`, { type });
   } catch {
     return null;
   }
+}
+
+async function sniffImageType(blob: Blob): Promise<string | null> {
+  const bytes = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
+  if (bytes.length >= 4 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return "image/png";
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes.length >= 3 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return "image/gif";
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  return null;
 }
 
 function promoteDocsFormatting(root: HTMLElement) {

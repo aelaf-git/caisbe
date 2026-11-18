@@ -65,6 +65,18 @@ const HIGHLIGHT_COLORS = [
   { label: "Orange", value: "#fed7aa" },
 ] as const;
 
+function imageFilesFromClipboard(clipboard: DataTransfer): File[] {
+  const files = Array.from(clipboard.files).filter((file) => file.type.startsWith("image/"));
+  if (files.length > 0) return files;
+  const fromItems: File[] = [];
+  Array.from(clipboard.items || []).forEach((item) => {
+    if (item.kind !== "file" || !item.type.startsWith("image/")) return;
+    const file = item.getAsFile();
+    if (file) fromItems.push(file);
+  });
+  return fromItems;
+}
+
 export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<Editor | null>(null);
@@ -93,7 +105,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     }
   }
 
-  async function insertClipboardHtml(html: string, source: "Word" | "Google Docs") {
+  async function insertClipboardHtml(html: string, source: "Word" | "Google Docs", spareImages: File[] = []) {
     const current = editorRef.current;
     if (!current) return;
     setUploading(true);
@@ -107,7 +119,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
           body: JSON.stringify({ url }),
         });
         return saved.url;
-      });
+      }, spareImages);
       if (remote.html.trim()) current.chain().focus().insertContent(remote.html).run();
       const skipped = cleaned.skippedFileImages + remote.skipped;
       if (skipped > 0) {
@@ -172,7 +184,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         const clipboard = event.clipboardData;
         if (!clipboard) return false;
         const html = clipboard.getData("text/html");
-        const files = Array.from(clipboard.files).filter((file) => file.type.startsWith("image/"));
+        const files = imageFilesFromClipboard(clipboard);
         if (files.length > 0 && !clipboard.getData("text/plain").trim()) {
           event.preventDefault();
           void insertImageFiles(files);
@@ -180,7 +192,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         }
         if (isWordHtml(html) || isDocsHtml(html)) {
           event.preventDefault();
-          void insertClipboardHtml(html, isWordHtml(html) ? "Word" : "Google Docs");
+          void insertClipboardHtml(html, isWordHtml(html) ? "Word" : "Google Docs", files);
           return true;
         }
         return false;

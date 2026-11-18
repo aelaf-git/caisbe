@@ -37,7 +37,7 @@ class _Client:
     async def __aexit__(self, *args):
         return None
 
-    async def get(self, url):
+    async def get(self, url, headers=None):
         return self.responses.pop(0)
 
 
@@ -60,6 +60,21 @@ def test_picture_is_stored(monkeypatch):
     url, filename = asyncio.run(save_google_doc_image("https://lh3.googleusercontent.com/a"))
     assert url == "/api/uploads/courses/media/abc.png"
     assert filename == "abc.png"
+
+
+def test_picture_bytes_are_kept_when_the_type_is_generic(monkeypatch):
+    png = b"\x89PNG\r\n\x1a\n" + b"x" * 16
+    client = _Client([_Response(200, {"content-type": "application/octet-stream"}, content=png)])
+    seen: dict[str, str] = {}
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: client)
+
+    def save(data, **kwargs):
+        seen["suffix"] = kwargs["suffix"]
+        return "/api/uploads/courses/media/abc.png"
+
+    monkeypatch.setattr("app.services.remote_image.save_bytes", save)
+    asyncio.run(save_google_doc_image("https://lh3.googleusercontent.com/a"))
+    assert seen["suffix"] == ".png"
 
 
 def test_non_image_and_oversized_are_rejected(monkeypatch):
