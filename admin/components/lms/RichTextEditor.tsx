@@ -11,9 +11,14 @@ import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
+import Table from "@tiptap/extension-table";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import TableRow from "@tiptap/extension-table-row";
 import Underline from "@tiptap/extension-underline";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FontSize } from "@/components/lms/fontSizeExtension";
+import { cleanWordHtml, isWordHtml, replaceDataImages } from "@/components/lms/wordPaste";
 import { apiUpload, ApiError } from "@/lib/auth";
 
 type RichTextEditorProps = {
@@ -55,8 +60,55 @@ const HIGHLIGHT_COLORS = [
 
 export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<Editor | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  async function uploadImageFile(file: File) {
+    const uploaded = await apiUpload("/admin/uploads", file, { folder: "courses/media" });
+    return uploaded.url;
+  }
+
+  async function insertImageFiles(files: File[]) {
+    const current = editorRef.current;
+    if (!current || files.length === 0) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      for (const file of files) {
+        const url = await uploadImageFile(file);
+        current.chain().focus().setImage({ src: url, alt: file.name }).run();
+      }
+    } catch (err) {
+      setUploadError(err instanceof ApiError ? err.detail : "Unable to upload image.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function insertWordHtml(html: string) {
+    const current = editorRef.current;
+    if (!current) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const cleaned = cleanWordHtml(html);
+      const htmlWithImages = await replaceDataImages(cleaned.html, uploadImageFile);
+      if (htmlWithImages.trim()) current.chain().focus().insertContent(htmlWithImages).run();
+      if (cleaned.skippedFileImages > 0) {
+        const count = cleaned.skippedFileImages;
+        setUploadError(
+          count === 1
+            ? "1 picture from Word could not be copied. Paste that picture on its own, or use Insert image."
+            : `${count} pictures from Word could not be copied. Paste each picture on its own, or use Insert image.`,
+        );
+      }
+    } catch (err) {
+      setUploadError(err instanceof ApiError ? err.detail : "Unable to paste this Word content.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const editor = useEditor({
     extensions: [
@@ -70,8 +122,12 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
       Subscript,
       Superscript,
       Highlight.configure({ multicolor: true }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
       TextAlign.configure({
-        types: ["heading", "paragraph"],
+        types: ["heading", "paragraph", "tableCell", "tableHeader"],
       }),
       Link.configure({
         openOnClick: false,
@@ -82,6 +138,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         },
       }),
       Image.configure({
+        inline: true,
         HTMLAttributes: {
           class: "max-w-full h-auto rounded-md",
         },
@@ -97,11 +154,32 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         class:
           "rich-text-editor min-h-[160px] px-4 py-3 text-[15px] leading-relaxed text-caisbe-text outline-none",
       },
+      handlePaste: (_view, event) => {
+        const clipboard = event.clipboardData;
+        if (!clipboard) return false;
+        const html = clipboard.getData("text/html");
+        const files = Array.from(clipboard.files).filter((file) => file.type.startsWith("image/"));
+        if (isWordHtml(html)) {
+          event.preventDefault();
+          void insertWordHtml(html);
+          return true;
+        }
+        if (files.length > 0 && !clipboard.getData("text/plain").trim()) {
+          event.preventDefault();
+          void insertImageFiles(files);
+          return true;
+        }
+        return false;
+      },
     },
     onUpdate: ({ editor: current }) => {
       onChange(current.getHTML());
     },
   });
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
@@ -400,6 +478,40 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
             >
               <IconImage />
             </IconButton>
+            <IconButton
+              title="Insert table"
+              onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+            >
+              <IconTable />
+            </IconButton>
+            <IconButton
+              title="Add row"
+              disabled={!editor.can().addRowAfter()}
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+            >
+              <span className="text-[10px] font-semibold leading-none">+R</span>
+            </IconButton>
+            <IconButton
+              title="Delete row"
+              disabled={!editor.can().deleteRow()}
+              onClick={() => editor.chain().focus().deleteRow().run()}
+            >
+              <span className="text-[10px] font-semibold leading-none">−R</span>
+            </IconButton>
+            <IconButton
+              title="Add column"
+              disabled={!editor.can().addColumnAfter()}
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+            >
+              <span className="text-[10px] font-semibold leading-none">+C</span>
+            </IconButton>
+            <IconButton
+              title="Delete column"
+              disabled={!editor.can().deleteColumn()}
+              onClick={() => editor.chain().focus().deleteColumn().run()}
+            >
+              <span className="text-[10px] font-semibold leading-none">−C</span>
+            </IconButton>
             <input
               ref={fileInputRef}
               type="file"
@@ -643,6 +755,15 @@ function IconImage() {
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <circle cx="9" cy="9" r="2" />
       <path d="m21 15-3.5-3.5L9 20" />
+    </svg>
+  );
+}
+
+function IconTable() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="4" width="18" height="16" />
+      <path d="M3 10h18M3 16h18M9 4v16M15 4v16" />
     </svg>
   );
 }

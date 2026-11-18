@@ -10,6 +10,9 @@ import { outlineNumber } from "@/lib/outlineNumber";
 import { isAdminUpload, isLegacyChapterReading } from "@/lib/readings";
 import { sanitizeCoursePresentation } from "@/lib/sanitizeHtml";
 
+const lessonHtmlClass =
+  "max-w-none overflow-x-auto break-words text-caisbe-text [&_a]:text-caisbe-red [&_h1]:font-display [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:text-caisbe-text-dark [&_h2]:font-display [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-caisbe-text-dark [&_h3]:font-display [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-caisbe-text-dark [&_img]:my-2 [&_img]:h-auto [&_img]:max-w-full [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-ifma-border [&_th]:bg-[#fafafa] [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:align-top [&_td]:border [&_td]:border-ifma-border [&_td]:px-2 [&_td]:py-1.5 [&_td]:align-top";
+
 function ResourceChip({ href, label }: { href: string; label: string }) {
   return (
     <a
@@ -78,7 +81,7 @@ export default function BlockView({
   if (block.block_type === "text" || block.block_type === "subtopic") {
     const title = heading ?? block.title;
     return (
-      <div className="prose prose-sm max-w-none break-words text-caisbe-text prose-headings:font-display prose-headings:text-caisbe-text-dark prose-a:text-caisbe-red prose-img:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:w-full prose-table:overflow-x-auto">
+      <div className={lessonHtmlClass}>
         {title ? <h3 className="mb-2 text-lg font-semibold">{title}</h3> : null}
         {block.body ? (
           <div dangerouslySetInnerHTML={{ __html: sanitizeCoursePresentation(block.body) }} />
@@ -382,7 +385,7 @@ export function TopicSections({
     <div className="space-y-6">
       {topic.body ? (
         <div
-          className="prose prose-sm max-w-none break-words text-caisbe-text prose-headings:font-display prose-headings:text-caisbe-text-dark prose-img:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:w-full prose-table:overflow-x-auto"
+          className={lessonHtmlClass}
           dangerouslySetInnerHTML={{ __html: sanitizeCoursePresentation(topic.body) }}
         />
       ) : null}

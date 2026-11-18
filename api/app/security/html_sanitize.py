@@ -32,6 +32,13 @@ ALLOWED_TAGS = [
     "span",
     "mark",
     "hr",
+    "table",
+    "thead",
+    "tbody",
+    "tfoot",
+    "tr",
+    "th",
+    "td",
 ]
 
 ALLOWED_ATTRIBUTES = {
@@ -43,6 +50,8 @@ ALLOWED_ATTRIBUTES = {
     "h1": ["class", "style"],
     "h2": ["class", "style"],
     "h3": ["class", "style"],
+    "th": ["colspan", "rowspan", "class", "style"],
+    "td": ["colspan", "rowspan", "class", "style"],
     "code": ["class"],
     "pre": ["class"],
 }
@@ -59,6 +68,7 @@ CSS_SANITIZER = CSSSanitizer(
 )
 
 _BLANK_TARGET_ANCHOR = re.compile(r"(<a\b[^>]*\btarget\s*=\s*['\"]?_blank['\"]?)([^>]*>)", re.IGNORECASE)
+_SCRIPT_OR_STYLE = re.compile(r"<(script|style)\b[^>]*>.*?</\1\s*>", re.IGNORECASE | re.DOTALL)
 
 
 def _harden_links(html: str) -> str:
@@ -78,7 +88,7 @@ def sanitize_html(value: str | None) -> str | None:
     if value is None:
         return None
     cleaned = bleach.clean(
-        value,
+        _SCRIPT_OR_STYLE.sub("", value),
         tags=ALLOWED_TAGS,
         attributes=ALLOWED_ATTRIBUTES,
         protocols=ALLOWED_PROTOCOLS,

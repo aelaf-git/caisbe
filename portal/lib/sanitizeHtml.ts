@@ -26,9 +26,16 @@ const ALLOWED_TAGS = [
   "span",
   "mark",
   "hr",
+  "table",
+  "thead",
+  "tbody",
+  "tfoot",
+  "tr",
+  "th",
+  "td",
 ];
 
-const ALLOWED_ATTR = ["href", "src", "alt", "title", "target", "rel", "class", "style"];
+const ALLOWED_ATTR = ["href", "src", "alt", "title", "target", "rel", "class", "style", "colspan", "rowspan"];
 
 function hardenLinks(node: Element): void {
   if (node.tagName !== "A") return;

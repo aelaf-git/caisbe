@@ -76,6 +76,26 @@
   margin: 0.5rem 0;
 }
 
+.rich-text-editor table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+}
+
+.rich-text-editor th,
+.rich-text-editor td {
+  border: 1px solid var(--color-caisbe-border);
+  padding: 0.4rem 0.55rem;
+  vertical-align: top;
+  min-width: 4rem;
+}
+
+.rich-text-editor th {
+  background: #fafafa;
+  font-weight: 600;
+  text-align: left;
+}
+
 @theme inline {
   --color-background: var(--caisbe-background, #ffffff);
   --color-foreground: var(--caisbe-foreground, #1f2937);
