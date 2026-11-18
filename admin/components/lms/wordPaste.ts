@@ -62,6 +62,120 @@ export async function replaceDataImages(
   return doc.body.innerHTML;
 }
 
+export function isDocsHtml(html: string): boolean {
+  return /docs-internal-guid|googleusercontent\.com|docs\.google\.com/i.test(html);
+}
+
+export function isGoogleImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
+    return host === "docs.google.com" || host === "googleusercontent.com" || host.endsWith(".googleusercontent.com");
+  } catch {
+    return false;
+  }
+}
+
+export function cleanDocsHtml(html: string): { html: string; skippedFileImages: number } {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  doc.querySelectorAll("style, script, meta, link, title").forEach((node) => node.remove());
+  removeComments(doc);
+  doc.querySelectorAll("[id^='docs-internal-guid']").forEach((node) => unwrap(node));
+  promoteDocsFormatting(doc.body);
+  let skippedFileImages = 0;
+  doc.querySelectorAll("img").forEach((img) => {
+    const src = img.getAttribute("src") || "";
+    if (!src || /^(file|cid|blob):/i.test(src)) {
+      skippedFileImages += 1;
+      img.remove();
+    }
+  });
+  doc.body.querySelectorAll("*").forEach((el) => cleanElement(el as HTMLElement));
+  wrapBareImages(doc.body);
+  ensureTableCells(doc.body);
+  return { html: doc.body.innerHTML, skippedFileImages };
+}
+
+export async function replaceRemoteImages(
+  html: string,
+  upload: (file: File) => Promise<string>,
+  fetchRemote: (url: string) => Promise<string>,
+): Promise<{ html: string; skipped: number }> {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  let skipped = 0;
+  let index = 0;
+  for (const img of Array.from(doc.querySelectorAll("img"))) {
+    const src = img.getAttribute("src") || "";
+    if (!src.startsWith("https://")) continue;
+    index += 1;
+    try {
+      const file = await readRemoteImage(src, index);
+      if (file) {
+        img.setAttribute("src", await upload(file));
+        continue;
+      }
+      if (!isGoogleImageUrl(src)) throw new Error("unreadable");
+      img.setAttribute("src", await fetchRemote(src));
+    } catch {
+      skipped += 1;
+      img.remove();
+    }
+  }
+  return { html: doc.body.innerHTML, skipped };
+}
+
+async function readRemoteImage(src: string, index: number): Promise<File | null> {
+  try {
+    const response = await fetch(src);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    if (!blob.type.startsWith("image/")) return null;
+    const extension = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "png";
+    return new File([blob], `docs-image-${index}.${extension}`, { type: blob.type });
+  } catch {
+    return null;
+  }
+}
+
+function promoteDocsFormatting(root: HTMLElement) {
+  root.querySelectorAll("span").forEach((span) => {
+    const style = span.getAttribute("style") || "";
+    if (/font-weight:\s*(700|800|900|bold)/i.test(style)) wrapChildren(span, "strong");
+    if (/font-style:\s*italic/i.test(style)) wrapChildren(span, "em");
+    if (/text-decoration:[^;]*underline/i.test(style)) wrapChildren(span, "u");
+  });
+}
+
+function wrapChildren(el: Element, tag: string) {
+  const wrapper = el.ownerDocument.createElement(tag);
+  while (el.firstChild) wrapper.appendChild(el.firstChild);
+  el.appendChild(wrapper);
+}
+
+function wrapBareImages(root: HTMLElement) {
+  root.querySelectorAll("img").forEach((img) => {
+    if (img.closest("p, h1, h2, h3, li, td, th, blockquote")) return;
+    const paragraph = img.ownerDocument.createElement("p");
+    img.replaceWith(paragraph);
+    paragraph.appendChild(img);
+    let parent = paragraph.parentElement;
+    while (parent && parent !== root && !["DIV", "BODY", "TD", "TH", "LI"].includes(parent.tagName)) {
+      const host = parent;
+      parent = host.parentElement;
+      const siblings = Array.from(host.childNodes).filter((node) => {
+        if (node.nodeType === Node.TEXT_NODE) return (node.textContent || "").replace(/\u00a0/g, " ").trim() !== "";
+        return node.nodeType === Node.ELEMENT_NODE;
+      });
+      if (siblings.length === 1) host.replaceWith(paragraph);
+      else {
+        host.parentElement?.insertBefore(paragraph, host);
+        break;
+      }
+    }
+  });
+}
+
 function removeComments(root: Document | HTMLElement) {
   const doc = root.nodeType === Node.DOCUMENT_NODE ? (root as Document) : root.ownerDocument;
   if (!doc) return;

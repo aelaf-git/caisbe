@@ -18,8 +18,15 @@ import TableRow from "@tiptap/extension-table-row";
 import Underline from "@tiptap/extension-underline";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FontSize } from "@/components/lms/fontSizeExtension";
-import { cleanWordHtml, isWordHtml, replaceDataImages } from "@/components/lms/wordPaste";
-import { apiUpload, ApiError } from "@/lib/auth";
+import {
+  cleanDocsHtml,
+  cleanWordHtml,
+  isDocsHtml,
+  isWordHtml,
+  replaceDataImages,
+  replaceRemoteImages,
+} from "@/components/lms/wordPaste";
+import { apiUpload, apiFetch, ApiError } from "@/lib/auth";
 
 type RichTextEditorProps = {
   value: string;
@@ -86,25 +93,32 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     }
   }
 
-  async function insertWordHtml(html: string) {
+  async function insertClipboardHtml(html: string, source: "Word" | "Google Docs") {
     const current = editorRef.current;
     if (!current) return;
     setUploading(true);
     setUploadError(null);
     try {
-      const cleaned = cleanWordHtml(html);
-      const htmlWithImages = await replaceDataImages(cleaned.html, uploadImageFile);
-      if (htmlWithImages.trim()) current.chain().focus().insertContent(htmlWithImages).run();
-      if (cleaned.skippedFileImages > 0) {
-        const count = cleaned.skippedFileImages;
+      const cleaned = source === "Word" ? cleanWordHtml(html) : cleanDocsHtml(html);
+      const withDataImages = await replaceDataImages(cleaned.html, uploadImageFile);
+      const remote = await replaceRemoteImages(withDataImages, uploadImageFile, async (url) => {
+        const saved = await apiFetch<{ url: string }>("/admin/uploads/remote-image", {
+          method: "POST",
+          body: JSON.stringify({ url }),
+        });
+        return saved.url;
+      });
+      if (remote.html.trim()) current.chain().focus().insertContent(remote.html).run();
+      const skipped = cleaned.skippedFileImages + remote.skipped;
+      if (skipped > 0) {
         setUploadError(
-          count === 1
-            ? "1 picture from Word could not be copied. Paste that picture on its own, or use Insert image."
-            : `${count} pictures from Word could not be copied. Paste each picture on its own, or use Insert image.`,
+          skipped === 1
+            ? `1 picture from ${source} could not be copied. Paste that picture on its own, or use Insert image.`
+            : `${skipped} pictures from ${source} could not be copied. Paste each picture on its own, or use Insert image.`,
         );
       }
     } catch (err) {
-      setUploadError(err instanceof ApiError ? err.detail : "Unable to paste this Word content.");
+      setUploadError(err instanceof ApiError ? err.detail : `Unable to paste this ${source} content.`);
     } finally {
       setUploading(false);
     }
@@ -159,14 +173,14 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         if (!clipboard) return false;
         const html = clipboard.getData("text/html");
         const files = Array.from(clipboard.files).filter((file) => file.type.startsWith("image/"));
-        if (isWordHtml(html)) {
-          event.preventDefault();
-          void insertWordHtml(html);
-          return true;
-        }
         if (files.length > 0 && !clipboard.getData("text/plain").trim()) {
           event.preventDefault();
           void insertImageFiles(files);
+          return true;
+        }
+        if (isWordHtml(html) || isDocsHtml(html)) {
+          event.preventDefault();
+          void insertClipboardHtml(html, isWordHtml(html) ? "Word" : "Google Docs");
           return true;
         }
         return false;

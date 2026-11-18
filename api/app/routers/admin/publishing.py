@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy.orm.attributes import flag_modified
 from starlette.datastructures import UploadFile
@@ -174,6 +175,21 @@ async def admin_upload(
         too_large_detail="File is too large. Maximum upload size is 500 MB.",
     )
     return UploadOut(url=url, filename=display_name)
+
+
+class RemoteImageIn(BaseModel):
+    url: str
+
+
+@router.post("/uploads/remote-image", response_model=UploadOut)
+async def admin_upload_remote_image(
+    payload: RemoteImageIn,
+    _: User = Depends(require_admin),
+) -> UploadOut:
+    from app.services.remote_image import save_google_doc_image
+
+    url, filename = await save_google_doc_image(payload.url)
+    return UploadOut(url=url, filename=filename)
 
 
 # --- Media library ---
