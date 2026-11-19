@@ -178,7 +178,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     editorProps: {
       attributes: {
         class:
-          "rich-text-editor min-h-[160px] px-4 py-3 text-[15px] leading-relaxed text-caisbe-text outline-none",
+          "rich-text-editor min-h-[160px] px-10 py-8 text-[15px] leading-relaxed text-caisbe-text outline-none",
       },
       handlePaste: (_view, event) => {
         const clipboard = event.clipboardData;
@@ -245,7 +245,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
 
   if (!editor) {
     return (
-      <div className="h-[220px] animate-pulse rounded-xl border border-ifma-border bg-admin-surface-muted px-4 py-3 text-sm text-caisbe-muted">
+      <div className="h-[220px] animate-pulse rounded-xl border border-ifma-border bg-admin-surface-muted px-10 py-8 text-sm text-caisbe-muted">
         Loading editor…
       </div>
     );
