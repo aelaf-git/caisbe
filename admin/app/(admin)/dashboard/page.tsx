@@ -10,6 +10,7 @@ import { PageSkeleton } from "@/components/ui/Skeleton";
 import { buttonStyles } from "@/components/ui/Button";
 import Alert from "@/components/ui/Alert";
 import { apiFetch, ApiError, type AdminDashboard, type Course } from "@/lib/auth";
+import { resolveUploadUrl } from "@/lib/mediaUrl";
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<AdminDashboard | null>(null);
@@ -115,14 +116,22 @@ export default function AdminDashboardPage() {
             <ul className="divide-y divide-ifma-border-light">
               {courses.slice(0, 6).map((course) => {
                 const published = (course.status ?? "draft") === "published";
+                const cover = course.cover_url ? resolveUploadUrl(course.cover_url) ?? course.cover_url : null;
                 return (
                   <li key={course.id}>
                     <Link
                       href={`/courses/${course.id}`}
                       className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-ifma-border-light/60 md:px-6"
                     >
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-caisbe-red/10 text-xs font-bold text-caisbe-red">
-                        {course.code.slice(0, 4)}
+                      <span className="relative h-14 w-20 shrink-0 overflow-hidden border border-ifma-border-light bg-[#f3f0ec]">
+                        {cover ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={cover} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-[10px] font-bold uppercase tracking-wide text-caisbe-red">
+                            {course.code.slice(0, 4)}
+                          </span>
+                        )}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold text-caisbe-text group-hover:text-caisbe-red">{course.title}</p>
